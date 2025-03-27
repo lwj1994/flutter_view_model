@@ -119,34 +119,16 @@ but you must use getter to getViewModel or you need reset _mainViewModel.
 ```dart
 
 // you'd better use getter to get ViewModel
-MyViewModel get viewModel =>
-    getViewModel<MyViewModel>(
-      // share same viewModel instance with key
-        key: "key",
-        factory: () {
-          //  if first create, will call factory
-          return MyViewModel(state: 'state', id: 'id');
-        });
-
+MyViewModel get viewModel => getViewModel<MyViewModel>();
 // refresh 
 refreshViewModel(_mainViewModel);
 ```
-
-
 
 or 
 
 ```dart
 
-late MyViewModel  viewModel =
-    getViewModel<MyViewModel>(
-      // share same viewModel instance with key
-        key: "key",
-        factory: () {
-          //  if first create, will call factory
-          return MyViewModel(state: 'state', id: 'id');
-        });
-
+late MyViewModel  viewModel = getViewModel<MyViewModel>();
 
 // refresh and reset 
 refreshViewModel(_mainViewModel);
