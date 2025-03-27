@@ -6,17 +6,12 @@ import 'store.dart';
 final instanceManager = InstanceManager._get();
 
 class InstanceManager {
-
   InstanceManager._();
-
-
 
   T recreate<T>(T t) {
     final Store<T> s = _stores[T];
     return s.recreate(t);
   }
-
-
 
   factory InstanceManager._get() => _instance;
   static final InstanceManager _instance = InstanceManager._();
