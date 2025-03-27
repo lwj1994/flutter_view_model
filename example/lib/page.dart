@@ -51,7 +51,7 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
         children: [
           Text("mainViewModel.state = ${_mainViewModel.state}"),
           Text(
-            "myViewModel state :" + state,
+            "myViewModel state :$state",
             style: const TextStyle(color: Colors.red),
           ),
           FilledButton(

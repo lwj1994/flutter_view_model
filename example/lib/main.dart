@@ -78,7 +78,7 @@ class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
       appBar: AppBar(),
       body: Column(
         children: [
-          Text("main vm state:" + _viewModel.state),
+          Text("main vm state:${_viewModel.state}"),
           FilledButton(
               onPressed: () {
                 appRouter
@@ -108,6 +108,6 @@ class MainViewModel extends ViewModel<String> {
   @override
   void dispose() {
     super.dispose();
-    print("MainViewModel dispose ${hashCode}");
+    print("MainViewModel dispose $hashCode");
   }
 }
