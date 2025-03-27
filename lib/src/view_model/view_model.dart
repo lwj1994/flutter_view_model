@@ -26,8 +26,6 @@ class ViewModel<T> implements InstanceDispose {
     _autoDisposeController.addDispose(block);
   }
 
-  final cacheLimit = 1;
-
   bool _isDisposed = false;
 
   bool get isDisposed => _isDisposed;
