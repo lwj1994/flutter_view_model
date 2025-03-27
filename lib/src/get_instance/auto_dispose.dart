@@ -1,6 +1,7 @@
 // @author luwenjie on 2025/3/25 16:24:32
 
 import 'package:uuid/v4.dart';
+import 'package:view_model/src/log.dart';
 
 import 'manager.dart';
 import 'store.dart';
@@ -22,9 +23,9 @@ class AutoDisposeInstanceController {
       factory: factory,
       watchId: watchId,
     );
-    _instanceNotifiers.add(notifier);
-
     if (_notifierListeners[notifier] != true) {
+      _notifierListeners[notifier] = true;
+      _instanceNotifiers.add(notifier);
       notifier.addListener(() {
         switch (notifier.action) {
           case null:
@@ -32,6 +33,7 @@ class AutoDisposeInstanceController {
           case InstanceAction.dispose:
             break;
           case InstanceAction.recreate:
+            viewModelLog("$T $key recreate call $watchId refresh");
             onRecreate.call();
             break;
         }

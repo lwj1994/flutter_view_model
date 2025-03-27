@@ -141,6 +141,7 @@ class InstanceNotifier<T> with ChangeNotifier {
     tryCallInstanceDispose();
     _instance = factory.call();
     _action = InstanceAction.recreate;
+    notifyListeners();
     return instance;
   }
 
