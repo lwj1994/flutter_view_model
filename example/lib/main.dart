@@ -74,7 +74,6 @@ class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
         factory: mainvm2.MainViewModelFactory(arg: "mainvm2"),
       );
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

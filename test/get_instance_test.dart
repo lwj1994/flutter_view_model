@@ -45,14 +45,16 @@ void main() {
       assert(b == b1);
     });
 
-    test('dispose', () {
+    test('recycle', () {
       final factory =
           InstanceFactory<TestModel>(builder: () => TestModel(), key: "share");
       final InstanceNotifier<TestModel> a =
           instanceManager.getNotifier<TestModel>(factory: factory);
 
       a.recycle();
-      final InstanceNotifier<TestModel> a1 = instanceManager.getNotifier<TestModel>(factory: factory);
+
+      final InstanceNotifier<TestModel> a1 =
+          instanceManager.getNotifier<TestModel>(factory: factory);
       assert(a != a1);
     });
 
