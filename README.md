@@ -55,7 +55,7 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
   String get state => viewModel.state;
 
   @override
-  Widget buildPage(BuildContext context) {
+  Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -83,13 +83,13 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
               onPressed: () async {
                 refreshViewModel(_mainViewModel);
               },
-              child: const Text("invalide with change id")),
+              child: const Text("refresh mainViewModel")),
           FilledButton(
               onPressed: () {
-                debugPrint("page._viewModel hashCode = ${viewModel.hashCode}");
-                debugPrint("page.state = ${viewModel.state}");
+                debugPrint("page.MyViewModel hashCode = ${viewModel.hashCode}");
+                debugPrint("page.MyViewModel.state = ${viewModel.state}");
               },
-              child: const Text("print viewmodel")),
+              child: const Text("print MyViewModel")),
         ],
       ),
     );
