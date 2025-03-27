@@ -46,13 +46,15 @@ class Store<T> {
     String? watchId,
   }) {
     final realKey = key ?? const UuidV4().generate();
-    if (watchId != null) {
+    final newWatcher =
+        watchId != null && !_getWaters(realKey).contains(watchId);
+    if (newWatcher) {
       _watchers[realKey] = _getWaters(realKey).toList()..add(watchId);
     }
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       viewModelLog("hit cache $T $realKey");
       final notifier = _instances[realKey]!;
-      if (watchId != null) {
+      if (newWatcher) {
         notifier.addWatcher(watchId);
         viewModelLog(
             "$T $realKey add watcher ${watchId}, all ${_watchers[realKey]}");
