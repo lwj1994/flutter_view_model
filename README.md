@@ -11,6 +11,12 @@
 __view_model only bind to StatefulWidget's `State`. we don't recommend to bind state to StatelessWidget.
 StatelessWidget shouldn't have state.__
 
+## core concept
+* ViewModel: state store and notify state changing
+* ViewModelFactory:  tell us how to create your ViewModel
+* getViewModel:  create or get exit ViewModel
+* listenViewModelStateChanged: listen state change in Widget.State
+
 ```dart
 class MyViewModel extends ViewModel<String> {
 
