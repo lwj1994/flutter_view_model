@@ -27,19 +27,29 @@ class MyViewModel extends ViewModel<String> {
     debugPrint("dispose MyViewModel $state $hashCode");
   }
 }
+
+
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  final String arg;
+
+  MyViewModelFactory({this.arg = ""});
+
+  @override
+  MyViewModel build() {
+    return MyViewModel(state: arg);
+  }
+
+  // share same viewModel instance with key. if null will not share
+  @override
+  String? get key => null;
+}
 ```
 
 ```dart
 class _State extends State<Page> with ViewModelStateMixin<Page> {
   // you'd better use getter to get ViewModel
   MyViewModel get viewModel =>
-      getViewModel<MyViewModel>(
-        // share same viewModel instance with key
-          key: "key",
-          factory: () {
-            //  if first create, will call factory
-            return MyViewModel(state: 'state', id: 'id');
-          });
+      getViewModel<MyViewModel>(factory: MyViewModelFactory(arg: "init arg"));
 
   // viewModel's state
   String get state => viewModel.state;

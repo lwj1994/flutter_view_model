@@ -21,11 +21,11 @@ class SecondPage extends StatefulWidget {
 }
 
 class _State extends State<SecondPage> with ViewModelStateMixin {
-  MyViewModel get viewModel => getViewModel<MyViewModel>(factory: () {
-        return MyViewModel(state: 'state', id: 'id');
-      });
+  MyViewModel get viewModel => getViewModel<MyViewModel>(
+      factory: MyViewModelFactory(arg: "init MyViewModel"));
 
-  MainViewModel get _mainViewModel => getViewModel<MainViewModel>(key: "share");
+  MainViewModel get _mainViewModel =>
+      getViewModel<MainViewModel>(factory: MainViewModelFactory());
 
   String get state => viewModel.state;
 
@@ -89,20 +89,28 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
   }
 }
 
-class MyViewModel extends ViewModel<String> {
-  final String id;
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  final String arg;
 
+  MyViewModelFactory({this.arg = ""});
+
+  @override
+  MyViewModel build() {
+    return MyViewModel(state: arg);
+  }
+}
+
+class MyViewModel extends ViewModel<String> {
   MyViewModel({
     required super.state,
-    required this.id,
   }) {
-    debugPrint("create ViewModel state:$state id:$id hashCode:$hashCode");
+    debugPrint("create ViewModel state:$state  hashCode:$hashCode");
   }
 
   @override
   void dispose() async {
     super.dispose();
-    debugPrint("dispose ViewModel $id $hashCode");
+    debugPrint("dispose ViewModel  $hashCode");
   }
 
   void setId() {

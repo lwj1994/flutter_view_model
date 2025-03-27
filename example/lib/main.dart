@@ -66,11 +66,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
-  MainViewModel get _viewModel => getViewModel<MainViewModel>(
-      key: "share",
-      factory: () {
-        return MainViewModel(state: "xx");
-      });
+  MainViewModel get _viewModel =>
+      getViewModel<MainViewModel>(factory: MainViewModelFactory(arg: "1"));
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +91,20 @@ class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
       ),
     );
   }
+}
+
+class MainViewModelFactory implements vm.ViewModelFactory<MainViewModel> {
+  final String arg;
+
+  MainViewModelFactory({this.arg = ""});
+
+  @override
+  MainViewModel build() {
+    return MainViewModel(state: arg);
+  }
+
+  @override
+  String? get key => "share";
 }
 
 class MainViewModel extends ViewModel<String> {

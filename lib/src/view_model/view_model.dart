@@ -75,3 +75,9 @@ class AutoDisposeController {
     }
   }
 }
+
+mixin ViewModelFactory<T> {
+  final String? key = null;
+
+  T build();
+}

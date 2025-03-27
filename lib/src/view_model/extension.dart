@@ -37,16 +37,14 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }));
   }
 
-  VM getViewModel<VM extends ViewModel>({
-    String? key,
-    VM Function()? factory,
-  }) {
+  VM getViewModel<VM extends ViewModel>(
+      {required ViewModelFactory<VM> factory}) {
     if (_dispose) {
       throw StateError("state is disposed");
     }
-    key ??= _defaultViewModelKey;
+    String key = factory.key ?? _defaultViewModelKey;
     final res = _instanceController.getInstance<VM>(
-      factory: factory,
+      factory: () => factory.build(),
       key: key,
     );
     if (_stateListeners[res] != true) {

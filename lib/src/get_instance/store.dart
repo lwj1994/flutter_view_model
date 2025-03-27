@@ -8,7 +8,6 @@ import 'auto_dispose.dart';
 
 class Store<T> {
   final Map<String, InstanceNotifier<T>> _instances = {};
-  final Map<String, List<String>> _watchers = {};
 
   void _listenDispose(InstanceNotifier<T> notifier) {
     void onNotify() {
@@ -18,7 +17,6 @@ class Store<T> {
         case InstanceAction.dispose:
           viewModelLog("remove $T ${notifier.key}");
           _instances.remove(notifier.key);
-          _watchers.remove(notifier.key);
           notifier.tryCallInstanceDispose();
           notifier.removeListener(onNotify);
           notifier.clear();
@@ -31,13 +29,6 @@ class Store<T> {
     notifier.addListener(onNotify);
   }
 
-  List<String> _getWaters(String key) {
-    List<String>? s = _watchers[key];
-    s ??= List.empty();
-    _watchers[key] = s;
-    return s;
-  }
-
   /// 根据 key 和工厂函数创建并存储实例
   InstanceNotifier<T> getNotifier({
     String? key,
@@ -46,20 +37,15 @@ class Store<T> {
     String? watchId,
   }) {
     final realKey = key ?? const UuidV4().generate();
-    final newWatcher =
-        watchId != null && !_getWaters(realKey).contains(watchId);
-    if (newWatcher) {
-      _watchers[realKey] = _getWaters(realKey).toList()..add(watchId);
-    }
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
-      viewModelLog("hit cache $T $realKey");
       final notifier = _instances[realKey]!;
+      final newWatcher =
+          watchId != null && !notifier.watchIds.contains(watchId);
       if (newWatcher) {
         notifier.addWatcher(watchId);
         viewModelLog(
-            "$T $realKey add watcher ${watchId}, all ${_watchers[realKey]}");
+            "hit cache $T $realKey, watchId $watchId, all ${notifier.watchIds}");
       }
-
       return notifier;
     }
 
@@ -79,7 +65,7 @@ class Store<T> {
       create.addWatcher(watchId);
     }
     _instances[realKey] = create;
-    viewModelLog("create $T $realKey watcher $watchId");
+    viewModelLog("create new $T $realKey, watchId $watchId");
     _listenDispose(create);
     return create;
   }

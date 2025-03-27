@@ -14,7 +14,7 @@ part of 'route.dart';
 /// [MyHomePage]
 class MyHomeRoute extends PageRouteInfo<void> {
   const MyHomeRoute({List<PageRouteInfo>? children})
-    : super(MyHomeRoute.name, initialChildren: children);
+      : super(MyHomeRoute.name, initialChildren: children);
 
   static const String name = 'MyHomeRoute';
 
@@ -30,11 +30,11 @@ class MyHomeRoute extends PageRouteInfo<void> {
 /// [SecondPage]
 class SecondRoute extends PageRouteInfo<SecondRouteArgs> {
   SecondRoute({required String id, Key? key, List<PageRouteInfo>? children})
-    : super(
-        SecondRoute.name,
-        args: SecondRouteArgs(id: id, key: key),
-        initialChildren: children,
-      );
+      : super(
+          SecondRoute.name,
+          args: SecondRouteArgs(id: id, key: key),
+          initialChildren: children,
+        );
 
   static const String name = 'SecondRoute';
 
