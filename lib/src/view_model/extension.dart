@@ -7,13 +7,14 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
-  late final instanceController = AutoDisposeInstanceController(onRecreate: () {
+  late final _instanceController =
+      AutoDisposeInstanceController(onRecreate: () {
     setState(() {});
   });
   final Map<ViewModel, bool> _stateListeners = {};
 
   final _defaultViewModelKey = const UuidV4().generate();
-
+  final List<Function()> _disposes = [];
   bool _init = false;
   bool _dispose = false;
 
@@ -29,6 +30,13 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     setState(() {});
   }
 
+  void listenViewModelStateChanged<VM extends ViewModel<S>, S>(VM vm,
+      {required Function(S? p, S n) onChange}) {
+    _disposes.add(vm.listen((s) {
+      onChange(vm.previousState, s);
+    }));
+  }
+
   VM getViewModel<VM extends ViewModel>({
     String? key,
     VM Function()? factory,
@@ -37,7 +45,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       throw StateError("state is disposed");
     }
     key ??= _defaultViewModelKey;
-    final res = instanceController.getInstance<VM>(
+    final res = _instanceController.getInstance<VM>(
       factory: factory,
       key: key,
     );
@@ -59,7 +67,10 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   void dispose() {
     _dispose = true;
     _stateListeners.clear();
-    instanceController.dispose();
+    _instanceController.dispose();
+    for (var e in _disposes) {
+      e.call();
+    }
     super.dispose();
   }
 }

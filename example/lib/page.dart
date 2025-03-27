@@ -22,12 +22,30 @@ class SecondPage extends StatefulWidget {
 
 class _State extends State<SecondPage> with ViewModelStateMixin {
   MyViewModel get viewModel => getViewModel<MyViewModel>(factory: () {
-    return MyViewModel(state: 'state', id: 'id');
-  });
+        return MyViewModel(state: 'state', id: 'id');
+      });
 
   MainViewModel get _mainViewModel => getViewModel<MainViewModel>(key: "share");
 
   String get state => viewModel.state;
+
+  @override
+  void initState() {
+    super.initState();
+    listenViewModelStateChanged<MainViewModel, String>(
+      _mainViewModel,
+      onChange: (String? p, String n) {
+        print("mainViewModel state change $p -> $n");
+      },
+    );
+
+    listenViewModelStateChanged<MyViewModel, String>(
+      viewModel,
+      onChange: (String? p, String n) {
+        print("myViewModel state change $p -> $n");
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +104,6 @@ class MyViewModel extends ViewModel<String> {
     super.dispose();
     debugPrint("dispose ViewModel $id $hashCode");
   }
-
 
   void setId() {
     setState((s) async {
