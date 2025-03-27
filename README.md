@@ -145,23 +145,16 @@ but you must use getter to getViewModel or you need reset _mainViewModel.
 // you'd better use getter to get ViewModel
 MyViewModel get viewModel => getViewModel<MyViewModel>();
 // refresh 
-refreshViewModel(_mainViewModel);
+refreshViewModel(viewModel);
 ```
 
 or
 
 ```dart
 
-late MyViewModel viewModel = getViewModel<MyViewModel>();
+late MyViewModel viewModel = getViewModel<MyViewModel>(factory:factory);
 
 // refresh and reset 
-refreshViewModel(_mainViewModel);
-viewModel = getViewModel<MyViewModel>
-(
-key
-:
-"
-key
-"
-);
+refreshViewModel(viewModel);
+viewModel = getViewModel<MyViewModel>(factory:factory);
 ```
