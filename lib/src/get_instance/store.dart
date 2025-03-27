@@ -5,7 +5,6 @@ import 'package:uuid/v4.dart';
 import 'package:view_model/src/log.dart';
 
 import 'auto_dispose.dart';
-import 'manager.dart';
 
 class Store<T> {
   final Map<String, InstanceNotifier<T>> _instances = {};
@@ -23,6 +22,8 @@ class Store<T> {
           notifier.tryCallInstanceDispose();
           notifier.removeListener(onNotify);
           notifier.clear();
+          break;
+        case InstanceAction.recreate:
           break;
       }
     }
@@ -139,6 +140,7 @@ class InstanceNotifier<T> with ChangeNotifier {
   T recreate() {
     tryCallInstanceDispose();
     _instance = factory.call();
+    _action = InstanceAction.recreate;
     return instance;
   }
 
@@ -150,4 +152,5 @@ class InstanceNotifier<T> with ChangeNotifier {
 
 enum InstanceAction {
   dispose,
+  recreate,
 }

@@ -8,6 +8,10 @@ import 'store.dart';
 class AutoDisposeInstanceController {
   final List<InstanceNotifier> _instanceNotifiers = List.empty(growable: true);
   final watchId = const UuidV4().generate();
+  final Function() onRecreate;
+  final Map<Object, bool> _notifierListeners = {};
+
+  AutoDisposeInstanceController({required this.onRecreate});
 
   T getInstance<T>({
     String? key,
@@ -19,6 +23,20 @@ class AutoDisposeInstanceController {
       watchId: watchId,
     );
     _instanceNotifiers.add(notifier);
+
+    if (_notifierListeners[notifier] != true) {
+      notifier.addListener(() {
+        switch (notifier.action) {
+          case null:
+            break;
+          case InstanceAction.dispose:
+            break;
+          case InstanceAction.recreate:
+            onRecreate.call();
+            break;
+        }
+      });
+    }
     return notifier.instance;
   }
 

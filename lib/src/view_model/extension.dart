@@ -7,7 +7,9 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
-  final instanceController = AutoDisposeInstanceController();
+  late final instanceController = AutoDisposeInstanceController(onRecreate: () {
+    setState(() {});
+  });
   final Map<ViewModel, bool> _stateListeners = {};
 
   final _defaultViewModelKey = const UuidV4().generate();
