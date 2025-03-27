@@ -3,6 +3,7 @@
 * Simple and lightweight ViewModel designed specifically for Flutter
 * No any magic, just base on StreamController and setState
 * Auto dispose. it will auto follow State's dispose
+* Unbind BuildContext, unbind Widget tree
 * SetState all Widget tree. but don't care this. because Widget tree just a configuration, no performance cost.
 
 ```dart
@@ -84,6 +85,21 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
     );
   }
 }
+```
+
+## listen changed
+
+```dart
+  @override
+  void initState() {
+    super.initState();
+    listenViewModelStateChanged<MainViewModel, String>(
+      _mainViewModel,
+      onChange: (String? p, String n) {
+        print("mainViewModel state change $p -> $n");
+      },
+    );
+  }
 ```
 
 ## refresh viewModel
