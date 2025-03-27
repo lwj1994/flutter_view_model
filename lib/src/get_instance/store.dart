@@ -5,6 +5,7 @@ import 'package:uuid/v4.dart';
 import 'package:view_model/src/log.dart';
 
 import 'auto_dispose.dart';
+import 'manager.dart';
 
 class Store<T> {
   final Map<String, InstanceNotifier<T>> _instances = {};
@@ -29,14 +30,9 @@ class Store<T> {
     notifier.addListener(onNotify);
   }
 
-  /// 根据 key 和工厂函数创建并存储实例
-  InstanceNotifier<T> getNotifier({
-    String? key,
-    T Function()? factory,
-    Object? extra,
-    String? watchId,
-  }) {
-    final realKey = key ?? const UuidV4().generate();
+  InstanceNotifier<T> getNotifier({required InstanceFactory<T> factory}) {
+    final realKey = factory.key ?? const UuidV4().generate();
+    final watchId = factory.watchId;
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
       final newWatcher =
@@ -49,17 +45,16 @@ class Store<T> {
       return notifier;
     }
 
-    if (factory == null) {
+    if (factory.builder == null) {
       throw StateError("factory == null and cache is null");
     }
 
     // new create
-    final instance = factory();
-    final create = InstanceNotifier(
+    final instance = factory.builder!();
+    final create = InstanceNotifier<T>(
       instance: instance,
       key: realKey,
-      extra: extra,
-      factory: factory,
+      factory: factory.builder!,
     );
     if (watchId != null) {
       create.addWatcher(watchId);
@@ -79,7 +74,6 @@ class Store<T> {
 class InstanceNotifier<T> with ChangeNotifier {
   final String key;
   final List<String> watchIds = List.empty(growable: true);
-  final Object? extra;
   final T Function() factory;
 
   T get instance => _instance!;
@@ -89,7 +83,6 @@ class InstanceNotifier<T> with ChangeNotifier {
   InstanceNotifier({
     required T instance,
     required this.key,
-    this.extra,
     required this.factory,
   }) : _instance = instance;
 

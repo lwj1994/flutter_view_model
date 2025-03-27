@@ -15,14 +15,12 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
 
   final _defaultViewModelKey = const UuidV4().generate();
   final List<Function()> _disposes = [];
-  bool _init = false;
   bool _dispose = false;
 
   @override
   @mustCallSuper
   void initState() {
     super.initState();
-    _init = true;
   }
 
   void refreshViewModel<VM extends ViewModel>(VM vm) {
@@ -44,8 +42,10 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
     String key = factory.key() ?? _defaultViewModelKey;
     final res = _instanceController.getInstance<VM>(
-      factory: () => factory.build(),
-      key: key,
+      factory: InstanceFactory(
+        key: key,
+        builder: () => factory.build(),
+      ),
     );
     if (_stateListeners[res] != true) {
       res.listen((state) async {

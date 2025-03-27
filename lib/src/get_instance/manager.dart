@@ -26,29 +26,49 @@ class InstanceManager {
   }
 
   T get<T>({
-    String? key,
-    T Function()? factory,
-    Object? extra,
-    String? watchId,
+    required InstanceFactory<T> factory,
   }) {
     return _getStore<T>()
         .getNotifier(
-          key: key,
           factory: factory,
-          extra: extra,
         )
         .instance;
   }
 
   InstanceNotifier getNotifier<T>({
-    String? key,
-    T Function()? factory,
-    String? watchId,
+    required InstanceFactory<T> factory,
   }) {
     return _getStore<T>().getNotifier(
-      key: key,
       factory: factory,
-      watchId: watchId,
     );
+  }
+}
+
+class InstanceFactory<T> {
+  final T Function()? builder;
+  final String? key;
+  final String? watchId;
+
+  InstanceFactory({
+    this.builder,
+    this.key,
+    this.watchId,
+  });
+
+  InstanceFactory copyWith({
+    T Function()? factory,
+    String? key,
+    String? watchId,
+  }) {
+    return InstanceFactory(
+      builder: factory ?? this.builder,
+      key: key ?? this.key,
+      watchId: watchId ?? this.watchId,
+    );
+  }
+
+  @override
+  String toString() {
+    return '$T InstanceFactory{factory: $builder, key: $key, watchId: $watchId}';
   }
 }

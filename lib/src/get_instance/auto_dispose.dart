@@ -15,13 +15,12 @@ class AutoDisposeInstanceController {
   AutoDisposeInstanceController({required this.onRecreate});
 
   T getInstance<T>({
-    String? key,
-    T Function()? factory,
+    required InstanceFactory<T> factory,
   }) {
     final notifier = instanceManager.getNotifier(
-      key: key,
-      factory: factory,
-      watchId: watchId,
+      factory: factory.copyWith(
+        watchId: watchId,
+      ),
     );
     if (_notifierListeners[notifier] != true) {
       _notifierListeners[notifier] = true;
@@ -33,7 +32,7 @@ class AutoDisposeInstanceController {
           case InstanceAction.dispose:
             break;
           case InstanceAction.recreate:
-            viewModelLog("$T $key recreate call $watchId refresh");
+            viewModelLog("recreate $factory");
             onRecreate.call();
             break;
         }
