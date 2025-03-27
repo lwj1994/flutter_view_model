@@ -2,6 +2,7 @@
 
 * Simple and lightweight ViewModel designed specifically for Flutter
 * No any magic, just base on StreamController and setState
+* Auto dispose. it will auto follow State's dispose
 * SetState all Widget tree. but don't care this. because Widget tree just a configuration, no performance cost.
 
 ```dart
