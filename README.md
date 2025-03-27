@@ -3,8 +3,13 @@
 * Simple and lightweight ViewModel designed specifically for Flutter
 * No any magic, just base on StreamController and setState
 * Auto dispose. it will auto follow State's dispose
+* Share viewModel in anyWhere.
 * Unbind BuildContext, unbind Widget tree
-* SetState all Widget tree. but don't care this. because Widget tree just a configuration, no performance cost.
+* SetState all Widget tree. but don't care this. because Widget tree just a configuration, no
+  performance cost.
+
+__view_model only bind to StatefulWidget's `State`. we don't recommend to bind state to StatelessWidget.
+StatelessWidget shouldn't have state.__
 
 ```dart
 class MyViewModel extends ViewModel<String> {
@@ -38,10 +43,6 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   MyViewModel build() {
     return MyViewModel(state: arg);
   }
-
-  // share same viewModel instance with key. if null will not share
-  @override
-  String? get key => null;
 }
 ```
 
@@ -97,25 +98,48 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 }
 ```
 
+## Share ViewModel
+
+you can set `unique() => true` to share same ViewModel instance in any StateWidget.
+
+```dart
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  final String arg;
+
+  MyViewModelFactory({this.arg = ""});
+
+  @override
+  MyViewModel build() {
+    return MyViewModel(state: arg);
+  }
+
+  // if true will share same viewModel instance.  
+  @override
+  bool unique() => false;
+}
+
+```
+
 ## listen changed
 
 ```dart
   @override
-  void initState() {
-    super.initState();
-    listenViewModelStateChanged<MainViewModel, String>(
-      _mainViewModel,
-      onChange: (String? p, String n) {
-        print("mainViewModel state change $p -> $n");
-      },
-    );
-  }
+void initState() {
+  super.initState();
+  listenViewModelStateChanged<MainViewModel, String>(
+    _mainViewModel,
+    onChange: (String? p, String n) {
+      print("mainViewModel state change $p -> $n");
+    },
+  );
+}
 ```
 
 ## refresh viewModel
 
 this will dispose old _mainViewModel and recreate a new _mainViewModel.
 but you must use getter to getViewModel or you need reset _mainViewModel.
+
 ```dart
 
 // you'd better use getter to get ViewModel
@@ -124,13 +148,20 @@ MyViewModel get viewModel => getViewModel<MyViewModel>();
 refreshViewModel(_mainViewModel);
 ```
 
-or 
+or
 
 ```dart
 
-late MyViewModel  viewModel = getViewModel<MyViewModel>();
+late MyViewModel viewModel = getViewModel<MyViewModel>();
 
 // refresh and reset 
 refreshViewModel(_mainViewModel);
-viewModel = getViewModel<MyViewModel>(key: "key");
+viewModel = getViewModel<MyViewModel>
+(
+key
+:
+"
+key
+"
+);
 ```
