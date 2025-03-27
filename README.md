@@ -17,6 +17,8 @@ StatelessWidget shouldn't have state.__
 * getViewModel:  create or get exit ViewModel
 * listenViewModelStateChanged: listen state change in Widget.State
 
+
+## usage
 ```dart
 class MyViewModel extends ViewModel<String> {
 
