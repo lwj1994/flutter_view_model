@@ -50,10 +50,14 @@ class Store<T> {
       _watchers[realKey] = _getWaters(realKey).toList()..add(watchId);
     }
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
+      viewModelLog("hit cache $T $realKey");
       final notifier = _instances[realKey]!;
       if (watchId != null) {
         notifier.addWatcher(watchId);
+        viewModelLog(
+            "$T $realKey add watcher ${watchId}, all ${_watchers[realKey]}");
       }
+
       return notifier;
     }
 
