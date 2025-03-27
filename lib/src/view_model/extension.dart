@@ -42,7 +42,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     if (_dispose) {
       throw StateError("state is disposed");
     }
-    String key = factory.key ?? _defaultViewModelKey;
+    String key = factory.key() ?? _defaultViewModelKey;
     final res = _instanceController.getInstance<VM>(
       factory: () => factory.build(),
       key: key,

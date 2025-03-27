@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart' as vm;
 import 'package:view_model/view_model.dart';
 
+import 'other/view_model.dart' as mainvm2;
 import 'route.dart';
 
 void main() {
@@ -69,6 +70,15 @@ class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
   MainViewModel get _viewModel =>
       getViewModel<MainViewModel>(factory: MainViewModelFactory(arg: "1"));
 
+  mainvm2.MainViewModel get _viewModel2 => getViewModel<mainvm2.MainViewModel>(
+        factory: mainvm2.MainViewModelFactory(arg: "mainvm2"),
+      );
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,6 +86,7 @@ class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
       body: Column(
         children: [
           Text("main vm state:${_viewModel.state}"),
+          Text("main vm2 state:${_viewModel2.state}"),
           FilledButton(
               onPressed: () {
                 appRouter
@@ -93,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
   }
 }
 
-class MainViewModelFactory implements vm.ViewModelFactory<MainViewModel> {
+class MainViewModelFactory with vm.ViewModelFactory<MainViewModel> {
   final String arg;
 
   MainViewModelFactory({this.arg = ""});
@@ -104,7 +115,9 @@ class MainViewModelFactory implements vm.ViewModelFactory<MainViewModel> {
   }
 
   @override
-  String? get key => "share";
+  bool unique() {
+    return true;
+  }
 }
 
 class MainViewModel extends ViewModel<String> {

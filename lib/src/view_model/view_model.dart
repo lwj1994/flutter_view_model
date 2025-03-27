@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/log.dart';
 
@@ -77,7 +78,14 @@ class AutoDisposeController {
 }
 
 mixin ViewModelFactory<T> {
-  final String? key = null;
+  static final _uniqueId = const UuidV4().generate();
+
+  /// if you want to set your key. unique() must be false
+  /// uniqueId dependency on T. so T's name must unique
+  String? key() => unique() ? _uniqueId : null;
 
   T build();
+
+  /// if true, key will auto set a unique id
+  bool unique() => false;
 }
