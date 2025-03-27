@@ -28,9 +28,12 @@ class ViewModel<T> implements InstanceDispose {
 
   bool _isDisposed = false;
 
+  late final T initState;
+
   bool get isDisposed => _isDisposed;
 
   ViewModel({required T state}) {
+    initState = state;
     _store = ViewModelStateStore(
       initialState: state,
     );
