@@ -17,10 +17,11 @@ class AutoDisposeInstanceController {
   T getInstance<T>({
     required InstanceFactory<T> factory,
   }) {
+    factory = factory.copyWith(
+      watchId: watchId,
+    );
     final InstanceNotifier<T> notifier = instanceManager.getNotifier<T>(
-      factory: factory.copyWith(
-        watchId: watchId,
-      ),
+      factory: factory,
     );
     if (_notifierListeners[notifier] != true) {
       _notifierListeners[notifier] = true;
