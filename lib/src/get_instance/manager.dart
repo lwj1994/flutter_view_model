@@ -35,7 +35,7 @@ class InstanceManager {
         .instance;
   }
 
-  InstanceNotifier getNotifier<T>({
+  InstanceNotifier<T> getNotifier<T>({
     required InstanceFactory<T> factory,
   }) {
     return _getStore<T>().getNotifier(
@@ -55,12 +55,12 @@ class InstanceFactory<T> {
     this.watchId,
   });
 
-  InstanceFactory copyWith({
+  InstanceFactory<T> copyWith({
     T Function()? factory,
     String? key,
     String? watchId,
   }) {
-    return InstanceFactory(
+    return InstanceFactory<T>(
       builder: factory ?? this.builder,
       key: key ?? this.key,
       watchId: watchId ?? this.watchId,
@@ -69,6 +69,6 @@ class InstanceFactory<T> {
 
   @override
   String toString() {
-    return '$T InstanceFactory{factory: $builder, key: $key, watchId: $watchId}';
+    return '$T InstanceFactory{key: $key, watchId: $watchId}';
   }
 }

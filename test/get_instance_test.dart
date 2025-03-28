@@ -2,6 +2,7 @@ import 'dart:core';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/get_instance/store.dart';
 
 import 'test_model.dart';
 
@@ -47,9 +48,11 @@ void main() {
     test('dispose', () {
       final factory =
           InstanceFactory<TestModel>(builder: () => TestModel(), key: "share");
-      final a = instanceManager.getNotifier<TestModel>(factory: factory);
+      final InstanceNotifier<TestModel> a =
+          instanceManager.getNotifier<TestModel>(factory: factory);
+
       a.recycle();
-      final a1 = instanceManager.getNotifier<TestModel>(factory: factory);
+      final InstanceNotifier<TestModel> a1 = instanceManager.getNotifier<TestModel>(factory: factory);
       assert(a != a1);
     });
 
