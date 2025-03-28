@@ -3,6 +3,8 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:view_model/src/log.dart';
+
 class ViewModelStateStore<S> implements StateStore<S> {
   final StreamController<FutureOr<S> Function(S)> _setStateController =
       StreamController<FutureOr<S> Function(S)>();
@@ -27,6 +29,7 @@ class ViewModelStateStore<S> implements StateStore<S> {
     _subscription = _setStateController.stream.listen(
       (FutureOr<S> Function(S) reducer) async {
         _reducerQueue.add(reducer);
+        viewModelLog("${S} add reducer, total pending ${_reducerQueue.length}");
         if (!_isProcessing) {
           await _processNextReducer();
         }
@@ -41,8 +44,11 @@ class ViewModelStateStore<S> implements StateStore<S> {
     }
     _isProcessing = true;
     final reducer = _reducerQueue.removeFirst();
+    viewModelLog(
+        "${S} process first reducer, remain pending length ${_reducerQueue.length}");
     final newState = await reducer(_state);
     if (newState == _state) {
+      viewModelLog("${S} ignore same state $_state");
       //
     } else {
       _previousState = _state;
