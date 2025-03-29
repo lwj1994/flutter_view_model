@@ -1,25 +1,32 @@
 # view_model
 
-* Simple and lightweight ViewModel designed specifically for Flutter
-* No any magic, just base on StreamController and setState
-* Auto dispose. it will auto follow State's dispose
-* Share viewModel in anyWhere.
-* Unbind BuildContext, unbind Widget tree
-* SetState all Widget tree. but don't care this. because Widget tree just a configuration, no
-  performance cost.
+* Simple & lightweight.
+* No magic, based on StreamController and setState.
+* Auto-disposes, following State's dispose..
+* Shareable across any StatefulWidgets.
 
-__view_model only bind to StatefulWidget's `State`. we don't recommend to bind state to StatelessWidget.
-StatelessWidget shouldn't have state.__
+> The ViewModel only binds to the State of a StatefulWidget. We do not recommend binding the state
+> to a StatelessWidget as a StatelessWidget should not have state.
 
 ## core concept
-* ViewModel: state store and notify state changing
-* ViewModelFactory:  tell us how to create your ViewModel
-* getViewModel:  create or get exit ViewModel
-* listenViewModelStateChanged: listen state change in Widget.State
 
+* ViewModel: Stores the state and notifies of state changes.
+* ViewModelFactory: Instructs how to create your ViewModel.
+* getViewModel: Creates or retrieves an existing ViewModel.
+* listenViewModelStateChanged: Listens for state changes within the Widget.State.
 
 ## usage
+
+```yaml
+  view_model:
+    git:
+      url: https://github.com/lwj1994/flutter_view_model
+      ref: 0.0.1
+```
+
 ```dart
+import "package:view_model/view_model.dart";
+
 class MyViewModel extends ViewModel<String> {
 
   MyViewModel({
@@ -55,6 +62,8 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 ```
 
 ```dart
+import "package:view_model/view_model.dart";
+
 class _State extends State<Page> with ViewModelStateMixin<Page> {
   // you'd better use getter to get ViewModel
   MyViewModel get viewModel =>
@@ -111,6 +120,8 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 you can set `unique() => true` to share same ViewModel instance in any StateWidget.
 
 ```dart
+import "package:view_model/view_model.dart";
+
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   final String arg;
 
@@ -160,9 +171,14 @@ or
 
 ```dart
 
-late MyViewModel viewModel = getViewModel<MyViewModel>(factory:factory);
+late MyViewModel viewModel = getViewModel<MyViewModel>(factory: factory);
 
 // refresh and reset 
 refreshViewModel(viewModel);
-viewModel = getViewModel<MyViewModel>(factory:factory);
+viewModel = getViewModel<MyViewModel>
+(
+factory
+:
+factory
+);
 ```
