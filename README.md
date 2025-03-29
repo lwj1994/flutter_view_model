@@ -117,7 +117,7 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 
 ## Share ViewModel
 
-you can set `unique() => true` to share same ViewModel instance in any StateWidget.
+You can set unique() => true to share the same ViewModel instance across any StateWidget.
 
 ```dart
 import "package:view_model/view_model.dart";
@@ -139,7 +139,7 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 
 ```
 
-## listen changed
+## Listening for Changes
 
 ```dart
   @override
@@ -154,17 +154,20 @@ void initState() {
 }
 ```
 
-## refresh viewModel
+## Refreshing the ViewModel
 
-this will dispose old _mainViewModel and recreate a new _mainViewModel.
-but you must use getter to getViewModel or you need reset _mainViewModel.
+This will dispose of the old viewModel and create a new one. However, It is recommended to use a getter to
+obtain the ViewModel, or you need to reset viewModel.
 
 ```dart
-
-// you'd better use getter to get ViewModel
+// It is recommended to use a getter to obtain the ViewModel.
 MyViewModel get viewModel => getViewModel<MyViewModel>();
-// refresh 
-refreshViewModel(viewModel);
+
+refresh() {
+  // refresh 
+  refreshViewModel(viewModel);
+}
+
 ```
 
 or
@@ -173,12 +176,10 @@ or
 
 late MyViewModel viewModel = getViewModel<MyViewModel>(factory: factory);
 
-// refresh and reset 
-refreshViewModel(viewModel);
-viewModel = getViewModel<MyViewModel>
-(
-factory
-:
-factory
-);
+refresh() {
+  // refresh and reset 
+  refreshViewModel(viewModel);
+  viewModel = getViewModel<MyViewModel>(factory: factory);
+}
+
 ```
