@@ -1,10 +1,10 @@
 # view_model
 
-[中文文档](README_ZH.md)[]
+[中文文档](README_ZH.md)
 
 * Simple & lightweight.
 * No magic, based on StreamController and setState.
-* Auto-disposes, following State's dispose..
+* Auto-disposes, following State's dispose.
 * Shareable across any StatefulWidgets.
 
 > The ViewModel only binds to the State of a StatefulWidget. We do not recommend binding the state
