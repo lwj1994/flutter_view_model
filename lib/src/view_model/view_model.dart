@@ -49,8 +49,14 @@ class ViewModel<T> implements InstanceDispose {
   }
 
   @protected
-  void setState(FutureOr<T> Function(T state) reducer) {
-    _store.set(reducer);
+  void setState(
+    FutureOr<T> Function(T state) reducer, {
+    Object? tag,
+  }) {
+    _store.set(Reducer(
+      builder: reducer,
+      tag: tag,
+    ));
   }
 
   T? get previousState {

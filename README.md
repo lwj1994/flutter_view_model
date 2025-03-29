@@ -117,6 +117,37 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 }
 ```
 
+## Set Reducer
+
+the viewModel receive a reducer to push state.
+
+[state0] -> [Reducer1] -> [state1] -> [Reducer2] -> [state2] ...
+
+the state is sorted by the order of the reducer.
+
+so you can set 2 reducer one by one. it will be sorted by the order of the reducer.
+
+```dart
+import "package:view_model/view_model.dart";
+
+class MyViewModel extends ViewModel {
+
+  void setNewStates() {
+    setState((s) async {
+      await Future.delayed(const Duration(seconds: 1));
+      return "1";
+    });
+
+    setState((s) {
+      return "2";
+    });
+  }
+}
+```
+
+though the first reducer is async and delay 1s, the state is sorted by the order of the reducer.
+states will be [1] -> [2]
+
 ## Share ViewModel
 
 You can set unique() => true to share the same ViewModel instance across any StateWidget.
@@ -186,3 +217,7 @@ refresh() {
 }
 
 ```
+
+## AsyncState
+
+

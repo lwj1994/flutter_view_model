@@ -13,6 +13,23 @@ void main() {
       viewModel = TestViewModel(state: "1");
     });
 
+    test("async_state tag", () async {
+      int c = 0;
+      viewModel.listenAsync((s) {
+        print(s.toString());
+        if (c == 0) assert(s is AsyncLoading  && s.tag == "tag");
+        if (c == 1) assert(s is AsyncSuccess && s.tag == "tag");
+        c++;
+      });
+
+      viewModel.setState((s) async {
+        await Future.delayed(const Duration(milliseconds: 2000));
+        return "2";
+      },tag: "tag");
+
+      await Future.delayed(const Duration(seconds: 2));
+    });
+
     test("reducer order", () async {
       int c = 0;
       viewModel.listen((s) {
@@ -50,7 +67,7 @@ void main() {
       });
 
       viewModel.setState((s) async {
-        await Future.delayed(Duration(milliseconds: 2000));
+        await Future.delayed(const Duration(milliseconds: 2000));
         return "2";
       });
 
@@ -104,5 +121,17 @@ void main() {
 
       await Future.delayed(const Duration(seconds: total));
     });
+
+
+
+
+
+
   });
+
+
+
+
+
+
 }

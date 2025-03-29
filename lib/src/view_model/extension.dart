@@ -100,61 +100,54 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
 }
 
 sealed class AsyncState<T> {
+  final Object? tag;
   final T? state;
 
-  AsyncState({this.state});
+  AsyncState({
+    this.state,
+    this.tag,
+  });
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AsyncState &&
           runtimeType == other.runtimeType &&
+          tag == other.tag &&
           state == other.state;
 
   @override
-  int get hashCode => state.hashCode;
+  int get hashCode => tag.hashCode ^ state.hashCode;
 }
 
 class AsyncLoading<T> extends AsyncState<T> {
-  AsyncLoading({super.state});
+  AsyncLoading({super.state, super.tag});
 
   @override
   String toString() {
-    return "AsyncLoading(${state})";
+    return "AsyncLoading(tag: $tag, state: $state)";
   }
 }
 
 class AsyncSuccess<T> extends AsyncState<T> {
   final bool changed;
 
-  AsyncSuccess({
-    required T state,
-    this.changed = true,
-  }) : super(state: state);
+  AsyncSuccess({required T state, this.changed = true, super.tag})
+      : super(state: state);
 
   @override
   String toString() {
-    return "AsyncSuccess(${state})";
+    return "AsyncSuccess(tag: $tag, state: $state)";
   }
 }
 
 class AsyncError<T> extends AsyncState<T> {
   final dynamic error;
 
-  AsyncError({this.error});
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AsyncError &&
-          runtimeType == other.runtimeType &&
-          error == other.error;
-
-  @override
-  int get hashCode => error.hashCode;
+  AsyncError({this.error, super.tag});
 
   @override
   String toString() {
-    return "AsyncError(${error})";
+    return "AsyncError(tag: $tag, error: $error)";
   }
 }
