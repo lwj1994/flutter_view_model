@@ -144,7 +144,7 @@ void main() {
     final state = testKey.currentState as TestPageState;
     final vm = state.getViewModel(factory: fc);
 
-    state.listenViewModelStateChanged(vm, onChange: (p, n) {
+    state.listenViewModelState(vm, onChange: (p, n) {
       print(vm.state);
       assert(vm.state == "newState");
     });

@@ -28,11 +28,16 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     setState(() {});
   }
 
-  void listenViewModelStateChanged<VM extends ViewModel<S>, S>(VM vm,
+  void listenViewModelState<VM extends ViewModel<S>, S>(VM vm,
       {required Function(S? p, S n) onChange}) {
     _disposes.add(vm.listen((s) {
       onChange(vm.previousState, s);
     }));
+  }
+
+  void listenViewModelAsyncState<VM extends ViewModel<S>, S>(VM vm,
+      {required Function(AsyncState<S>) onChange}) {
+    _disposes.add(vm.listenAsync(onChange));
   }
 
   VM getViewModel<VM extends ViewModel>({
@@ -56,6 +61,26 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
           if (_dispose) return;
         }
         setState(() {});
+      });
+
+      res.listenAsync((as) async {
+        if (_dispose) return;
+        while (!context.mounted) {
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (_dispose) return;
+        }
+
+        switch (as) {
+          case AsyncLoading():
+            setState(() {});
+            break;
+          case AsyncSuccess():
+            // ignore success
+            break;
+          case AsyncError():
+            setState(() {});
+            break;
+        }
       });
     }
     return res;
@@ -90,23 +115,46 @@ sealed class AsyncState<T> {
   int get hashCode => state.hashCode;
 }
 
-class AsyncSuccess<T> extends AsyncState<T> {
-  AsyncSuccess({required T state}) : super(state: state);
+class AsyncLoading<T> extends AsyncState<T> {
+  AsyncLoading({super.state});
+
+  @override
+  String toString() {
+    return "AsyncLoading(${state})";
+  }
 }
 
-class AsyncError<T, E> extends AsyncState<T> {
-  final E? error;
+class AsyncSuccess<T> extends AsyncState<T> {
+  final bool changed;
 
-  AsyncError({super.state, this.error});
+  AsyncSuccess({
+    required T state,
+    this.changed = true,
+  }) : super(state: state);
+
+  @override
+  String toString() {
+    return "AsyncSuccess(${state})";
+  }
+}
+
+class AsyncError<T> extends AsyncState<T> {
+  final dynamic error;
+
+  AsyncError({this.error});
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AsyncError &&
           runtimeType == other.runtimeType &&
-          state == other.state &&
           error == other.error;
 
   @override
-  int get hashCode => error.hashCode ^ state.hashCode;
+  int get hashCode => error.hashCode;
+
+  @override
+  String toString() {
+    return "AsyncError(${error})";
+  }
 }
