@@ -73,3 +73,40 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     super.dispose();
   }
 }
+
+sealed class AsyncState<T> {
+  final T? state;
+
+  AsyncState({this.state});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncState &&
+          runtimeType == other.runtimeType &&
+          state == other.state;
+
+  @override
+  int get hashCode => state.hashCode;
+}
+
+class AsyncSuccess<T> extends AsyncState<T> {
+  AsyncSuccess({required T state}) : super(state: state);
+}
+
+class AsyncError<T, E> extends AsyncState<T> {
+  final E? error;
+
+  AsyncError({super.state, this.error});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncError &&
+          runtimeType == other.runtimeType &&
+          state == other.state &&
+          error == other.error;
+
+  @override
+  int get hashCode => error.hashCode ^ state.hashCode;
+}
