@@ -32,14 +32,14 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
   @override
   void initState() {
     super.initState();
-    listenViewModelStateChanged<MainViewModel, String>(
+    listenViewModelState<MainViewModel, String>(
       _mainViewModel,
       onChange: (String? p, String n) {
         print("mainViewModel state change $p -> $n");
       },
     );
 
-    listenViewModelStateChanged<MyViewModel, String>(
+    listenViewModelState<MyViewModel, String>(
       viewModel,
       onChange: (String? p, String n) {
         print("myViewModel state change $p -> $n");
@@ -49,6 +49,14 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    switch (viewModel.asyncState) {
+      case AsyncLoading<String>():
+        return const Center(child: CircularProgressIndicator());
+      case AsyncSuccess<String>():
+        break;
+      case AsyncError():
+        break;
+    }
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -115,6 +123,7 @@ class MyViewModel extends ViewModel<String> {
 
   void setId() {
     setState((s) async {
+      await Future.delayed(Duration(seconds: 1));
       return Random().nextInt(200).toString();
     });
   }

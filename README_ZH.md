@@ -10,7 +10,7 @@
 - `ViewModel`：存储状态并在状态改变时发出通知。
 - `ViewModelFactory`：指导如何创建你的`ViewModel`。
 - `getViewModel`：创建或获取已存在的`ViewModel`。
-- `listenViewModelStateChanged`：监听`Widget.State`内的状态变化。
+- `listenViewModelState`：监听`Widget.State`内的状态变化。
 
 ## 使用方法
 ### 添加依赖
@@ -138,7 +138,7 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 @override
 void initState() {
   super.initState();
-  listenViewModelStateChanged<MainViewModel, String>(
+  listenViewModelState<MainViewModel, String>(
     _mainViewModel,
     onChange: (String? p, String n) {
       print("mainViewModel状态变化: $p -> $n");

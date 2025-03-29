@@ -40,8 +40,46 @@ void main() {
       await Future.delayed(const Duration(seconds: 10));
     });
 
+    test("set_state success", () async {
+      int c = 0;
+      viewModel.listenAsync((s) {
+        print(s.toString());
+        if (c == 0) assert(s is AsyncLoading);
+        if (c == 1) assert(s is AsyncSuccess);
+        c++;
+      });
+
+      viewModel.setState((s) async {
+        await Future.delayed(Duration(milliseconds: 2000));
+        return "2";
+      });
+
+      await Future.delayed(const Duration(seconds: 2));
+    });
+
+    test("set_state error", () async {
+      int c = 0;
+      viewModel.listenAsync((s) {
+        print(s.toString());
+        if (c == 0) assert(s is AsyncLoading);
+        if (c == 1) assert(s is AsyncError);
+        c++;
+      });
+
+      viewModel.setState((s) async {
+        await Future.delayed(Duration(milliseconds: Random().nextInt(1000)));
+        throw Exception("test error");
+      });
+
+      await Future.delayed(const Duration(seconds: 2));
+    });
+
     test("batch_set_state", () async {
       const total = 100;
+      viewModel.listenAsync((s) {
+        print(s.toString());
+      });
+
       viewModel.listen((s) {
         print("${viewModel.previousState} -> $s");
 
@@ -52,6 +90,7 @@ void main() {
           );
         }
       });
+
       int size = total;
 
       while (size > 0) {

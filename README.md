@@ -15,7 +15,7 @@
 * ViewModel: Stores the state and notifies of state changes.
 * ViewModelFactory: Instructs how to create your ViewModel.
 * getViewModel: Creates or retrieves an existing ViewModel.
-* listenViewModelStateChanged: Listens for state changes within the Widget.State.
+* listenViewModelState: Listens for state changes within the Widget.State.
 
 ## usage
 
@@ -147,7 +147,7 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   @override
 void initState() {
   super.initState();
-  listenViewModelStateChanged<MainViewModel, String>(
+  listenViewModelState<MainViewModel, String>(
     _mainViewModel,
     onChange: (String? p, String n) {
       print("mainViewModel state change $p -> $n");

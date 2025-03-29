@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/log.dart';
+import 'package:view_model/src/view_model/extension.dart';
 
 import 'state_store.dart';
 
@@ -15,6 +16,14 @@ class ViewModel<T> implements InstanceDispose {
 
   Function() listen(Function(T state) block) {
     final s = _store.stateStream.listen((event) {
+      if (_isDisposed) return;
+      block.call(event);
+    });
+    return s.cancel;
+  }
+
+  Function() listenAsync(Function(AsyncState<T> state) block) {
+    final s = _store.asyncStateStream.listen((event) {
       if (_isDisposed) return;
       block.call(event);
     });
@@ -50,6 +59,10 @@ class ViewModel<T> implements InstanceDispose {
 
   T get state {
     return _store.state;
+  }
+
+  AsyncState<T> get asyncState {
+    return _store.asyncState;
   }
 
   @override
