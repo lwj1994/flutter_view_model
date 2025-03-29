@@ -35,11 +35,14 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }));
   }
 
-  void listenViewModelAsyncState<VM extends ViewModel<S>, S>(VM vm,
-      {required Function(AsyncState<S>) onChange}) {
+  void listenViewModelAsyncState<VM extends ViewModel<S>, S>(
+    VM vm, {
+    required Function(AsyncState<S>) onChange,
+  }) {
     _disposes.add(vm.listenAsync(onChange));
   }
 
+  /// [ViewModel] trigger rebuilding automatically.
   VM getViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
   }) {
@@ -75,7 +78,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
             setState(() {});
             break;
           case AsyncSuccess():
-            // ignore success
+            // ignore success because res.listen will trigger setState
             break;
           case AsyncError():
             setState(() {});

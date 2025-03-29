@@ -20,24 +20,29 @@ class SecondPage extends StatefulWidget {
   }
 }
 
+enum ReducerType {
+  add,
+  sub,
+}
+
 class _State extends State<SecondPage> with ViewModelStateMixin {
   MyViewModel get viewModel => getViewModel<MyViewModel>(
       factory: MyViewModelFactory(arg: "init MyViewModel"));
 
-  MainViewModel get _mainViewModel =>
-      getViewModel<MainViewModel>(factory: MainViewModelFactory());
+  // MainViewModel get _mainViewModel =>
+  //     getViewModel<MainViewModel>(factory: MainViewModelFactory());
 
   String get state => viewModel.state;
 
   @override
   void initState() {
     super.initState();
-    listenViewModelState<MainViewModel, String>(
-      _mainViewModel,
-      onChange: (String? p, String n) {
-        print("mainViewModel state change $p -> $n");
-      },
-    );
+    // listenViewModelState<MainViewModel, String>(
+    //   _mainViewModel,
+    //   onChange: (String? p, String n) {
+    //     print("mainViewModel state change $p -> $n");
+    //   },
+    // );
 
     listenViewModelState<MyViewModel, String>(
       viewModel,
@@ -45,13 +50,29 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
         print("myViewModel state change $p -> $n");
       },
     );
+
+    listenViewModelAsyncState<MyViewModel, String>(
+      viewModel,
+      onChange: (AsyncState<String> s) {
+        print("myViewModel asyncState change $s");
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    print("SecondPage trigger build(BuildContext context)");
     switch (viewModel.asyncState) {
       case AsyncLoading<String>():
-        return const Center(child: CircularProgressIndicator());
+        switch (viewModel.asyncState.tag as ReducerType?) {
+          case ReducerType.add:
+            return const Center(child: CircularProgressIndicator());
+            break;
+          case ReducerType.sub:
+            break;
+          case null:
+            break;
+        }
       case AsyncSuccess<String>():
         break;
       case AsyncError():
@@ -60,7 +81,7 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          viewModel.setId();
+          viewModel.setId(ReducerType.add);
         },
         child: Icon(Icons.add),
       ),
@@ -75,16 +96,16 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("mainViewModel.state = ${_mainViewModel.state}"),
+          // Text("mainViewModel.state = ${_mainViewModel.state}"),
           Text(
             "myViewModel state :$state",
             style: const TextStyle(color: Colors.red),
           ),
           FilledButton(
               onPressed: () async {
-                refreshViewModel(_mainViewModel);
+                refreshViewModel(viewModel);
               },
-              child: const Text("refresh mainViewModel")),
+              child: const Text("refresh viewModel")),
           FilledButton(
               onPressed: () {
                 debugPrint("page._viewModel hashCode = ${viewModel.hashCode}");
@@ -121,10 +142,10 @@ class MyViewModel extends ViewModel<String> {
     debugPrint("dispose ViewModel  $hashCode");
   }
 
-  void setId() {
+  void setId(ReducerType type) {
     setState((s) async {
-      await Future.delayed(Duration(seconds: 1));
+      // await Future.delayed(Duration(seconds: 1));
       return Random().nextInt(200).toString();
-    });
+    }, tag: type);
   }
 }
