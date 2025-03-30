@@ -9,10 +9,6 @@ import 'package:view_model/src/view_model/extension.dart';
 class ViewModelStateStore<S> implements StateStore<S> {
   final StreamController<Reducer<S>> _setStateController =
       StreamController<Reducer<S>>();
-  final StreamController<S> _stateStreamController = StreamController.broadcast(
-    onCancel: () {},
-    onListen: () {},
-  );
 
   final StreamController<AsyncState<S>> _asyncStateStreamController =
       StreamController.broadcast(
@@ -69,7 +65,6 @@ class ViewModelStateStore<S> implements StateStore<S> {
       } else {
         _previousState = _state;
         _state = newState;
-        _stateStreamController.add(newState);
         _asyncState = AsyncSuccess(
           state: newState,
           changed: true,
@@ -104,15 +99,11 @@ class ViewModelStateStore<S> implements StateStore<S> {
   S? get previousState => _previousState;
 
   void dispose() {
-    _stateStreamController.close();
     _asyncStateStreamController.close();
     _setStateController.close();
     _subscription?.cancel();
     _reducerQueue.clear();
   }
-
-  @override
-  Stream<S> get stateStream => _stateStreamController.stream;
 
   @override
   Stream<AsyncState<S>> get asyncStateStream =>
@@ -126,7 +117,6 @@ abstract class StateStore<S> {
   abstract final S state;
   abstract final AsyncState<S> asyncState;
   abstract final S? previousState;
-  abstract final Stream<S> stateStream;
   abstract final Stream<AsyncState<S>> asyncStateStream;
 
   void set(Reducer<S> reducer);

@@ -57,28 +57,21 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       ),
     );
     if (_stateListeners[res] != true) {
-      res.listen((state) async {
-        if (_dispose) return;
-        while (!context.mounted) {
-          await Future.delayed(const Duration(milliseconds: 50));
-          if (_dispose) return;
-        }
-        setState(() {});
-      });
-
       res.listenAsync((as) async {
         if (_dispose) return;
         while (!context.mounted) {
           await Future.delayed(const Duration(milliseconds: 50));
           if (_dispose) return;
         }
-
         switch (as) {
           case AsyncLoading():
             setState(() {});
             break;
           case AsyncSuccess():
-            // ignore success because res.listen will trigger setState
+            if (as.changed) {
+              setState(() {});
+            }
+            setState(() {});
             break;
           case AsyncError():
             setState(() {});

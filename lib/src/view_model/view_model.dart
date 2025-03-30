@@ -15,9 +15,19 @@ class ViewModel<T> implements InstanceDispose {
   late final ViewModelStateStore<T> _store;
 
   Function() listen(Function(T state) block) {
-    final s = _store.stateStream.listen((event) {
+    final s = _store.asyncStateStream.listen((event) {
       if (_isDisposed) return;
-      block.call(event);
+      switch (event) {
+        case AsyncLoading<T>():
+          break;
+        case AsyncSuccess<T>():
+          if (event.changed) {
+            block.call(event.state as T);
+          }
+          break;
+        case AsyncError<T>():
+          break;
+      }
     });
     return s.cancel;
   }
