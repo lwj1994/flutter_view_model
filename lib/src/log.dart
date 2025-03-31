@@ -3,6 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:view_model/view_model.dart';
 
 void viewModelLog(String s) {
-  if (!logEnable) return;
+  if (!ViewModel.logEnable) return;
   debugPrint("view_model:  $s");
 }

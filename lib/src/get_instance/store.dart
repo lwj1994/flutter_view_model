@@ -1,26 +1,25 @@
 // @author luwenjie on 2025/3/25 12:14:48
 
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/log.dart';
 
-import 'auto_dispose.dart';
 import 'manager.dart';
 
 class Store<T> {
-  final Map<String, InstanceNotifier<T>> _instances = {};
+  final _streamController = StreamController<InstanceHandle<T>>.broadcast();
+  final Map<String, InstanceHandle<T>> _instances = {};
 
-  void _listenDispose(InstanceNotifier<T> notifier) {
+  void _listenDispose(InstanceHandle<T> notifier) {
     void onNotify() {
       switch (notifier.action) {
         case null:
           break;
         case InstanceAction.dispose:
-          viewModelLog("remove $T ${notifier.key}");
           _instances.remove(notifier.key);
-          notifier.tryCallInstanceDispose();
           notifier.removeListener(onNotify);
-          notifier.clear();
           break;
         case InstanceAction.recreate:
           break;
@@ -30,17 +29,17 @@ class Store<T> {
     notifier.addListener(onNotify);
   }
 
-  InstanceNotifier<T> getNotifier({required InstanceFactory<T> factory}) {
+  InstanceHandle<T> getNotifier({required InstanceFactory<T> factory}) {
     final realKey = factory.key ?? const UuidV4().generate();
     final watchId = factory.watchId;
+
+    // cache
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
       final newWatcher =
           watchId != null && !notifier.watchIds.contains(watchId);
       if (newWatcher) {
-        notifier.addWatcher(watchId);
-        viewModelLog(
-            "hit cache $T $realKey, watchId $watchId, all ${notifier.watchIds}");
+        notifier.addNewWatcher(watchId);
       }
       return notifier;
     }
@@ -49,18 +48,15 @@ class Store<T> {
       throw StateError("factory == null and cache is null");
     }
 
-    // new create
+    // create new instance
     final instance = factory.builder!();
-    final create = InstanceNotifier<T>(
-      instance: instance,
-      key: realKey,
-      factory: factory.builder!,
-    );
-    if (watchId != null) {
-      create.addWatcher(watchId);
-    }
+    final create = InstanceHandle<T>(
+        instance: instance,
+        key: realKey,
+        factory: factory.builder!,
+        initWatchId: factory.watchId);
     _instances[realKey] = create;
-    viewModelLog("create new $T $realKey, watchId $watchId");
+    _streamController.add(create);
     _listenDispose(create);
     return create;
   }
@@ -71,8 +67,9 @@ class Store<T> {
   }
 }
 
-class InstanceNotifier<T> with ChangeNotifier {
+class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
   final String key;
+  final String? initWatchId;
   final List<String> watchIds = List.empty(growable: true);
   final T Function() factory;
 
@@ -80,20 +77,23 @@ class InstanceNotifier<T> with ChangeNotifier {
 
   late T? _instance;
 
-  InstanceNotifier({
+  InstanceHandle({
     required T instance,
     required this.key,
+    this.initWatchId,
     required this.factory,
-  }) : _instance = instance;
+  }) : _instance = instance {
+    onCreate(key, initWatchId);
+  }
 
-  void addWatcher(String id) {
-    if (watchIds.contains(id)) return;
+  void _addWatcher(String? id) {
+    if (watchIds.contains(id) || id == null) return;
     watchIds.add(id);
   }
 
   void removeWatcher(String id) {
     if (watchIds.remove(id)) {
-      viewModelLog("$T removeWatcher $id, $watchIds");
+      viewModelLog("$this remove Watcher($id)");
     }
     if (watchIds.isEmpty) {
       recycle();
@@ -104,39 +104,63 @@ class InstanceNotifier<T> with ChangeNotifier {
 
   InstanceAction? get action => _action;
 
-  @protected
-  @override
-  void dispose() {
-    super.dispose();
-    _instance = null;
-  }
-
   void recycle() {
     _action = InstanceAction.dispose;
     notifyListeners();
-  }
-
-  void tryCallInstanceDispose() {
-    if (_instance is InstanceDispose) {
-      (_instance as InstanceDispose).dispose();
-    }
+    onDispose();
   }
 
   T recreate() {
-    tryCallInstanceDispose();
+    onDispose();
     _instance = factory.call();
+    onCreate(key, initWatchId);
     _action = InstanceAction.recreate;
     notifyListeners();
     return instance;
   }
 
-  void clear() {
+  @override
+  String toString() {
+    return "InstanceHandle<$T>(key=$key, initWatchId=${initWatchId}, watchIds=${watchIds})";
+  }
+
+  @override
+  void onCreate(String key, String? watchId) {
+    if (_instance is InstanceLifeCycle) {
+      (_instance as InstanceLifeCycle).onCreate(key, watchId);
+    }
+    _addWatcher(watchId);
+    viewModelLog("$this onCreate");
+  }
+
+  void addNewWatcher(String id) {
+    _addWatcher(id);
+    viewModelLog("$this added New Watcher($id)");
+  }
+
+  void _tryCallInstanceDispose() {
+    if (_instance is InstanceLifeCycle) {
+      (_instance as InstanceLifeCycle).onDispose();
+    }
+  }
+
+  @override
+  void onDispose() {
+    _tryCallInstanceDispose();
+    _instance = null;
     watchIds.clear();
     _instance = null;
+    viewModelLog("$this onDispose");
   }
 }
 
 enum InstanceAction {
   dispose,
   recreate,
+}
+
+abstract interface class InstanceLifeCycle {
+  void onCreate(String key, String? watchId);
+
+  void onDispose();
 }

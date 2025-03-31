@@ -35,7 +35,7 @@ class InstanceManager {
         .instance;
   }
 
-  InstanceNotifier<T> getNotifier<T>({
+  InstanceHandle<T> getNotifier<T>({
     required InstanceFactory<T> factory,
   }) {
     return _getStore<T>().getNotifier(

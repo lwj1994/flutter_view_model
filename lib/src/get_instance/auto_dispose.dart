@@ -7,7 +7,7 @@ import 'manager.dart';
 import 'store.dart';
 
 class AutoDisposeInstanceController {
-  final List<InstanceNotifier> _instanceNotifiers = List.empty(growable: true);
+  final List<InstanceHandle> _instanceNotifiers = List.empty(growable: true);
   final watchId = const UuidV4().generate();
   final Function() onRecreate;
   final Map<Object, bool> _notifierListeners = {};
@@ -20,7 +20,7 @@ class AutoDisposeInstanceController {
     factory = factory.copyWith(
       watchId: watchId,
     );
-    final InstanceNotifier<T> notifier = instanceManager.getNotifier<T>(
+    final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
       factory: factory,
     );
     if (_notifierListeners[notifier] != true) {
@@ -33,7 +33,6 @@ class AutoDisposeInstanceController {
           case InstanceAction.dispose:
             break;
           case InstanceAction.recreate:
-            viewModelLog("recreate $factory");
             onRecreate.call();
             break;
         }
@@ -48,8 +47,4 @@ class AutoDisposeInstanceController {
     }
     _instanceNotifiers.clear();
   }
-}
-
-abstract class InstanceDispose {
-  void dispose();
 }

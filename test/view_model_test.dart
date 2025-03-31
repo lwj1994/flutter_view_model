@@ -9,7 +9,7 @@ void main() {
   group('view_model', () {
     late TestViewModel viewModel;
     setUp(() {
-      logEnable = false;
+      ViewModel.logEnable = false;
       viewModel = TestViewModel(state: "1");
     });
 

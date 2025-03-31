@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/src/view_model/view_model.dart';
 
 import 'test_widget.dart';
 
 void main() {
+  setUp(() {
+    ViewModel.logEnable = true;
+  });
   testWidgets('initState text', (tester) async {
     final testKey = GlobalKey();
     await tester.pumpWidget(MaterialApp(
@@ -153,5 +157,26 @@ void main() {
       assert(state == fc.initState);
       return "newState";
     });
+  });
+
+  testWidgets('refresh viewModel', (tester) async {
+    final testKey = GlobalKey();
+    final fc = TestViewModelFactory();
+    await tester.pumpWidget(MaterialApp(
+        home: Column(
+      children: [
+        TestPage(
+          key: testKey,
+          factory: fc,
+        ),
+      ],
+    )));
+    final state = testKey.currentState as TestPageState;
+    final vm = state.getViewModel(factory: fc);
+
+    state.refreshViewModel(vm);
+    final vm2 = state.getViewModel(factory: fc);
+
+    assert(vm != vm2);
   });
 }

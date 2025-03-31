@@ -4,13 +4,20 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
-import 'package:view_model/src/get_instance/auto_dispose.dart';
+import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/extension.dart';
 
 import 'state_store.dart';
 
-class ViewModel<T> implements InstanceDispose {
+class ViewModel<T> implements InstanceLifeCycle {
+  static bool logEnable = false;
+
+  static listenViewModelLifecycle() {
+    instanceManager;
+  }
+
   final _autoDisposeController = AutoDisposeController();
   late final ViewModelStateStore<T> _store;
 
@@ -81,11 +88,23 @@ class ViewModel<T> implements InstanceDispose {
     return _store.asyncState;
   }
 
-  @override
   void dispose() {
     _isDisposed = true;
     _autoDisposeController.dispose();
     _store.dispose();
+  }
+
+  @override
+  void onCreate(String key, String? watchId) {
+    viewModelLog(
+        "${this.runtimeType}<${T}>(key=$key,watchId=$watchId) onCreate");
+  }
+
+  @protected
+  @override
+  void onDispose() {
+    viewModelLog("${this.runtimeType}<${T}> onDispose");
+    dispose();
   }
 }
 
