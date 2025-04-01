@@ -47,14 +47,6 @@ class ViewModel<T> implements InstanceLifeCycle {
     return s.cancel;
   }
 
-  /// wait executing state complete
-  Future<T> ensureIdle() async {
-    if (asyncState is AsyncLoading) {
-      await Future.delayed(const Duration(milliseconds: 10));
-    }
-    return state;
-  }
-
   @protected
   void addDispose(Function() block) async {
     _autoDisposeController.addDispose(block);
@@ -88,8 +80,17 @@ class ViewModel<T> implements InstanceLifeCycle {
     return _store.previousState;
   }
 
+  /// provide for external use
   T get state {
     return _store.state;
+  }
+
+  /// wait executing state complete
+  Future<T> get idleState async {
+    if (asyncState is AsyncLoading) {
+      await Future.delayed(const Duration(milliseconds: 10));
+    }
+    return state;
   }
 
   AsyncState<T> get asyncState {
