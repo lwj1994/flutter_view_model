@@ -87,8 +87,8 @@ class ViewModel<T> implements InstanceLifeCycle {
 
   /// wait executing state complete
   Future<T> get idleState async {
-    if (asyncState is AsyncLoading) {
-      await Future.delayed(const Duration(milliseconds: 10));
+    while (_store.executingReducer != null) {
+      await Future.delayed(Duration.zero);
     }
     return state;
   }

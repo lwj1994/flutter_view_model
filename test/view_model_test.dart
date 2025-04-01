@@ -121,5 +121,38 @@ void main() {
 
       await Future.delayed(const Duration(seconds: total));
     });
+
+    test("idleState", () async {
+      viewModel.listenAsync((s) {
+        print(s.toString());
+      });
+
+      viewModel.setState((s) async {
+        return "2";
+      });
+      // normal state
+      assert(viewModel.state != "2");
+
+      final idleState = await viewModel.idleState;
+      assert(idleState == "2");
+
+      viewModel.setState((s) async {
+        return "3";
+      });
+      viewModel.setState((s) async {
+        return "4";
+      });
+
+      assert(viewModel.state == "2");
+      assert(await viewModel.idleState == "4");
+
+      viewModel.setState((s) async {
+        await Future.delayed(Duration(seconds: 3));
+        return "5";
+      });
+
+      assert(viewModel.state == "4");
+      assert(await viewModel.idleState == "5");
+    });
   });
 }
