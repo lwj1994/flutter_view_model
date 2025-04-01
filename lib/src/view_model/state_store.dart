@@ -111,12 +111,16 @@ class ViewModelStateStore<S> implements StateStore<S> {
 
   @override
   AsyncState<S> get asyncState => _asyncState;
+
+  @override
+  Queue<Reducer<S>> get pendingReducers => _reducerQueue;
 }
 
 abstract class StateStore<S> {
   abstract final S state;
   abstract final AsyncState<S> asyncState;
   abstract final S? previousState;
+  abstract final Queue<Reducer<S>> pendingReducers;
   abstract final Stream<AsyncState<S>> asyncStateStream;
 
   void set(Reducer<S> reducer);

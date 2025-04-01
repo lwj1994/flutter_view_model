@@ -47,6 +47,14 @@ class ViewModel<T> implements InstanceLifeCycle {
     return s.cancel;
   }
 
+  /// wait executing state complete
+  Future<T> ensureIdle() async {
+    if (asyncState is AsyncLoading) {
+      await Future.delayed(const Duration(milliseconds: 10));
+    }
+    return state;
+  }
+
   @protected
   void addDispose(Function() block) async {
     _autoDisposeController.addDispose(block);
