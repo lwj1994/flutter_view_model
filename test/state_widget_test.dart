@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/view_model.dart';
 
 import 'test_widget.dart';
 
@@ -148,15 +148,19 @@ void main() {
     final state = testKey.currentState as TestPageState;
     final vm = state.getViewModel(factory: fc);
 
+    var c = 0;
     state.listenViewModelState(vm, onChange: (p, n) {
       print(vm.state);
-      assert(vm.state == "newState");
+      if (c == 0) assert(vm.state == "2");
+      if (c == 1) assert(vm.state == "3");
     });
 
     vm.setState((state) {
       assert(state == fc.initState);
-      return "newState";
+      return AsyncSuccess(state: "2");
     });
+
+    vm.state = "3";
   });
 
   testWidgets('refresh viewModel', (tester) async {

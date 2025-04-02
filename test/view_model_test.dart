@@ -6,7 +6,7 @@ import 'package:view_model/view_model.dart';
 import 'test_widget.dart';
 
 void main() {
-  group('view_model', () {
+  group('view_model reducer', () {
     late TestViewModel viewModel;
     setUp(() {
       ViewModel.logEnable = false;
@@ -24,7 +24,7 @@ void main() {
 
       viewModel.setState((s) async {
         await Future.delayed(const Duration(milliseconds: 2000));
-        return "2";
+        return AsyncSuccess(state: "2");
       }, tag: "tag");
 
       await Future.delayed(const Duration(seconds: 2));
@@ -42,16 +42,16 @@ void main() {
 
       viewModel.setState((state) async {
         await Future.delayed(const Duration(seconds: 4));
-        return "2";
+        return AsyncSuccess(state: "2");
       });
 
       viewModel.setState((state) async {
         await Future.delayed(const Duration(seconds: 2));
-        return "3";
+        return AsyncSuccess(state: "3");
       });
 
       viewModel.setState((state) {
-        return "4";
+        return AsyncSuccess(state: "4");
       });
 
       await Future.delayed(const Duration(seconds: 10));
@@ -68,7 +68,7 @@ void main() {
 
       viewModel.setState((s) async {
         await Future.delayed(const Duration(milliseconds: 2000));
-        return "2";
+        return AsyncSuccess(state: "2");
       });
 
       await Future.delayed(const Duration(seconds: 2));
@@ -114,7 +114,7 @@ void main() {
         final s1 = size.toString();
         viewModel.setState((s) async {
           await Future.delayed(Duration(milliseconds: Random().nextInt(total)));
-          return s1;
+          return AsyncSuccess(state: s1);
         });
         size--;
       }
@@ -128,31 +128,76 @@ void main() {
       });
 
       viewModel.setState((s) async {
-        return "2";
+        return AsyncSuccess(state: "2");
       });
       // normal state
       assert(viewModel.state != "2");
 
-      final idleState = await viewModel.idleState;
+      final idleState = await viewModel.successState;
       assert(idleState == "2");
 
       viewModel.setState((s) async {
-        return "3";
+        return AsyncSuccess(state: "3");
       });
       viewModel.setState((s) async {
-        return "4";
+        return AsyncSuccess(state: "4");
       });
 
       assert(viewModel.state == "2");
-      assert(await viewModel.idleState == "4");
+      assert(await viewModel.successState == "4");
 
       viewModel.setState((s) async {
         await Future.delayed(Duration(seconds: 3));
-        return "5";
+        return AsyncSuccess(state: "5");
       });
 
       assert(viewModel.state == "4");
-      assert(await viewModel.idleState == "5");
+      assert(await viewModel.successState == "5");
+    });
+  });
+
+  group('view_model setter state', () {
+    late TestViewModel viewModel;
+    setUp(() {
+      ViewModel.logEnable = false;
+      viewModel = TestViewModel(state: "1");
+    });
+
+    test("set_state success", () async {
+      int c = 0;
+      viewModel.listenAsync((s) {
+        print(s.toString());
+        if (c == 0) assert(s is AsyncSuccess);
+        c++;
+      });
+
+      viewModel.state = "2";
+
+      await Future.delayed(const Duration(seconds: 2));
+    });
+
+    test("batch_set_state", () async {
+      const total = 100;
+
+      viewModel.listen((s) {
+        print("${viewModel.previousState} -> $s");
+
+        if (viewModel.previousState != viewModel.initState) {
+          expect(
+            s,
+            (int.parse(viewModel.previousState ?? "$total") - 1).toString(),
+          );
+        }
+      });
+
+      int size = total;
+
+      while (size > 0) {
+        final s1 = size.toString();
+        await Future.delayed(Duration(milliseconds: Random().nextInt(total)));
+        viewModel.state = s1;
+        size--;
+      }
     });
   });
 }

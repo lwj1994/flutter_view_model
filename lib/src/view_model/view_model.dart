@@ -66,11 +66,20 @@ class ViewModel<T> implements InstanceLifeCycle {
   }
 
   @protected
+  set state(T state) {
+    if (_isDisposed) {
+      viewModelLog("set state when $runtimeType is disposed");
+      return;
+    }
+    _store.setState(state);
+  }
+
+  @protected
   void setState(
-    FutureOr<T> Function(T state) reducer, {
+    FutureOr<AsyncState<T>> Function(T state) reducer, {
     Object? tag,
   }) {
-    _store.set(Reducer(
+    _store.setReducer(Reducer(
       builder: reducer,
       tag: tag,
     ));
@@ -86,7 +95,7 @@ class ViewModel<T> implements InstanceLifeCycle {
   }
 
   /// wait executing state complete
-  Future<T> get idleState async {
+  Future<T> get successState async {
     while (_store.executingReducer != null) {
       await Future.delayed(Duration.zero);
     }

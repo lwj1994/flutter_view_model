@@ -60,7 +60,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       res.listenAsync((as) async {
         if (_dispose) return;
         while (!context.mounted) {
-          await Future.delayed(const Duration(milliseconds: 50));
+          await Future.delayed(Duration.zero);
           if (_dispose) return;
         }
         setState(() {});

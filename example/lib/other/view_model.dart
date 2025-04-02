@@ -8,7 +8,7 @@ class MainViewModel extends ViewModel<String> {
   MainViewModel({required super.state}) {
     print("MainViewModel2 create : $hashCode");
     final t = Timer.periodic(Duration(seconds: 3), (t) {
-      setState((s) => "update2 ${t.tick}");
+      state = "update2 ${t.tick}";
     });
     addDispose(t.cancel);
   }

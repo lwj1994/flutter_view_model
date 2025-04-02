@@ -116,6 +116,21 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
   }
 }
 ```
+## Set State
+
+the simple way to change state:
+
+```dart
+import "package:view_model/view_model.dart";
+
+class MyViewModel extends ViewModel {
+
+  void setNewState() {
+    state = "1";
+  }
+}
+```
+
 
 ## Set Reducer
 
@@ -135,11 +150,11 @@ class MyViewModel extends ViewModel {
   void setNewStates() {
     setState((s) async {
       await Future.delayed(const Duration(seconds: 1));
-      return "1";
+      return AsyncSuccess(state: "1");
     });
 
     setState((s) {
-      return "2";
+      return AsyncSuccess.success("2");
     });
   }
 }
@@ -219,5 +234,67 @@ refresh() {
 ```
 
 ## AsyncState
+if you use Reducer to update State. you can use AsyncState to show loading or error.
+we can use tag to switch different reducer-type
+```dart
+
+enum ReducerType{
+  loading,
+  like;
+}
+
+void loading() {
+  setState((s) async {
+    bool success = await loadingSomthing();
+    if (success) {
+      return AsyncSuccess(state: "1");
+    } else {
+      return AsyncError(error: "error");
+    }
+  }, tag: ReducerType.loading);
+}
+
+void like() {
+  setState((s) async {
+    bool success = await likeApi();
+    if (success) {
+      return AsyncSuccess(state: "liked");
+    } else {
+      return AsyncError(error: "error");
+    }
+  }, tag: ReducerType.like);
+}
+
+
+
+class MyWidget {
+  Widget build(BuildContext context) {
+    switch (_viewModel.state.asyncState) {
+      case AsyncError():
+        switch(_viewModel.state.asyncState.tag as ReducerType){
+            case ReducerType.loading:
+              return LoadingErrorWidget();
+            case ReducerType.like:
+              break;
+        }
+      return ErrorWidget();
+    case AsyncSuccess():
+      switch(_viewModel.state.asyncState.tag as ReducerType){
+        case ReducerType.loading:
+          return LoadingSuccessWidget();
+        case ReducerType.like:
+          break;
+      }
+    }
+    
+    return EmptyWidget();
+  }  
+  
+}
+
+
+```
+
+
 
 

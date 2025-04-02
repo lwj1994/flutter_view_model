@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:auto_route/annotations.dart';
-import 'package:example/main.dart';
 import 'package:example/route.dart';
 import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
@@ -143,9 +142,6 @@ class MyViewModel extends ViewModel<String> {
   }
 
   void setId(ReducerType type) {
-    setState((s) async {
-      // await Future.delayed(Duration(seconds: 1));
-      return Random().nextInt(200).toString();
-    }, tag: type);
+    state = Random().nextInt(200).toString();
   }
 }

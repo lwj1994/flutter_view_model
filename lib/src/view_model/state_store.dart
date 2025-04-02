@@ -39,36 +39,56 @@ class ViewModelStateStore<S> implements StateStore<S> {
     _asyncStateStreamController.add(_asyncState);
     try {
       final newState = await reducer.builder(_state);
-      if (newState == _state) {
-        viewModelLog("$S ignore same state $_state");
-        //
-        _asyncState = AsyncSuccess(
-          state: state,
-          changed: false,
-          tag: reducer.tag,
-        );
-        _asyncStateStreamController.add(_asyncState);
-      } else {
-        _previousState = _state;
-        _state = newState;
-        _asyncState = AsyncSuccess(
-          state: newState,
-          changed: true,
-          tag: reducer.tag,
-        );
-        _asyncStateStreamController.add(_asyncState);
+      switch (newState) {
+        case AsyncLoading<S>():
+          throw ViewModelError("reducer only set AsyncSuccess or AsyncError");
+        case AsyncSuccess<S>():
+          _onSuccess(newState.state as S, reducer);
+          break;
+        case AsyncError<S>():
+          _onError(newState.error, reducer);
+          break;
       }
     } catch (e) {
-      viewModelLog("$S reducer $e");
-      _asyncState = AsyncError(tag: reducer.tag, error: e);
-      _asyncStateStreamController.add(_asyncState);
+      if (e is ViewModelError) {
+        rethrow;
+      }
+      _onError(e, reducer);
     } finally {
       _executingReducer = null;
     }
   }
 
+  void _onSuccess(S newState, Reducer<S> reducer) {
+    if (newState == _state) {
+      viewModelLog("$S ignore same state $_state");
+      //
+      _asyncState = AsyncSuccess(
+        state: state,
+        changed: false,
+        tag: reducer.tag,
+      );
+      _asyncStateStreamController.add(_asyncState);
+    } else {
+      _previousState = _state;
+      _state = newState;
+      _asyncState = AsyncSuccess(
+        state: newState,
+        changed: true,
+        tag: reducer.tag,
+      );
+      _asyncStateStreamController.add(_asyncState);
+    }
+  }
+
+  void _onError(dynamic e, Reducer<S> reducer) {
+    viewModelLog("$S reducer $e");
+    _asyncState = AsyncError(tag: reducer.tag, error: e);
+    _asyncStateStreamController.add(_asyncState);
+  }
+
   @override
-  void set(Reducer<S> reducer) {
+  void setReducer(Reducer<S> reducer) {
     _reducerQueue.add(reducer);
     _tryTriggerNextReducer();
   }
@@ -101,6 +121,15 @@ class ViewModelStateStore<S> implements StateStore<S> {
 
   @override
   Reducer<S>? get executingReducer => _executingReducer;
+
+  /// set state directly blockly
+  void setState(S state) {
+    if (state == _state) return;
+    _previousState = _state;
+    _state = state;
+    _asyncState = AsyncSuccess(state: state);
+    _asyncStateStreamController.add(_asyncState);
+  }
 }
 
 abstract class StateStore<S> {
@@ -111,11 +140,11 @@ abstract class StateStore<S> {
   abstract final Reducer<S>? executingReducer;
   abstract final Stream<AsyncState<S>> asyncStateStream;
 
-  void set(Reducer<S> reducer);
+  void setReducer(Reducer<S> reducer);
 }
 
 class Reducer<S> {
-  final FutureOr<S> Function(S state) builder;
+  final FutureOr<AsyncState<S>> Function(S state) builder;
   final Object? tag;
 
   Reducer({
@@ -133,4 +162,8 @@ class Reducer<S> {
 
   @override
   int get hashCode => builder.hashCode ^ tag.hashCode;
+}
+
+class ViewModelError extends StateError {
+  ViewModelError(super.message);
 }
