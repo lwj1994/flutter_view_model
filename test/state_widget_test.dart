@@ -156,11 +156,11 @@ void main() {
       c++;
     });
 
-    await vm.setState((state) {
+    vm.setState((state) {
       assert(state == fc.initState);
       return "2";
     });
-    await vm.setState((state) => "3");
+    vm.setState((state) => "3");
   });
 
   testWidgets('refresh viewModel', (tester) async {

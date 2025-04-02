@@ -28,7 +28,8 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   final String initState;
   final bool isSingleton;
 
-  TestViewModelFactory({this.initState = "initState", this.isSingleton = false});
+  TestViewModelFactory(
+      {this.initState = "initState", this.isSingleton = false});
 
   @override
   TestViewModel build() {

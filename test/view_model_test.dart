@@ -13,16 +13,16 @@ void main() {
       viewModel = TestViewModel(state: "1");
     });
 
-    test("batch_set_state", () async {
+    test("batch_set_state block", () async {
       const total = 100;
 
-      viewModel.listen((s) {
-        print("${viewModel.previousState} -> $s");
+      viewModel.listen((p, s) {
+        print("batch_set_state $p -> $s");
 
-        if (viewModel.previousState != viewModel.initState) {
+        if (p != viewModel.initState) {
           expect(
             s,
-            (int.parse(viewModel.previousState ?? "$total") - 1).toString(),
+            (int.parse(p ?? "$total") - 1).toString(),
           );
         }
       });
@@ -31,12 +31,73 @@ void main() {
 
       while (size > 0) {
         final s1 = size.toString();
-        await viewModel.setState((state) async {
+        viewModel.setState((state) {
+          return s1;
+        });
+        size--;
+      }
+
+      await Future.delayed(const Duration(seconds: 3));
+    });
+
+    test("batch_set_state async", () async {
+      const total = 100;
+
+      viewModel.listen((p, s) {
+        print("$p -> $s");
+
+        if (p != viewModel.initState) {
+          expect(
+            s,
+            (int.parse(p ?? "$total") - 1).toString(),
+          );
+        }
+      });
+
+      int size = total;
+
+      while (size > 0) {
+        final s1 = size.toString();
+        await viewModel.setStateAsync((state) async {
           await Future.delayed(Duration(milliseconds: Random().nextInt(total)));
           return s1;
         });
         size--;
       }
+    });
+
+    test("set_state block", () async {
+      int c = 0;
+      viewModel.listen((p, s) {
+        print("$p -> $s");
+        if (c == 0) {
+          expect(p, "1");
+          expect(s, "2");
+        }
+
+        if (c == 1) {
+          expect(p, "2");
+          expect(s, "3");
+        }
+
+        if (c == 2) {
+          expect(p, "3");
+          expect(s, "4");
+        }
+
+        c++;
+      });
+
+      viewModel.setState((state) => "2");
+      expect(viewModel.state, '2');
+      viewModel.setState((state) => "3");
+      expect(viewModel.state, '3');
+
+      viewModel.setState((state) {
+        while (Random().nextInt(100) != 29) {}
+        return "4";
+      });
+      expect(viewModel.state, '4');
     });
   });
 }

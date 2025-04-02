@@ -20,10 +20,10 @@ abstract class ViewModel<T> implements InstanceLifeCycle {
   final _autoDisposeController = AutoDisposeController();
   late final ViewModelStateStore<T> _store;
 
-  Function() listen(Function(T state) block) {
+  Function() listen(Function(T? previous, T state) block) {
     final s = _store.stateStream.listen((event) {
       if (_isDisposed) return;
-      block.call(event);
+      block.call(event.p, event.n);
     });
     return s.cancel;
   }
@@ -47,15 +47,26 @@ abstract class ViewModel<T> implements InstanceLifeCycle {
   }
 
   @protected
-  FutureOr<void> setState(FutureOr<T> Function(T state) reducer) async {
+  void setState(T Function(T state) reducer) {
     if (_isDisposed) {
       viewModelLog("setState after Disposed");
       return;
     }
     try {
-      await _store.setState(Reducer(
-        builder: reducer,
-      ));
+      _store.setState(reducer);
+    } catch (e) {
+      onError(e);
+    }
+  }
+
+  @protected
+  FutureOr<void> setStateAsync(FutureOr<T> Function(T state) reducer) async {
+    if (_isDisposed) {
+      viewModelLog("setState after Disposed");
+      return;
+    }
+    try {
+      await _store.setStateAsync(reducer);
     } catch (e) {
       onError(e);
     }

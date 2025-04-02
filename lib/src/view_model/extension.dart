@@ -30,8 +30,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
 
   void listenViewModelState<VM extends ViewModel<S>, S>(VM vm,
       {required Function(S? p, S n) onChange}) {
-    _disposes.add(vm.listen((s) {
-      onChange(vm.previousState, s);
+    _disposes.add(vm.listen((p, s) {
+      onChange(p, s);
     }));
   }
 
@@ -50,7 +50,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       ),
     );
     if (_stateListeners[res] != true) {
-      res.listen((as) async {
+      res.listen((p, n) async {
         if (_dispose) return;
         while (!context.mounted) {
           await Future.delayed(Duration.zero);
