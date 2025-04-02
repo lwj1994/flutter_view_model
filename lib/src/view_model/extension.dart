@@ -35,13 +35,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }));
   }
 
-  void listenViewModelAsyncState<VM extends ViewModel<S>, S>(
-    VM vm, {
-    required Function(AsyncState<S>) onChange,
-  }) {
-    _disposes.add(vm.listenAsync(onChange));
-  }
-
   /// [ViewModel] trigger rebuilding automatically.
   VM getViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
@@ -57,7 +50,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       ),
     );
     if (_stateListeners[res] != true) {
-      res.listenAsync((as) async {
+      res.listen((as) async {
         if (_dispose) return;
         while (!context.mounted) {
           await Future.delayed(Duration.zero);
@@ -79,58 +72,5 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       e.call();
     }
     super.dispose();
-  }
-}
-
-sealed class AsyncState<T> {
-  final Object? tag;
-  final T? state;
-
-  AsyncState({
-    this.state,
-    this.tag,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AsyncState &&
-          runtimeType == other.runtimeType &&
-          tag == other.tag &&
-          state == other.state;
-
-  @override
-  int get hashCode => tag.hashCode ^ state.hashCode;
-}
-
-class AsyncLoading<T> extends AsyncState<T> {
-  AsyncLoading({super.state, super.tag});
-
-  @override
-  String toString() {
-    return "AsyncLoading(tag: $tag, state: $state)";
-  }
-}
-
-class AsyncSuccess<T> extends AsyncState<T> {
-  final bool changed;
-
-  AsyncSuccess({required T state, this.changed = true, super.tag})
-      : super(state: state);
-
-  @override
-  String toString() {
-    return "AsyncSuccess(tag: $tag, state: $state)";
-  }
-}
-
-class AsyncError<T> extends AsyncState<T> {
-  final dynamic error;
-
-  AsyncError({this.error, super.tag});
-
-  @override
-  String toString() {
-    return "AsyncError(tag: $tag, error: $error)";
   }
 }

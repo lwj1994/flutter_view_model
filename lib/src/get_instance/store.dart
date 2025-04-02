@@ -121,7 +121,7 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
 
   @override
   String toString() {
-    return "InstanceHandle<$T>(key=$key, initWatchId=${initWatchId}, watchIds=${watchIds})";
+    return "InstanceHandle<$T>(key=$key, initWatchId=$initWatchId, watchIds=$watchIds)";
   }
 
   @override

@@ -110,7 +110,7 @@ class MainViewModelFactory with vm.ViewModelFactory<MainViewModel> {
   }
 
   @override
-  bool unique() {
+  bool singleton() {
     return true;
   }
 }
@@ -119,7 +119,7 @@ class MainViewModel extends ViewModel<String> {
   MainViewModel({required super.state}) {
     print("MainViewModel create : $hashCode");
     final t = Timer.periodic(Duration(seconds: 1), (t) {
-      state = "update ${t.tick}";
+      setState((state) => "update ${t.tick}");
     });
     addDispose(t.cancel);
   }

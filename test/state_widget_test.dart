@@ -15,7 +15,7 @@ void main() {
       key: testKey,
       factory: TestViewModelFactory(
         initState: "initState",
-        uniquee: false,
+        isSingleton: false,
       ),
     )));
 
@@ -31,7 +31,7 @@ void main() {
       key: testKey,
       factory: TestViewModelFactory(
         initState: "initState",
-        uniquee: false,
+        isSingleton: false,
       ),
     )));
     final state = testKey.currentState as TestPageState;
@@ -39,13 +39,13 @@ void main() {
     final vm1 = state.getViewModel(
         factory: TestViewModelFactory(
       initState: "initState",
-      uniquee: false,
+      isSingleton: false,
     ));
 
     final vm2 = state.getViewModel(
         factory: TestViewModelFactory(
       initState: "initState2",
-      uniquee: false,
+      isSingleton: false,
     ));
 
     assert(vm2.state == "initState");
@@ -71,14 +71,14 @@ void main() {
           key: testKey,
           factory: TestViewModelFactory(
             initState: "initState",
-            uniquee: false,
+            isSingleton: false,
           ),
         ),
         TestPage(
           key: testKey2,
           factory: TestViewModelFactory(
             initState: "initState2",
-            uniquee: false,
+            isSingleton: false,
           ),
         ),
       ],
@@ -89,13 +89,13 @@ void main() {
     final vm1 = state.getViewModel(
         factory: TestViewModelFactory(
       initState: "initState",
-      uniquee: false,
+      isSingleton: false,
     ));
 
     final vm2 = state2.getViewModel(
         factory: TestViewModelFactory(
       initState: "initState2",
-      uniquee: false,
+      isSingleton: false,
     ));
     print(vm1.state);
     print(vm2.state);
@@ -107,7 +107,7 @@ void main() {
     final testKey2 = GlobalKey();
     final fc = TestViewModelFactory(
       initState: "initState",
-      uniquee: true,
+      isSingleton: true,
     );
     await tester.pumpWidget(MaterialApp(
         home: Column(
@@ -153,14 +153,14 @@ void main() {
       print(vm.state);
       if (c == 0) assert(vm.state == "2");
       if (c == 1) assert(vm.state == "3");
+      c++;
     });
 
-    vm.setState((state) {
+    await vm.setState((state) {
       assert(state == fc.initState);
-      return AsyncSuccess(state: "2");
+      return "2";
     });
-
-    vm.state = "3";
+    await vm.setState((state) => "3");
   });
 
   testWidgets('refresh viewModel', (tester) async {

@@ -49,34 +49,11 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
         print("myViewModel state change $p -> $n");
       },
     );
-
-    listenViewModelAsyncState<MyViewModel, String>(
-      viewModel,
-      onChange: (AsyncState<String> s) {
-        print("myViewModel asyncState change $s");
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     print("SecondPage trigger build(BuildContext context)");
-    switch (viewModel.asyncState) {
-      case AsyncLoading<String>():
-        switch (viewModel.asyncState.tag as ReducerType?) {
-          case ReducerType.add:
-            return const Center(child: CircularProgressIndicator());
-            break;
-          case ReducerType.sub:
-            break;
-          case null:
-            break;
-        }
-      case AsyncSuccess<String>():
-        break;
-      case AsyncError():
-        break;
-    }
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -142,6 +119,6 @@ class MyViewModel extends ViewModel<String> {
   }
 
   void setId(ReducerType type) {
-    state = Random().nextInt(200).toString();
+    setState((state) => Random().nextInt(200).toString());
   }
 }

@@ -7,7 +7,6 @@ import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
-import 'package:view_model/src/view_model/extension.dart';
 
 import 'state_store.dart';
 
@@ -22,25 +21,7 @@ class ViewModel<T> implements InstanceLifeCycle {
   late final ViewModelStateStore<T> _store;
 
   Function() listen(Function(T state) block) {
-    final s = _store.asyncStateStream.listen((event) {
-      if (_isDisposed) return;
-      switch (event) {
-        case AsyncLoading<T>():
-          break;
-        case AsyncSuccess<T>():
-          if (event.changed) {
-            block.call(event.state as T);
-          }
-          break;
-        case AsyncError<T>():
-          break;
-      }
-    });
-    return s.cancel;
-  }
-
-  Function() listenAsync(Function(AsyncState<T> state) block) {
-    final s = _store.asyncStateStream.listen((event) {
+    final s = _store.stateStream.listen((event) {
       if (_isDisposed) return;
       block.call(event);
     });
@@ -66,23 +47,23 @@ class ViewModel<T> implements InstanceLifeCycle {
   }
 
   @protected
-  set state(T state) {
+  FutureOr<void> setState(FutureOr<T> Function(T state) reducer) async {
     if (_isDisposed) {
-      viewModelLog("set state when $runtimeType is disposed");
+      viewModelLog("setState after Disposed");
       return;
     }
-    _store.setState(state);
+    try {
+      await _store.setState(Reducer(
+        builder: reducer,
+      ));
+    } catch (e) {
+      onError(e);
+    }
   }
 
   @protected
-  void setState(
-    FutureOr<AsyncState<T>> Function(T state) reducer, {
-    Object? tag,
-  }) {
-    _store.setReducer(Reducer(
-      builder: reducer,
-      tag: tag,
-    ));
+  void onError(dynamic e) {
+    viewModelLog("error :$e");
   }
 
   T? get previousState {
@@ -94,18 +75,6 @@ class ViewModel<T> implements InstanceLifeCycle {
     return _store.state;
   }
 
-  /// wait executing state complete
-  Future<T> get successState async {
-    while (_store.executingReducer != null) {
-      await Future.delayed(Duration.zero);
-    }
-    return state;
-  }
-
-  AsyncState<T> get asyncState {
-    return _store.asyncState;
-  }
-
   void dispose() {
     _isDisposed = true;
     _autoDisposeController.dispose();
@@ -115,13 +84,13 @@ class ViewModel<T> implements InstanceLifeCycle {
   @override
   void onCreate(String key, String? watchId) {
     viewModelLog(
-        "${this.runtimeType}<${T}>(key=$key,watchId=$watchId) onCreate");
+        "$runtimeType<$T>(key=$key,watchId=$watchId) onCreate");
   }
 
   @protected
   @override
   void onDispose() {
-    viewModelLog("${this.runtimeType}<${T}> onDispose");
+    viewModelLog("$runtimeType<$T> onDispose");
     dispose();
   }
 }
@@ -145,14 +114,14 @@ class AutoDisposeController {
 }
 
 mixin ViewModelFactory<T> {
-  static final _uniqueId = const UuidV4().generate();
+  static final _singletonId = const UuidV4().generate();
 
   /// if you want to set your key. unique() must be false
   /// uniqueId dependency on T. so T's name must unique
-  String? key() => unique() ? _uniqueId : null;
+  String? key() => singleton() ? _singletonId : null;
 
   T build();
 
   /// if true, key will auto set a unique id
-  bool unique() => false;
+  bool singleton() => false;
 }

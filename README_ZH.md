@@ -113,7 +113,7 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 ```
 
 ## 共享`ViewModel`
-你可以设置`unique() => true`来在任意有状态组件（`StateWidget`）间共享同一个`ViewModel`实例。
+你可以设置`singleton() => true`来在任意有状态组件（`StateWidget`）间共享同一个`ViewModel`实例。
 ```dart
 import "package:view_model/view_model.dart";
 
@@ -129,7 +129,7 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 
   // 如果为true，则会共享同一个viewModel实例。
   @override
-  bool unique() => false;
+  bool singleton() => false;
 }
 ```
 

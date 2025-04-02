@@ -26,9 +26,9 @@ class TestPageState extends State<TestPage> with ViewModelStateMixin {
 
 class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   final String initState;
-  final bool uniquee;
+  final bool isSingleton;
 
-  TestViewModelFactory({this.initState = "initState", this.uniquee = false});
+  TestViewModelFactory({this.initState = "initState", this.isSingleton = false});
 
   @override
   TestViewModel build() {
@@ -36,8 +36,8 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   }
 
   @override
-  bool unique() {
-    return uniquee;
+  bool singleton() {
+    return isSingleton;
   }
 }
 
