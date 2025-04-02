@@ -10,7 +10,7 @@ import 'package:view_model/src/log.dart';
 
 import 'state_store.dart';
 
-class ViewModel<T> implements InstanceLifeCycle {
+abstract class ViewModel<T> implements InstanceLifeCycle {
   static bool logEnable = false;
 
   static listenViewModelLifecycle() {
@@ -83,8 +83,7 @@ class ViewModel<T> implements InstanceLifeCycle {
 
   @override
   void onCreate(String key, String? watchId) {
-    viewModelLog(
-        "$runtimeType<$T>(key=$key,watchId=$watchId) onCreate");
+    viewModelLog("$runtimeType<$T>(key=$key,watchId=$watchId) onCreate");
   }
 
   @protected
