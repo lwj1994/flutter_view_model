@@ -28,13 +28,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     setState(() {});
   }
 
-  void listenViewModelState<VM extends ViewModel<S>, S>(VM vm,
-      {required Function(S? p, S n) onChange}) {
-    _disposes.add(vm.listen((p, s) {
-      onChange(p, s);
-    }));
-  }
-
   /// [ViewModel] trigger rebuilding automatically.
   VM getViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
@@ -50,7 +43,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       ),
     );
     if (_stateListeners[res] != true) {
-      res.listen((p, n) async {
+      res.listen(onChanged: (p, n) async {
         if (_dispose) return;
         while (!context.mounted) {
           await Future.delayed(Duration.zero);

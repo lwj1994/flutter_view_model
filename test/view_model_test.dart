@@ -16,7 +16,7 @@ void main() {
     test("batch_set_state block", () async {
       const total = 100;
 
-      viewModel.listen((p, s) {
+      viewModel.listen(onChanged: (p, s) {
         print("batch_set_state $p -> $s");
 
         if (p != viewModel.initState) {
@@ -31,9 +31,7 @@ void main() {
 
       while (size > 0) {
         final s1 = size.toString();
-        viewModel.setState((state) {
-          return s1;
-        });
+        viewModel.setState(s1);
         size--;
       }
 
@@ -43,7 +41,7 @@ void main() {
     test("batch_set_state async", () async {
       const total = 100;
 
-      viewModel.listen((p, s) {
+      viewModel.listen(onChanged: (p, s) {
         print("$p -> $s");
 
         if (p != viewModel.initState) {
@@ -68,7 +66,7 @@ void main() {
 
     test("set_state block", () async {
       int c = 0;
-      viewModel.listen((p, s) {
+      viewModel.listen(onChanged: (p, s) {
         print("$p -> $s");
         if (c == 0) {
           expect(p, "1");
@@ -88,15 +86,13 @@ void main() {
         c++;
       });
 
-      viewModel.setState((state) => "2");
+      viewModel.setState("2");
       expect(viewModel.state, '2');
-      viewModel.setState((state) => "3");
+      viewModel.setState("3");
       expect(viewModel.state, '3');
 
-      viewModel.setState((state) {
-        while (Random().nextInt(100) != 29) {}
-        return "4";
-      });
+      while (Random().nextInt(100) != 29) {}
+      viewModel.setState("4");
       expect(viewModel.state, '4');
     });
   });

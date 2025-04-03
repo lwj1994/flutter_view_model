@@ -40,9 +40,8 @@ class ViewModelStateStore<S> implements StateStore<S> {
   }
 
   @override
-  void setState(S Function(S state) reducer) {
-    final newState = reducer(state);
-    _update(newState);
+  void setState(S state) {
+    _update(state);
   }
 
   FutureOr<void> setStateAsync(FutureOr<S> Function(S state) reducer) async {
@@ -56,7 +55,7 @@ abstract class StateStore<S> {
   abstract final S? previousState;
   abstract final Stream<DiffState<S>> stateStream;
 
-  void setState(S Function(S state) reducer);
+  void setState(S state);
 }
 
 class Reducer<S> {

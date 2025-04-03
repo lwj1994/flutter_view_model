@@ -43,12 +43,9 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
     //   },
     // );
 
-    listenViewModelState<MyViewModel, String>(
-      viewModel,
-      onChange: (String? p, String n) {
-        print("myViewModel state change $p -> $n");
-      },
-    );
+    viewModel.listen(onChanged: (String? previous, String state) {
+      print("myViewModel state change $previous -> $state");
+    });
   }
 
   @override
@@ -119,6 +116,6 @@ class MyViewModel extends ViewModel<String> {
   }
 
   void setId(ReducerType type) {
-    setState((state) => Random().nextInt(200).toString());
+    setState(Random().nextInt(200).toString());
   }
 }

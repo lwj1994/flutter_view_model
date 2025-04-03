@@ -15,7 +15,7 @@
 * ViewModel: Stores the state and notifies of state changes.
 * ViewModelFactory: Instructs how to create your ViewModel.
 * getViewModel: Creates or retrieves an existing ViewModel.
-* listenViewModelState: Listens for state changes within the Widget.State.
+
 
 ## usage
 
@@ -119,28 +119,17 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 
 ## Set State
 
-the viewModel receive a reducer to push state. setState is support async.
-if you want to wait until it completed , you can add `await` before setState,
-
 ```dart
 import "package:view_model/view_model.dart";
 
 class MyViewModel extends ViewModel {
 
   void setNewStates() async {
-    // async
-    setState((s) async {
-      await Future.delayed(const Duration(seconds: 1));
-      return AsyncSuccess(state: "1");
-    });
-
-    // wait
-    await setState((s) {
-      return AsyncSuccess.success("2");
-    });
+    setState("1");
   }
 }
 ```
+
 
 ## Share ViewModel
 
@@ -172,10 +161,8 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   @override
 void initState() {
   super.initState();
-  listenViewModelState<MainViewModel, String>(
-    _mainViewModel,
-    onChange: (String? p, String n) {
-      print("mainViewModel state change $p -> $n");
+  _mainViewModel.listen(onChanged: (String? p, String state) {
+      print("mainViewModel state change $p -> $state");
     },
   );
 }
