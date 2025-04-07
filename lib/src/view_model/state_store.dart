@@ -43,11 +43,6 @@ class ViewModelStateStore<S> implements StateStore<S> {
   void setState(S state) {
     _update(state);
   }
-
-  FutureOr<void> setStateAsync(FutureOr<S> Function(S state) reducer) async {
-    final newState = await reducer.call(state);
-    _update(newState);
-  }
 }
 
 abstract class StateStore<S> {

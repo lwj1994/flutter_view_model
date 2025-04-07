@@ -1,7 +1,5 @@
 // @author luwenjie on 2025/3/25 17:00:38
 
-import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -54,19 +52,6 @@ abstract class ViewModel<T> implements InstanceLifeCycle {
     }
     try {
       _store.setState(state);
-    } catch (e) {
-      onError(e);
-    }
-  }
-
-  @protected
-  FutureOr<void> setStateAsync(FutureOr<T> Function(T state) reducer) async {
-    if (_isDisposed) {
-      viewModelLog("setState after Disposed");
-      return;
-    }
-    try {
-      await _store.setStateAsync(reducer);
     } catch (e) {
       onError(e);
     }

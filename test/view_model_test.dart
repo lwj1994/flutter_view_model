@@ -38,32 +38,6 @@ void main() {
       await Future.delayed(const Duration(seconds: 3));
     });
 
-    test("batch_set_state async", () async {
-      const total = 100;
-
-      viewModel.listen(onChanged: (p, s) {
-        print("$p -> $s");
-
-        if (p != viewModel.initState) {
-          expect(
-            s,
-            (int.parse(p ?? "$total") - 1).toString(),
-          );
-        }
-      });
-
-      int size = total;
-
-      while (size > 0) {
-        final s1 = size.toString();
-        await viewModel.setStateAsync((state) async {
-          await Future.delayed(Duration(milliseconds: Random().nextInt(total)));
-          return s1;
-        });
-        size--;
-      }
-    });
-
     test("set_state block", () async {
       int c = 0;
       viewModel.listen(onChanged: (p, s) {
