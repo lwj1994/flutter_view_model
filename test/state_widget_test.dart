@@ -133,6 +133,38 @@ void main() {
     assert(vm1 == vm2);
   });
 
+  testWidgets('getViewModel without listen', (tester) async {
+    final testKey = GlobalKey();
+    final fc = TestViewModelFactory();
+    await tester.pumpWidget(MaterialApp(
+        home: Column(
+      children: [
+        TestPage(
+          key: testKey,
+          factory: fc,
+        ),
+      ],
+    )));
+    final state = testKey.currentState as TestPageState;
+    final vm = state.getViewModel(
+      factory: fc,
+      listen: false,
+    );
+
+    var c = 0;
+    vm.listen(onChanged: (p, n) {
+      print(n);
+      if (c == 0) assert(n == "2");
+      if (c == 1) assert(n == "3");
+      c++;
+    });
+
+    vm.setState("2");
+
+    final stateText = find.text(vm.initState);
+    expect(stateText, findsOneWidget);
+  });
+
   testWidgets('setState', (tester) async {
     final testKey = GlobalKey();
     final fc = TestViewModelFactory();
