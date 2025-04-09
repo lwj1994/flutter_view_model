@@ -151,7 +151,7 @@ void main() {
       listen: false,
     );
 
-    final vm2 = state.requireActiveSingleViewModel<TestViewModel>();
+    final vm2 = state.requireExistingSingleViewModel<TestViewModel>();
 
     assert(vm == vm2);
     vm2.setState("2");
