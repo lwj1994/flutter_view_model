@@ -28,9 +28,10 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     setState(() {});
   }
 
-  /// [ViewModel] trigger rebuilding automatically.
+  /// if listen == true, [ViewModel] trigger rebuilding automatically.
   VM getViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
+    bool listen = true,
   }) {
     if (_dispose) {
       throw StateError("state is disposed");
@@ -42,15 +43,17 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
         builder: () => factory.build(),
       ),
     );
-    if (_stateListeners[res] != true) {
-      res.listen(onChanged: (p, n) async {
-        if (_dispose) return;
-        while (!context.mounted) {
-          await Future.delayed(Duration.zero);
+    if (listen) {
+      if (_stateListeners[res] != true) {
+        res.listen(onChanged: (p, n) async {
           if (_dispose) return;
-        }
-        setState(() {});
-      });
+          while (!context.mounted) {
+            await Future.delayed(Duration.zero);
+            if (_dispose) return;
+          }
+          setState(() {});
+        });
+      }
     }
     return res;
   }
