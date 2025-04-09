@@ -28,15 +28,17 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     setState(() {});
   }
 
-  /// get existing viewModel or throw error
+  /// get existing viewModel by [key], or throw error
   /// if listen == true, [ViewModel] trigger rebuilding automatically.
-  VM requireExistingSingleViewModel<VM extends ViewModel>({
+  VM requireExistingViewModel<VM extends ViewModel>({
     bool listen = true,
+    String? key,
   }) {
-    final res = _instanceController.getInstance(
-        factory: InstanceFactory(
-      key: ViewModelFactory.singletonId,
-    ));
+    final res = _instanceController.getInstance<VM>(
+      factory: InstanceFactory(
+        key: key ?? ViewModelFactory.singletonId,
+      ),
+    );
 
     if (listen) {
       _addListener(res);
@@ -56,7 +58,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     final res = _instanceController.getInstance<VM>(
       factory: InstanceFactory<VM>(
         key: key,
-        builder: () => factory.build(),
+        builder: factory.build,
       ),
     );
     if (listen) {

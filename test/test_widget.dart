@@ -26,14 +26,23 @@ class TestPageState extends State<TestPage> with ViewModelStateMixin {
 
 class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   final String initState;
+  final String? keyV;
   final bool isSingleton;
 
-  TestViewModelFactory(
-      {this.initState = "initState", this.isSingleton = false});
+  TestViewModelFactory({
+    this.initState = "initState",
+    this.isSingleton = false,
+    this.keyV,
+  });
 
   @override
   TestViewModel build() {
     return TestViewModel(state: initState);
+  }
+
+  @override
+  String? key() {
+    return keyV;
   }
 
   @override

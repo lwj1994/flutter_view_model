@@ -133,7 +133,32 @@ void main() {
     assert(vm1 == vm2);
   });
 
-  testWidgets('requireSingleViewModel', (tester) async {
+  testWidgets('requireExistingViewModel with key', (tester) async {
+    final testKey = GlobalKey();
+    final fc = TestViewModelFactory(keyV: "key");
+    await tester.pumpWidget(MaterialApp(
+        home: Column(
+      children: [
+        TestPage(
+          key: testKey,
+          factory: fc,
+        ),
+      ],
+    )));
+    final state = testKey.currentState as TestPageState;
+    final vm = state.getViewModel(
+      factory: fc,
+      listen: false,
+    );
+
+    final vm2 = state.requireExistingViewModel<TestViewModel>(key: "key");
+
+    assert(vm == vm2);
+    vm2.setState("2");
+    assert(vm.state == "2");
+  });
+
+  testWidgets('requireExistingViewModel', (tester) async {
     final testKey = GlobalKey();
     final fc = TestViewModelFactory(isSingleton: true);
     await tester.pumpWidget(MaterialApp(
@@ -151,7 +176,7 @@ void main() {
       listen: false,
     );
 
-    final vm2 = state.requireExistingSingleViewModel<TestViewModel>();
+    final vm2 = state.requireExistingViewModel<TestViewModel>();
 
     assert(vm == vm2);
     vm2.setState("2");
