@@ -28,6 +28,14 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     setState(() {});
   }
 
+  /// get existing viewModel or throw error
+  VM requireExistingSingleViewModel<VM extends ViewModel>() {
+    return _instanceController.getInstance(
+        factory: InstanceFactory(
+      key: ViewModelFactory.singletonId,
+    ));
+  }
+
   /// if listen == true, [ViewModel] trigger rebuilding automatically.
   VM getViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,

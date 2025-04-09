@@ -133,6 +133,31 @@ void main() {
     assert(vm1 == vm2);
   });
 
+  testWidgets('requireSingleViewModel', (tester) async {
+    final testKey = GlobalKey();
+    final fc = TestViewModelFactory(isSingleton: true);
+    await tester.pumpWidget(MaterialApp(
+        home: Column(
+      children: [
+        TestPage(
+          key: testKey,
+          factory: fc,
+        ),
+      ],
+    )));
+    final state = testKey.currentState as TestPageState;
+    final vm = state.getViewModel(
+      factory: fc,
+      listen: false,
+    );
+
+    final vm2 = state.requireActiveSingleViewModel<TestViewModel>();
+
+    assert(vm == vm2);
+    vm2.setState("2");
+    assert(vm.state == "2");
+  });
+
   testWidgets('getViewModel without listen', (tester) async {
     final testKey = GlobalKey();
     final fc = TestViewModelFactory();

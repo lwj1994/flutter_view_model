@@ -109,11 +109,11 @@ class AutoDisposeController {
 }
 
 mixin ViewModelFactory<T> {
-  static final _singletonId = const UuidV4().generate();
+  static final singletonId = const UuidV4().generate();
 
   /// if you want to set your key. unique() must be false
   /// uniqueId dependency on T. so T's name must unique
-  String? key() => singleton() ? _singletonId : null;
+  String? key() => singleton() ? singletonId : null;
 
   T build();
 
