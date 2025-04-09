@@ -2,7 +2,6 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
-import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 
@@ -10,10 +9,6 @@ import 'state_store.dart';
 
 abstract class ViewModel<T> implements InstanceLifeCycle {
   static bool logEnable = false;
-
-  static listenViewModelLifecycle() {
-    instanceManager;
-  }
 
   final _autoDisposeController = AutoDisposeController();
   late final ViewModelStateStore<T> _store;
