@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:view_model/src/view_model/stateless_view_model.dart';
 import 'package:view_model/view_model.dart';
 
 class TestPage extends StatefulWidget {
@@ -54,5 +55,37 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 class TestViewModel extends ViewModel<String> {
   TestViewModel({required super.state}) {
     print("TestViewModel create : $hashCode");
+  }
+}
+
+class TestStatelessViewModel extends StatelessViewModel {
+  TestStatelessViewModel() {
+    print("TestStatelessViewModel create : $hashCode");
+  }
+}
+
+class TestStatelessViewModelFactory
+    with ViewModelFactory<TestStatelessViewModel> {
+  final String? keyV;
+  final bool isSingleton;
+
+  TestStatelessViewModelFactory({
+    this.isSingleton = false,
+    this.keyV,
+  });
+
+  @override
+  TestStatelessViewModel build() {
+    return TestStatelessViewModel();
+  }
+
+  @override
+  String? key() {
+    return keyV;
+  }
+
+  @override
+  bool singleton() {
+    return isSingleton;
   }
 }
