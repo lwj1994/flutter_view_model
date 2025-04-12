@@ -40,6 +40,11 @@ abstract class ViewModel<T> implements InstanceLifeCycle {
   }
 
   @protected
+  void notifyListeners() {
+    _store.notifyListeners();
+  }
+
+  @protected
   void setState(T state) {
     if (_isDisposed) {
       viewModelLog("setState after Disposed");

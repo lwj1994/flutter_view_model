@@ -36,6 +36,11 @@ class ViewModelStateStore<S> implements StateStore<S> {
     if (state == _state) return;
     _previousState = _state;
     _state = state;
+    notifyListeners();
+  }
+
+  /// trigger refresh, state will not change
+  void notifyListeners() {
     _stateStreamController.add(DiffState(_previousState, _state));
   }
 

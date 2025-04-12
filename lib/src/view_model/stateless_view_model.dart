@@ -3,16 +3,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
-class StatelessState {}
-
-abstract class StatelessViewModel extends ViewModel<StatelessState> {
-  StatelessViewModel() : super(state: StatelessState());
+abstract class StatelessViewModel extends ViewModel<String> {
+  StatelessViewModel() : super(state: "");
 
   @override
   @protected
   Function() listen(
-      {required Function(StatelessState? previous, StatelessState state)
-          onChanged}) {
+      {required Function(String? previous, String state) onChanged}) {
     return super.listen(onChanged: onChanged);
   }
 
@@ -20,10 +17,5 @@ abstract class StatelessViewModel extends ViewModel<StatelessState> {
     return super.listen(onChanged: (p, n) {
       onChanged.call();
     });
-  }
-
-  @protected
-  void notifyListeners() {
-    setState(StatelessState());
   }
 }
