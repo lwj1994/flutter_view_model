@@ -4,11 +4,18 @@ import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
+import 'package:view_model/src/view_model/config.dart';
 
 import 'state_store.dart';
 
 abstract class ViewModel<T> implements InstanceLifeCycle {
-  static bool logEnable = false;
+  static ViewModelConfig _config = ViewModelConfig();
+
+  static ViewModelConfig get config => _config;
+
+  static void initConfig(ViewModelConfig config) {
+    _config = config;
+  }
 
   final _autoDisposeController = AutoDisposeController();
   late final ViewModelStateStore<T> _store;
@@ -111,12 +118,12 @@ class AutoDisposeController {
 mixin ViewModelFactory<T> {
   static final singletonId = const UuidV4().generate();
 
-  /// if you want to set your key. unique() must be false
-  /// uniqueId dependency on T. so T's name must unique
+  /// 如果 [key] 一样，那么获取的就是同一个内存地址的 [T]
   String? key() => singleton() ? singletonId : null;
 
   T build();
 
-  /// if true, key will auto set a unique id
+  /// 便捷的把当前类型 [T] 设置为单例共享
+  /// 如果需要共享不同的实例，根据需求去重写 [key]
   bool singleton() => false;
 }

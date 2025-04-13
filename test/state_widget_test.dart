@@ -6,7 +6,7 @@ import 'test_widget.dart';
 
 void main() {
   setUp(() {
-    ViewModel.logEnable = true;
+    ViewModel.initConfig(ViewModelConfig(logEnable: true));
   });
   testWidgets('initState text', (tester) async {
     final testKey = GlobalKey();
@@ -161,6 +161,7 @@ void main() {
   testWidgets('requireExistingViewModel', (tester) async {
     final testKey = GlobalKey();
     final fc = TestViewModelFactory(isSingleton: true);
+    print("key = ${fc.key()}");
     await tester.pumpWidget(MaterialApp(
         home: Column(
       children: [

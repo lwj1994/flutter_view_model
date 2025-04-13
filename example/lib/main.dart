@@ -11,7 +11,7 @@ import 'route.dart';
 
 void main() {
   runApp(const MyApp());
-  vm.ViewModel.logEnable = (true);
+  ViewModel.initConfig(ViewModelConfig(logEnable: true));
 }
 
 class MyApp extends StatelessWidget {

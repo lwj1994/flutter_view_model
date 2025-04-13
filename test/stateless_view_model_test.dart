@@ -7,7 +7,7 @@ void main() {
   group('stateless_view_model state', () {
     late TestStatelessViewModel viewModel;
     setUp(() {
-      ViewModel.logEnable = false;
+      ViewModel.initConfig(ViewModelConfig(logEnable: true));
       viewModel = TestStatelessViewModel();
     });
 

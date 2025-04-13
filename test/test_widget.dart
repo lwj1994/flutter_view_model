@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:view_model/src/view_model/stateless_view_model.dart';
 import 'package:view_model/view_model.dart';
 
 class TestPage extends StatefulWidget {
@@ -43,6 +42,7 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 
   @override
   String? key() {
+    if (keyV == null) return super.key();
     return keyV;
   }
 

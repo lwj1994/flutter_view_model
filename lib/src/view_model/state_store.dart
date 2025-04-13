@@ -2,6 +2,8 @@
 
 import 'dart:async';
 
+import 'package:view_model/src/view_model/view_model.dart';
+
 class ViewModelStateStore<S> implements StateStore<S> {
   final StreamController<DiffState<S>> _stateStreamController =
       StreamController.broadcast(
@@ -33,10 +35,18 @@ class ViewModelStateStore<S> implements StateStore<S> {
 
   /// set state directly blockly
   void _update(S state) {
-    if (state == _state) return;
+    if (_isSameState(_state, state)) return;
     _previousState = _state;
     _state = state;
     notifyListeners();
+  }
+
+  bool _isSameState(S c, S n) {
+    if (ViewModel.config.isSameState != null) {
+      return ViewModel.config.isSameState!(c, n);
+    } else {
+      return identical(c, n);
+    }
   }
 
   /// trigger refresh, state will not change

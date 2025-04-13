@@ -3,6 +3,7 @@ import 'dart:core';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
+import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 import 'test_model.dart';
@@ -10,7 +11,7 @@ import 'test_model.dart';
 void main() {
   group('get_instance', () {
     setUp(() {
-      ViewModel.logEnable = true;
+      ViewModel.initConfig(ViewModelConfig(logEnable: true));
     });
     test('key = null', () {
       final factory = InstanceFactory<TestModel>(
