@@ -1,42 +1,55 @@
-# **ViewModel**
+# view_model
 
-[English Documentation](README.md)
+[English README](README.md)
 
-- **简单 & 轻量**
-- **无魔法，基于 `StreamController` 和 `setState`**
-- **自动释放，跟随 `State` 的 `dispose`**
-- **可在任意 `StatefulWidget` 之间共享**
+* 简洁轻量
+* 无魔法实现，基于 `StreamController` 和 `setState`
+* 自动释放资源，跟随 Widget 的 `State.dispose`
+* 可在多个 `StatefulWidget` 间共享
 
-> **ViewModel 仅绑定到 `StatefulWidget` 的 `State`。不推荐将其绑定到 `StatelessWidget`，因为 `StatelessWidget` 不应具有状态。**
-
----
-
-## **核心概念**
-
-- **ViewModel**：存储状态并通知状态变更。
-- **ViewModelFactory**：定义如何创建 `ViewModel`。
-- **getViewModel**：创建或获取已有的 `ViewModel`。
-
+> ViewModel 只绑定于 `StatefulWidget` 的 `State`。  
+> 不推荐绑定到 `StatelessWidget`，因为它本身不应持有状态。
 
 ---
 
-## **使用方法**
+## 核心概念
 
-### **安装**
+* **ViewModel**：保存状态并在状态变化时通知监听者。
+* **ViewModelFactory**：定义如何创建 ViewModel。
+* **getViewModel**：创建或获取一个已有的 ViewModel 实例。
+
+---
+
+## StatefulViewModel 与 StatelessViewModel
+
+默认情况下，`ViewModel` 是带状态的（Stateful）。
+
+* **Stateful ViewModel**
+    * 必须持有一个 `state`
+    * `state` 应为不可变对象
+    * 调用 `setState()` 来更新状态
+
+* **StatelessViewModel**
+    * 一个更简单的类，不持有 `state`
+    * 调用 `notifyListeners()` 来通知数据更新
+
+---
+
+## 使用方式
+
 ```yaml
 view_model:
   git:
     url: https://github.com/lwj1994/flutter_view_model
-    ref: 0.0.1
+    ref: 0.0.7
 ```
 
-### **创建 ViewModel**
 ```dart
 import "package:view_model/view_model.dart";
 
 class MyViewModel extends ViewModel<String> {
   MyViewModel({required super.state}) {
-    debugPrint("创建 MyViewModel，state: $state, hashCode: $hashCode");
+    debugPrint("创建 MyViewModel state: $state hashCode: $hashCode");
   }
 
   void setNewState() {
@@ -46,58 +59,42 @@ class MyViewModel extends ViewModel<String> {
   @override
   void dispose() async {
     super.dispose();
-    debugPrint("释放 MyViewModel: $state, $hashCode");
+    debugPrint("销毁 MyViewModel $state $hashCode");
   }
 }
-```
-
----
-
-### **创建 ViewModel 工厂**
-```dart
-import "package:view_model/view_model.dart";
 
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   final String arg;
-
   MyViewModelFactory({this.arg = ""});
 
   @override
-  MyViewModel build() {
-    return MyViewModel(state: arg);
-  }
+  MyViewModel build() => MyViewModel(state: arg);
 }
 ```
 
 ---
 
-### **在 Widget 中使用 ViewModel**
 ```dart
 import "package:view_model/view_model.dart";
 
 class _State extends State<Page> with ViewModelStateMixin<Page> {
-  // 建议使用 getter 获取 ViewModel
+  // 推荐使用 getter 获取 ViewModel
   MyViewModel get viewModel =>
-      getViewModel<MyViewModel>(factory: MyViewModelFactory(arg: "初始参数"));
+      getViewModel<MyViewModel>(factory: MyViewModelFactory(arg: "init arg"));
 
-  // 获取 ViewModel 的状态
   String get state => viewModel.state;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          viewModel.setNewState();
-        },
+        onPressed: viewModel.setNewState,
         child: Icon(Icons.add),
       ),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            appRouter.maybePop();
-          },
+          onPressed: () => appRouter.maybePop(),
         ),
       ),
       body: Column(
@@ -109,16 +106,16 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
             style: const TextStyle(color: Colors.red),
           ),
           FilledButton(
-              onPressed: () async {
-                refreshViewModel(_mainViewModel);
-              },
-              child: const Text("刷新 mainViewModel")),
+            onPressed: () async => refreshViewModel(_mainViewModel),
+            child: const Text("刷新 mainViewModel"),
+          ),
           FilledButton(
-              onPressed: () {
-                debugPrint("页面 MyViewModel hashCode = ${viewModel.hashCode}");
-                debugPrint("页面 MyViewModel.state = ${viewModel.state}");
-              },
-              child: const Text("打印 MyViewModel")),
+            onPressed: () {
+              debugPrint("page.MyViewModel hashCode = ${viewModel.hashCode}");
+              debugPrint("page.MyViewModel.state = ${viewModel.state}");
+            },
+            child: const Text("打印 MyViewModel"),
+          ),
         ],
       ),
     );
@@ -128,7 +125,10 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 
 ---
 
-## **更新状态**
+## 设置状态或通知数据变更
+
+**Stateful ViewModel 示例：**
+
 ```dart
 import "package:view_model/view_model.dart";
 
@@ -139,55 +139,97 @@ class MyViewModel extends ViewModel {
 }
 ```
 
----
-
-## **共享 ViewModel**
-可以设置 `singleton() => true`，在多个 `StatefulWidget` 之间共享同一个 `ViewModel` 实例。
+**StatelessViewModel 示例：**
 
 ```dart
 import "package:view_model/view_model.dart";
 
-class MyViewModelFactory with ViewModelFactory<MyViewModel> {
-  final String arg;
+class MyViewModel extends StatelessViewModel {
+  String s = "1";
 
-  MyViewModelFactory({this.arg = ""});
-
-  @override
-  MyViewModel build() {
-    return MyViewModel(state: arg);
+  void setNewStates() async {
+    s = "2";
+    notifyListeners();
   }
-
-  // 设置为 true 共享 ViewModel 实例  
-  @override
-  bool singleton() => false;
 }
 ```
 
 ---
 
-## **监听状态变化**
+## 共享 ViewModel 实例
+
+### singleton 单例共享
+
+通过重写 `singleton() => true`，可以在多个 StateWidget 之间共享同一个 ViewModel 实例：
+
+```dart
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  final String arg;
+  MyViewModelFactory({this.arg = ""});
+
+  @override
+  MyViewModel build() => MyViewModel(state: arg);
+
+  @override
+  bool singleton() => true;
+}
+```
+
+### key 键值共享
+
+通过重写 `key()`，可指定在同一个 key 下共享 ViewModel 实例。若返回 null，则不共享：
+
+```dart
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  final String arg;
+  MyViewModelFactory({this.arg = ""});
+
+  @override
+  MyViewModel build() => MyViewModel(state: arg);
+
+  @override
+  String? key() => "shared-key";
+}
+```
+
+---
+
+### 获取已存在的 ViewModel
+
+通过 `requireExistingViewModel` 获取一个已有的共享实例。若传入 `key == null`，则获取标记了 `singleton() == true` 的 ViewModel：
+
+```dart
+class _State extends State<Page> with ViewModelStateMixin<Page> {
+  MyViewModel get viewModel => requireExistingViewModel<MyViewModel>(key: null);
+}
+```
+
+---
+
+## 监听状态变化
+
 ```dart
 @override
 void initState() {
   super.initState();
-  _mainViewModel.listen(onChanged: (String? prev, String state) {
-    print("mainViewModel 状态变化: $prev -> $state");
+  _mainViewModel.listen(onChanged: (String? prev, String next) {
+    print("mainViewModel 状态变化: $prev -> $next");
   });
 }
 ```
 
 ---
 
-## **刷新 ViewModel**
-刷新 `ViewModel` 会销毁旧的 `ViewModel` 并创建一个新的。  
-建议使用 **getter 获取 `ViewModel`**，否则需要手动重置 `viewModel`。
+## 刷新 ViewModel
+
+刷新会销毁旧的 ViewModel 并创建一个新的实例。  
+建议使用 getter 获取 ViewModel，否则你需要手动重置它的引用。
 
 ```dart
-// 推荐使用 getter 获取 ViewModel
+// 推荐方式
 MyViewModel get viewModel => getViewModel<MyViewModel>();
 
-refresh() {
-  // 刷新 ViewModel
+void refresh() {
   refreshViewModel(viewModel);
 }
 ```
@@ -197,9 +239,12 @@ refresh() {
 ```dart
 late MyViewModel viewModel = getViewModel<MyViewModel>(factory: factory);
 
-refresh() {
-  // 刷新并重置 ViewModel
+void refresh() {
   refreshViewModel(viewModel);
   viewModel = getViewModel<MyViewModel>(factory: factory);
 }
 ```
+
+---
+
+如果你还需要我帮你优化中文版本 README（比如 `README_ZH.md`），也可以继续发我～
