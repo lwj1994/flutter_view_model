@@ -16,14 +16,13 @@
 * ViewModelFactory: Instructs how to create your ViewModel.
 * getViewModel: Creates or retrieves an existing ViewModel.
 
-
 ## usage
 
 ```yaml
   view_model:
     git:
       url: https://github.com/lwj1994/flutter_view_model
-      ref: 0.0.1
+      ref: 0.0.7
 ```
 
 ```dart
@@ -130,10 +129,11 @@ class MyViewModel extends ViewModel {
 }
 ```
 
-
 ## Share ViewModel
 
-You can set singleton() => true to share the same ViewModel instance across any StateWidget.
+### singleton
+
+You can set singleton() => true to share the same Type ViewModel instance across any StateWidget.
 
 ```dart
 import "package:view_model/view_model.dart";
@@ -152,7 +152,43 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   @override
   bool singleton() => false;
 }
+```
 
+### key
+
+You can set key() to share the same ViewModel instance across any StateWidget. if key == null, will
+not share.
+
+```dart
+import "package:view_model/view_model.dart";
+
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  final String arg;
+
+  MyViewModelFactory({this.arg = ""});
+
+  @override
+  MyViewModel build() {
+    return MyViewModel(state: arg);
+  }
+
+  // if true will share same viewModel instance.  
+  @override
+  String? key() => "key";
+}
+```
+
+### require exiting viewModel
+
+require exiting viewModel by key, if key is null will get viewModel which declare `single() == true`
+in factory.
+
+```dart
+class _State extends State<Page> with ViewModelStateMixin<Page> {
+  // you'd better use getter to get ViewModel
+  MyViewModel get viewModel =>
+      requireExistingViewModel<MyViewModel>(key: null);
+}
 ```
 
 ## Listening for Changes
@@ -162,8 +198,8 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 void initState() {
   super.initState();
   _mainViewModel.listen(onChanged: (String? p, String state) {
-      print("mainViewModel state change $p -> $state");
-    },
+    print("mainViewModel state change $p -> $state");
+  },
   );
 }
 ```
