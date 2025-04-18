@@ -244,7 +244,3 @@ void refresh() {
   viewModel = getViewModel<MyViewModel>(factory: factory);
 }
 ```
-
----
-
-如果你还需要我帮你优化中文版本 README（比如 `README_ZH.md`），也可以继续发我～

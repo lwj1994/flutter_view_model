@@ -244,7 +244,3 @@ void refresh() {
   viewModel = getViewModel<MyViewModel>(factory: factory);
 }
 ```
-
----
-
-如需继续写中文文档或调整风格，随时告诉我！
