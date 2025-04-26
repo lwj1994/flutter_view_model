@@ -1,41 +1,43 @@
-# view_model
+# ViewModel Documentation
 
-[中文文档](README_ZH.md)
+[Chinese Documentation](README_ZH.md)
 
-* Simple & lightweight.
-* No magic – built on top of `StreamController` and `setState`.
-* Automatically disposes alongside the widget's `State`.
-* Shareable across any `StatefulWidget`.
+## Features
 
-> ViewModel only binds to the `State` of a `StatefulWidget`.  
-> We do not recommend binding it to a `StatelessWidget`, as `StatelessWidget`s are not meant to hold state.
+- **Simple and lightweight**: It features a concise design with minimal resource consumption.
+- **No hidden magic**: Built upon `StreamController` and `setState`, its logic is clear and easy to
+  understand.
+- **Automatic disposal**: Automatically releases resources along with the `State` of a
+  `StatefulWidget`.
+- **Shareable**: Can be shared among any `StatefulWidget`s.
 
----
+> Note: `ViewModel` can only be bound to the `State` of a `StatefulWidget`. `StatelessWidget`s are
+> not designed to hold state.
 
 ## Core Concepts
 
-* **ViewModel**: Holds state and notifies listeners of state changes.
-* **ViewModelFactory**: Defines how to create your ViewModel.
-* **getViewModel**: Creates or retrieves an existing ViewModel.
+- **ViewModel**: Responsible for holding state and notifying listeners when the state changes.
+- **ViewModelFactory**: Defines the way to create `ViewModel`s.
+- **getViewModel**: Used to create a new `ViewModel` or retrieve an existing `ViewModel` instance.
 
----
-
-## StatefulViewModel and StatelessViewModel
+## Stateful and Stateless ViewModels
 
 By default, `ViewModel` is stateful.
 
-* **Stateful ViewModel**
-    * Must hold a `state`.
-    * The `state` should be immutable.
-    * Call `setState()` to update the state.
+### Stateful ViewModel
 
-* **StatelessViewModel**
-    * A simpler alternative without internal `state`.
-    * Call `notifyListeners()` to notify data changes.
+- Must hold a `state`.
+- The `state` should be immutable.
+- Update the state by calling the `setState()` method.
 
----
+### Stateless ViewModel
+
+- A simpler alternative without an internal `state`.
+- Notify of data changes by calling `notifyListeners()`.
 
 ## Usage
+
+### Add Dependency in `pubspec.yaml`
 
 ```yaml
 view_model:
@@ -43,6 +45,8 @@ view_model:
     url: https://github.com/lwj1994/flutter_view_model
     ref: 0.0.7
 ```
+
+### Implement ViewModel in Dart
 
 ```dart
 import "package:view_model/view_model.dart";
@@ -65,6 +69,7 @@ class MyViewModel extends ViewModel<String> {
 
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   final String arg;
+
   MyViewModelFactory({this.arg = ""});
 
   @override
@@ -72,13 +77,13 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 }
 ```
 
----
+### Use ViewModel in Widget
 
 ```dart
 import "package:view_model/view_model.dart";
 
 class _State extends State<Page> with ViewModelStateMixin<Page> {
-  // Recommended to use a getter for ViewModel
+  // It is recommended to use a getter for ViewModel
   MyViewModel get viewModel =>
       getViewModel<MyViewModel>(factory: MyViewModelFactory(arg: "init arg"));
 
@@ -123,11 +128,9 @@ class _State extends State<Page> with ViewModelStateMixin<Page> {
 }
 ```
 
----
+## Updating State or Notifying Changes
 
-## Set State or Notify Change
-
-**Stateful ViewModel**
+### For Stateful ViewModel
 
 ```dart
 import "package:view_model/view_model.dart";
@@ -139,7 +142,7 @@ class MyViewModel extends ViewModel {
 }
 ```
 
-**StatelessViewModel**
+### For Stateless ViewModel
 
 ```dart
 import "package:view_model/view_model.dart";
@@ -154,17 +157,17 @@ class MyViewModel extends StatelessViewModel {
 }
 ```
 
----
-
 ## Sharing ViewModel Instances
 
 ### Singleton
 
-Use `singleton() => true` to share the same ViewModel instance across multiple `StatefulWidget`s.
+Set `singleton() => true` to share the same `MyViewModel` instance across multiple `StatefulWidget`
+s.
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   final String arg;
+
   MyViewModelFactory({this.arg = ""});
 
   @override
@@ -177,11 +180,15 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 
 ### Key-based Sharing
 
-Use `key()` to share the same ViewModel across widgets with the same key. If `key == null`, the instance won't be shared.
+Use `key()` to share the same `MyViewModel` among widgets with the same key. If `key == null`, the
+instance won't be shared, and different keys will create different instances.
+
+For example, in `UserPage`, the `UserViewModel` instance is shared based on the `userId`.
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   final String arg;
+
   MyViewModelFactory({this.arg = ""});
 
   @override
@@ -192,19 +199,16 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 }
 ```
 
----
+### Retrieving an Existing ViewModel
 
-### Requiring an Existing ViewModel
-
-Use `requireExistingViewModel` to retrieve a shared instance. If `key` is null, it will return the ViewModel with `singleton() == true`.
+Use `requireExistingViewModel` to retrieve a shared instance. If `key` is null, it will return the
+newly created `ViewModel`.
 
 ```dart
 class _State extends State<Page> with ViewModelStateMixin<Page> {
   MyViewModel get viewModel => requireExistingViewModel<MyViewModel>(key: null);
 }
 ```
-
----
 
 ## Listening for Changes
 
@@ -218,12 +222,10 @@ void initState() {
 }
 ```
 
----
-
 ## Refreshing the ViewModel
 
-Refreshing disposes the old ViewModel and creates a new one.  
-It’s recommended to use a getter for ViewModel access—otherwise, you’ll need to manually reset the reference.
+Refreshing disposes of the old `ViewModel` and creates a new one. It's recommended to use a getter
+for accessing the `ViewModel`; otherwise, you'll need to manually reset the reference.
 
 ```dart
 // Recommended way
@@ -237,10 +239,11 @@ void refresh() {
 Or:
 
 ```dart
+
 late MyViewModel viewModel = getViewModel<MyViewModel>(factory: factory);
 
 void refresh() {
   refreshViewModel(viewModel);
   viewModel = getViewModel<MyViewModel>(factory: factory);
 }
-```
+``` 
