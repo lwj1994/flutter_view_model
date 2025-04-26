@@ -70,5 +70,34 @@ void main() {
       final a1 = instanceManager.recreate<TestModel>(a);
       assert(a != a1);
     });
+
+    test('get exiting instance', () {
+      final factory = InstanceFactory<TestModel>(
+        builder: () => TestModel(),
+      );
+      final b = instanceManager.get<TestModel>(factory: factory);
+      final c = instanceManager.get<TestModel>();
+      // assert(a != b);
+      assert(c == b);
+    });
+
+    test('get exiting instance with watchId', () async {
+      final factory = InstanceFactory<TestModel>(
+        builder: () => TestModel(),
+      );
+      final a = instanceManager.getNotifier<TestModel>(factory: factory);
+      print(a.index);
+      final b = instanceManager.getNotifier<TestModel>(factory: factory);
+      print(b.index);
+      assert(a.index < b.index);
+      final c = instanceManager.getNotifier<TestModel>(
+          factory: InstanceFactory.watch(
+        watchId: "watchId_c",
+      ));
+      assert(c == b);
+      b.recycle();
+      await Future.delayed(const Duration(seconds: 1));
+      assert(c.watchIds.isEmpty);
+    });
   });
 }

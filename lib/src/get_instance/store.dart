@@ -12,6 +12,17 @@ class Store<T> {
   final _streamController = StreamController<InstanceHandle<T>>.broadcast();
   final Map<String, InstanceHandle<T>> _instances = {};
 
+  /// find newly instance sort by createTime desc
+  InstanceHandle<T>? findNewlyInstance() {
+    if (_instances.isEmpty) return null;
+    final l = _instances.values.toList();
+    l.sort((InstanceHandle<T> a, InstanceHandle<T> b) {
+      // desc
+      return b.index.compareTo(a.index);
+    });
+    return l.firstOrNull;
+  }
+
   void _listenDispose(InstanceHandle<T> notifier) {
     void onNotify() {
       switch (notifier.action) {
@@ -50,11 +61,20 @@ class Store<T> {
 
     // create new instance
     final instance = factory.builder!();
+
+    int maxIndex = -1;
+    for (var e in _instances.values) {
+      if (e.index > maxIndex) {
+        maxIndex = e.index;
+      }
+    }
     final create = InstanceHandle<T>(
-        instance: instance,
-        key: realKey,
-        factory: factory.builder!,
-        initWatchId: factory.watchId);
+      instance: instance,
+      key: realKey,
+      factory: factory.builder!,
+      initWatchId: factory.watchId,
+      index: maxIndex + 1,
+    );
     _instances[realKey] = create;
     _streamController.add(create);
     _listenDispose(create);
@@ -72,6 +92,7 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
   final String? initWatchId;
   final List<String> watchIds = List.empty(growable: true);
   final T Function() factory;
+  final int index;
 
   T get instance => _instance!;
 
@@ -81,6 +102,7 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
     required T instance,
     required this.key,
     this.initWatchId,
+    required this.index,
     required this.factory,
   }) : _instance = instance {
     onCreate(key, initWatchId);
@@ -105,6 +127,7 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
   InstanceAction? get action => _action;
 
   void recycle() {
+    viewModelLog("$this recycle");
     _action = InstanceAction.dispose;
     notifyListeners();
     onDispose();
@@ -121,7 +144,7 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
 
   @override
   String toString() {
-    return "InstanceHandle<$T>(key=$key, initWatchId=$initWatchId, watchIds=$watchIds)";
+    return "InstanceHandle<$T>(index=$index, key=$key, initWatchId=$initWatchId, watchIds=$watchIds)";
   }
 
   @override

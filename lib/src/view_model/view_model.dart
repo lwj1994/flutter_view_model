@@ -119,11 +119,14 @@ mixin ViewModelFactory<T> {
   static final singletonId = const UuidV4().generate();
 
   /// 如果 [key] 一样，那么获取的就是同一个内存地址的 [T]
+  /// 比如 key = "userId"，那么不同 User 会获取的自己的单例
+  /// key = null，每次都会调用 [build] 创建新实例
   String? key() => singleton() ? singletonId : null;
 
   T build();
 
   /// 便捷的把当前类型 [T] 设置为单例共享
   /// 如果需要共享不同的实例，根据需求去重写 [key]
+  /// [key] 的优先级高于 [singleton]
   bool singleton() => false;
 }

@@ -35,9 +35,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     String? key,
   }) {
     final res = _instanceController.getInstance<VM>(
-      factory: InstanceFactory(
-        key: key ?? ViewModelFactory.singletonId,
-      ),
+      factory: key == null ? null : InstanceFactory(key: key),
     );
 
     if (listen) {

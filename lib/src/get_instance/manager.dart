@@ -25,22 +25,39 @@ class InstanceManager {
     return s;
   }
 
+  /// if null throw error
   T get<T>({
-    required InstanceFactory<T> factory,
+    InstanceFactory<T>? factory,
   }) {
-    return _getStore<T>()
-        .getNotifier(
-          factory: factory,
-        )
-        .instance;
+    return getNotifier(factory: factory).instance;
   }
 
   InstanceHandle<T> getNotifier<T>({
-    required InstanceFactory<T> factory,
+    InstanceFactory<T>? factory,
   }) {
-    return _getStore<T>().getNotifier(
-      factory: factory,
-    );
+    if (factory == null || factory.isEmpty()) {
+      final watchId = factory?.watchId;
+      // find newly T instance
+      final find = _getStore<T>().findNewlyInstance();
+      if (find == null) {
+        throw StateError("no $T instance found");
+      }
+
+      // if watchId is not null, add watcher
+      if (watchId != null) {
+        final factory = InstanceFactory<T>(
+          watchId: watchId,
+          key: find.key,
+        );
+        return _getStore<T>().getNotifier(factory: factory);
+      } else {
+        return find;
+      }
+    } else {
+      return _getStore<T>().getNotifier(
+        factory: factory,
+      );
+    }
   }
 }
 
@@ -48,6 +65,16 @@ class InstanceFactory<T> {
   final T Function()? builder;
   final String? key;
   final String? watchId;
+
+  bool isEmpty() {
+    return builder == null && key == null;
+  }
+
+  factory InstanceFactory.watch({required String watchId}) {
+    return InstanceFactory(
+      watchId: watchId,
+    );
+  }
 
   InstanceFactory({
     this.builder,

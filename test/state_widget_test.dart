@@ -13,7 +13,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: TestPage(
       key: testKey,
-      factory: TestViewModelFactory(
+      factory: const TestViewModelFactory(
         initState: "initState",
         isSingleton: false,
       ),
@@ -29,7 +29,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
         home: TestPage(
       key: testKey,
-      factory: TestViewModelFactory(
+      factory: const TestViewModelFactory(
         initState: "initState",
         isSingleton: false,
       ),
@@ -37,13 +37,13 @@ void main() {
     final state = testKey.currentState as TestPageState;
 
     final vm1 = state.getViewModel(
-        factory: TestViewModelFactory(
+        factory: const TestViewModelFactory(
       initState: "initState",
       isSingleton: false,
     ));
 
     final vm2 = state.getViewModel(
-        factory: TestViewModelFactory(
+        factory: const TestViewModelFactory(
       initState: "initState2",
       isSingleton: false,
     ));
@@ -69,14 +69,14 @@ void main() {
       children: [
         TestPage(
           key: testKey,
-          factory: TestViewModelFactory(
+          factory: const TestViewModelFactory(
             initState: "initState",
             isSingleton: false,
           ),
         ),
         TestPage(
           key: testKey2,
-          factory: TestViewModelFactory(
+          factory: const TestViewModelFactory(
             initState: "initState2",
             isSingleton: false,
           ),
@@ -87,13 +87,13 @@ void main() {
     final state2 = testKey2.currentState as TestPageState;
 
     final vm1 = state.getViewModel(
-        factory: TestViewModelFactory(
+        factory: const TestViewModelFactory(
       initState: "initState",
       isSingleton: false,
     ));
 
     final vm2 = state2.getViewModel(
-        factory: TestViewModelFactory(
+        factory: const TestViewModelFactory(
       initState: "initState2",
       isSingleton: false,
     ));
@@ -102,10 +102,45 @@ void main() {
     assert(vm1 != vm2);
   });
 
-  testWidgets('state share viewModel', (tester) async {
+  testWidgets('state share exiting viewModel', (tester) async {
     final testKey = GlobalKey();
     final testKey2 = GlobalKey();
-    final fc = TestViewModelFactory(
+    const fc = TestViewModelFactory(
+      initState: "initState",
+    );
+    await tester.pumpWidget(MaterialApp(
+        home: Column(
+      children: [
+        TestPage(
+          key: testKey,
+          factory: fc.copyWith(
+            initState: "initState1",
+          ),
+        ),
+        TestPage(
+          key: testKey2,
+          factory: fc.copyWith(
+            initState: "initState2",
+          ),
+        ),
+      ],
+    )));
+    final state = testKey.currentState as TestPageState;
+    final state2 = testKey2.currentState as TestPageState;
+
+    final vm1 = state.requireExistingViewModel<TestViewModel>();
+    final vm2 = state2.requireExistingViewModel<TestViewModel>();
+    print(vm1.state);
+    print(vm2.state);
+    assert(vm1.state == "initState2");
+    assert(vm2.state == "initState2");
+    assert(vm1 == vm2);
+  });
+
+  testWidgets('state share singleton viewModel', (tester) async {
+    final testKey = GlobalKey();
+    final testKey2 = GlobalKey();
+    const fc = TestViewModelFactory(
       initState: "initState",
       isSingleton: true,
     );
@@ -128,14 +163,17 @@ void main() {
     final vm1 = state.getViewModel(factory: fc);
 
     final vm2 = state2.getViewModel(factory: fc);
+    final vm3 = state2.requireExistingViewModel<TestViewModel>();
     print(vm1.state);
     print(vm2.state);
+    print(vm3.state);
     assert(vm1 == vm2);
+    assert(vm1 == vm3);
   });
 
   testWidgets('requireExistingViewModel with key', (tester) async {
     final testKey = GlobalKey();
-    final fc = TestViewModelFactory(keyV: "key");
+    const fc = TestViewModelFactory(keyV: "key");
     await tester.pumpWidget(MaterialApp(
         home: Column(
       children: [
@@ -160,7 +198,7 @@ void main() {
 
   testWidgets('requireExistingViewModel', (tester) async {
     final testKey = GlobalKey();
-    final fc = TestViewModelFactory(isSingleton: true);
+    const fc = TestViewModelFactory();
     print("key = ${fc.key()}");
     await tester.pumpWidget(MaterialApp(
         home: Column(
@@ -186,7 +224,7 @@ void main() {
 
   testWidgets('getViewModel without listen', (tester) async {
     final testKey = GlobalKey();
-    final fc = TestViewModelFactory();
+    const fc = TestViewModelFactory();
     await tester.pumpWidget(MaterialApp(
         home: Column(
       children: [
@@ -218,7 +256,7 @@ void main() {
 
   testWidgets('setState', (tester) async {
     final testKey = GlobalKey();
-    final fc = TestViewModelFactory();
+    const fc = TestViewModelFactory();
     await tester.pumpWidget(MaterialApp(
         home: Column(
       children: [
@@ -247,7 +285,7 @@ void main() {
 
   testWidgets('refresh viewModel', (tester) async {
     final testKey = GlobalKey();
-    final fc = TestViewModelFactory();
+    const fc = TestViewModelFactory();
     await tester.pumpWidget(MaterialApp(
         home: Column(
       children: [
