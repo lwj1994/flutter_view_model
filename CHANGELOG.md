@@ -1,9 +1,3 @@
-## 0.0.1
-
-* This is a simple and lightweight ViewModel designed specifically for Flutter. It doesn't rely on
-  any complex mechanisms.
-  Instead, it's implemented solely based on StreamController and setState.
-  Although it triggers setState for the entire Widget tree, there's no need to worry about this.
-  This is because the Widget tree essentially serves as a configuration, incurring minimal
-  performance overhead.
+## 0.3.0
+* transfer to https://github.com/lwj1994/flutter_view_model. thank to [Miolin](https://github.com/Miolin)
 

@@ -1,6 +1,6 @@
 name: view_model
 description: "view model for flutter"
-version: 0.0.8
+version: 0.3.0
 homepage: https://github.com/lwj1994/flutter_view_model
 
 environment:

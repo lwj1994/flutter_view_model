@@ -1,4 +1,5 @@
 # view_model
+![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)
 
 [Chinese Documentation](README_ZH.md)
 
@@ -45,10 +46,7 @@ By default, `ViewModel` is stateful.
 ### Add Dependency in `pubspec.yaml`
 
 ```yaml
-view_model:
-  git:
-    url: https://github.com/lwj1994/flutter_view_model
-    ref: 0.0.7
+view_model: ${latest_version}
 ```
 
 ### Implement ViewModel in Dart
