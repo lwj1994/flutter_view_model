@@ -1,6 +1,11 @@
-# ViewModel Documentation
+# view_model
 
 [Chinese Documentation](README_ZH.md)
+
+
+> Huge thanks to [Miolin](https://github.com/Miolin) for entrusting me with
+> the [view_model](https://pub.dev/packages/view_model) ! Your support
+> means a lot, and I’m excited to continue its development. Appreciate it!
 
 ## Features
 
