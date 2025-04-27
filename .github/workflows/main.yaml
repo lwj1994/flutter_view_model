@@ -1,4 +1,4 @@
-name: Codecov Coverage Upload
+name: view_model Workflow
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
       # 这里可以添加生成覆盖率报告的步骤，比如运行测试等
       - name: Generate coverage report
-        run: # 运行生成覆盖率报告的命令
+        run: npx jest --coverage
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
