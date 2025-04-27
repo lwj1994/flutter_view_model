@@ -1,4 +1,4 @@
-# ViewModel
+# view_model
 
 [![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
@@ -42,6 +42,11 @@
 ## 使用 ViewModel 的分步指南
 
 使用 `view_model` 包是一个简单直接的过程。遵循以下四个步骤：
+
+```yaml
+dependencies:
+  view_model: ^0.3.0
+```
 
 ### 1. 定义状态类（适用于有状态 ViewModel）
 

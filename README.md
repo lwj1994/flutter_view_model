@@ -1,5 +1,4 @@
-# ViewModel
-
+# view_model
 [![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
 [中文文档](README_ZH.md)
@@ -55,6 +54,12 @@ By default, `ViewModel` operates in a stateful mode.
 ## Step - by - Step Guide to Using ViewModel
 
 Using the `view_model` package is a straightforward process. Follow these four steps:
+
+Add Dependency:
+```yaml
+dependencies:
+  view_model: ^0.3.0
+```
 
 ### 1. Define a State Class (for Stateful ViewModel)
 
