@@ -12,11 +12,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 这里可以添加生成覆盖率报告的步骤，比如运行测试等
-      - name: Generate coverage report
-        run: npx jest --coverage
+      - name: 👷 Install Dependencies
+        timeout-minutes: 1
+        run: |
+          fvm dart pub get
 
-      - name: Upload coverage reports to Codecov
+      - name: 🔎 Check format
+        timeout-minutes: 1
+        run: fvm dart format --set-exit-if-changed -l 80 -o none lib/
+
+      - name: 📈 Check analyzer
+        timeout-minutes: 1
+        run: fvm dart analyze --fatal-infos --fatal-warnings lib/
+
+      #- name: 🌐 Setup Chrome
+      #  uses: browser-actions/setup-chrome@latest
+
+      - name: 🧪 Run tests
+        timeout-minutes: 2
+        run: |
+          fvm dart run coverage:test_with_coverage -fb -o coverage -- \
+            --concurrency=6 --platform vm --coverage=./coverage --reporter=expanded test/ws_test.dart
+
+      - name: 📥 Upload coverage to Codecov
+        timeout-minutes: 1
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
