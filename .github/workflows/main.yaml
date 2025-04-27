@@ -1,4 +1,22 @@
-- name: Upload coverage reports to Codecov
-    uses: codecov/codecov-action@v5
-    with:
-      token: ${{ secrets.CODECOV_TOKEN }}
+name: Codecov Coverage Upload
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  codecov-upload:
+    runs-on: self-hosted  # 指定作业运行在自托管运行器上
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 这里可以添加生成覆盖率报告的步骤，比如运行测试等
+      - name: Generate coverage report
+        run: # 运行生成覆盖率报告的命令
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
