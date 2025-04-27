@@ -1,12 +1,14 @@
 # view_model
-![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)
+
+[![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model)
 
 [Chinese Documentation](README_ZH.md)
 
 
-> Huge thanks to [Miolin](https://github.com/Miolin) for entrusting me with
-> the [view_model](https://pub.dev/packages/view_model) ! Your support
-> means a lot, and I’m excited to continue its development. Appreciate it!
+> Huge thanks to [Miolin](https://github.com/Miolin) for entrusting me with the permissions of
+> the [view_model](https://pub.dev/packages/view_model) and transferring
+> its ownership to me! Your support means a great deal, and I’m truly excited to continue its
+> development. Appreciate it!
 
 ## Features
 
