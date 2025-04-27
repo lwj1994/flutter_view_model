@@ -19,11 +19,6 @@ class SecondPage extends StatefulWidget {
   }
 }
 
-enum ReducerType {
-  add,
-  sub,
-}
-
 class _State extends State<SecondPage> with ViewModelStateMixin {
   MyViewModel get viewModel => getViewModel<MyViewModel>(
       factory: MyViewModelFactory(arg: "init MyViewModel"));
@@ -31,7 +26,7 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
   // MainViewModel get _mainViewModel =>
   //     getViewModel<MainViewModel>(factory: MainViewModelFactory());
 
-  String get state => viewModel.state;
+  MyState get state => viewModel.state;
 
   @override
   void initState() {
@@ -43,18 +38,17 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
     //   },
     // );
 
-    viewModel.listen(onChanged: (String? previous, String state) {
+    viewModel.listen(onChanged: (MyState? previous, MyState state) {
       print("myViewModel state change $previous -> $state");
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    print("SecondPage trigger build(BuildContext context)");
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          viewModel.setId(ReducerType.add);
+          viewModel.setRandomName();
         },
         child: Icon(Icons.add),
       ),
@@ -69,7 +63,6 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Text("mainViewModel.state = ${_mainViewModel.state}"),
           Text(
             "myViewModel state :$state",
             style: const TextStyle(color: Colors.red),
@@ -98,11 +91,11 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 
   @override
   MyViewModel build() {
-    return MyViewModel(state: arg);
+    return MyViewModel(state: MyState(name: ""));
   }
 }
 
-class MyViewModel extends ViewModel<String> {
+class MyViewModel extends ViewModel<MyState> {
   MyViewModel({
     required super.state,
   }) {
@@ -115,7 +108,53 @@ class MyViewModel extends ViewModel<String> {
     debugPrint("dispose ViewModel  $hashCode");
   }
 
-  void setId(ReducerType type) {
-    setState(Random().nextInt(200).toString());
+  void setRandomName() {
+    setState(MyState(name: Random().nextInt(200).toString()));
   }
+}
+
+class MyState {
+  final String name;
+
+//<editor-fold desc="Data Methods">
+  const MyState({
+    required this.name,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MyState &&
+          runtimeType == other.runtimeType &&
+          name == other.name);
+
+  @override
+  int get hashCode => name.hashCode;
+
+  @override
+  String toString() {
+    return 'MyState{' + ' name: $name,' + '}';
+  }
+
+  MyState copyWith({
+    String? name,
+  }) {
+    return MyState(
+      name: name ?? this.name,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': this.name,
+    };
+  }
+
+  factory MyState.fromMap(Map<String, dynamic> map) {
+    return MyState(
+      name: map['name'] as String,
+    );
+  }
+
+//</editor-fold>
 }

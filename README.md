@@ -1,254 +1,233 @@
-# view_model
+# ViewModel
 
 [![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[Chinese Documentation](README_ZH.md)
+[中文文档](README_ZH.md)
 
-
-> Huge thanks to [Miolin](https://github.com/Miolin) for entrusting me with the permissions of
-> the [view_model](https://pub.dev/packages/view_model) and transferring
-> its ownership to me! Your support means a great deal, and I’m truly excited to continue its
-> development. Appreciate it!
+I would like to express my sincere gratitude to [Miolin](https://github.com/Miolin) for entrusting
+me with the permissions of the [view_model](https://pub.dev/packages/view_model) package and
+transferring its ownership. This support is invaluable, and I'm truly thrilled to drive its
+continuous development forward. Thank you!
 
 ## Features
 
-- **Simple and lightweight**: It features a concise design with minimal resource consumption.
-- **No hidden magic**: Built upon `StreamController` and `setState`, its logic is clear and easy to
-  understand.
-- **Automatic disposal**: Automatically releases resources along with the `State` of a
-  `StatefulWidget`.
-- **Shareable**: Can be shared among any `StatefulWidget`s.
+- **Simplicity and Lightweight Design**: Boasts a streamlined architecture with minimal resource
+  overhead, ensuring efficient performance.
+- **Transparent Implementation**: Built on `StreamController` and `setState`, its internal logic is
+  straightforward and easily comprehensible, eliminating any hidden complexities.
+- **Automatic Resource Disposal**: Resources are automatically released in tandem with the `State`
+  of a `StatefulWidget`, simplifying memory management.
+- **Cross - Widget Sharing**: Can be shared across multiple `StatefulWidget`s, promoting code
+  reusability and modularity.
 
-> Note: `ViewModel` can only be bound to the `State` of a `StatefulWidget`. `StatelessWidget`s are
-> not designed to hold state.
+> **Important Note**: `ViewModel` is designed to be bound exclusively to the `State` of a
+`StatefulWidget`. Since `StatelessWidget`s do not maintain state, they are not compatible with this
+> binding mechanism.
 
 ## Core Concepts
 
-- **ViewModel**: Responsible for holding state and notifying listeners when the state changes.
-- **ViewModelFactory**: Defines the way to create `ViewModel`s.
-- **getViewModel**: Used to create a new `ViewModel` or retrieve an existing `ViewModel` instance.
+- **ViewModel**: Serves as the central repository for state management. It holds the application
+  state and notifies registered listeners whenever the state undergoes a change.
+- **ViewModelFactory**: Defines the instantiation logic for `ViewModel`s, specifying how they are
+  created and configured.
+- **getViewModel**: A utility function used to either create a new `ViewModel` instance or retrieve
+  an existing one, facilitating easy access to view models within the application.
 
 ## Stateful and Stateless ViewModels
 
-By default, `ViewModel` is stateful.
+By default, `ViewModel` operates in a stateful mode.
 
 ### Stateful ViewModel
 
-- Must hold a `state`.
-- The `state` should be immutable.
-- Update the state by calling the `setState()` method.
+- **State - Centric**: Mandatorily holds an internal `state` object.
+- **Immutability Principle**: The `state` is designed to be immutable, ensuring data integrity and
+  predictability.
+- **State Updates**: State modifications are achieved through the `setState()` method, which
+  triggers a rebuild of the associated widgets.
 
 ### Stateless ViewModel
 
-- A simpler alternative without an internal `state`.
-- Notify of data changes by calling `notifyListeners()`.
+- **Simplified Approach**: Offers a more lightweight alternative without maintaining an internal
+  `state`.
+- **Change Notification**: Data changes are communicated to listeners by invoking the
+  `notifyListeners()` method.
 
-## Usage
+## Step - by - Step Guide to Using ViewModel
 
-### Add Dependency in `pubspec.yaml`
+Using the `view_model` package is a straightforward process. Follow these four steps:
 
-```yaml
-view_model: ${latest_version}
-```
+### 1. Define a State Class (for Stateful ViewModel)
 
-### Implement ViewModel in Dart
+For stateful view models, start by creating an immutable state class:
 
 ```dart
-import "package:view_model/view_model.dart";
+class MyState {
+  final String name;
 
-class MyViewModel extends ViewModel<String> {
-  MyViewModel({required super.state}) {
-    debugPrint("Created MyViewModel state: $state hashCode: $hashCode");
-  }
+  const MyState({required this.name});
 
-  void setNewState() {
-    setState((s) => "hi");
+  MyState copyWith({String? name}) =>
+      MyState(
+        name: name ?? this.name,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          (other is MyState && runtimeType == other.runtimeType && name == other.name);
+
+  @override
+  int get hashCode => name.hashCode;
+
+  @override
+  String toString() => 'MyState{name: $name}';
+}
+```
+
+> **Pro Tip**: If your use case doesn't require managing complex state, you can skip this step and
+> opt for a Stateless ViewModel instead (refer to Step 2).
+
+### 2. Create a ViewModel
+
+Extend either `ViewModel<T>` for stateful management or `StatelessViewModel` for stateless
+scenarios:
+
+**Example: Stateful ViewModel**
+
+```dart
+import 'package:view_model/view_model.dart';
+
+class MyViewModel extends ViewModel<MyState> {
+  MyViewModel({required super.state});
+
+  void updateName(String newName) {
+    setState(state.copyWith(name: newName));
   }
 
   @override
   void dispose() async {
     super.dispose();
-    debugPrint("Disposed MyViewModel $state $hashCode");
+    debugPrint('Disposed MyViewModel: $state');
   }
-}
-
-class MyViewModelFactory with ViewModelFactory<MyViewModel> {
-  final String arg;
-
-  MyViewModelFactory({this.arg = ""});
-
-  @override
-  MyViewModel build() => MyViewModel(state: arg);
 }
 ```
 
-### Use ViewModel in Widget
+**Example: Stateless ViewModel**
 
 ```dart
-import "package:view_model/view_model.dart";
+import 'package:view_model/view_model.dart';
 
-class _State extends State<Page> with ViewModelStateMixin<Page> {
-  // It is recommended to use a getter for ViewModel
+class MyViewModel extends StatelessViewModel {
+  String name = "Initial Name";
+
+  void updateName(String newName) {
+    name = newName;
+    notifyListeners();
+  }
+}
+```
+
+### 3. Implement a ViewModelFactory
+
+Use a `ViewModelFactory` to specify how your `ViewModel` should be instantiated:
+
+```dart
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  final String initialName;
+
+  MyViewModelFactory({this.initialName = ""});
+
+  @override
+  MyViewModel build() => MyViewModel(state: MyState(name: initialName));
+
+  // Optional: Enable singleton sharing. Only applicable when key() returns null.
+  @override
+  bool singleton() => true;
+
+  // Optional: Share ViewModel based on a custom key.
+  @override
+  String? key() => initialName;
+}
+```
+
+### 4. Integrate ViewModel into Your Widget
+
+In a `StatefulWidget`, utilize `getViewModel` to access the view model:
+
+```dart
+import 'package:view_model/view_model.dart';
+
+class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
   MyViewModel get viewModel =>
-      getViewModel<MyViewModel>(factory: MyViewModelFactory(arg: "init arg"));
-
-  String get state => viewModel.state;
+      getViewModel<MyViewModel>(factory: MyViewModelFactory(initialName: "Hello"));
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      body: Center(
+        child: Text(viewModel.state.name),
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: viewModel.setNewState,
-        child: Icon(Icons.add),
-      ),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => appRouter.maybePop(),
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("mainViewModel.state = ${_mainViewModel.state}"),
-          Text(
-            state,
-            style: const TextStyle(color: Colors.red),
-          ),
-          FilledButton(
-            onPressed: () async => refreshViewModel(_mainViewModel),
-            child: const Text("Refresh mainViewModel"),
-          ),
-          FilledButton(
-            onPressed: () {
-              debugPrint("page.MyViewModel hashCode = ${viewModel.hashCode}");
-              debugPrint("page.MyViewModel.state = ${viewModel.state}");
-            },
-            child: const Text("Print MyViewModel"),
-          ),
-        ],
+        onPressed: () => viewModel.updateName("New Name"),
+        child: Icon(Icons.refresh),
       ),
     );
   }
 }
 ```
 
-## Updating State or Notifying Changes
+> **Note**: Additional functionality such as change listening, view model refresh, and cross - page
+> sharing are also supported. Refer to the sections below for more details.
 
-### For Stateful ViewModel
+## Advanced APIs
 
-```dart
-import "package:view_model/view_model.dart";
-
-class MyViewModel extends ViewModel {
-  void setNewStates() async {
-    setState("1");
-  }
-}
-```
-
-### For Stateless ViewModel
-
-```dart
-import "package:view_model/view_model.dart";
-
-class MyViewModel extends StatelessViewModel {
-  String s = "1";
-
-  void setNewStates() async {
-    s = "2";
-    notifyListeners();
-  }
-}
-```
-
-## Sharing ViewModel Instances
-
-### Singleton
-
-Set `singleton() => true` to share the same `MyViewModel` instance across multiple `StatefulWidget`
-s.
-
-```dart
-class MyViewModelFactory with ViewModelFactory<MyViewModel> {
-  final String arg;
-
-  MyViewModelFactory({this.arg = ""});
-
-  @override
-  MyViewModel build() => MyViewModel(state: arg);
-
-  @override
-  bool singleton() => true;
-}
-```
-
-### Key-based Sharing
-
-Use `key()` to share the same `MyViewModel` among widgets with the same key. If `key == null`, the
-instance won't be shared, and different keys will create different instances.
-
-For example, in `UserPage`, the `UserViewModel` instance is shared based on the `userId`.
-
-```dart
-class MyViewModelFactory with ViewModelFactory<MyViewModel> {
-  final String arg;
-
-  MyViewModelFactory({this.arg = ""});
-
-  @override
-  MyViewModel build() => MyViewModel(state: arg);
-
-  @override
-  String? key() => "shared-key";
-}
-```
-
-### Retrieving an Existing ViewModel
-
-Use `requireExistingViewModel` to retrieve a shared instance. If `key` is null, it will return the
-newly created `ViewModel`.
-
-```dart
-class _State extends State<Page> with ViewModelStateMixin<Page> {
-  MyViewModel get viewModel => requireExistingViewModel<MyViewModel>(key: null);
-}
-```
-
-## Listening for Changes
+### Listening for State Changes
 
 ```dart
 @override
 void initState() {
   super.initState();
-  _mainViewModel.listen(onChanged: (String? prev, String next) {
-    print("mainViewModel state changed: $prev -> $next");
+  viewModel.listen(onChanged: (prev, next) {
+    print('State changed: $prev -> $next');
   });
 }
 ```
 
-## Refreshing the ViewModel
+### Retrieving Existing ViewModels
 
-Refreshing disposes of the old `ViewModel` and creates a new one. It's recommended to use a getter
-for accessing the `ViewModel`; otherwise, you'll need to manually reset the reference.
+**Option 1**: Use `getViewModel` to fetch an existing view model (creates a new one if not found):
 
 ```dart
-// Recommended way
-MyViewModel get viewModel => getViewModel<MyViewModel>();
-
-void refresh() {
-  refreshViewModel(viewModel);
-}
+MyViewModel get viewModel =>
+    getViewModel<MyViewModel>(factory: MyViewModelFactory(
+      key: "my-key",
+    ));
 ```
 
-Or:
+**Option 2**: Use `requireExistingViewModel` to retrieve only existing view models (throws an
+exception if not found):
 
 ```dart
+// Find newly created <MyViewModel> instance
+MyViewModel get viewModel => requireExistingViewModel<MyViewModel>();
 
-late MyViewModel viewModel = getViewModel<MyViewModel>(factory: factory);
+// Find <MyViewModel> instance by key
+MyViewModel get viewModel => requireExistingViewModel<MyViewModel>(key: "my-key");
+```
 
+### Refreshing ViewModel
+
+Create a new instance of the view model:
+
+```dart
 void refresh() {
   refreshViewModel(viewModel);
-  viewModel = getViewModel<MyViewModel>(factory: factory);
+
+  // This will obtain a new instance
+  viewModel = getViewModel<MyViewModel>(
+    factory: MyViewModelFactory(
+      key: "my-key",
+    ),
+  );
 }
 ``` 
