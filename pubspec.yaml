@@ -2,6 +2,22 @@ name: view_model
 description: "view model for flutter"
 version: 0.3.0
 homepage: https://github.com/lwj1994/flutter_view_model
+repository: https://github.com/lwj1994/flutter_view_model
+issue_tracker: https://github.com/lwj1994/flutter_view_model/issues
+
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  web:
+  windows:
+
+topics:
+  - vm
+  - view_model
+  - state
+  - state_manager
 
 environment:
   sdk: ^3.0.0
@@ -16,6 +32,5 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-
-
-flutter:
+  coverage:
+  test:
