@@ -100,13 +100,13 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 //</editor-fold>
 }
 
-class TestViewModel extends ViewModel<String> {
+class TestViewModel extends StateViewModel<String> {
   TestViewModel({required super.state}) {
     print("TestViewModel create : $hashCode");
   }
 }
 
-class TestStatelessViewModel extends StatelessViewModel {
+class TestStatelessViewModel extends ViewModel {
   TestStatelessViewModel() {
     print("TestStatelessViewModel create : $hashCode");
   }

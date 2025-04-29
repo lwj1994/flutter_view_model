@@ -72,7 +72,7 @@ class MainViewModelFactory with vm.ViewModelFactory<MainViewModel> {
 
   @override
   MainViewModel build() {
-    return MainViewModel(state: arg);
+    return MainViewModel();
   }
 
   @override
@@ -81,18 +81,20 @@ class MainViewModelFactory with vm.ViewModelFactory<MainViewModel> {
   }
 }
 
-class MainViewModel extends ViewModel<String> {
-  MainViewModel({required super.state}) {
+class MainViewModel extends ViewModel {
+  String state = "";
+
+  MainViewModel() {
     print("MainViewModel create : $hashCode");
     final t = Timer.periodic(Duration(seconds: 1), (t) {
-      setState("update ${t.tick}");
+      state = ("update ${t.tick}");
+      notifyListeners();
     });
     addDispose(t.cancel);
   }
 
   @override
   void dispose() {
-    super.dispose();
     print("MainViewModel dispose $hashCode");
   }
 }
