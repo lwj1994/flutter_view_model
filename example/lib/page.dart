@@ -28,7 +28,7 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
   @override
   void initState() {
     super.initState();
-    viewModel.listenState(onChanged: (MyState? previous, MyState state) {
+    viewModel.listen(onChanged: (MyState? previous, MyState state) {
       print("myViewModel state change $previous -> $state");
     });
   }
