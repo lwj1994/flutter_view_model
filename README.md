@@ -1,4 +1,5 @@
 # view_model
+
 [![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
 [中文文档](README_ZH.md)
@@ -34,7 +35,14 @@ continuous development forward. Thank you!
 
 ## Stateful and Stateless ViewModels
 
-By default, `ViewModel` operates in a stateful mode.
+By default, `ViewModel` operates in a stateless mode.
+
+### Stateless ViewModel
+
+- **Simplified Approach**: Offers a more lightweight alternative without maintaining an internal
+  `state`.
+- **Change Notification**: Data changes are communicated to listeners by invoking the
+  `notifyListeners()` method.
 
 ### Stateful ViewModel
 
@@ -44,21 +52,15 @@ By default, `ViewModel` operates in a stateful mode.
 - **State Updates**: State modifications are achieved through the `setState()` method, which
   triggers a rebuild of the associated widgets.
 
-### Stateless ViewModel
-
-- **Simplified Approach**: Offers a more lightweight alternative without maintaining an internal
-  `state`.
-- **Change Notification**: Data changes are communicated to listeners by invoking the
-  `notifyListeners()` method.
-
 ## Step - by - Step Guide to Using ViewModel
 
 Using the `view_model` package is a straightforward process. Follow these four steps:
 
 Add Dependency:
+
 ```yaml
 dependencies:
-  view_model: ^0.3.0
+  view_model: ^0.4.0
 ```
 
 ### 1. Define a State Class (for Stateful ViewModel)
@@ -94,15 +96,30 @@ class MyState {
 
 ### 2. Create a ViewModel
 
-Extend either `ViewModel<T>` for stateful management or `StatelessViewModel` for stateless
-scenarios:
+Extend either `ViewModel<T>` for stateless scenarios or `StateViewModel` for stateful management.
+
+
+**Example: Stateless ViewModel**
+
+```dart
+import 'package:view_model/view_model.dart';
+
+class MyViewModel extends ViewModel {
+  String name = "Initial Name";
+
+  void updateName(String newName) {
+    name = newName;
+    notifyListeners();
+  }
+}
+```
 
 **Example: Stateful ViewModel**
 
 ```dart
 import 'package:view_model/view_model.dart';
 
-class MyViewModel extends ViewModel<MyState> {
+class MyViewModel extends StateViewModel<MyState> {
   MyViewModel({required super.state});
 
   void updateName(String newName) {
@@ -117,20 +134,7 @@ class MyViewModel extends ViewModel<MyState> {
 }
 ```
 
-**Example: Stateless ViewModel**
 
-```dart
-import 'package:view_model/view_model.dart';
-
-class MyViewModel extends StatelessViewModel {
-  String name = "Initial Name";
-
-  void updateName(String newName) {
-    name = newName;
-    notifyListeners();
-  }
-}
-```
 
 ### 3. Implement a ViewModelFactory
 

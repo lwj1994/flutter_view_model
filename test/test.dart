@@ -1,7 +1,7 @@
 // @author luwenjie on 2025/4/27 14:07:07
 
-
 import 'package:flutter_test/flutter_test.dart';
+
 import 'get_instance_test.dart' as get_instance_test;
 import 'state_widget_test.dart' as state_widget_test;
 import 'stateless_view_model_test.dart' as stateless_view_model_test;

@@ -20,25 +20,15 @@ class SecondPage extends StatefulWidget {
 }
 
 class _State extends State<SecondPage> with ViewModelStateMixin {
-  MyViewModel get viewModel => getViewModel<MyViewModel>(
-      factory: MyViewModelFactory(arg: "init MyViewModel"));
-
-  // MainViewModel get _mainViewModel =>
-  //     getViewModel<MainViewModel>(factory: MainViewModelFactory());
+  MyViewModel get viewModel =>
+      getViewModel(factory: MyViewModelFactory(arg: "init MyViewModel"));
 
   MyState get state => viewModel.state;
 
   @override
   void initState() {
     super.initState();
-    // listenViewModelState<MainViewModel, String>(
-    //   _mainViewModel,
-    //   onChange: (String? p, String n) {
-    //     print("mainViewModel state change $p -> $n");
-    //   },
-    // );
-
-    viewModel.listen(onChanged: (MyState? previous, MyState state) {
+    viewModel.listenState(onChanged: (MyState? previous, MyState state) {
       print("myViewModel state change $previous -> $state");
     });
   }
@@ -95,7 +85,7 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   }
 }
 
-class MyViewModel extends ViewModel<MyState> {
+class MyViewModel extends StateViewModel<MyState> {
   MyViewModel({
     required super.state,
   }) {
@@ -133,7 +123,7 @@ class MyState {
 
   @override
   String toString() {
-    return 'MyState{' + ' name: $name,' + '}';
+    return 'MyState{' ' name: $name,' '}';
   }
 
   MyState copyWith({
@@ -146,7 +136,7 @@ class MyState {
 
   Map<String, dynamic> toMap() {
     return {
-      'name': this.name,
+      'name': name,
     };
   }
 

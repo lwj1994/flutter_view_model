@@ -16,7 +16,7 @@ void main() {
     test("batch_set_state block", () async {
       const total = 100;
 
-      viewModel.listen(onChanged: (p, s) {
+      viewModel.listenState(onChanged: (p, s) {
         print("batch_set_state $p -> $s");
 
         if (p != viewModel.initState) {
@@ -40,7 +40,7 @@ void main() {
 
     test("set_state block", () async {
       int c = 0;
-      viewModel.listen(onChanged: (p, s) {
+      viewModel.listenState(onChanged: (p, s) {
         print("$p -> $s");
         if (c == 0) {
           expect(p, "1");

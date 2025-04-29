@@ -1,5 +1,7 @@
 // @author luwenjie on 2025/3/25 17:00:38
 
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/store.dart';
@@ -8,47 +10,110 @@ import 'package:view_model/src/view_model/config.dart';
 
 import 'state_store.dart';
 
-abstract class ViewModel<T> implements InstanceLifeCycle {
+abstract class ViewModel implements InstanceLifeCycle {
+  final List<VoidCallback?> _listeners = [];
   static ViewModelConfig _config = ViewModelConfig();
-
-  static ViewModelConfig get config => _config;
-
-  static void initConfig(ViewModelConfig config) {
-    _config = config;
-  }
-
   final _autoDisposeController = AutoDisposeController();
-  late final ViewModelStateStore<T> _store;
+  bool _isDisposed = false;
 
-  Function() listen({required Function(T? previous, T state) onChanged}) {
-    final s = _store.stateStream.listen((event) {
-      if (_isDisposed) return;
-      onChanged.call(event.p, event.n);
-    });
-    return s.cancel;
-  }
+  bool get isDisposed => _isDisposed;
 
   @protected
   void addDispose(Function() block) async {
     _autoDisposeController.addDispose(block);
   }
 
-  bool _isDisposed = false;
+  Function() listen({required VoidCallback onChanged}) {
+    _listeners.add(onChanged);
+    return () {
+      _listeners.remove(onChanged);
+    };
+  }
+
+  void notifyListeners() {
+    for (var element in _listeners) {
+      try {
+        element?.call();
+      } catch (e) {
+        viewModelLog("error on $e");
+      }
+    }
+  }
+
+  static void initConfig(ViewModelConfig config) {
+    _config = config;
+  }
+
+  static ViewModelConfig get config => _config;
+
+  @override
+  @mustCallSuper
+  void onCreate(String key, String? watchId) {}
+
+  @override
+  @mustCallSuper
+  void onDispose() {
+    dispose();
+  }
+
+  @mustCallSuper
+  void dispose() {
+    _isDisposed = true;
+    _autoDisposeController.dispose();
+  }
+}
+
+abstract class StateViewModel<T> extends ViewModel {
+  late final ViewModelStateStore<T> _store;
+  final List<Function(T? previous, T state)?> _stateListeners = [];
+
+  Function() listenState({required Function(T? previous, T state) onChanged}) {
+    _stateListeners.add(onChanged);
+    return () {
+      _stateListeners.remove(onChanged);
+    };
+  }
 
   late final T initState;
+  late final StreamSubscription _streamSubscription;
 
-  bool get isDisposed => _isDisposed;
-
-  ViewModel({required T state}) {
+  StateViewModel({required T state}) {
     initState = state;
     _store = ViewModelStateStore(
       initialState: state,
     );
+
+    _streamSubscription = _store.stateStream.listen((event) {
+      if (_isDisposed) return;
+      for (var element in _stateListeners) {
+        try {
+          element?.call(event.p, event.n);
+        } catch (e) {
+          //
+        }
+      }
+
+      for (var element in _listeners) {
+        try {
+          element?.call();
+        } catch (e) {
+          //
+        }
+      }
+    });
   }
 
-  @protected
+  @override
   void notifyListeners() {
-    _store.notifyListeners();
+    if (_isDisposed) {
+      viewModelLog("notifyListeners after Disposed");
+      return;
+    }
+    try {
+      _store.notifyListeners();
+    } catch (e) {
+      onError(e);
+    }
   }
 
   @protected
@@ -78,22 +143,21 @@ abstract class ViewModel<T> implements InstanceLifeCycle {
     return _store.state;
   }
 
+  @mustCallSuper
+  @override
   void dispose() {
-    _isDisposed = true;
-    _autoDisposeController.dispose();
+    viewModelLog("$runtimeType<$T> onDispose");
     _store.dispose();
+    _listeners.clear();
+    _stateListeners.clear();
+    _streamSubscription.cancel();
+    super.dispose();
   }
 
   @override
   void onCreate(String key, String? watchId) {
+    super.onCreate(key, watchId);
     viewModelLog("$runtimeType<$T>(key=$key,watchId=$watchId) onCreate");
-  }
-
-  @protected
-  @override
-  void onDispose() {
-    viewModelLog("$runtimeType<$T> onDispose");
-    dispose();
   }
 }
 
