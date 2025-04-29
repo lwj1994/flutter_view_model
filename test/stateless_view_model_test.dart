@@ -13,7 +13,7 @@ void main() {
 
     test("batch_set_state", () async {
       var c = 0;
-      viewModel.listen(onChanged: () {
+      viewModel.addListener(onChanged: () {
         c++;
         print("batch_set_state $c");
       });

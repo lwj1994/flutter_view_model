@@ -23,7 +23,7 @@ abstract class ViewModel implements InstanceLifeCycle {
     _autoDisposeController.addDispose(block);
   }
 
-  Function() listen({required VoidCallback onChanged}) {
+  Function() addListener({required VoidCallback onChanged}) {
     _listeners.add(onChanged);
     return () {
       _listeners.remove(onChanged);
@@ -67,7 +67,7 @@ abstract class StateViewModel<T> extends ViewModel {
   late final ViewModelStateStore<T> _store;
   final List<Function(T? previous, T state)?> _stateListeners = [];
 
-  Function() listenState({required Function(T? previous, T state) onChanged}) {
+  Function() listen({required Function(T? previous, T state) onChanged}) {
     _stateListeners.add(onChanged);
     return () {
       _stateListeners.remove(onChanged);
