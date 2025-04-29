@@ -16,15 +16,23 @@ void main() {
     test("batch_set_state block", () async {
       const total = 100;
 
+      int listenCount = 0;
+
       viewModel.listen(onChanged: (p, s) {
         print("batch_set_state $p -> $s");
-
+        listenCount++;
         if (p != viewModel.initState) {
           expect(
             s,
             (int.parse(p ?? "$total") - 1).toString(),
           );
         }
+      });
+
+      int addListenerCount = 0;
+      viewModel.addListener(onChanged: () {
+        addListenerCount++;
+        print("addListener batch_set_state $addListenerCount");
       });
 
       int size = total;
@@ -36,6 +44,8 @@ void main() {
       }
 
       await Future.delayed(const Duration(seconds: 3));
+      assert(addListenerCount == 100);
+      assert(listenCount == 100);
     });
 
     test("set_state block", () async {
