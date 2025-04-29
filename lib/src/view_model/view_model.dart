@@ -83,7 +83,7 @@ abstract class StateViewModel<T> extends ViewModel {
       initialState: state,
     );
 
-    _streamSubscription = _store.stateStream.listen((event) {
+    _streamSubscription = _store.stateStream.listen((event) async {
       if (_isDisposed) return;
       for (var element in _stateListeners) {
         try {
