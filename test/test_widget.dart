@@ -14,7 +14,7 @@ class TestPage extends StatefulWidget {
 
 class TestPageState extends State<TestPage> with ViewModelStateMixin {
   TestViewModel get _viewModel =>
-      getViewModel<TestViewModel>(factory: widget.factory);
+      watchViewModel<TestViewModel>(factory: widget.factory);
 
   @override
   Widget build(BuildContext context) {
