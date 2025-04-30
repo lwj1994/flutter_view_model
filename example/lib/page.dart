@@ -21,7 +21,7 @@ class SecondPage extends StatefulWidget {
 
 class _State extends State<SecondPage> with ViewModelStateMixin {
   MyViewModel get viewModel =>
-      getViewModel(factory: MyViewModelFactory(arg: "init MyViewModel"));
+      watchViewModel(factory: MyViewModelFactory(arg: "init MyViewModel"));
 
   MyState get state => viewModel.state;
 

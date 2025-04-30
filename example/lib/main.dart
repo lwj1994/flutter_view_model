@@ -15,6 +15,7 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
@@ -34,13 +35,15 @@ class MyApp extends StatelessWidget {
 @RoutePage()
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
   MainViewModel get _viewModel =>
-      getViewModel<MainViewModel>(factory: MainViewModelFactory(arg: "arg1"));
+      watchViewModel(factory: MainViewModelFactory(arg: "arg1"));
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,6 +98,7 @@ class MainViewModel extends ViewModel {
 
   @override
   void dispose() {
+    super.dispose();
     print("MainViewModel dispose $hashCode");
   }
 }
