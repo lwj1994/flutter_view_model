@@ -101,6 +101,7 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 }
 
 class TestViewModel extends StateViewModel<String> {
+  String name = "";
   TestViewModel({required super.state}) {
     print("TestViewModel create : $hashCode");
   }

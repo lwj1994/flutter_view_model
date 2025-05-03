@@ -44,6 +44,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     return res;
   }
 
+  /// [key] ViewModelFactory.Key
   VM watchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
@@ -54,6 +55,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
         listen: true,
       );
 
+  /// [key] ViewModelFactory.Key
   VM readViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
@@ -69,6 +71,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     String? key,
     bool listen = true,
   }) {
+    if (VM == ViewModel || VM == dynamic) {
+      throw StateError("VM must extends ViewModel");
+    }
     // find key first
     if (key != null) {
       try {

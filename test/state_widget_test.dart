@@ -22,6 +22,13 @@ void main() {
     // Create the Finders.
     final stateText = find.text('initState');
     expect(stateText, findsOneWidget);
+
+    (testKey.currentState as TestPageState)
+        .readViewModel<TestViewModel>()
+        .setState("hi");
+    await tester.pump(Duration(seconds: 1));
+    final stateText2 = find.text('hi');
+    expect(stateText2, findsOneWidget);
   });
 
   testWidgets('state viewModel', (tester) async {
