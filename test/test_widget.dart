@@ -113,6 +113,18 @@ class TestStatelessViewModel extends ViewModel {
   }
 }
 
+class DisposeErrorViewModel extends ViewModel {
+  DisposeErrorViewModel() {
+    print("DisposeErrorViewModel create : $hashCode");
+  }
+
+  @override
+  void dispose() {
+    throw StateError("dispose test error");
+    super.dispose();
+  }
+}
+
 class TestStatelessViewModelFactory
     with ViewModelFactory<TestStatelessViewModel> {
   final String? keyV;
