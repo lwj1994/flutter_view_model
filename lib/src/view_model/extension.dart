@@ -7,15 +7,21 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
-  late final _instanceController =
-      AutoDisposeInstanceController(onRecreate: () {
-    setState(() {});
-  });
+  late final _instanceController = AutoDisposeInstanceController(
+    onRecreate: () {
+      setState(() {});
+    },
+    watcherName: viewModelWatcherName(),
+  );
   final Map<ViewModel, bool> _stateListeners = {};
 
   final _defaultViewModelKey = const UuidV4().generate();
   final List<Function()> _disposes = [];
   bool _dispose = false;
+
+  /// add watcherName. it is useful for debug
+  String viewModelWatcherName() =>
+      ViewModel.config.logEnable ? "$runtimeType" : "";
 
   @override
   @mustCallSuper

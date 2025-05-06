@@ -1,9 +1,13 @@
-## 0.4.0-dev.4
-Breaking change:
-* `ViewModel` instead of `StatelessViewModel`.
-* `StateViewModel` instead of `ViewModel`.
-* delete `getViewModel` instead of `watchViewModel`/`readViewModel`
+## 0.4.0
+
+_Breaking change:_
+
+* Use `ViewModel` instead of `StatelessViewModel`.
+* Use `StateViewModel` instead of `ViewModel`.
+* Use either `watchViewModel` or `readViewModel` instead of `getViewModel`.
 
 ## 0.3.0
-* transfer to https://github.com/lwj1994/flutter_view_model. thank to [Miolin](https://github.com/Miolin)
+
+* transfer to https://github.com/lwj1994/flutter_view_model. thank
+  to [Miolin](https://github.com/Miolin)
 
