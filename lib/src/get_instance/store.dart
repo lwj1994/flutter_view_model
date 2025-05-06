@@ -163,7 +163,11 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
 
   void _tryCallInstanceDispose() {
     if (_instance is InstanceLifeCycle) {
-      (_instance as InstanceLifeCycle).onDispose();
+      try {
+        (_instance as InstanceLifeCycle).onDispose();
+      } catch (e) {
+        viewModelLog("${_instance.runtimeType} onDispose error $e");
+      }
     }
   }
 

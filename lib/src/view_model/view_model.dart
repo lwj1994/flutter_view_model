@@ -50,17 +50,18 @@ abstract class ViewModel implements InstanceLifeCycle {
   @mustCallSuper
   void onCreate(String key, String? watchId) {}
 
+  /// protect this method
   @override
   @mustCallSuper
+  @protected
   void onDispose() {
+    _isDisposed = true;
+    _autoDisposeController.dispose();
     dispose();
   }
 
   @mustCallSuper
-  void dispose() {
-    _isDisposed = true;
-    _autoDisposeController.dispose();
-  }
+  void dispose() {}
 }
 
 abstract class StateViewModel<T> extends ViewModel {
