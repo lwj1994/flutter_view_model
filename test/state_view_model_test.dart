@@ -86,7 +86,7 @@ void main() {
         assert(viewModel.name == "a");
       });
       viewModel.name = "a";
-      await Future.delayed(Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 1));
     });
   });
 }

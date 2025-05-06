@@ -7,11 +7,19 @@ import 'store.dart';
 
 class AutoDisposeInstanceController {
   final List<InstanceHandle> _instanceNotifiers = List.empty(growable: true);
-  final watchId = const UuidV4().generate();
   final Function() onRecreate;
   final Map<Object, bool> _notifierListeners = {};
 
-  AutoDisposeInstanceController({required this.onRecreate});
+  final String watcherName;
+
+  AutoDisposeInstanceController({
+    required this.onRecreate,
+    required this.watcherName,
+  });
+
+  final _uuid = const UuidV4().generate();
+
+  String get _watchId => "$watcherName:$_uuid";
 
   T getInstance<T>({
     InstanceFactory<T>? factory,
@@ -20,7 +28,7 @@ class AutoDisposeInstanceController {
       throw StateError("T must extends ViewModel");
     }
     factory = (factory ?? InstanceFactory<T>()).copyWith(
-      watchId: watchId,
+      watchId: _watchId,
     );
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
       factory: factory,
@@ -45,7 +53,7 @@ class AutoDisposeInstanceController {
 
   Future<void> dispose() async {
     for (var e in _instanceNotifiers) {
-      e.removeWatcher(watchId);
+      e.removeWatcher(_watchId);
     }
     _instanceNotifiers.clear();
   }

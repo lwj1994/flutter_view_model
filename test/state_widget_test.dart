@@ -26,7 +26,7 @@ void main() {
     (testKey.currentState as TestPageState)
         .readViewModel<TestViewModel>()
         .setState("hi");
-    await tester.pump(Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
     final stateText2 = find.text('hi');
     expect(stateText2, findsOneWidget);
   });
