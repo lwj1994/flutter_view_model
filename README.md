@@ -232,20 +232,12 @@ void refresh() {
 
 ## About Partial Refresh
 
-The state manager doesn't need to concern itself with partial refresh. We can use the
-`didUpdateWidget` method to achieve this functionality.
+The state manager doesn't need to handle partial UI refreshes — the Flutter engine automatically
+performs UI diffing.
+A widget's build method is simply a configuration step, and triggering it doesn't incur significant
+performance overhead.
 
-```dart
-@override
-void didUpdateWidget(Options oldWidget) {
-  super.didUpdateWidget(oldWidget);
-  if (widget.model != oldWidget.model) {
-    setState(() {});
-  }
-}
-```
-
-Alternatively, we can use `ValueNotifierBuilder` to achieve the same goal:
+To achieve fine-grained updates, we can use ValueListenableBuilder.
 
 ```dart
 @override

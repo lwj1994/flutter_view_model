@@ -229,19 +229,10 @@ void refresh() {
 
 ## 关于局部刷新
 
-状态管理器无需关注局部刷新，我们可以使用 `didUpdateWidget` 方法来实现这一功能。
+状态管理器无需处理局部 UI 刷新—— Flutter 引擎会自动执行 UI 差异化更新（UI diffing）。
+小部件的 build 方法仅仅是配置步骤，触发它不会带来显著的性能开销。
 
-```dart
-@override
-void didUpdateWidget(Options oldWidget) {
-  super.didUpdateWidget(oldWidget);
-  if (widget.model != oldWidget.model) {
-    setState(() {});
-  }
-}
-```
-
-或者使用 `ValueNotifierBuilder` 来达成相同目的：
+为了实现更精细的更新，我们可以使用 ValueListenableBuilder。
 
 ```dart
 @override
