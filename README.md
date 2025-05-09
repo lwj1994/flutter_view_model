@@ -190,8 +190,12 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
 @override
 void initState() {
   super.initState();
-  viewModel.listen(onChanged: (prev, next) {
+  final dispose = viewModel.listenState(onChanged: (prev, next) {
     print('State changed: $prev -> $next');
+  });
+
+  final dispose2 = viewModel.listen(onChanged: () {
+    print('viewModel notifyListeners');
   });
 }
 ```

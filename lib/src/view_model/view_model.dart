@@ -118,6 +118,10 @@ abstract class StateViewModel<T> with ViewModel {
     });
   }
 
+  void removeStateListener(Function(T? previous, T state) listener) {
+    _stateListeners.remove(listener);
+  }
+
   @override
   void notifyListeners() {
     if (_isDisposed) {
