@@ -127,7 +127,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   void _addListener(ViewModel res) {
     if (_stateListeners[res] != true) {
       _stateListeners[res] = true;
-      _disposes.add(res.addListener(onChanged: () async {
+      _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
         while (!context.mounted) {
           await Future.delayed(Duration.zero);

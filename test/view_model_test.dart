@@ -28,7 +28,7 @@ void main() {
     test("batch_set_state", () async {
       final viewModel = TestStatelessViewModel();
       var c = 0;
-      viewModel.addListener(onChanged: () {
+      viewModel.listen(onChanged: () {
         c++;
         print("batch_set_state $c");
       });
@@ -39,5 +39,29 @@ void main() {
       await Future.delayed(const Duration(seconds: 1));
       assert(c == 3);
     });
+
+    test("changeNotifier_set_state", () async {
+      late ChangeNotifierVM viewModel = ChangeNotifierVM();
+      var c = 0;
+      viewModel.listen(onChanged: () {
+        c++;
+      });
+      viewModel.notifyListeners();
+      viewModel.notifyListeners();
+      viewModel.notifyListeners();
+      await Future.delayed(const Duration(seconds: 1));
+      assert(c == 3);
+    });
   });
+}
+
+class ChangeNotifierVM extends ChangeNotifierViewModel {}
+
+class ChangeNotifierVMFactory with ViewModelFactory<ChangeNotifierVM> {
+  String? name;
+
+  @override
+  ChangeNotifierVM build() {
+    return ChangeNotifierVM();
+  }
 }

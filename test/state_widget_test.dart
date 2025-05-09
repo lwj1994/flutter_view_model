@@ -245,7 +245,7 @@ void main() {
     );
 
     var c = 0;
-    vm.listen(onChanged: (p, n) {
+    vm.listenState(onChanged: (p, n) {
       print(n);
       if (c == 0) assert(n == "2");
       if (c == 1) assert(n == "3");
@@ -274,7 +274,7 @@ void main() {
     final vm = state.readViewModel(factory: fc);
 
     var c = 0;
-    vm.listen(onChanged: (p, n) {
+    vm.listenState(onChanged: (p, n) {
       print(n);
       if (c == 0) assert(n == "2");
       if (c == 1) assert(n == "3");

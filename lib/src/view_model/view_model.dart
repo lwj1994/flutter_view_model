@@ -10,40 +10,15 @@ import 'package:view_model/src/view_model/config.dart';
 
 import 'state_store.dart';
 
-abstract class ChangeViewModel extends ChangeNotifier
-    implements InstanceLifeCycle {
-  final _autoDisposeController = AutoDisposeController();
-  bool _isDisposed = false;
-
-  bool get isDisposed => _isDisposed;
-
-  @protected
-  void addDispose(Function() block) async {
-    _autoDisposeController.addDispose(block);
-  }
-
+/// ViewModel api will override ChangeNotifier api.
+class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
   @override
-  @mustCallSuper
-  void onCreate(String key, String? watchId) {}
-
-  /// protect this method
-  @override
-  @mustCallSuper
-  @protected
-  void onDispose() {
-    _isDisposed = true;
-    _autoDisposeController.dispose();
-    dispose();
-  }
-
-  @override
-  @mustCallSuper
-  void dispose() {
-    super.dispose();
+  void addListener(VoidCallback listener) {
+    listen(onChanged: listener);
   }
 }
 
-abstract class ViewModel implements InstanceLifeCycle {
+mixin class ViewModel implements InstanceLifeCycle {
   final List<VoidCallback?> _listeners = [];
   static ViewModelConfig _config = ViewModelConfig();
   final _autoDisposeController = AutoDisposeController();
@@ -51,12 +26,18 @@ abstract class ViewModel implements InstanceLifeCycle {
 
   bool get isDisposed => _isDisposed;
 
+  bool get hasListeners => _listeners.isNotEmpty;
+
+  void removeListener(VoidCallback listener) {
+    _listeners.remove(listener);
+  }
+
   @protected
   void addDispose(Function() block) async {
     _autoDisposeController.addDispose(block);
   }
 
-  Function() addListener({required VoidCallback onChanged}) {
+  Function() listen({required VoidCallback onChanged}) {
     _listeners.add(onChanged);
     return () {
       _listeners.remove(onChanged);
@@ -97,11 +78,11 @@ abstract class ViewModel implements InstanceLifeCycle {
   void dispose() {}
 }
 
-abstract class StateViewModel<T> extends ViewModel {
+abstract class StateViewModel<T> with ViewModel {
   late final ViewModelStateStore<T> _store;
   final List<Function(T? previous, T state)?> _stateListeners = [];
 
-  Function() listen({required Function(T? previous, T state) onChanged}) {
+  Function() listenState({required Function(T? previous, T state) onChanged}) {
     _stateListeners.add(onChanged);
     return () {
       _stateListeners.remove(onChanged);
