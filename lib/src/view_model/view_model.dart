@@ -10,6 +10,39 @@ import 'package:view_model/src/view_model/config.dart';
 
 import 'state_store.dart';
 
+abstract class ChangeViewModel extends ChangeNotifier
+    implements InstanceLifeCycle {
+  final _autoDisposeController = AutoDisposeController();
+  bool _isDisposed = false;
+
+  bool get isDisposed => _isDisposed;
+
+  @protected
+  void addDispose(Function() block) async {
+    _autoDisposeController.addDispose(block);
+  }
+
+  @override
+  @mustCallSuper
+  void onCreate(String key, String? watchId) {}
+
+  /// protect this method
+  @override
+  @mustCallSuper
+  @protected
+  void onDispose() {
+    _isDisposed = true;
+    _autoDisposeController.dispose();
+    dispose();
+  }
+
+  @override
+  @mustCallSuper
+  void dispose() {
+    super.dispose();
+  }
+}
+
 abstract class ViewModel implements InstanceLifeCycle {
   final List<VoidCallback?> _listeners = [];
   static ViewModelConfig _config = ViewModelConfig();
