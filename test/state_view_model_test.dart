@@ -16,7 +16,7 @@ void main() {
     test("batch_set_state", () async {
       const total = 100;
       int listenCount = 0;
-      viewModel.listen(onChanged: (p, s) {
+      viewModel.listenState(onChanged: (p, s) {
         print("batch_set_state $p -> $s");
         listenCount++;
         if (p != viewModel.initState) {
@@ -28,7 +28,7 @@ void main() {
       });
 
       int addListenerCount = 0;
-      viewModel.addListener(onChanged: () {
+      viewModel.listen(onChanged: () {
         addListenerCount++;
         print("addListener batch_set_state $addListenerCount");
       });
@@ -48,7 +48,7 @@ void main() {
 
     test("set_state", () async {
       int c = 0;
-      viewModel.listen(onChanged: (p, s) {
+      viewModel.listenState(onChanged: (p, s) {
         print("$p -> $s");
         if (c == 0) {
           expect(p, "1");
@@ -79,10 +79,10 @@ void main() {
     });
 
     test("notifyListeners", () async {
-      viewModel.listen(onChanged: (String? previous, String state) {
+      viewModel.listenState(onChanged: (String? previous, String state) {
         assert(state == "a");
       });
-      viewModel.addListener(onChanged: () {
+      viewModel.listen(onChanged: () {
         assert(viewModel.name == "a");
       });
       viewModel.name = "a";
