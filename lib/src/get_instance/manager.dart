@@ -35,6 +35,9 @@ class InstanceManager {
   InstanceHandle<T> getNotifier<T>({
     InstanceFactory<T>? factory,
   }) {
+    if (T == dynamic) {
+      throw StateError("T is dynamic");
+    }
     if (factory == null || factory.isEmpty()) {
       final watchId = factory?.watchId;
       // find newly T instance

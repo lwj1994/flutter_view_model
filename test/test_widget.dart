@@ -14,7 +14,7 @@ class TestPage extends StatefulWidget {
 
 class TestPageState extends State<TestPage> with ViewModelStateMixin {
   TestViewModel get _viewModel =>
-      getViewModel<TestViewModel>(factory: widget.factory);
+      watchViewModel<TestViewModel>(factory: widget.factory);
 
   @override
   Widget build(BuildContext context) {
@@ -100,15 +100,28 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 //</editor-fold>
 }
 
-class TestViewModel extends ViewModel<String> {
+class TestViewModel extends StateViewModel<String> {
+  String name = "";
   TestViewModel({required super.state}) {
     print("TestViewModel create : $hashCode");
   }
 }
 
-class TestStatelessViewModel extends StatelessViewModel {
+class TestStatelessViewModel extends ViewModel {
   TestStatelessViewModel() {
     print("TestStatelessViewModel create : $hashCode");
+  }
+}
+
+class DisposeErrorViewModel extends ViewModel {
+  DisposeErrorViewModel() {
+    print("DisposeErrorViewModel create : $hashCode");
+  }
+
+  @override
+  void dispose() {
+    throw StateError("dispose test error");
+    super.dispose();
   }
 }
 

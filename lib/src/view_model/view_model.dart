@@ -1,31 +1,68 @@
 // @author luwenjie on 2025/3/25 17:00:38
 
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
+import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
 
 import 'state_store.dart';
 
-abstract class ViewModel<T> implements InstanceLifeCycle {
-  static ViewModelConfig _config = ViewModelConfig();
+/// ViewModel api will override ChangeNotifier api.
+class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
+  @override
+  void addListener(VoidCallback listener) {
+    listen(onChanged: listener);
+  }
+}
 
-  static ViewModelConfig get config => _config;
+mixin class ViewModel implements InstanceLifeCycle {
+  static final List<ViewModelLifecycle> _viewModelLifecycles =
+      List.empty(growable: true);
 
-  static void initConfig(ViewModelConfig config) {
-    _config = config;
+  /// read instance of T
+  static T read<T extends ViewModel>({String? key}) {
+    final T vm;
+    if (key != null) {
+      vm = instanceManager.get<T>(
+        factory: InstanceFactory<T>(
+          key: key,
+        ),
+      );
+    } else {
+      vm = instanceManager.get<T>();
+    }
+    if (vm.isDisposed) {
+      throw StateError("$T is disposed");
+    }
+    return vm;
   }
 
-  final _autoDisposeController = AutoDisposeController();
-  late final ViewModelStateStore<T> _store;
+  static Function() addLifecycle(ViewModelLifecycle lifecycle) {
+    _viewModelLifecycles.add(lifecycle);
+    return () {
+      _viewModelLifecycles.remove(lifecycle);
+    };
+  }
 
-  Function() listen({required Function(T? previous, T state) onChanged}) {
-    final s = _store.stateStream.listen((event) {
-      if (_isDisposed) return;
-      onChanged.call(event.p, event.n);
-    });
-    return s.cancel;
+  static void removeLifecycle(ViewModelLifecycle value) {
+    _viewModelLifecycles.remove(value);
+  }
+
+  final List<VoidCallback?> _listeners = [];
+  static ViewModelConfig _config = ViewModelConfig();
+  final _autoDisposeController = AutoDisposeController();
+  bool _isDisposed = false;
+
+  bool get isDisposed => _isDisposed;
+
+  bool get hasListeners => _listeners.isNotEmpty;
+
+  void removeListener(VoidCallback listener) {
+    _listeners.remove(listener);
   }
 
   @protected
@@ -33,22 +70,130 @@ abstract class ViewModel<T> implements InstanceLifeCycle {
     _autoDisposeController.addDispose(block);
   }
 
-  bool _isDisposed = false;
+  Function() listen({required VoidCallback onChanged}) {
+    _listeners.add(onChanged);
+    return () {
+      _listeners.remove(onChanged);
+    };
+  }
+
+  void notifyListeners() {
+    for (var element in _listeners) {
+      try {
+        element?.call();
+      } catch (e) {
+        viewModelLog("error on $e");
+      }
+    }
+  }
+
+  static void initConfig(ViewModelConfig config) {
+    _config = config;
+  }
+
+  static ViewModelConfig get config => _config;
+
+  @override
+  @protected
+  @mustCallSuper
+  void onCreate(String key) {
+    for (var element in _viewModelLifecycles) {
+      element.onCreate(this, key);
+    }
+  }
+
+  @protected
+  @mustCallSuper
+  @override
+  void onAddWatcher(String key, String newWatchId) {
+    for (var element in _viewModelLifecycles) {
+      element.onAddWatcher(this, key, newWatchId);
+    }
+  }
+
+  @protected
+  @mustCallSuper
+  @override
+  void onRemoveWatcher(String key, String removedWatchId) {
+    for (var element in _viewModelLifecycles) {
+      element.onRemoveWatcher(this, key, removedWatchId);
+    }
+  }
+
+  /// protect this method
+
+  @override
+  @mustCallSuper
+  @protected
+  void onDispose(String key) {
+    _isDisposed = true;
+    _autoDisposeController.dispose();
+    dispose();
+    for (var element in _viewModelLifecycles) {
+      element.onDispose(this, key);
+    }
+  }
+
+  @protected
+  @mustCallSuper
+  void dispose() {}
+}
+
+abstract class StateViewModel<T> with ViewModel {
+  late final ViewModelStateStore<T> _store;
+  final List<Function(T? previous, T state)?> _stateListeners = [];
+
+  Function() listenState({required Function(T? previous, T state) onChanged}) {
+    _stateListeners.add(onChanged);
+    return () {
+      _stateListeners.remove(onChanged);
+    };
+  }
 
   late final T initState;
+  late final StreamSubscription _streamSubscription;
 
-  bool get isDisposed => _isDisposed;
-
-  ViewModel({required T state}) {
+  StateViewModel({required T state}) {
     initState = state;
     _store = ViewModelStateStore(
       initialState: state,
     );
+
+    _streamSubscription = _store.stateStream.listen((event) async {
+      if (_isDisposed) return;
+      for (var element in _stateListeners) {
+        try {
+          element?.call(event.p, event.n);
+        } catch (e) {
+          //
+        }
+      }
+
+      for (var element in _listeners) {
+        try {
+          element?.call();
+        } catch (e) {
+          //
+        }
+      }
+    });
   }
 
-  @protected
+  void removeStateListener(Function(T? previous, T state) listener) {
+    _stateListeners.remove(listener);
+  }
+
+  @override
   void notifyListeners() {
-    _store.notifyListeners();
+    if (_isDisposed) {
+      viewModelLog("notifyListeners after Disposed");
+      return;
+    }
+    try {
+      _store.notifyListeners();
+    } catch (e) {
+      onError(e);
+    }
   }
 
   @protected
@@ -78,22 +223,19 @@ abstract class ViewModel<T> implements InstanceLifeCycle {
     return _store.state;
   }
 
+  @mustCallSuper
+  @override
   void dispose() {
-    _isDisposed = true;
-    _autoDisposeController.dispose();
     _store.dispose();
+    _listeners.clear();
+    _stateListeners.clear();
+    _streamSubscription.cancel();
+    super.dispose();
   }
 
   @override
-  void onCreate(String key, String? watchId) {
-    viewModelLog("$runtimeType<$T>(key=$key,watchId=$watchId) onCreate");
-  }
-
-  @protected
-  @override
-  void onDispose() {
-    viewModelLog("$runtimeType<$T> onDispose");
-    dispose();
+  void onCreate(String key) {
+    super.onCreate(key);
   }
 }
 
@@ -129,4 +271,15 @@ mixin ViewModelFactory<T> {
   /// 如果需要共享不同的实例，根据需求去重写 [key]
   /// [key] 的优先级高于 [singleton]
   bool singleton() => false;
+}
+
+abstract class ViewModelLifecycle {
+  void onCreate(ViewModel viewModel, String key) {}
+
+  void onAddWatcher(ViewModel viewModel, String key, String newWatchId) {}
+
+  void onRemoveWatcher(
+      ViewModel viewModel, String key, String removedWatchId) {}
+
+  void onDispose(ViewModel viewModel, String key) {}
 }

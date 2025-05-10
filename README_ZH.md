@@ -2,55 +2,55 @@
 
 [![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[中文文档](README_ZH.md)
+[English](README.md)
 
-我要向 [Miolin](https://github.com/Miolin)
-表示诚挚的感谢，感谢他将 [view_model](https://pub.dev/packages/view_model)
-包的权限托付给我，并转让了所有权。这份支持意义重大，我非常激动能够推动它持续发展。谢谢！
+我衷心感谢 [Miolin](https://github.com/Miolin) 将 [ViewModel](https://pub.dev/packages/view_model) 包的权限委托给我，并转移其所有权。这种支持无比珍贵，我很兴奋能推动它持续发展。
 
 ## 特性
 
-- **简洁轻量**：拥有简洁的架构，资源占用极少，确保高效运行。
-- **逻辑透明**：基于 `StreamController` 和 `setState` 构建，内部逻辑清晰易懂，不存在隐藏的复杂机制。
-- **自动资源释放**：会随着 `StatefulWidget` 的 `State` 自动释放资源，简化了内存管理。
-- **跨组件共享**：可以在多个 `StatefulWidget` 之间共享，促进代码复用和模块化。
+- **简洁轻量**：架构简洁，资源开销极小，确保高性能表现。
+- **透明实现**：基于 `StreamController` 和 `setState` 构建，内部逻辑简单易懂，无隐藏的复杂部分。
+- **自动资源释放**：资源会随着 `StatefulWidget` 的 `State` 自动释放，简化了内存管理。
+- **跨组件共享**：可在多个 `StatefulWidget` 之间共享，提升代码的可复用性和模块化程度。
 
-> **重要提示**：`ViewModel` 仅设计用于绑定 `StatefulWidget` 的 `State`。由于 `StatelessWidget`
-> 不维护状态，因此不支持这种绑定机制。
+> **注意**：`ViewModel` 旨在仅绑定到 `StatefulWidget` 的 `State`。由于 `StatelessWidget` 不维护状态，它们与这种绑定机制不兼容。
 
 ## 核心概念
 
-- **ViewModel**：作为状态管理的核心，负责持有应用程序的状态，并在状态发生变化时通知注册的监听器。
-- **ViewModelFactory**：定义 `ViewModel` 的实例化逻辑，指定如何创建和配置它们。
-- **getViewModel**：一个实用函数，用于创建新的 `ViewModel` 实例或获取现有的实例，方便在应用程序中访问视图模型。
+- **ViewModel**：作为状态管理的核心。它持有应用程序状态，并在状态发生变化时通知已注册的监听器。
+- **ViewModelFactory**：定义 `ViewModel` 的实例化和配置方式。
+- **watchViewModel**：创建一个新的 `ViewModel` 实例或获取现有的实例，并自动触发 `setState`。
+- **readViewModel**：获取现有的 `ViewModel`，或者使用工厂创建一个，不会触发 `setState`。
 
-## 有状态和无状态 ViewModel
+## 无状态和有状态的 ViewModel
 
-默认情况下，`ViewModel` 以有状态模式运行。
-
-### 有状态 ViewModel
-
-- **以状态为中心**：必须持有一个内部的 `state` 对象。
-- **不可变原则**：`state` 设计为不可变的，确保数据的完整性和可预测性。
-- **状态更新**：通过 `setState()` 方法修改状态，该方法会触发关联小部件的重建。
+默认情况下，`ViewModel` 以无状态模式运行。
 
 ### 无状态 ViewModel
 
-- **简化方案**：提供了一种更轻量级的替代方案，无需维护内部 `state`。
-- **变更通知**：通过调用 `notifyListeners()` 方法将数据变更通知给监听器。
+- **简化使用**：是一种轻量级的选项，没有内部的 `state`。
+- **更改通知**：数据更改通过 `notifyListeners()` 方法通知监听器。
 
-## 使用 ViewModel 的分步指南
+### 有状态 ViewModel
 
-使用 `view_model` 包是一个简单直接的过程。遵循以下四个步骤：
+- **面向状态**：必须持有一个内部的 `state` 对象。
+- **不可变性原则**：`state` 是不可变的，确保数据的完整性和可预测性。
+- **状态更新**：通过 `setState()` 方法进行状态更改，这会触发组件重建。
+
+## 分步指南
+
+使用 `view_model` 包非常简单。按照以下四个步骤操作：
+
+添加依赖项：
 
 ```yaml
 dependencies:
-  view_model: ^0.3.0
+  view_model: ^0.4.0
 ```
 
-### 1. 定义状态类（适用于有状态 ViewModel）
+### 1. 定义一个状态类（用于有状态 ViewModel）
 
-对于有状态的视图模型，首先创建一个不可变的状态类：
+对于有状态 ViewModel，首先创建一个不可变的状态类：
 
 ```dart
 class MyState {
@@ -76,19 +76,33 @@ class MyState {
 }
 ```
 
-> **专业提示**：如果你的用例不需要管理复杂的状态，可以跳过此步骤，选择使用无状态 ViewModel（请参阅步骤
-> 2）。
+> **提示**：如果不需要管理复杂的状态，可以跳过此步骤，使用无状态 ViewModel（请参阅步骤 2）。
 
-### 2. 创建 ViewModel
+### 2. 创建一个 ViewModel
 
-通过继承 `ViewModel<T>` 进行有状态管理，或继承 `StatelessViewModel` 进行无状态管理：
+对于无状态场景，扩展 `ViewModel<T>`；对于有状态管理，扩展 `StateViewModel`。
+
+**示例：无状态 ViewModel**
+
+```dart
+import 'package:view_model/view_model.dart';
+
+class MyViewModel extends ViewModel {
+  String name = "Initial Name";
+
+  void updateName(String newName) {
+    name = newName;
+    notifyListeners();
+  }
+}
+```
 
 **示例：有状态 ViewModel**
 
 ```dart
 import 'package:view_model/view_model.dart';
 
-class MyViewModel extends ViewModel<MyState> {
+class MyViewModel extends StateViewModel<MyState> {
   MyViewModel({required super.state});
 
   void updateName(String newName) {
@@ -103,24 +117,9 @@ class MyViewModel extends ViewModel<MyState> {
 }
 ```
 
-**示例：无状态 ViewModel**
+### 3. 实现一个 ViewModelFactory
 
-```dart
-import 'package:view_model/view_model.dart';
-
-class MyViewModel extends StatelessViewModel {
-  String name = "Initial Name";
-
-  void updateName(String newName) {
-    name = newName;
-    notifyListeners();
-  }
-}
-```
-
-### 3. 实现 ViewModelFactory
-
-使用 `ViewModelFactory` 来指定如何实例化你的 `ViewModel`：
+使用 `ViewModelFactory` 指定 `ViewModel` 的实例化方式：
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
@@ -131,26 +130,26 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   @override
   MyViewModel build() => MyViewModel(state: MyState(name: initialName));
 
-  // 可选：启用单例共享。仅当 key() 返回 null 时适用。
+  // 可选：启用单例共享。仅在 key() 返回 null 时适用。
   @override
   bool singleton() => true;
 
-  // 可选：根据自定义键共享 ViewModel。
+  // 可选：基于自定义键共享 ViewModel。
   @override
   String? key() => initialName;
 }
 ```
 
-### 4. 将 ViewModel 集成到你的小部件中
+### 4. 将 ViewModel 集成到你的组件中
 
-在 `StatefulWidget` 中，使用 `getViewModel` 来访问视图模型：
+在 `StatefulWidget` 中，使用 `watchViewModel` 来访问 ViewModel：
 
 ```dart
 import 'package:view_model/view_model.dart';
 
 class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
   MyViewModel get viewModel =>
-      getViewModel<MyViewModel>(factory: MyViewModelFactory(initialName: "Hello"));
+      watchViewModel<MyViewModel>(factory: MyViewModelFactory(initialName: "Hello"));
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +166,7 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
 }
 ```
 
-> **注意**：还支持诸如监听变更、刷新视图模型和跨页面共享等附加功能。请参阅以下部分以获取更多详细信息。
+> **注意**：还支持其他功能，如更改监听、ViewModel 刷新和跨页面共享。有关详细信息，请参阅以下部分。
 
 ## 高级 API
 
@@ -177,46 +176,71 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
 @override
 void initState() {
   super.initState();
-  viewModel.listen(onChanged: (prev, next) {
+  final dispose = viewModel.listenState(onChanged: (prev, next) {
     print('State changed: $prev -> $next');
+  });
+
+  final dispose2 = viewModel.listen(onChanged: () {
+    print('viewModel notifyListeners');
   });
 }
 ```
 
-### 获取现有 ViewModel
+### 获取现有的 ViewModel
 
-**选项 1**：使用 `getViewModel` 来获取现有的视图模型（如果未找到则创建一个新的）：
-
-```dart
-MyViewModel get viewModel =>
-    getViewModel<MyViewModel>(factory: MyViewModelFactory(
-      key: "my-key",
-    ));
-```
-
-**选项 2**：使用 `requireExistingViewModel` 仅获取现有的视图模型（如果未找到则抛出异常）：
+使用 `readViewModel` 获取现有的 ViewModel。
 
 ```dart
 // 查找新创建的 <MyViewModel> 实例
-MyViewModel get viewModel => requireExistingViewModel<MyViewModel>();
+MyViewModel get viewModel => readViewModel<MyViewModel>();
 
 // 按键查找 <MyViewModel> 实例
-MyViewModel get viewModel => requireExistingViewModel<MyViewModel>(key: "my-key");
+MyViewModel get viewModel => readViewModel<MyViewModel>(key: "my-key");
+
+// 如果找不到（"my-key"），将回退到使用 MyViewModelFactory 创建实例
+MyViewModel get viewModel =>
+    readViewModel<MyViewModel>(key: "my-key", factory: MyViewModelFactory());
+```
+
+全局读取现有的 ViewModel：
+
+```dart
+final T vm = ViewModel.read<T>(key: "shareKey");
 ```
 
 ### 刷新 ViewModel
 
-创建一个新的视图模型实例：
+创建 ViewModel 的新实例：
 
 ```dart
+MyViewModel get viewModel =>
+    watchViewModel<MyViewModel>(key: "my-key", factory: MyViewModelFactory());
+
 void refresh() {
   refreshViewModel(viewModel);
 
-  // 这将获取一个新的实例
-  viewModel = getViewModel<MyViewModel>(
-    factory: MyViewModelFactory(
-      key: "my-key",
-    ),
+  // 这将获取一个新实例
+  viewModel = readViewModel<MyViewModel>(
+    key: "my-key",
+  );
+}
+```
+
+## 关于部分刷新
+
+状态管理器无需处理部分 UI 刷新 —— Flutter 引擎会自动执行 UI 差异比较。
+一个组件的 `build` 方法只是一个配置步骤，触发它不会带来显著的性能开销。
+
+要实现细粒度的更新，我们可以使用 `ValueListenableBuilder`。
+
+```dart
+@override
+Widget build(BuildContext context) {
+  return ValueNotifierBuilder(
+    valueListenable: _notifier,
+    builder: (context, value, child) {
+      return Text(value);
+    },
   );
 }
 ``` 

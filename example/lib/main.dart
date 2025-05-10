@@ -15,6 +15,7 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
@@ -34,13 +35,15 @@ class MyApp extends StatelessWidget {
 @RoutePage()
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
+
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> with ViewModelStateMixin {
   MainViewModel get _viewModel =>
-      getViewModel<MainViewModel>(factory: MainViewModelFactory(arg: "arg1"));
+      watchViewModel(factory: MainViewModelFactory(arg: "arg1"));
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,7 +75,7 @@ class MainViewModelFactory with vm.ViewModelFactory<MainViewModel> {
 
   @override
   MainViewModel build() {
-    return MainViewModel(state: arg);
+    return MainViewModel();
   }
 
   @override
@@ -81,11 +84,14 @@ class MainViewModelFactory with vm.ViewModelFactory<MainViewModel> {
   }
 }
 
-class MainViewModel extends ViewModel<String> {
-  MainViewModel({required super.state}) {
+class MainViewModel extends ViewModel {
+  String state = "";
+
+  MainViewModel() {
     print("MainViewModel create : $hashCode");
     final t = Timer.periodic(Duration(seconds: 1), (t) {
-      setState("update ${t.tick}");
+      state = ("update ${t.tick}");
+      notifyListeners();
     });
     addDispose(t.cancel);
   }

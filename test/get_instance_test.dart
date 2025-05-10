@@ -99,5 +99,22 @@ void main() {
       await Future.delayed(const Duration(seconds: 1));
       assert(c.watchIds.isEmpty);
     });
+
+    test('find exiting', () async {
+      final factory = InstanceFactory<TestModel>(
+        builder: () => TestModel(),
+      );
+      final a = instanceManager.getNotifier<TestModel>(factory: factory);
+      final b = instanceManager.getNotifier<TestModel>(factory: factory);
+      final c = instanceManager.getNotifier<TestModel>(factory: factory);
+      final d = instanceManager.getNotifier<TestModel>(factory: factory);
+
+      final findNewlyCreated = instanceManager.getNotifier<TestModel>();
+
+      assert(d == findNewlyCreated);
+      assert(a != b);
+      assert(a != c);
+      assert(a != d);
+    });
   });
 }

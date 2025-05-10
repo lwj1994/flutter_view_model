@@ -1,6 +1,5 @@
 class ViewModelConfig {
   final bool logEnable;
-
   final bool Function(dynamic previous, dynamic state)? isSameState;
 
   ViewModelConfig({

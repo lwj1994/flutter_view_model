@@ -1,73 +1,91 @@
-import 'dart:math';
-
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/view_model.dart';
 
 import 'test_widget.dart';
 
+class MyViewModelLifecycle extends ViewModelLifecycle {
+  @override
+  void onAddWatcher(ViewModel viewModel, String key, String? newWatchId) {
+    print("MyViewModelLifecycle onAddWatcher $viewModel $key $newWatchId");
+  }
+
+  @override
+  void onCreate(ViewModel viewModel, String key) {
+    print("MyViewModelLifecycle onCreate $viewModel  $key");
+  }
+
+  @override
+  void onDispose(ViewModel viewModel, String key) {
+    print("MyViewModelLifecycle onDispose $viewModel    $key");
+  }
+
+  @override
+  void onRemoveWatcher(
+      ViewModel viewModel, String key, String? removedWatchId) {
+    print(
+        "MyViewModelLifecycle onRemoveWatcher $viewModel $key $removedWatchId");
+  }
+}
+
 void main() {
-  group('view_model state', () {
-    late TestViewModel viewModel;
+  group('stateless_view_model state', () {
     setUp(() {
       ViewModel.initConfig(ViewModelConfig(logEnable: true));
-      viewModel = TestViewModel(state: "1");
     });
 
-    test("batch_set_state block", () async {
-      const total = 100;
+    test("dispose error", () async {
+      final vm = instanceManager.getNotifier(
+          factory: InstanceFactory<DisposeErrorViewModel>(
+              builder: () {
+                return DisposeErrorViewModel();
+              },
+              watchId: "watchId1"));
+      final vmIns = vm.instance;
+      vm.recycle();
 
-      viewModel.listen(onChanged: (p, s) {
-        print("batch_set_state $p -> $s");
+      await Future.delayed(const Duration(seconds: 1));
+      assert(vm.watchIds.isEmpty);
+      assert(vmIns.isDisposed);
+    });
 
-        if (p != viewModel.initState) {
-          expect(
-            s,
-            (int.parse(p ?? "$total") - 1).toString(),
-          );
-        }
+    test("batch_set_state", () async {
+      final viewModel = TestStatelessViewModel();
+      var c = 0;
+      viewModel.listen(onChanged: () {
+        c++;
+        print("batch_set_state $c");
       });
 
-      int size = total;
-
-      while (size > 0) {
-        final s1 = size.toString();
-        viewModel.setState(s1);
-        size--;
-      }
-
-      await Future.delayed(const Duration(seconds: 3));
+      viewModel.notifyListeners();
+      viewModel.notifyListeners();
+      viewModel.notifyListeners();
+      await Future.delayed(const Duration(seconds: 1));
+      assert(c == 3);
     });
 
-    test("set_state block", () async {
-      int c = 0;
-      viewModel.listen(onChanged: (p, s) {
-        print("$p -> $s");
-        if (c == 0) {
-          expect(p, "1");
-          expect(s, "2");
-        }
-
-        if (c == 1) {
-          expect(p, "2");
-          expect(s, "3");
-        }
-
-        if (c == 2) {
-          expect(p, "3");
-          expect(s, "4");
-        }
-
+    test("changeNotifier_set_state", () async {
+      late ChangeNotifierVM viewModel = ChangeNotifierVM();
+      var c = 0;
+      viewModel.listen(onChanged: () {
         c++;
       });
-
-      viewModel.setState("2");
-      expect(viewModel.state, '2');
-      viewModel.setState("3");
-      expect(viewModel.state, '3');
-
-      while (Random().nextInt(100) != 29) {}
-      viewModel.setState("4");
-      expect(viewModel.state, '4');
+      viewModel.notifyListeners();
+      viewModel.notifyListeners();
+      viewModel.notifyListeners();
+      await Future.delayed(const Duration(seconds: 1));
+      assert(c == 3);
     });
   });
+}
+
+class ChangeNotifierVM extends ChangeNotifierViewModel {}
+
+class ChangeNotifierVMFactory with ViewModelFactory<ChangeNotifierVM> {
+  String? name;
+
+  @override
+  ChangeNotifierVM build() {
+    return ChangeNotifierVM();
+  }
 }

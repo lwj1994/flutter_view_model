@@ -22,6 +22,13 @@ void main() {
     // Create the Finders.
     final stateText = find.text('initState');
     expect(stateText, findsOneWidget);
+
+    (testKey.currentState as TestPageState)
+        .readViewModel<TestViewModel>()
+        .setState("hi");
+    await tester.pump(const Duration(seconds: 1));
+    final stateText2 = find.text('hi');
+    expect(stateText2, findsOneWidget);
   });
 
   testWidgets('state viewModel', (tester) async {
@@ -36,13 +43,13 @@ void main() {
     )));
     final state = testKey.currentState as TestPageState;
 
-    final vm1 = state.getViewModel(
+    final vm1 = state.watchViewModel(
         factory: const TestViewModelFactory(
       initState: "initState",
       isSingleton: false,
     ));
 
-    final vm2 = state.getViewModel(
+    final vm2 = state.watchViewModel(
         factory: const TestViewModelFactory(
       initState: "initState2",
       isSingleton: false,
@@ -86,13 +93,13 @@ void main() {
     final state = testKey.currentState as TestPageState;
     final state2 = testKey2.currentState as TestPageState;
 
-    final vm1 = state.getViewModel(
+    final vm1 = state.watchViewModel(
         factory: const TestViewModelFactory(
       initState: "initState",
       isSingleton: false,
     ));
 
-    final vm2 = state2.getViewModel(
+    final vm2 = state2.watchViewModel(
         factory: const TestViewModelFactory(
       initState: "initState2",
       isSingleton: false,
@@ -128,13 +135,16 @@ void main() {
     final state = testKey.currentState as TestPageState;
     final state2 = testKey2.currentState as TestPageState;
 
-    final vm1 = state.requireExistingViewModel<TestViewModel>();
-    final vm2 = state2.requireExistingViewModel<TestViewModel>();
+    final vm1 = state.readViewModel<TestViewModel>();
+    final vm2 = state2.readViewModel<TestViewModel>();
+    final vm3 = ViewModel.read<TestViewModel>();
+
     print(vm1.state);
     print(vm2.state);
     assert(vm1.state == "initState2");
     assert(vm2.state == "initState2");
     assert(vm1 == vm2);
+    assert(vm1 == vm3);
   });
 
   testWidgets('state share singleton viewModel', (tester) async {
@@ -160,10 +170,10 @@ void main() {
     final state = testKey.currentState as TestPageState;
     final state2 = testKey2.currentState as TestPageState;
 
-    final vm1 = state.getViewModel(factory: fc);
+    final vm1 = state.readViewModel(factory: fc);
 
-    final vm2 = state2.getViewModel(factory: fc);
-    final vm3 = state2.requireExistingViewModel<TestViewModel>();
+    final vm2 = state2.readViewModel(factory: fc);
+    final vm3 = state2.readViewModel<TestViewModel>();
     print(vm1.state);
     print(vm2.state);
     print(vm3.state);
@@ -184,12 +194,11 @@ void main() {
       ],
     )));
     final state = testKey.currentState as TestPageState;
-    final vm = state.getViewModel(
+    final vm = state.readViewModel(
       factory: fc,
-      listen: false,
     );
 
-    final vm2 = state.requireExistingViewModel<TestViewModel>(key: "key");
+    final vm2 = state.readViewModel<TestViewModel>(key: "key");
 
     assert(vm == vm2);
     vm2.setState("2");
@@ -210,12 +219,11 @@ void main() {
       ],
     )));
     final state = testKey.currentState as TestPageState;
-    final vm = state.getViewModel(
+    final vm = state.readViewModel(
       factory: fc,
-      listen: false,
     );
 
-    final vm2 = state.requireExistingViewModel<TestViewModel>();
+    final vm2 = state.readViewModel<TestViewModel>();
 
     assert(vm == vm2);
     vm2.setState("2");
@@ -235,13 +243,12 @@ void main() {
       ],
     )));
     final state = testKey.currentState as TestPageState;
-    final vm = state.getViewModel(
+    final vm = state.readViewModel(
       factory: fc,
-      listen: false,
     );
 
     var c = 0;
-    vm.listen(onChanged: (p, n) {
+    vm.listenState(onChanged: (p, n) {
       print(n);
       if (c == 0) assert(n == "2");
       if (c == 1) assert(n == "3");
@@ -267,10 +274,10 @@ void main() {
       ],
     )));
     final state = testKey.currentState as TestPageState;
-    final vm = state.getViewModel(factory: fc);
+    final vm = state.readViewModel(factory: fc);
 
     var c = 0;
-    vm.listen(onChanged: (p, n) {
+    vm.listenState(onChanged: (p, n) {
       print(n);
       if (c == 0) assert(n == "2");
       if (c == 1) assert(n == "3");
@@ -296,11 +303,40 @@ void main() {
       ],
     )));
     final state = testKey.currentState as TestPageState;
-    final vm = state.getViewModel(factory: fc);
+    final vm = state.readViewModel(factory: fc);
 
     state.refreshViewModel(vm);
-    final vm2 = state.getViewModel(factory: fc);
+    final vm2 = state.readViewModel(factory: fc);
 
     assert(vm != vm2);
+  });
+
+  testWidgets('read ViewModel error', (tester) async {
+    final testKey = GlobalKey();
+    const fc = TestViewModelFactory();
+    await tester.pumpWidget(MaterialApp(
+        home: Column(
+      children: [
+        TestPage(
+          key: testKey,
+          factory: fc,
+        ),
+      ],
+    )));
+    final state = testKey.currentState as TestPageState;
+    final vm = state.readViewModel(
+      factory: fc,
+    );
+
+    final vm2 = state.readViewModel<TestViewModel>(key: "1");
+    assert(vm == vm2);
+
+    // key "2" 找不到就走默认 fc
+    final TestViewModel vm3 =
+        state.readViewModel<TestViewModel>(key: "2", factory: fc);
+    assert(vm == vm3);
+
+    final TestViewModel vm4 = state.readViewModel(key: "3");
+    assert(vm3 == vm4);
   });
 }

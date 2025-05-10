@@ -7,15 +7,21 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
-  late final _instanceController =
-      AutoDisposeInstanceController(onRecreate: () {
-    setState(() {});
-  });
+  late final _instanceController = AutoDisposeInstanceController(
+    onRecreate: () {
+      setState(() {});
+    },
+    watcherName: viewModelWatcherName(),
+  );
   final Map<ViewModel, bool> _stateListeners = {};
 
   final _defaultViewModelKey = const UuidV4().generate();
   final List<Function()> _disposes = [];
   bool _dispose = false;
+
+  /// add watcherName. it is useful for debug
+  String viewModelWatcherName() =>
+      ViewModel.config.logEnable ? "$runtimeType" : "";
 
   @override
   @mustCallSuper
@@ -30,7 +36,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
 
   /// get existing viewModel by [key], or throw error
   /// if listen == true, [ViewModel] trigger rebuilding automatically.
-  VM requireExistingViewModel<VM extends ViewModel>({
+  VM _requireExistingViewModel<VM extends ViewModel>({
     bool listen = true,
     String? key,
   }) {
@@ -44,8 +50,61 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     return res;
   }
 
+  /// [key] ViewModelFactory.Key
+  VM watchViewModel<VM extends ViewModel>({
+    ViewModelFactory<VM>? factory,
+    String? key,
+  }) =>
+      _tryGetViewModel<VM>(
+        factory: factory,
+        key: key,
+        listen: true,
+      );
+
+  /// [key] ViewModelFactory.Key
+  VM readViewModel<VM extends ViewModel>({
+    ViewModelFactory<VM>? factory,
+    String? key,
+  }) =>
+      _tryGetViewModel<VM>(
+        factory: factory,
+        key: key,
+        listen: false,
+      );
+
+  VM _tryGetViewModel<VM extends ViewModel>({
+    ViewModelFactory<VM>? factory,
+    String? key,
+    bool listen = true,
+  }) {
+    if (VM == ViewModel || VM == dynamic) {
+      throw StateError("VM must extends ViewModel");
+    }
+    // find key first
+    if (key != null) {
+      try {
+        return _requireExistingViewModel<VM>(
+          key: key,
+          listen: listen,
+        );
+      } catch (e) {
+        //
+      }
+    }
+
+    if (factory != null) {
+      return _createViewModel<VM>(
+        factory: factory,
+        listen: listen,
+      );
+    }
+
+    // fallback to find newly created
+    return _requireExistingViewModel<VM>(listen: listen);
+  }
+
   /// if listen == true, [ViewModel] trigger rebuilding automatically.
-  VM getViewModel<VM extends ViewModel>({
+  VM _createViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
     bool listen = true,
   }) {
@@ -67,7 +126,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
 
   void _addListener(ViewModel res) {
     if (_stateListeners[res] != true) {
-      _disposes.add(res.listen(onChanged: (p, n) async {
+      _stateListeners[res] = true;
+      _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
         while (!context.mounted) {
           await Future.delayed(Duration.zero);
