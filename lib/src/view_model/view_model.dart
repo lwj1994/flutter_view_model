@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
+import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
@@ -19,6 +20,24 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 }
 
 mixin class ViewModel implements InstanceLifeCycle {
+  /// read instance of T
+  static T read<T extends ViewModel>({String? key}) {
+    final T vm;
+    if (key != null) {
+      vm = instanceManager.get<T>(
+        factory: InstanceFactory<T>(
+          key: key,
+        ),
+      );
+    } else {
+      vm = instanceManager.get<T>();
+    }
+    if (vm.isDisposed) {
+      throw StateError("$T is disposed");
+    }
+    return vm;
+  }
+
   final List<VoidCallback?> _listeners = [];
   static ViewModelConfig _config = ViewModelConfig();
   final _autoDisposeController = AutoDisposeController();

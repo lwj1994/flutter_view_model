@@ -2,7 +2,7 @@
 
 [![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[Chinese Documentation](README_ZH.md)
+[Chinese](README_ZH.md)
 
 I sincerely thank [Miolin](https://github.com/Miolin) for entrusting me with the permissions of
 the [view_model](https://pub.dev/packages/view_model) package and transferring its ownership. This
@@ -214,6 +214,13 @@ MyViewModel get viewModel => readViewModel<MyViewModel>(key: "my-key");
 // if not find ("my-key"), will fallback to use MyViewModelFactory create instance
 MyViewModel get viewModel =>
     readViewModel<MyViewModel>(key: "my-key", factory: MyViewModelFactory());
+```
+
+read existing view model globally:
+
+```dart
+
+final T vm = ViewModel.read<T>(key: "shareKey");
 ```
 
 ### Refreshing ViewModel
