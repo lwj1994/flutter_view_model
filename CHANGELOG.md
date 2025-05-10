@@ -4,7 +4,10 @@ _Breaking change:_
 
 * Use `ViewModel` instead of `StatelessViewModel`.
 * Use `StateViewModel` instead of `ViewModel`.
-* Use either `watchViewModel` or `readViewModel` instead of `getViewModel`.
+* Use either `watchViewModel` or `readViewModel` instead of `getViewModel`/
+  `requireExistingViewModel`.
+* Use `StateViewModel.listenState` instead of `ViewModel.listen`.
+* Use `ViewModel.listen` instead of `ViewModel.addListener`.
 
 ## 0.3.0
 
