@@ -87,7 +87,7 @@ class Store<T> {
   }
 }
 
-class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
+class InstanceHandle<T> with ChangeNotifier {
   final String key;
   final String? initWatchId;
   final List<String> watchIds = List.empty(growable: true);
@@ -111,11 +111,16 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
   void _addWatcher(String? id) {
     if (watchIds.contains(id) || id == null) return;
     watchIds.add(id);
+    if (_instance is InstanceLifeCycle) {
+      (_instance as InstanceLifeCycle).onAddWatcher(key, id);
+    }
   }
 
   void removeWatcher(String id) {
     if (watchIds.remove(id)) {
-      viewModelLog("$this remove Watcher($id)");
+      if (_instance is InstanceLifeCycle) {
+        (_instance as InstanceLifeCycle).onRemoveWatcher(key, id);
+      }
     }
     if (watchIds.isEmpty) {
       recycle();
@@ -127,7 +132,6 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
   InstanceAction? get action => _action;
 
   void recycle() {
-    viewModelLog("$this recycle");
     _action = InstanceAction.dispose;
     notifyListeners();
     onDispose();
@@ -147,37 +151,32 @@ class InstanceHandle<T> with ChangeNotifier implements InstanceLifeCycle {
     return "InstanceHandle<$T>(index=$index, key=$key, initWatchId=$initWatchId, watchIds=$watchIds)";
   }
 
-  @override
   void onCreate(String key, String? watchId) {
     if (_instance is InstanceLifeCycle) {
-      (_instance as InstanceLifeCycle).onCreate(key, watchId);
+      (_instance as InstanceLifeCycle).onCreate(key);
     }
     _addWatcher(watchId);
-    viewModelLog("$this onCreate");
   }
 
   void addNewWatcher(String id) {
     _addWatcher(id);
-    viewModelLog("$this added New Watcher($id)");
   }
 
   void _tryCallInstanceDispose() {
     if (_instance is InstanceLifeCycle) {
       try {
-        (_instance as InstanceLifeCycle).onDispose();
+        (_instance as InstanceLifeCycle).onDispose(key);
       } catch (e) {
         viewModelLog("${_instance.runtimeType} onDispose error $e");
       }
     }
   }
 
-  @override
   void onDispose() {
     _tryCallInstanceDispose();
     _instance = null;
     watchIds.clear();
     _instance = null;
-    viewModelLog("$this onDispose");
   }
 }
 
@@ -187,7 +186,11 @@ enum InstanceAction {
 }
 
 abstract interface class InstanceLifeCycle {
-  void onCreate(String key, String? watchId);
+  void onCreate(String key);
 
-  void onDispose();
+  void onAddWatcher(String key, String newWatchId);
+
+  void onRemoveWatcher(String key, String removedWatchId);
+
+  void onDispose(String key);
 }

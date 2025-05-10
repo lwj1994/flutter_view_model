@@ -4,6 +4,30 @@ import 'package:view_model/view_model.dart';
 
 import 'test_widget.dart';
 
+class MyViewModelLifecycle extends ViewModelLifecycle {
+  @override
+  void onAddWatcher(ViewModel viewModel, String key, String? newWatchId) {
+    print("MyViewModelLifecycle onAddWatcher $viewModel $key $newWatchId");
+  }
+
+  @override
+  void onCreate(ViewModel viewModel, String key) {
+    print("MyViewModelLifecycle onCreate $viewModel  $key");
+  }
+
+  @override
+  void onDispose(ViewModel viewModel, String key) {
+    print("MyViewModelLifecycle onDispose $viewModel    $key");
+  }
+
+  @override
+  void onRemoveWatcher(
+      ViewModel viewModel, String key, String? removedWatchId) {
+    print(
+        "MyViewModelLifecycle onRemoveWatcher $viewModel $key $removedWatchId");
+  }
+}
+
 void main() {
   group('stateless_view_model state', () {
     setUp(() {

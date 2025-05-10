@@ -20,6 +20,9 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 }
 
 mixin class ViewModel implements InstanceLifeCycle {
+  static final List<ViewModelLifecycle> _viewModelLifecycles =
+      List.empty(growable: true);
+
   /// read instance of T
   static T read<T extends ViewModel>({String? key}) {
     final T vm;
@@ -36,6 +39,17 @@ mixin class ViewModel implements InstanceLifeCycle {
       throw StateError("$T is disposed");
     }
     return vm;
+  }
+
+  static Function() addLifecycle(ViewModelLifecycle lifecycle) {
+    _viewModelLifecycles.add(lifecycle);
+    return () {
+      _viewModelLifecycles.remove(lifecycle);
+    };
+  }
+
+  static void removeLifecycle(ViewModelLifecycle value) {
+    _viewModelLifecycles.remove(value);
   }
 
   final List<VoidCallback?> _listeners = [];
@@ -80,19 +94,47 @@ mixin class ViewModel implements InstanceLifeCycle {
   static ViewModelConfig get config => _config;
 
   @override
+  @protected
   @mustCallSuper
-  void onCreate(String key, String? watchId) {}
+  void onCreate(String key) {
+    for (var element in _viewModelLifecycles) {
+      element.onCreate(this, key);
+    }
+  }
+
+  @protected
+  @mustCallSuper
+  @override
+  void onAddWatcher(String key, String newWatchId) {
+    for (var element in _viewModelLifecycles) {
+      element.onAddWatcher(this, key, newWatchId);
+    }
+  }
+
+  @protected
+  @mustCallSuper
+  @override
+  void onRemoveWatcher(String key, String removedWatchId) {
+    for (var element in _viewModelLifecycles) {
+      element.onRemoveWatcher(this, key, removedWatchId);
+    }
+  }
 
   /// protect this method
+
   @override
   @mustCallSuper
   @protected
-  void onDispose() {
+  void onDispose(String key) {
     _isDisposed = true;
     _autoDisposeController.dispose();
     dispose();
+    for (var element in _viewModelLifecycles) {
+      element.onDispose(this, key);
+    }
   }
 
+  @protected
   @mustCallSuper
   void dispose() {}
 }
@@ -184,7 +226,6 @@ abstract class StateViewModel<T> with ViewModel {
   @mustCallSuper
   @override
   void dispose() {
-    viewModelLog("$runtimeType<$T> onDispose");
     _store.dispose();
     _listeners.clear();
     _stateListeners.clear();
@@ -193,9 +234,8 @@ abstract class StateViewModel<T> with ViewModel {
   }
 
   @override
-  void onCreate(String key, String? watchId) {
-    super.onCreate(key, watchId);
-    viewModelLog("$runtimeType<$T>(key=$key,watchId=$watchId) onCreate");
+  void onCreate(String key) {
+    super.onCreate(key);
   }
 }
 
@@ -231,4 +271,15 @@ mixin ViewModelFactory<T> {
   /// 如果需要共享不同的实例，根据需求去重写 [key]
   /// [key] 的优先级高于 [singleton]
   bool singleton() => false;
+}
+
+abstract class ViewModelLifecycle {
+  void onCreate(ViewModel viewModel, String key) {}
+
+  void onAddWatcher(ViewModel viewModel, String key, String newWatchId) {}
+
+  void onRemoveWatcher(
+      ViewModel viewModel, String key, String removedWatchId) {}
+
+  void onDispose(ViewModel viewModel, String key) {}
 }
