@@ -1,8 +1,8 @@
 # view_model
 
-[![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
+[![Pub Version](https://img.shields.io/pub/v/view_model)](https://github/lwj1994/flutter_view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)  
 
-[Chinese](README_ZH.md)
+[Chinese Doc](README_ZH.md)
 
 I sincerely thank [Miolin](https://github.com/Miolin) for entrusting me with the permissions of
 the [view_model](https://pub.dev/packages/view_model) package and transferring its ownership. This
