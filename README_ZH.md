@@ -1,10 +1,11 @@
 # view_model
 
-[![Static Badge](https://img.shields.io/badge/pub-0.3.0-brightgreen)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
+[![Pub Version](https://img.shields.io/pub/v/view_model)](https://github/lwj1994/flutter_view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)  
 
-[English](README.md)
+[English Doc](README.md)
 
-我衷心感谢 [Miolin](https://github.com/Miolin) 将 [ViewModel](https://pub.dev/packages/view_model) 包的权限委托给我，并转移其所有权。这种支持无比珍贵，我很兴奋能推动它持续发展。
+我衷心感谢 [Miolin](https://github.com/Miolin) 将 [ViewModel](https://pub.dev/packages/view_model)
+包的权限委托给我，并转移其所有权。这种支持无比珍贵，我很兴奋能推动它持续发展。
 
 ## 特性
 
@@ -13,7 +14,8 @@
 - **自动资源释放**：资源会随着 `StatefulWidget` 的 `State` 自动释放，简化了内存管理。
 - **跨组件共享**：可在多个 `StatefulWidget` 之间共享，提升代码的可复用性和模块化程度。
 
-> **注意**：`ViewModel` 旨在仅绑定到 `StatefulWidget` 的 `State`。由于 `StatelessWidget` 不维护状态，它们与这种绑定机制不兼容。
+> **注意**：`ViewModel` 旨在仅绑定到 `StatefulWidget` 的 `State`。由于 `StatelessWidget`
+> 不维护状态，它们与这种绑定机制不兼容。
 
 ## 核心概念
 
@@ -205,6 +207,7 @@ MyViewModel get viewModel =>
 全局读取现有的 ViewModel：
 
 ```dart
+
 final T vm = ViewModel.read<T>(key: "shareKey");
 ```
 
