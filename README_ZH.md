@@ -211,21 +211,18 @@ MyViewModel get viewModel =>
 final T vm = ViewModel.read<T>(key: "shareKey");
 ```
 
-### 刷新 ViewModel
+### 手动回收 ViewModel
 
-创建 ViewModel 的新实例：
 
 ```dart
 MyViewModel get viewModel =>
     watchViewModel<MyViewModel>(key: "my-key", factory: MyViewModelFactory());
 
 void refresh() {
-  refreshViewModel(viewModel);
+  recycleViewModel(viewModel);
 
-  // 这将获取一个新实例
-  viewModel = readViewModel<MyViewModel>(
-    key: "my-key",
-  );
+  // 再次调用的话，这将获取一个新实例
+  viewModel;
 }
 ```
 

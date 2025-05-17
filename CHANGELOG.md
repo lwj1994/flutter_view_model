@@ -1,3 +1,6 @@
+## 0.4.1
+_Breaking change:_
+* Use `recycleViewModel` instead of `refreshViewModel`. 
 ## 0.4.0
 
 _Breaking change:_

@@ -305,9 +305,8 @@ void main() {
     final state = testKey.currentState as TestPageState;
     final vm = state.readViewModel(factory: fc);
 
-    state.refreshViewModel(vm);
+    state.recycleViewModel(vm);
     final vm2 = state.readViewModel(factory: fc);
-
     assert(vm != vm2);
   });
 
