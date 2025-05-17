@@ -21,7 +21,9 @@ class SecondPage extends StatefulWidget {
 
 class _State extends State<SecondPage> with ViewModelStateMixin {
   MyViewModel get viewModel =>
-      watchViewModel(factory: MyViewModelFactory(arg: "init MyViewModel"));
+      watchViewModel(factory: MyViewModelFactory(arg: _dynamicArg));
+
+  String _dynamicArg = "init MyViewModel";
 
   MyState get state => viewModel.state;
 
@@ -54,14 +56,15 @@ class _State extends State<SecondPage> with ViewModelStateMixin {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "myViewModel state :$state",
+            "$viewModel",
             style: const TextStyle(color: Colors.red),
           ),
           FilledButton(
               onPressed: () async {
-                refreshViewModel(viewModel);
+                _dynamicArg = DateTime.now().toString();
+                recycleViewModel(viewModel);
               },
-              child: const Text("refresh viewModel")),
+              child: const Text("recycle viewModel")),
           FilledButton(
               onPressed: () {
                 debugPrint("page._viewModel hashCode = ${viewModel.hashCode}");
@@ -81,15 +84,26 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 
   @override
   MyViewModel build() {
-    return MyViewModel(state: MyState(name: ""));
+    return MyViewModel(
+      state: MyState(name: ""),
+      arg: arg,
+    );
   }
 }
 
 class MyViewModel extends StateViewModel<MyState> {
+  final String arg;
+
   MyViewModel({
     required super.state,
+    this.arg = "",
   }) {
-    debugPrint("create ViewModel state:$state  hashCode:$hashCode");
+    debugPrint("create $this, hashCode:$hashCode");
+  }
+
+  @override
+  String toString() {
+    return "(state:$state,arg:$arg)";
   }
 
   @override

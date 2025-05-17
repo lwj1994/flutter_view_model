@@ -29,8 +29,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     super.initState();
   }
 
-  void refreshViewModel<VM extends ViewModel>(VM vm) {
-    instanceManager.recreate(vm);
+  /// trigger vm.dispose and remove it from cache
+  void recycleViewModel<VM extends ViewModel>(VM vm) {
+    _instanceController.recycle(vm);
     setState(() {});
   }
 

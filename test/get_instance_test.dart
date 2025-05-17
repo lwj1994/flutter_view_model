@@ -71,6 +71,18 @@ void main() {
       assert(a != a1);
     });
 
+    test('recreate with new builder', () {
+      final factory =
+          InstanceFactory<TestModel>(builder: () => TestModel(), key: "share");
+      final a = instanceManager.get<TestModel>(factory: factory);
+      final newT = TestModel();
+      final a1 = instanceManager.recreate<TestModel>(a, builder: () {
+        return newT;
+      });
+      assert(a != a1);
+      assert(newT == a1);
+    });
+
     test('get exiting instance', () {
       final factory = InstanceFactory<TestModel>(
         builder: () => TestModel(),

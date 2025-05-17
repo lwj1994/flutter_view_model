@@ -51,6 +51,17 @@ class AutoDisposeInstanceController {
     return notifier.instance;
   }
 
+  void recycle(Object instance) {
+    _instanceNotifiers.removeWhere((e) {
+      if (e.instance == instance) {
+        e.recycle();
+        return true;
+      } else {
+        return false;
+      }
+    });
+  }
+
   Future<void> dispose() async {
     for (var e in _instanceNotifiers) {
       e.removeWatcher(_watchId);

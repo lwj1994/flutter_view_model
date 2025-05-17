@@ -223,21 +223,19 @@ read existing view model globally:
 final T vm = ViewModel.read<T>(key: "shareKey");
 ```
 
-### Refreshing ViewModel
+### Recycle ViewModel 
 
-Create a new instance of the view model:
+if you want to dispose the view model, you can use `recycleViewModel` method.
 
 ```dart
 MyViewModel get viewModel =>
     watchViewModel<MyViewModel>(key: "my-key", factory: MyViewModelFactory());
 
 void refresh() {
-  refreshViewModel(viewModel);
+  recycleViewModel(viewModel);
 
   // This will obtain a new instance
-  viewModel = readViewModel<MyViewModel>(
-    key: "my-key",
-  );
+  viewModel.get();
 }
 ``` 
 

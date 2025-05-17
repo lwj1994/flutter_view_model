@@ -81,9 +81,12 @@ class Store<T> {
     return create;
   }
 
-  T recreate(T t) {
+  T recreate(
+    T t, {
+    T Function()? builder,
+  }) {
     final find = _instances.values.where((e) => e.instance == t).first;
-    return find.recreate();
+    return find.recreate(builder: builder);
   }
 }
 
@@ -137,10 +140,12 @@ class InstanceHandle<T> with ChangeNotifier {
     onDispose();
   }
 
-  T recreate() {
+  T recreate({
+    T Function()? builder,
+  }) {
     onDispose();
-    _instance = factory.call();
-    onCreate(key, initWatchId);
+    _instance = (builder?.call()) ?? factory.call();
+    onCreate(key, null);
     _action = InstanceAction.recreate;
     notifyListeners();
     return instance;

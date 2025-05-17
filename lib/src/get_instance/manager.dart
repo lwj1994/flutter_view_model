@@ -7,9 +7,15 @@ final instanceManager = InstanceManager._get();
 class InstanceManager {
   InstanceManager._();
 
-  T recreate<T>(T t) {
+  T recreate<T>(
+    T t, {
+    T Function()? builder,
+  }) {
     final Store<T> s = _stores[T];
-    return s.recreate(t);
+    return s.recreate(
+      t,
+      builder: builder,
+    );
   }
 
   factory InstanceManager._get() => _instance;
