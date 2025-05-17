@@ -20,6 +20,10 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 }
 
 mixin class ViewModel implements InstanceLifeCycle {
+  String _key = "";
+
+  String get key => _key;
+
   static final List<ViewModelLifecycle> _viewModelLifecycles =
       List.empty(growable: true);
 
@@ -97,6 +101,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   @protected
   @mustCallSuper
   void onCreate(String key) {
+    _key = key;
     for (var element in _viewModelLifecycles) {
       element.onCreate(this, key);
     }
