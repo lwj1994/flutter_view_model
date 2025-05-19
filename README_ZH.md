@@ -1,6 +1,6 @@
 # view_model
 
-[![Pub Version](https://img.shields.io/pub/v/view_model)](https://github/lwj1994/flutter_view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)  
+[![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)  
 
 [English Doc](README.md)
 
