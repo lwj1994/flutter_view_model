@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
@@ -39,10 +40,12 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// if listen == true, [ViewModel] trigger rebuilding automatically.
   VM _requireExistingViewModel<VM extends ViewModel>({
     bool listen = true,
-    String? key,
+    InstanceArg arg = const InstanceArg(),
   }) {
     final res = _instanceController.getInstance<VM>(
-      factory: key == null ? null : InstanceFactory(key: key),
+      factory: InstanceFactory(
+        arg: arg,
+      ),
     );
 
     if (listen) {
@@ -55,10 +58,14 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   VM watchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
+    Object? tag,
   }) =>
       _tryGetViewModel<VM>(
         factory: factory,
-        key: key,
+        arg: InstanceArg(
+          key: key,
+          tag: tag,
+        ),
         listen: true,
       );
 
@@ -66,26 +73,32 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   VM readViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
+    Object? tag,
   }) =>
       _tryGetViewModel<VM>(
         factory: factory,
-        key: key,
+        arg: InstanceArg(
+          key: key,
+          tag: tag,
+        ),
         listen: false,
       );
 
   VM _tryGetViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
-    String? key,
+    InstanceArg arg = const InstanceArg(),
     bool listen = true,
   }) {
     if (VM == ViewModel || VM == dynamic) {
       throw StateError("VM must extends ViewModel");
     }
-    // find key first
-    if (key != null) {
+    // find key first to reuse
+    if (arg.key != null) {
       try {
         return _requireExistingViewModel<VM>(
-          key: key,
+          arg: InstanceArg(
+            key: arg.key,
+          ),
           listen: listen,
         );
       } catch (e) {
@@ -93,6 +106,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       }
     }
 
+    // factory
     if (factory != null) {
       return _createViewModel<VM>(
         factory: factory,
@@ -101,7 +115,11 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
 
     // fallback to find newly created
-    return _requireExistingViewModel<VM>(listen: listen);
+    return _requireExistingViewModel<VM>(
+        arg: InstanceArg(
+          tag: arg.tag,
+        ),
+        listen: listen);
   }
 
   /// if listen == true, [ViewModel] trigger rebuilding automatically.
@@ -113,9 +131,13 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       throw StateError("state is disposed");
     }
     String key = factory.key() ?? _defaultViewModelKey;
+    final tag = factory.getTag();
     final res = _instanceController.getInstance<VM>(
       factory: InstanceFactory<VM>(
-        key: key,
+        arg: InstanceArg(
+          key: key,
+          tag: tag,
+        ),
         builder: factory.build,
       ),
     );

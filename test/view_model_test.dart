@@ -1,30 +1,31 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/view_model.dart';
 
 import 'test_widget.dart';
 
 class MyViewModelLifecycle extends ViewModelLifecycle {
   @override
-  void onAddWatcher(ViewModel viewModel, String key, String? newWatchId) {
-    print("MyViewModelLifecycle onAddWatcher $viewModel $key $newWatchId");
+  void onAddWatcher(ViewModel viewModel, InstanceArg arg, String? newWatchId) {
+    print("MyViewModelLifecycle onAddWatcher $viewModel $arg $newWatchId");
   }
 
   @override
-  void onCreate(ViewModel viewModel, String key) {
-    print("MyViewModelLifecycle onCreate $viewModel  $key");
+  void onCreate(ViewModel viewModel, InstanceArg arg) {
+    print("MyViewModelLifecycle onCreate $viewModel  $arg");
   }
 
   @override
-  void onDispose(ViewModel viewModel, String key) {
-    print("MyViewModelLifecycle onDispose $viewModel    $key");
+  void onDispose(ViewModel viewModel, InstanceArg arg) {
+    print("MyViewModelLifecycle onDispose $viewModel    $arg");
   }
 
   @override
   void onRemoveWatcher(
-      ViewModel viewModel, String key, String? removedWatchId) {
+      ViewModel viewModel, InstanceArg arg, String? removedWatchId) {
     print(
-        "MyViewModelLifecycle onRemoveWatcher $viewModel $key $removedWatchId");
+        "MyViewModelLifecycle onRemoveWatcher $viewModel $arg $removedWatchId");
   }
 }
 
@@ -37,10 +38,11 @@ void main() {
     test("dispose error", () async {
       final vm = instanceManager.getNotifier(
           factory: InstanceFactory<DisposeErrorViewModel>(
-              builder: () {
-                return DisposeErrorViewModel();
-              },
-              watchId: "watchId1"));
+        builder: () {
+          return DisposeErrorViewModel();
+        },
+        arg: const InstanceArg(watchId: "watchId1"),
+      ));
       final vmIns = vm.instance;
       vm.recycle();
 

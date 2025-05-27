@@ -45,9 +45,12 @@ class InstanceManager {
       throw StateError("T is dynamic");
     }
     if (factory == null || factory.isEmpty()) {
-      final watchId = factory?.watchId;
+      final watchId = factory?.arg.watchId;
+      final tag = factory?.arg.tag;
       // find newly T instance
-      final find = _getStore<T>().findNewlyInstance();
+      final find = _getStore<T>().findNewlyInstance(
+        tag: tag,
+      );
       if (find == null) {
         throw StateError("no $T instance found");
       }
@@ -55,9 +58,11 @@ class InstanceManager {
       // if watchId is not null, add watcher
       if (watchId != null) {
         final factory = InstanceFactory<T>(
+            arg: InstanceArg(
           watchId: watchId,
-          key: find.key,
-        );
+          key: find.arg.key,
+          tag: find.arg.tag,
+        ));
         return _getStore<T>().getNotifier(factory: factory);
       } else {
         return find;
@@ -72,39 +77,37 @@ class InstanceManager {
 
 class InstanceFactory<T> {
   final T Function()? builder;
-  final String? key;
-  final String? watchId;
+  final InstanceArg arg;
 
   bool isEmpty() {
-    return builder == null && key == null;
+    return builder == null && arg.key == null;
   }
 
   factory InstanceFactory.watch({required String watchId}) {
     return InstanceFactory(
-      watchId: watchId,
+      arg: InstanceArg(
+        watchId: watchId,
+      ),
     );
   }
 
   InstanceFactory({
     this.builder,
-    this.key,
-    this.watchId,
+    this.arg = const InstanceArg(),
   });
 
   InstanceFactory<T> copyWith({
     T Function()? factory,
-    String? key,
-    String? watchId,
+    InstanceArg? arg,
   }) {
     return InstanceFactory<T>(
       builder: factory ?? this.builder,
-      key: key ?? this.key,
-      watchId: watchId ?? this.watchId,
+      arg: arg ?? this.arg,
     );
   }
 
   @override
   String toString() {
-    return '$T InstanceFactory{key: $key, watchId: $watchId}';
+    return '$T InstanceFactory{arg: $arg}';
   }
 }
