@@ -27,8 +27,11 @@ class AutoDisposeInstanceController {
     if (T == dynamic) {
       throw StateError("T must extends ViewModel");
     }
-    factory = (factory ?? InstanceFactory<T>()).copyWith(
-      watchId: _watchId,
+    factory = (factory ?? InstanceFactory<T>());
+    factory = factory.copyWith(
+      arg: factory.arg.copyWith(
+        watchId: _watchId,
+      ),
     );
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
       factory: factory,

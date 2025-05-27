@@ -27,6 +27,7 @@ class TestPageState extends State<TestPage> with ViewModelStateMixin {
 class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   final String initState;
   final String? keyV;
+  final Object? tag;
   final bool isSingleton;
 
   @override
@@ -41,6 +42,11 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   }
 
   @override
+  Object? getTag() {
+    return tag;
+  }
+
+  @override
   bool singleton() {
     return isSingleton;
   }
@@ -49,6 +55,7 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   const TestViewModelFactory({
     this.initState = "initState",
     this.keyV,
+    this.tag,
     this.isSingleton = false,
   });
 
@@ -73,10 +80,12 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
     String? initState,
     String? keyV,
     bool? isSingleton,
+    Object? tag,
   }) {
     return TestViewModelFactory(
       initState: initState ?? this.initState,
       keyV: keyV ?? this.keyV,
+      tag: tag ?? this.tag,
       isSingleton: isSingleton ?? this.isSingleton,
     );
   }
@@ -102,6 +111,7 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 
 class TestViewModel extends StateViewModel<String> {
   String name = "";
+
   TestViewModel({required super.state}) {
     print("TestViewModel create : $hashCode");
   }

@@ -20,25 +20,39 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 }
 
 mixin class ViewModel implements InstanceLifeCycle {
-  String _key = "";
+  late InstanceArg _instanceArg;
 
-  String get key => _key;
+  Object? get tag => _instanceArg.tag;
 
   static final List<ViewModelLifecycle> _viewModelLifecycles =
       List.empty(growable: true);
 
   /// read instance of T
-  static T read<T extends ViewModel>({String? key}) {
-    final T vm;
+  static T read<T extends ViewModel>({String? key, Object? tag}) {
+    T? vm;
+
+    /// find key firstly
     if (key != null) {
-      vm = instanceManager.get<T>(
-        factory: InstanceFactory<T>(
-          key: key,
-        ),
-      );
-    } else {
-      vm = instanceManager.get<T>();
+      try {
+        vm = instanceManager.get<T>(
+          factory: InstanceFactory<T>(
+              arg: InstanceArg(
+            key: key,
+          )),
+        );
+      } catch (e) {
+        //
+      }
     }
+
+    // find newly cache
+    vm = instanceManager.get<T>(
+      factory: InstanceFactory<T>(
+          arg: InstanceArg(
+        tag: tag,
+      )),
+    );
+
     if (vm.isDisposed) {
       throw StateError("$T is disposed");
     }
@@ -100,28 +114,28 @@ mixin class ViewModel implements InstanceLifeCycle {
   @override
   @protected
   @mustCallSuper
-  void onCreate(String key) {
-    _key = key;
+  void onCreate(InstanceArg arg) {
+    _instanceArg = arg;
     for (var element in _viewModelLifecycles) {
-      element.onCreate(this, key);
+      element.onCreate(this, arg);
     }
   }
 
   @protected
   @mustCallSuper
   @override
-  void onAddWatcher(String key, String newWatchId) {
+  void onAddWatcher(InstanceArg arg, String newWatchId) {
     for (var element in _viewModelLifecycles) {
-      element.onAddWatcher(this, key, newWatchId);
+      element.onAddWatcher(this, arg, newWatchId);
     }
   }
 
   @protected
   @mustCallSuper
   @override
-  void onRemoveWatcher(String key, String removedWatchId) {
+  void onRemoveWatcher(InstanceArg arg, String removedWatchId) {
     for (var element in _viewModelLifecycles) {
-      element.onRemoveWatcher(this, key, removedWatchId);
+      element.onRemoveWatcher(this, arg, removedWatchId);
     }
   }
 
@@ -130,12 +144,12 @@ mixin class ViewModel implements InstanceLifeCycle {
   @override
   @mustCallSuper
   @protected
-  void onDispose(String key) {
+  void onDispose(InstanceArg arg) {
     _isDisposed = true;
     _autoDisposeController.dispose();
     dispose();
     for (var element in _viewModelLifecycles) {
-      element.onDispose(this, key);
+      element.onDispose(this, arg);
     }
   }
 
@@ -239,8 +253,8 @@ abstract class StateViewModel<T> with ViewModel {
   }
 
   @override
-  void onCreate(String key) {
-    super.onCreate(key);
+  void onCreate(InstanceArg arg) {
+    super.onCreate(arg);
   }
 }
 
@@ -262,13 +276,16 @@ class AutoDisposeController {
   }
 }
 
-mixin ViewModelFactory<T> {
+abstract mixin class ViewModelFactory<T> {
   static final singletonId = const UuidV4().generate();
 
   /// 如果 [key] 一样，那么获取的就是同一个内存地址的 [T]
   /// 比如 key = "userId"，那么不同 User 会获取的自己的单例
   /// key = null，每次都会调用 [build] 创建新实例
   String? key() => singleton() ? singletonId : null;
+
+  /// set tag for viewModel to flag something
+  Object? getTag() => null;
 
   T build();
 
@@ -279,12 +296,12 @@ mixin ViewModelFactory<T> {
 }
 
 abstract class ViewModelLifecycle {
-  void onCreate(ViewModel viewModel, String key) {}
+  void onCreate(ViewModel viewModel, InstanceArg arg) {}
 
-  void onAddWatcher(ViewModel viewModel, String key, String newWatchId) {}
+  void onAddWatcher(ViewModel viewModel, InstanceArg arg, String newWatchId) {}
 
   void onRemoveWatcher(
-      ViewModel viewModel, String key, String removedWatchId) {}
+      ViewModel viewModel, InstanceArg arg, String removedWatchId) {}
 
-  void onDispose(ViewModel viewModel, String key) {}
+  void onDispose(ViewModel viewModel, InstanceArg arg) {}
 }

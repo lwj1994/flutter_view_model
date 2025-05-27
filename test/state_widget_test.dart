@@ -109,6 +109,42 @@ void main() {
     assert(vm1 != vm2);
   });
 
+  testWidgets('state share exiting viewModel by tag', (tester) async {
+    final testKey = GlobalKey();
+    final testKey2 = GlobalKey();
+    const fc = TestViewModelFactory(initState: "initState", tag: "1");
+    await tester.pumpWidget(MaterialApp(
+        home: Column(
+      children: [
+        TestPage(
+          key: testKey,
+          factory: fc.copyWith(
+            initState: "initState1",
+          ),
+        ),
+        TestPage(
+          key: testKey2,
+          factory: fc.copyWith(
+            initState: "initState2",
+          ),
+        ),
+      ],
+    )));
+    final state = testKey.currentState as TestPageState;
+    final state2 = testKey2.currentState as TestPageState;
+
+    final vm1 = state.readViewModel<TestViewModel>(tag: "1");
+    final vm2 = state2.readViewModel<TestViewModel>();
+    final vm3 = ViewModel.read<TestViewModel>();
+
+    print(vm1.state);
+    print(vm2.state);
+    assert(vm1.state == "initState2");
+    assert(vm2.state == "initState2");
+    assert(vm1 == vm2);
+    assert(vm1 == vm3);
+  });
+
   testWidgets('state share exiting viewModel', (tester) async {
     final testKey = GlobalKey();
     final testKey2 = GlobalKey();

@@ -26,9 +26,7 @@ void main() {
 
     test('share key', () {
       final factory = InstanceFactory<TestModel>(
-        builder: () => TestModel(),
-        key: 'share',
-      );
+          builder: () => TestModel(), arg: const InstanceArg(key: "share"));
       final a = instanceManager.get<TestModel>(factory: factory);
       final b = instanceManager.get<TestModel>(factory: factory);
       final c = instanceManager.get<TestModel>(factory: factory);
@@ -37,10 +35,10 @@ void main() {
     });
 
     test('get different type', () {
-      final factory =
-          InstanceFactory<TestModel>(builder: () => TestModel(), key: "share");
+      final factory = InstanceFactory<TestModel>(
+          builder: () => TestModel(), arg: const InstanceArg(key: "share"));
       final factoryB = InstanceFactory<TestModelB>(
-          builder: () => TestModelB(), key: "share");
+          builder: () => TestModelB(), arg: const InstanceArg(key: "share"));
       final a = instanceManager.get<TestModel>(factory: factory);
       final a1 = instanceManager.get<TestModel>(factory: factory);
       final b = instanceManager.get<TestModelB>(factory: factoryB);
@@ -51,8 +49,8 @@ void main() {
     });
 
     test('recycle', () {
-      final factory =
-          InstanceFactory<TestModel>(builder: () => TestModel(), key: "share");
+      final factory = InstanceFactory<TestModel>(
+          builder: () => TestModel(), arg: const InstanceArg(key: "share"));
       final InstanceHandle<TestModel> a =
           instanceManager.getNotifier<TestModel>(factory: factory);
 
@@ -64,16 +62,16 @@ void main() {
     });
 
     test('recreate', () {
-      final factory =
-          InstanceFactory<TestModel>(builder: () => TestModel(), key: "share");
+      final factory = InstanceFactory<TestModel>(
+          builder: () => TestModel(), arg: const InstanceArg(key: "share"));
       final a = instanceManager.get<TestModel>(factory: factory);
       final a1 = instanceManager.recreate<TestModel>(a);
       assert(a != a1);
     });
 
     test('recreate with new builder', () {
-      final factory =
-          InstanceFactory<TestModel>(builder: () => TestModel(), key: "share");
+      final factory = InstanceFactory<TestModel>(
+          builder: () => TestModel(), arg: const InstanceArg(key: "share"));
       final a = instanceManager.get<TestModel>(factory: factory);
       final newT = TestModel();
       final a1 = instanceManager.recreate<TestModel>(a, builder: () {
@@ -91,6 +89,38 @@ void main() {
       final c = instanceManager.get<TestModel>();
       // assert(a != b);
       assert(c == b);
+    });
+
+    test('get exiting instance by tag', () {
+      final factory = InstanceFactory<TestModel>(
+          builder: () => TestModel(), arg: const InstanceArg(tag: "tag"));
+      final factory2 = InstanceFactory<TestModel>(
+        builder: () => TestModel(),
+      );
+      final factory3 = InstanceFactory<TestModel>(
+          builder: () => TestModel(), arg: const InstanceArg(tag: "tag3"));
+      final a = instanceManager.get<TestModel>(factory: factory);
+      final b = instanceManager.get<TestModel>(factory: factory2);
+      final c = instanceManager.get<TestModel>(factory: factory3);
+      assert(a != b);
+      assert(a != c);
+
+      final find = instanceManager.getNotifier<TestModel>(
+        factory: InstanceFactory(
+          arg: const InstanceArg(tag: "tag"),
+        ),
+      );
+      assert(find.arg.tag == "tag");
+
+      final find2 = instanceManager.getNotifier<TestModel>(
+        factory: InstanceFactory(
+          arg: const InstanceArg(tag: "tag3"),
+        ),
+      );
+      assert(find2.arg.tag == "tag3");
+
+      final find3 = instanceManager.getNotifier<TestModel>();
+      assert(find3.arg.tag == "tag3");
     });
 
     test('get exiting instance with watchId', () async {
