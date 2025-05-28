@@ -214,7 +214,26 @@ MyViewModel get viewModel => readViewModel<MyViewModel>(key: "my-key");
 // if not find ("my-key"), will fallback to use MyViewModelFactory create instance
 MyViewModel get viewModel =>
     readViewModel<MyViewModel>(key: "my-key", factory: MyViewModelFactory());
+
 ```
+
+find existing ViewModel by tag:
+
+set tag in `ViewModelFactory.getTag()`:
+```dart
+class MyViewModelFactory extends ViewModelFactory<MyViewModel> {
+  
+  @override
+  Object? getTag(){
+    return 'tag';
+  }
+}
+```
+find existing ViewModel by tag:
+```dart
+MyViewModel get viewModel => watchViewModel<MyViewModel>(tag: 'tag');
+```
+
 
 read existing view model globally:
 
