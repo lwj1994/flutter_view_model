@@ -1,3 +1,22 @@
+## 0.4.2
+* Support find existing ViewModel by tag
+
+set tag in `ViewModelFactory.getTag()`:
+```dart
+class MyViewModelFactory extends ViewModelFactory<MyViewModel> {
+  
+  @override
+  Object? getTag(){
+    return 'tag';
+  }
+}
+```
+find existing ViewModel by tag:
+```dart
+MyViewModel get viewModel => watchViewModel<MyViewModel>(tag: 'tag');
+```
+
+
 ## 0.4.1
 _Breaking change:_
 * Use `recycleViewModel` instead of `refreshViewModel`. 
