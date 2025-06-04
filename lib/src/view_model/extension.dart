@@ -55,6 +55,16 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// [key] ViewModelFactory.Key
+  /// [tag] ViewModelFactory.Tag
+  /// [factory] ViewModelFactory to create ViewModel.
+  /// 1. if [key] is not null, it will find existing ViewModel by key first.
+  /// 2. if has [factory] and not found by [key], it will create a new ViewModel by [factory].
+  /// 3. if [factory] is null, and [tag] is not null, it will find existing ViewModel by tag.
+  /// 4. if all is null, it will find newly created ViewModel from cache.
+  ///
+  /// watchViewModel will trigger to rebuild the widget when ViewModel state changed.
+  ///
+  /// `watchViewModel` and `readViewModel` will bind ViewModel, when no one bind viewModel, viewModel will be disposed automatically
   VM watchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
@@ -70,6 +80,15 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       );
 
   /// [key] ViewModelFactory.Key
+  /// [tag] ViewModelFactory.Tag
+  /// [factory] ViewModelFactory to create ViewModel.
+  /// 1. if [key] is not null, it will find existing ViewModel by key first.
+  /// 2. if has [factory] and not found by [key], it will create a new ViewModel by [factory].
+  /// 3. if [factory] is null, and [tag] is not null, it will find existing ViewModel by tag.
+  /// 4. if all is null, it will find newly created ViewModel from cache.
+  ///
+  /// readViewModel just read the ViewModel without rebuilding the widget when ViewModel state changed.
+  /// `watchViewModel` and `readViewModel` will bind ViewModel, when no one bind viewModel, viewModel will be disposed automatically
   VM readViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,

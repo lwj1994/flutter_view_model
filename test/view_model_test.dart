@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/get_instance/manager.dart';
-import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/view_model.dart';
 
 import 'test_widget.dart';
