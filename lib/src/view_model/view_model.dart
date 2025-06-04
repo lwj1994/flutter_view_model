@@ -27,7 +27,13 @@ mixin class ViewModel implements InstanceLifeCycle {
   static final List<ViewModelLifecycle> _viewModelLifecycles =
       List.empty(growable: true);
 
-  /// read instance of T
+  /// read a ViewModel instance by [key] or [tag].
+  /// [key] ViewModelFactory.Key
+  /// [tag] ViewModelFactory.Tag
+  /// 1. if [key] is not null, it will find existing ViewModel by key first.
+  /// 2. if [tag] is not null, it will find existing ViewModel by tag.
+  /// 3. if all is null, it will find newly created ViewModel from cache.
+  ///
   static T read<T extends ViewModel>({String? key, Object? tag}) {
     T? vm;
 
@@ -277,21 +283,33 @@ class AutoDisposeController {
 }
 
 abstract mixin class ViewModelFactory<T> {
-  static final singletonId = const UuidV4().generate();
+  static final _defaultShareId = const UuidV4().generate();
 
-  /// 如果 [key] 一样，那么获取的就是同一个内存地址的 [T]
-  /// 比如 key = "userId"，那么不同 User 会获取的自己的单例
-  /// key = null，每次都会调用 [build] 创建新实例
-  String? key() => singleton() ? singletonId : null;
+  /// customs key to share the viewModel instance. this will ignore [autoSharable()]
+  /// same key will get same viewModel instance
+  ///
+  /// ```dart
+  /// class MyState extend State<MyWidget> with ViewModelStateMixin{
+  ///   MyViewModel _viewModel => watchViewModel(factory: MyViewModelFactory(key: "my_key"));
+  /// }
+  ///
+  String? key() => (singleton()) ? _defaultShareId : null;
 
-  /// set tag for viewModel to flag something
+  /// set tag for viewModel to flag something.
+  /// you can get the tag by [ViewModel.tag].
+  /// you can find newly viewModel which has the tag if it exists, or throw [Exception].
+  /// ```dart
+  /// class MyState extend State<MyWidget> with ViewModelStateMixin{
+  ///   MyViewModel _viewModel => watchViewModel(tag: tag)
+  /// }
+  /// ```
   Object? getTag() => null;
 
+  /// how to build your viewModel instance
   T build();
 
-  /// 便捷的把当前类型 [T] 设置为单例共享
-  /// 如果需要共享不同的实例，根据需求去重写 [key]
-  /// [key] 的优先级高于 [singleton]
+  /// auto return [_defaultShareId] as [key()] to share the viewModel instance
+  /// [T] will only have a instance
   bool singleton() => false;
 }
 
