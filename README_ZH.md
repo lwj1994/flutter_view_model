@@ -15,9 +15,6 @@
 
 ### 1.1 什么是 ViewModel？
 
-`ViewModel` 是基于 `StreamController` 和 `setState` 实现的轻量级状态管理工具。它并非严格遵循 MVVM
-架构中的 ViewModel 定义，而是更侧重于作为 Widget 的状态和业务逻辑的承载者。
-
 ### 1.2 核心特性
 
 * **轻量易用**：以最少的依赖和极简的 API 为设计目标，上手快，侵入性低。

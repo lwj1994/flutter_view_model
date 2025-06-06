@@ -16,10 +16,6 @@ efficient solutions.
 
 ### 1.1 What is ViewModel?
 
-`ViewModel` is a lightweight state management tool implemented based on `StreamController` and
-`setState`. It does not strictly follow the ViewModel definition in the MVVM architecture but
-focuses more on serving as a carrier for the state and business logic of Widgets.
-
 ### 1.2 Core Features
 
 - **Lightweight and Easy to Use**: Aims for minimal dependencies and extremely simple APIs, making
