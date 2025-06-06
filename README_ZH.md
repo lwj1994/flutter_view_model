@@ -1,6 +1,6 @@
 # view_model
 
-[![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/view_model/main)](https://app.codecov.io/gh/lwj1994/view_model/tree/main)
+[![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
 [English Doc](README.md)
 
@@ -21,7 +21,7 @@
 ### 1.2 核心特性
 
 * **轻量易用**：以最少的依赖和极简的 API 为设计目标，上手快，侵入性低。
-* **自动资源管理**：当没有任何 Widget `watch` (监听) 一个 `ViewModel` 实例时，该实例会自动调用
+* **自动资源管理**：当没有任何 Widget 绑定(watch/read) 一个 `ViewModel` 实例时，该实例会自动调用
   `dispose` 方法并被销毁，有效防止内存泄漏。
 * **便捷共享**：支持跨多个 Widget 共享同一个 `ViewModel` 实例，并且能以 O(1) 的时间复杂度高效查找。
 
@@ -47,7 +47,7 @@ ViewModel 的方法很简单：
 
 ## 2. 基础用法
 
-本节将引导您完成 `view_model` 最基础的无状态 `ViewModel` 使用流程。这是上手此库的最佳起点。
+本节将引导您完成 `view_model` 最基础的使用流程。这是上手此库的最佳起点。
 
 ### 2.1 添加依赖
 
@@ -261,10 +261,10 @@ __🔍 查找逻辑优先级（重要）__
 
 1. 如果传入了 key：
     * 优先尝试从缓存中查找具有相同 key 的实例。
-    * 找不到则调用 factory.build() 创建一个新实例，并缓存。
+2. 如果 factory 存在的话，通过用 factory 获取新实例。
+3. 最后尝试从缓存中查找该类型最新创建的实例
 
-2. 尝试从缓存中查找最新创建的实例
-3. __⚠️如果找不到指定类型的 ViewModel 实例，将抛出异常。请确保在使用前已正确创建并注册了 ViewModel。__
+> __⚠️如果找不到指定类型的 ViewModel 实例，将抛出异常。请确保在使用前已正确创建并注册了 ViewModel。__
 
 ✅ 一旦找到实例，watchViewModel 会自动注册监听，并在其状态发生变化时调用 setState() 重建当前 Widget。
 
@@ -272,11 +272,10 @@ __🔍 查找逻辑优先级（重要）__
 
 和 `watchViewModel` 参数一致，区别是不会触发 Widget 重建。适用于需要一次性读取 ViewModel 状态或执行操作的场景。
 
-
 ### 3.4 ViewModel 的生命周期
+
 * `watchViewModel` 和 `readViewModel` 都会绑定 ViewModel
 * 当没有任何 Widget 绑定 ViewModel 时，会自动销毁。
-
 
 ## 4. 带状态的 ViewModel (`StateViewModel<S>`)
 
