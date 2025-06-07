@@ -1,15 +1,14 @@
 import 'package:view_model/view_model.dart';
+
 import 'todo_state.dart';
 
 class TodoViewModel extends StateViewModel<TodoState> {
   TodoViewModel() : super(state: const TodoState());
 
-  // 为了支持多页面共享，添加 key
-  @override
-  String? key() => 'shared-todo-viewmodel';
-
   void addTodo(String title, {String? category}) {
-    if (title.trim().isEmpty) return;
+    if (title.trim().isEmpty) {
+      return;
+    }
 
     final newTodo = TodoItem(
       id: DateTime.now().toString(),
