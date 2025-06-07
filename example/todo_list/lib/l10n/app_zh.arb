@@ -1,0 +1,48 @@
+{
+  "@@locale": "zh",
+  "appTitle": "待办事项",
+  "addTodo": "添加待办",
+  "addTodoHint": "添加新的待办事项",
+  "categoryHint": "分类（可选）",
+  "noTodos": "暂无待办事项",
+  "editTodo": "编辑待办",
+  "editTodoTitle": "标题",
+  "editTodoCategory": "分类（可选）",
+  "save": "保存",
+  "cancel": "取消",
+  "clearCompleted": "清除已完成",
+  "searchTodos": "搜索待办事项",
+  "searchTodosHint": "搜索待办事项...",
+  "noMatchingTodos": "没有找到匹配的待办事项",
+  "todoStats": "待办事项统计",
+  "overview": "总览",
+  "total": "总数",
+  "completed": "已完成",
+  "remaining": "未完成",
+  "categoryStats": "分类统计",
+  "all": "全部",
+  "totalTodos": "总计: {count}",
+  "@totalTodos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "completedTodos": "已完成: {count}",
+  "@completedTodos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "incompleteTodos": "未完成: {count}",
+  "@incompleteTodos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}
