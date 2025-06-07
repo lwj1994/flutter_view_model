@@ -1,0 +1,48 @@
+{
+  "@@locale": "en",
+  "appTitle": "Todo List",
+  "addTodo": "Add Todo",
+  "addTodoHint": "Add new todo",
+  "categoryHint": "Category (optional)",
+  "noTodos": "No todos yet",
+  "editTodo": "Edit Todo",
+  "editTodoTitle": "Title",
+  "editTodoCategory": "Category (optional)",
+  "save": "Save",
+  "cancel": "Cancel",
+  "clearCompleted": "Clear completed",
+  "searchTodos": "Search Todos",
+  "searchTodosHint": "Search todos...",
+  "noMatchingTodos": "No matching todos found",
+  "todoStats": "Todo Statistics",
+  "overview": "Overview",
+  "total": "Total",
+  "completed": "Completed",
+  "remaining": "Remaining",
+  "categoryStats": "Category Statistics",
+  "all": "All",
+  "totalTodos": "Total todos: {count}",
+  "@totalTodos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "completedTodos": "Completed: {count}",
+  "@completedTodos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "incompleteTodos": "Incomplete: {count}",
+  "@incompleteTodos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}
