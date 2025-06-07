@@ -1,0 +1,21 @@
+{
+  "@@locale": "zh",
+  "appTitle": "计数器示例",
+  "currentCount": "当前计数：",
+  "incrementBy": "每次增加/减少：{value}",
+  "@incrementBy": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "decrease": "减少",
+  "increase": "增加",
+  "reset": "重置",
+  "settings": "设置",
+  "settingsTitle": "计数器设置",
+  "incrementSetting": "增量设置",
+  "adjustIncrementHint": "调整每次增加或减少的数值：",
+  "settingsDescription": "• 增量值决定了每次点击增加或减少按钮时的变化量\n• 增量值的范围是1到10\n• 修改后的增量值会立即生效，并在主页面显示"
+}

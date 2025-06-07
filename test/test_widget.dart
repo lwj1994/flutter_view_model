@@ -113,25 +113,25 @@ class TestViewModel extends StateViewModel<String> {
   String name = "";
 
   TestViewModel({required super.state}) {
-    print("TestViewModel create : $hashCode");
+    debugPrint("TestViewModel create : $hashCode");
   }
 }
 
 class TestStatelessViewModel extends ViewModel {
   TestStatelessViewModel() {
-    print("TestStatelessViewModel create : $hashCode");
+    debugPrint("TestStatelessViewModel create : $hashCode");
   }
 }
 
 class DisposeErrorViewModel extends ViewModel {
   DisposeErrorViewModel() {
-    print("DisposeErrorViewModel create : $hashCode");
+    debugPrint("DisposeErrorViewModel create : $hashCode");
   }
 
   @override
   void dispose() {
-    throw StateError("dispose test error");
     super.dispose();
+    throw StateError("dispose test error");
   }
 }
 

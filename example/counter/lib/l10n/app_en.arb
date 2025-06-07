@@ -1,0 +1,21 @@
+{
+  "@@locale": "en",
+  "appTitle": "Counter Example",
+  "currentCount": "Current Count:",
+  "incrementBy": "Increment By: {value}",
+  "@incrementBy": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "decrease": "Decrease",
+  "increase": "Increase",
+  "reset": "Reset",
+  "settings": "Settings",
+  "settingsTitle": "Counter Settings",
+  "incrementSetting": "Increment Setting",
+  "adjustIncrementHint": "Adjust the value to increase or decrease by:",
+  "settingsDescription": "• The increment value determines how much the counter changes each time\n• The range is from 1 to 10\n• Changes take effect immediately and are shown on the main page"
+}

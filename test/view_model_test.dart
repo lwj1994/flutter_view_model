@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/view_model.dart';
@@ -7,23 +8,23 @@ import 'test_widget.dart';
 class MyViewModelLifecycle extends ViewModelLifecycle {
   @override
   void onAddWatcher(ViewModel viewModel, InstanceArg arg, String? newWatchId) {
-    print("MyViewModelLifecycle onAddWatcher $viewModel $arg $newWatchId");
+    debugPrint("MyViewModelLifecycle onAddWatcher $viewModel $arg $newWatchId");
   }
 
   @override
   void onCreate(ViewModel viewModel, InstanceArg arg) {
-    print("MyViewModelLifecycle onCreate $viewModel  $arg");
+    debugPrint("MyViewModelLifecycle onCreate $viewModel  $arg");
   }
 
   @override
   void onDispose(ViewModel viewModel, InstanceArg arg) {
-    print("MyViewModelLifecycle onDispose $viewModel    $arg");
+    debugPrint("MyViewModelLifecycle onDispose $viewModel    $arg");
   }
 
   @override
   void onRemoveWatcher(
       ViewModel viewModel, InstanceArg arg, String? removedWatchId) {
-    print(
+    debugPrint(
         "MyViewModelLifecycle onRemoveWatcher $viewModel $arg $removedWatchId");
   }
 }
@@ -55,7 +56,7 @@ void main() {
       var c = 0;
       viewModel.listen(onChanged: () {
         c++;
-        print("batch_set_state $c");
+        debugPrint("batch_set_state $c");
       });
 
       viewModel.notifyListeners();
