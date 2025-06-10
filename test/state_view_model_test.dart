@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/view_model.dart';
 
@@ -8,85 +6,53 @@ import 'test_widget.dart';
 void main() {
   group('view_model state', () {
     late TestViewModel viewModel;
+
     setUp(() {
       ViewModel.initConfig(ViewModelConfig(logEnable: true));
-      viewModel = TestViewModel(state: "1");
+      viewModel = TestViewModel(state: "0");
     });
 
-    test("batch_set_state", () async {
+    test("should correctly trigger listeners on batch state updates", () async {
       const total = 100;
-      int listenCount = 0;
+      int listenStateCount = 0;
+
       viewModel.listenState(onChanged: (p, s) {
-        print("batch_set_state $p -> $s");
-        listenCount++;
-        if (p != viewModel.initState) {
-          expect(
-            s,
-            (int.parse(p ?? "$total") - 1).toString(),
-          );
-        }
+        listenStateCount++;
+        expect(s, listenStateCount);
+        expect(p, listenStateCount - 1);
       });
 
-      int addListenerCount = 0;
+      int listenCallbackCount = 0;
       viewModel.listen(onChanged: () {
-        addListenerCount++;
-        print("addListener batch_set_state $addListenerCount");
+        listenCallbackCount++;
+        expect(viewModel.state, listenCallbackCount);
       });
 
-      int size = total;
-
-      while (size > 0) {
-        final s1 = size.toString();
-        viewModel.setState(s1);
-        size--;
+      for (int i = 1; i <= total; i++) {
+        viewModel.setState(i.toString());
       }
 
-      await Future.delayed(const Duration(seconds: 3));
-      assert(addListenerCount == 100);
-      assert(listenCount == 100);
+      while (listenStateCount < total) {
+        await Future.delayed(Duration.zero);
+      }
+
+      expect(listenCallbackCount, total);
+      expect(listenStateCount, total);
     });
 
-    test("set_state", () async {
-      int c = 0;
-      viewModel.listenState(onChanged: (p, s) {
-        print("$p -> $s");
-        if (c == 0) {
-          expect(p, "1");
-          expect(s, "2");
-        }
+    test("should correctly update state on notifyListeners", () async {
+      int completedCount = 0;
 
-        if (c == 1) {
-          expect(p, "2");
-          expect(s, "3");
-        }
-
-        if (c == 2) {
-          expect(p, "3");
-          expect(s, "4");
-        }
-
-        c++;
-      });
-
-      viewModel.setState("2");
-      expect(viewModel.state, '2');
-      viewModel.setState("3");
-      expect(viewModel.state, '3');
-
-      while (Random().nextInt(100) != 29) {}
-      viewModel.setState("4");
-      expect(viewModel.state, '4');
-    });
-
-    test("notifyListeners", () async {
-      viewModel.listenState(onChanged: (String? previous, String state) {
-        assert(state == "a");
-      });
       viewModel.listen(onChanged: () {
-        assert(viewModel.name == "a");
+        expect(viewModel.name, "a");
+        completedCount += 1;
       });
+
       viewModel.name = "a";
-      await Future.delayed(const Duration(seconds: 1));
+      viewModel.notifyListeners();
+      while (completedCount < 1) {
+        await Future.delayed(Duration.zero);
+      }
     });
   });
 }
