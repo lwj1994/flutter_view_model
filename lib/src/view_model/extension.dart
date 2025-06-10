@@ -121,7 +121,10 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
           listen: listen,
         );
       } catch (e) {
-        //
+        // rethrow if factory is null and tag is null
+        if (factory == null && arg.tag == null) {
+          rethrow;
+        }
       }
     }
 
