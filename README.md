@@ -270,10 +270,12 @@ order):
 
 1. If a key is passed in:
     * First, attempt to find an instance with the same key in the cache.
-2. If a factory exists, use the factory to get a new instance.
-3. Finally, attempt to find the latest created instance of this type in the cache.
+    * If a factory exists, use the factory to get a new instance.
+    * If no factory is found and no instance is found, an error will be thrown.
+    
+2. If no key and no factory are passed in, attempt to find the latest created instance of this type in the cache.
 
-> __⚠️ If no ViewModel instance of the specified type is found, an exception will be thrown. Ensure
+> __⚠️ If no ViewModel instance of the specified type is found, an error will be thrown. Ensure
 that the ViewModel has been correctly created and registered before use.__
 
 ✅ Once an instance is found, `watchViewModel` will automatically register for listening and call
