@@ -227,6 +227,7 @@ instances. It is used via mixing (with).
 |-----------------|-----------|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `build()`       | `T`       | ❌ Must implement | The factory method to create a ViewModel instance. Typically, constructor parameters are passed here.                                                  |
 | `key()`         | `String?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing). | |                              |
+| `getTag()`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and  it's used by find ViewModel by `watchViewModel(tag:tag)`.                           |
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
@@ -264,7 +265,7 @@ VM watchViewModel<VM extends ViewModel>({
 |----------------|-------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `factory`      | `ViewModelFactory<VM>?` | ✅        | Provides the construction method for the ViewModel. Optional; if an existing instance is not found in the cache, it will be used to create a new one. |
 | `key`          | `String?`               | ✅        | Specifies a unique key to support sharing the same ViewModel instance. First, it tries to find an instance with the same key in the cache.            |
-| `getTag`       | `Object?`               | ✅        | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and  it's used by find ViewModel by `watchViewModel(tag:tag)`.                          |
+| `tag`          | `Object?`               | ✅        | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and  it's used by find ViewModel by `watchViewModel(tag:tag)`.                          |
 
 __🔍 Lookup Logic Priority (Important)__
 The internal lookup and creation logic of `watchViewModel` is as follows (executed in priority

@@ -211,10 +211,11 @@ void dispose() {
 
 `ViewModelFactory<T>` 是用于创建、配置和识别 ViewModel 实例的工厂类。它通过混入（with）使用。
 
-| 方法/属性     | 类型        | 是否可选   | 说明                                                                   |
-|-----------|-----------|--------|----------------------------------------------------------------------|
-| `build()` | `T`       | ❌ 必须实现 | 创建 ViewModel 实例的工厂方法。通常在这里传入构造参数。                                    |
-| `key()`   | `String?` | ✅ 可选   | 为 ViewModel 提供唯一标识。具备相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/page 共享）。 | |                              |
+| 方法/属性      | 类型        | 是否可选   | 说明                                                                                               |
+|------------|-----------|--------|--------------------------------------------------------------------------------------------------|
+| `build()`  | `T`       | ❌ 必须实现 | 创建 ViewModel 实例的工厂方法。通常在这里传入构造参数。                                                                |
+| `key()`    | `String?` | ✅ 可选   | 为 ViewModel 提供唯一标识。具备相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/page 共享）。                             | |                              |
+| `getTag()` | `Object?` | ✅      | 为 ViewModel 添加一个 tag，可以通过 `viewModel.tag` 获取；tag 也可用于查找 ViewModel 实例：`watchViewModel(tag: tag)`。 |
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
@@ -253,7 +254,7 @@ VM watchViewModel<VM extends ViewModel>({
 |-----------|-------------------------|------|--------------------------------------------------------------------------------------------------|
 | `factory` | `ViewModelFactory<VM>?` | ✅    | 提供 ViewModel 的构建方式。可选，如果缓存中找不到现有实例时会使用它创建新的。                                                     |
 | `key`     | `String?`               | ✅    | 指定唯一键，支持共享同一个 ViewModel 实例。优先查找缓存中的实例。                                                           |
-| `getTag`  | `Object?`               | ✅    | 为 ViewModel 添加一个 tag，可以通过 `viewModel.tag` 获取；tag 也可用于查找 ViewModel 实例：`watchViewModel(tag: tag)`。 |
+| `tag`     | `Object?`               | ✅    | 为 ViewModel 添加一个 tag，可以通过 `viewModel.tag` 获取；tag 也可用于查找 ViewModel 实例：`watchViewModel(tag: tag)`。 |
 
 __🔍 查找逻辑优先级（重要）__
 `watchViewModel` 内部的查找与创建逻辑如下所示（按优先级执行）：
