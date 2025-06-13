@@ -37,11 +37,10 @@ class _StatsPageState extends State<StatsPage>
               stats.categories.map((category) {
                 final itemsInCategory =
                     todoVM.getItemsByCategory(category).length;
-                final completedInCategory =
-                    todoVM
-                        .getItemsByCategory(category)
-                        .where((item) => item.completed)
-                        .length;
+                final completedInCategory = todoVM
+                    .getItemsByCategory(category)
+                    .where((item) => item.completed)
+                    .length;
                 return _buildCategoryStats(
                   category,
                   itemsInCategory,

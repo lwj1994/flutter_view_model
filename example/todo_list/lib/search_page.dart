@@ -45,16 +45,15 @@ class _SearchPageState extends State<SearchPage>
                     hintText: l10n.searchTodosHint,
                     prefixIcon: const Icon(Icons.search),
                     border: const OutlineInputBorder(),
-                    suffixIcon:
-                        _searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {});
-                              },
-                            )
-                            : null,
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {});
+                            },
+                          )
+                        : null,
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -99,38 +98,34 @@ class _SearchPageState extends State<SearchPage>
             ),
           ),
           Expanded(
-            child:
-                filteredItems.isEmpty
-                    ? Center(child: Text(l10n.noMatchingTodos))
-                    : ListView.builder(
-                      itemCount: filteredItems.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredItems[index];
-                        return ListTile(
-                          leading: Checkbox(
-                            value: item.completed,
-                            onChanged: (_) => todoVM.toggleTodo(item.id),
+            child: filteredItems.isEmpty
+                ? Center(child: Text(l10n.noMatchingTodos))
+                : ListView.builder(
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+                      return ListTile(
+                        leading: Checkbox(
+                          value: item.completed,
+                          onChanged: (_) => todoVM.toggleTodo(item.id),
+                        ),
+                        title: Text(
+                          item.title,
+                          style: TextStyle(
+                            decoration: item.completed
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
-                          title: Text(
-                            item.title,
-                            style: TextStyle(
-                              decoration:
-                                  item.completed
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                            ),
-                          ),
-                          subtitle:
-                              item.category != null
-                                  ? Text(item.category!)
-                                  : null,
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => todoVM.removeTodo(item.id),
-                          ),
-                        );
-                      },
-                    ),
+                        ),
+                        subtitle:
+                            item.category != null ? Text(item.category!) : null,
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => todoVM.removeTodo(item.id),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -145,19 +140,18 @@ class _SearchPageState extends State<SearchPage>
     }
 
     if (_searchController.text.isNotEmpty) {
-      items =
-          items
-              .where(
-                (item) =>
-                    item.title.toLowerCase().contains(
+      items = items
+          .where(
+            (item) =>
+                item.title.toLowerCase().contains(
                       _searchController.text.toLowerCase(),
                     ) ||
-                    (item.category?.toLowerCase().contains(
+                (item.category?.toLowerCase().contains(
                           _searchController.text.toLowerCase(),
                         ) ??
-                        false),
-              )
-              .toList();
+                    false),
+          )
+          .toList();
     }
 
     return items;

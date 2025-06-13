@@ -20,13 +20,12 @@ class TodoViewModel extends StateViewModel<TodoState> {
   }
 
   void toggleTodo(String id) {
-    final updatedItems =
-        state.items.map((item) {
-          if (item.id == id) {
-            return item.copyWith(completed: !item.completed);
-          }
-          return item;
-        }).toList();
+    final updatedItems = state.items.map((item) {
+      if (item.id == id) {
+        return item.copyWith(completed: !item.completed);
+      }
+      return item;
+    }).toList();
 
     setState(state.copyWith(items: updatedItems));
   }
@@ -42,16 +41,15 @@ class TodoViewModel extends StateViewModel<TodoState> {
   void editTodo(String id, String newTitle, {String? newCategory}) {
     if (newTitle.trim().isEmpty) return;
 
-    final updatedItems =
-        state.items.map((item) {
-          if (item.id == id) {
-            return item.copyWith(
-              title: newTitle.trim(),
-              category: newCategory ?? item.category,
-            );
-          }
-          return item;
-        }).toList();
+    final updatedItems = state.items.map((item) {
+      if (item.id == id) {
+        return item.copyWith(
+          title: newTitle.trim(),
+          category: newCategory ?? item.category,
+        );
+      }
+      return item;
+    }).toList();
 
     setState(state.copyWith(items: updatedItems));
   }
@@ -86,11 +84,10 @@ class TodoViewModel extends StateViewModel<TodoState> {
   TodoStats getStats() {
     final total = state.items.length;
     final completed = state.items.where((item) => item.completed).length;
-    final categories =
-        state.items
-            .map((item) => item.category)
-            .where((category) => category != null)
-            .toSet();
+    final categories = state.items
+        .map((item) => item.category)
+        .where((category) => category != null)
+        .toSet();
 
     return TodoStats(
       total: total,

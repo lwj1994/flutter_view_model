@@ -136,7 +136,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       );
     }
 
-    // fallback to find newly created
+    // fallback to find newly created by tag
     return _requireExistingViewModel<VM>(
         arg: InstanceArg(
           tag: arg.tag,
@@ -180,6 +180,38 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
         }
         setState(() {});
       }));
+    }
+  }
+
+  VM? maybeWatchViewModel<VM extends ViewModel>({
+    ViewModelFactory<VM>? factory,
+    String? key,
+    Object? tag,
+  }) {
+    try {
+      return watchViewModel(
+        factory: factory,
+        key: key,
+        tag: tag,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  VM? maybeReadViewModel<VM extends ViewModel>({
+    ViewModelFactory<VM>? factory,
+    String? key,
+    Object? tag,
+  }) {
+    try {
+      return readViewModel(
+        factory: factory,
+        key: key,
+        tag: tag,
+      );
+    } catch (e) {
+      return null;
     }
   }
 

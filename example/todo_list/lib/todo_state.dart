@@ -86,10 +86,10 @@ class TodoState {
 
   @override
   int get hashCode => Object.hash(
-    Object.hashAll(items),
-    isLoading,
-    error,
-    selectedCategory,
-    searchQuery,
-  );
+        Object.hashAll(items),
+        isLoading,
+        error,
+        selectedCategory,
+        searchQuery,
+      );
 }

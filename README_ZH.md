@@ -245,13 +245,15 @@ setState() 使 Widget 重建。
 VM watchViewModel<VM extends ViewModel>({
   ViewModelFactory<VM>? factory,
   String? key,
+  Object? tag,
 });
 ```
 
-| 参数名       | 类型                      | 是否可选 | 说明                                           |
-|-----------|-------------------------|------|----------------------------------------------|
-| `factory` | `ViewModelFactory<VM>?` | ✅    | 提供 ViewModel 的构建方式。可选，如果缓存中找不到现有实例时会使用它创建新的。 |
-| `key`     | `String?`               | ✅    | 指定唯一键，支持共享同一个 ViewModel 实例。优先查找缓存中的实例。       |
+| 参数名       | 类型                      | 是否可选 | 说明                                                                                               |
+|-----------|-------------------------|------|--------------------------------------------------------------------------------------------------|
+| `factory` | `ViewModelFactory<VM>?` | ✅    | 提供 ViewModel 的构建方式。可选，如果缓存中找不到现有实例时会使用它创建新的。                                                     |
+| `key`     | `String?`               | ✅    | 指定唯一键，支持共享同一个 ViewModel 实例。优先查找缓存中的实例。                                                           |
+| `getTag`  | `Object?`               | ✅    | 为 ViewModel 添加一个 tag，可以通过 `viewModel.tag` 获取；tag 也可用于查找 ViewModel 实例：`watchViewModel(tag: tag)`。 |
 
 __🔍 查找逻辑优先级（重要）__
 `watchViewModel` 内部的查找与创建逻辑如下所示（按优先级执行）：
@@ -260,7 +262,8 @@ __🔍 查找逻辑优先级（重要）__
     * 优先尝试从缓存中查找具有相同 key 的实例。
     * 如果没找到， factory 存在的话，通过用 factory 获取新实例。
     * factory 不存在，直接抛出 error
-2. 没有 key 也没有 factory 时， 会尝试从缓存中查找该类型最新创建的实例
+2. 如果有 tag，从缓存中查找该类型最新创建的包含该 tag 的实例
+3. 没有任何参数时， 会尝试从缓存中查找该类型最新创建的实例
 
 > __⚠️如果找不到指定类型的 ViewModel 实例，将抛出异常。请确保在使用前已正确创建并注册了 ViewModel。__
 
