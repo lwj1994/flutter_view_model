@@ -7,6 +7,7 @@
 VM watchViewModel<VM extends ViewModel>({
   ViewModelFactory<VM>? factory,
   String? key,
+  Object? tag,
 });
 ```
 
