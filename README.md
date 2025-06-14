@@ -4,7 +4,7 @@
 
 [中文文档](README_ZH.md)
 
-[CHANGELOG.md](CHANGELOG.md)[]
+[CHANGELOG.md](CHANGELOG.md)
 
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
 > the [ViewModel](https://pub.dev/packages/view_model) package to me.
