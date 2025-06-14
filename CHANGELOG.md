@@ -1,3 +1,6 @@
+## 0.4.4
+* Add `ViewModel.maybeRead`
+
 ## 0.4.3
 
 * Add `maybeWatchViewModel` and `maybeReadViewModel`

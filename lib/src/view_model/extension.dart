@@ -62,6 +62,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// 3. if [factory] is null, and [tag] is not null, it will find existing ViewModel by tag.
   /// 4. if all is null, it will find newly created ViewModel from cache.
   ///
+  /// if not found will throw [StateError]
+  ///
   /// watchViewModel will trigger to rebuild the widget when ViewModel state changed.
   ///
   /// `watchViewModel` and `readViewModel` will bind ViewModel, when no one bind viewModel, viewModel will be disposed automatically
@@ -86,6 +88,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// 2. if has [factory] and not found by [key], it will create a new ViewModel by [factory].
   /// 3. if [factory] is null, and [tag] is not null, it will find existing ViewModel by tag.
   /// 4. if all is null, it will find newly created ViewModel from cache.
+  ///
+  /// if not found will throw [StateError]
   ///
   /// readViewModel just read the ViewModel without rebuilding the widget when ViewModel state changed.
   /// `watchViewModel` and `readViewModel` will bind ViewModel, when no one bind viewModel, viewModel will be disposed automatically

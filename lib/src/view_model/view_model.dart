@@ -27,6 +27,15 @@ mixin class ViewModel implements InstanceLifeCycle {
   static final List<ViewModelLifecycle> _viewModelLifecycles =
       List.empty(growable: true);
 
+  /// read a ViewModel instance by [key] or [tag]. maybe return null.
+  static T? maybeRead<T extends ViewModel>({String? key, Object? tag}) {
+    try {
+      return read(key: key, tag: tag);
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// read a ViewModel instance by [key] or [tag].
   /// [key] ViewModelFactory.Key
   /// [tag] ViewModelFactory.Tag
@@ -34,6 +43,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// 2. if [tag] is not null, it will find existing ViewModel by tag.
   /// 3. if all is null, it will find newly created ViewModel from cache.
   ///
+  /// if not found will throw [StateError]
   static T read<T extends ViewModel>({String? key, Object? tag}) {
     T? vm;
 
