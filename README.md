@@ -2,8 +2,6 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[中文文档](README_ZH.md)
-
 [CHANGELOG.md](CHANGELOG.md)
 
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
@@ -490,3 +488,44 @@ class _MyCounterPageState extends State<MyCounterPage>
       ),
     );
   }
+}
+```
+
+---
+
+## 4. DefaultViewModelFactory Quick Factory
+
+### 4.1 When to Use
+
+For simple ViewModels that do not require complex construction logic, you can use this factory directly.
+
+### 4.2 Usage
+
+```dart
+final factory = DefaultViewModelFactory<MyViewModel>(
+  builder: () => MyViewModel(),
+  isSingleton: true, // optional
+);
+```
+
+### 4.3 Parameters
+
+- `builder`: Function to create the ViewModel instance.
+- `customKey`: Custom key for singleton instance sharing.
+- `customTag`: Custom tag for identifying the ViewModel.
+- `isSingleton`: Whether to use singleton mode.
+
+### 4.4 Example
+
+```dart
+final factory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+  isSingleton: true,
+  customKey: 'global-counter',
+);
+```
+
+This factory is especially useful for simple ViewModels that do not require complex construction logic.

@@ -279,12 +279,49 @@ __🔍 查找逻辑优先级（重要）__
 * `watchViewModel` 和 `readViewModel` 都会绑定 ViewModel
 * 当没有任何 Widget 绑定 ViewModel 时，会自动销毁。
 
-## 4. 带状态的 ViewModel (`StateViewModel<S>`)
+## 4. DefaultViewModelFactory 快速工厂
+
+### 4.1 适用场景
+
+对于不需要复杂构造逻辑的简单 ViewModel，可以直接使用该工厂，减少样板代码。
+
+### 4.2 用法
+
+```dart
+final factory = DefaultViewModelFactory<MyViewModel>(
+  builder: () => MyViewModel(),
+  isSingleton: true, // 可选
+);
+```
+
+### 4.3 参数说明
+
+- `builder`：用于创建 ViewModel 实例的方法。
+- `customKey`：单例共享时的自定义 key。
+- `customTag`：用于标记 ViewModel 的自定义 tag。
+- `isSingleton`：是否为单例模式。
+
+### 4.4 示例
+
+```dart
+final factory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+  isSingleton: true,
+  customKey: 'global-counter',
+);
+```
+
+该工厂特别适用于无需复杂构造逻辑的简单 ViewModel。
+
+## 5. 带状态的 ViewModel (`StateViewModel<S>`)
 
 当您的业务逻辑需要管理一个明确的、结构化的状态对象时，`StateViewModel<S>` 是一个更合适的选择。它强制持有一个不可变的
 `state` 对象，并通过 `setState` 方法来更新状态。
 
-### 4.1 定义状态类
+### 5.1 定义状态类
 
 首先，您需要定义一个状态类。强烈建议该类是不可变的，通常通过提供 `copyWith` 方法来实现。
 
@@ -322,7 +359,7 @@ class MyCounterState {
 }
 ```
 
-### 4.2 创建有状态的 ViewModel
+### 5.2 创建有状态的 ViewModel
 
 继承 `StateViewModel<S>`，其中 `S` 是您定义的状态类的类型。
 
@@ -364,7 +401,7 @@ class MyCounterViewModel extends StateViewModel<MyCounterState> {
 
 在 `StateViewModel` 中，您通过调用 `setState(newState)` 来更新状态。这个方法会用新的状态替换旧的状态，并自动通知所有监听者。
 
-### 4.3 创建 ViewModelFactory
+### 5.3 创建 ViewModelFactory
 
 为您的 `StateViewModel` 创建一个对应的 `Factory`。
 
@@ -388,7 +425,7 @@ class MyCounterViewModelFactory with ViewModelFactory<MyCounterViewModel> {
 }
 ```
 
-### 4.4 在 Widget 中使用有状态 ViewModel
+### 5.4 在 Widget 中使用有状态 ViewModel
 
 在 `StatefulWidget` 中使用有状态 `ViewModel` 的方式与无状态 `ViewModel` 非常相似，主要区别在于您可以直接访问
 `viewModel.state` 来获取当前状态对象。
@@ -470,7 +507,7 @@ class _MyCounterPageState extends State<MyCounterPage>
 }
 ```
 
-### 4.5 监听状态变化 (`listenState`)
+### 5.5 监听状态变化 (`listenState`)
 
 对于 `StateViewModel`，除了通用的 `listen()` 方法外，还有一个专门的 `listenState()`
 方法，它允许您在状态对象实际发生变化时接收到旧状态和新状态。
@@ -504,47 +541,6 @@ void dispose() {
 
 `listenState` 同样返回一个 `VoidCallback` 用于取消监听，请务必在 `State` 的 `dispose` 方法中调用它。
 
-## 5、其他的进阶用法
-
-### 5.1 全局获取 ViewModel 实例
-
-除了在 StatefulWidget 中使用 watchViewModel() 和 readViewModel()，你还可以在任意位置全局访问已有的
-ViewModel 实例，比如在业务逻辑层、路由跳转逻辑、服务模块中。
-
-1. 直接根据类型查找：
-    ```dart
-    final MyViewModel vm = ViewModel.read<MyViewModel>();
-    ```
-2. 根据 key 查找：
-    ```dart
-    final vm = ViewModel.read<MyViewModel>(key: 'user-profile');
-    ```
-
-> ⚠️如果找不到指定类型的 ViewModel 实例，将抛出异常。请确保在使用前已正确创建并注册了 ViewModel。
-
-### 5.2 手动管理 ViewModel 生命周期
-
-在某些高级场景下，您可能需要显式地从缓存中移除（并 `dispose`）一个 `ViewModel` 实例。
-
-* **`recycleViewModel<T extends ViewModel>(T viewModel)` (在 `ViewModelStateMixin` 中)**
-    * 此方法会立即从内部缓存中移除指定的 `viewModel` 实例，并调用其 `dispose()` 方法。
-    * 所有之前 `watch` 或 `read` 该实例的地方，如果再次尝试访问，将会根据其 `Factory` 的配置重新创建或获取。
-
-```dart
-MyComplexViewModel get complexViewModel =>
-    watchViewModel<MyComplexViewModel>(
-        factory: MyComplexViewModelFactory());
-
-void resetAndRefreshTask() {
-  final vmToRecycle = complexViewModel;
-  recycleViewModel(vmToRecycle);
-  // 再次访问 complexViewModel 会得到新实例
-  print(complexViewModel.state.status); // 假设是 StateViewModel
-  print(complexViewModel.someProperty); // 假设是 ViewModel
-}
-```
-
-**谨慎使用 `recycleViewModel`**：不当使用可能导致正在使用该 `ViewModel` 的其他 Widget 出现意外行为。
 
 ## 6. 关于局部刷新
 

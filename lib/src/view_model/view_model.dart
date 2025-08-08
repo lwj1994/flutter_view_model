@@ -333,3 +333,30 @@ abstract class ViewModelLifecycle {
 
   void onDispose(ViewModel viewModel, InstanceArg arg) {}
 }
+
+/// A default generic ViewModelFactory for quickly creating ViewModel factories.
+class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
+  final T Function() builder;
+  final String? customKey;
+  final Object? customTag;
+  final bool isSingleton;
+
+  DefaultViewModelFactory({
+    required this.builder,
+    this.customKey,
+    this.customTag,
+    this.isSingleton = false,
+  });
+
+  @override
+  String? key() => isSingleton ? (customKey ?? super.key()) : null;
+
+  @override
+  Object? getTag() => customTag;
+
+  @override
+  T build() => builder();
+
+  @override
+  bool singleton() => isSingleton;
+}
