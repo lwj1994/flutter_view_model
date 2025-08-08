@@ -1,3 +1,7 @@
+## 0.4.5
+* Add `DefaultViewModelFactory` for convenient and generic ViewModel factory creation.
+
+
 ## 0.4.4
 * Add `ViewModel.maybeRead`
 
@@ -83,4 +87,3 @@ _Breaking change:_
 
 * transfer to https://github.com/lwj1994/flutter_view_model. thank
   to [Miolin](https://github.com/Miolin)
-
