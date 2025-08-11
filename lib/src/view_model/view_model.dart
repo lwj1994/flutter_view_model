@@ -337,22 +337,31 @@ abstract class ViewModelLifecycle {
 /// A default generic ViewModelFactory for quickly creating ViewModel factories.
 class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
   final T Function() builder;
-  final String? customKey;
-  final Object? customTag;
+  late final String? _key;
+  late final Object? _tag;
   final bool isSingleton;
 
   DefaultViewModelFactory({
     required this.builder,
-    this.customKey,
-    this.customTag,
+    String? key,
+    Object? tag,
     this.isSingleton = false,
-  });
+  }) {
+    _key = key;
+    _tag = tag;
+  }
 
   @override
-  String? key() => isSingleton ? (customKey ?? super.key()) : null;
+  String? key() {
+    if (_key == null) {
+      return super.key();
+    } else {
+      return _key;
+    }
+  }
 
   @override
-  Object? getTag() => customTag;
+  Object? getTag() => _tag;
 
   @override
   T build() => builder();

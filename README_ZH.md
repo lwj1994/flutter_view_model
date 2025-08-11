@@ -297,8 +297,8 @@ final factory = DefaultViewModelFactory<MyViewModel>(
 ### 4.3 参数说明
 
 - `builder`：用于创建 ViewModel 实例的方法。
-- `customKey`：单例共享时的自定义 key。
-- `customTag`：用于标记 ViewModel 的自定义 tag。
+- `key`：单例共享时的自定义 key。
+- `tag`：用于标记 ViewModel 的自定义 tag。
 - `isSingleton`：是否为单例模式。
 
 ### 4.4 示例
@@ -310,7 +310,7 @@ final factory = DefaultViewModelFactory<CounterViewModel>(
 final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
   builder: () => CounterViewModel(),
   isSingleton: true,
-  customKey: 'global-counter',
+  key: 'global-counter',
 );
 ```
 
