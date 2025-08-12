@@ -2,7 +2,7 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[更新日志](CHANGELOG.md)  
+[更新日志](CHANGELOG.md)
 
 [English Doc](README.md) | [中文文档](README_ZH.md)
 > 感谢 [Miolin](https://github.com/Miolin) 将
@@ -32,7 +32,10 @@
 > * `watchViewModel` 和 `readViewModel` 会绑定到 ViewModel。
 > * 当没有 Widget 绑定到 ViewModel 时，ViewModel 会自动销毁。
 
-### 1.3 API 快速概览
+### 1.3 关于局部更新
+
+不支持局部更新，因为本质上没什么大的收益：https://github.com/lwj1994/flutter_view_model/issues/13
+### 1.4 API 快速概览
 
 ViewModel 的方法很简单：
 
@@ -269,9 +272,9 @@ __🔍 查找逻辑优先级（重要）__
 顺序）：
 
 1. 如果传入了 key：
-    * 首先，尝试在缓存中查找具有相同 key 的实例。
-    * 如果存在工厂，使用工厂获取新实例。
-    * 如果没有找到工厂且没有找到实例，将抛出错误。
+   * 首先，尝试在缓存中查找具有相同 key 的实例。
+   * 如果存在工厂，使用工厂获取新实例。
+   * 如果没有找到工厂且没有找到实例，将抛出错误。
 2. 如果传入了 tag，尝试在缓存中查找具有相同 tag
    的最新创建实例。
 3. 如果什么都没传入，尝试在缓存中查找此类型
@@ -543,8 +546,8 @@ description: This file stores settings for Dart & Flutter DevTools.
 documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
 extensions:
   - view_model: true
-![devtool2.png](images/devtool2.png)
-  
-
-![devtool1.png](images/devtool1.png)
 ```
+
+
+![](https://i.imgur.com/5itXPYD.png)
+![](https://imgur.com/83iOQhy.png)

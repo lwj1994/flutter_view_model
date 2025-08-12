@@ -32,7 +32,13 @@ This library extends the traditional ViewModel pattern with Flutter-specific enh
 > * `watchViewModel` and `readViewModel` will bind to the ViewModel.
 > * When no Widget is bound to the ViewModel, the ViewModel will be automatically destroyed.
 
-### 1.3 API Quick Overview
+### 1.3 Don't support Fine-grained Updates
+
+`view_model` deliberately does not provide fine-grained update mechanisms like Observer patterns, and here's why:
+
+https://github.com/lwj1994/flutter_view_model/issues/13
+
+### 1.4 API Quick Overview
 
 The methods of ViewModel are straightforward:
 
@@ -546,7 +552,8 @@ description: This file stores settings for Dart & Flutter DevTools.
 documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
 extensions:
   - view_model: true
-![devtool2.png](images/devtool2.png)
-  
+```
 
-![devtool1.png](images/devtool1.png)
+![](https://i.imgur.com/5itXPYD.png)
+![](https://imgur.com/83iOQhy.png)
+
