@@ -2,8 +2,9 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[CHANGELOG.md](CHANGELOG.md)
+[ChangeLog](CHANGELOG.md)  
 
+[English Doc](README.md) | [中文文档](README_ZH.md)
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
 > the [ViewModel](https://pub.dev/packages/view_model) package to me.
 
@@ -497,11 +498,13 @@ class _MyCounterPageState extends State<MyCounterPage>
 
 ### 4.1 When to Use
 
-For simple ViewModels that do not require complex construction logic, you can use this factory directly.
+For simple ViewModels that do not require complex construction logic, you can use this factory
+directly.
 
 ### 4.2 Usage
 
 ```dart
+
 final factory = DefaultViewModelFactory<MyViewModel>(
   builder: () => MyViewModel(),
   isSingleton: true, // optional
@@ -518,6 +521,7 @@ final factory = DefaultViewModelFactory<MyViewModel>(
 ### 4.4 Example
 
 ```dart
+
 final factory = DefaultViewModelFactory<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
@@ -528,4 +532,26 @@ final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
 );
 ```
 
-This factory is especially useful for simple ViewModels that do not require complex construction logic.
+This factory is especially useful for simple ViewModels that do not require complex construction
+logic.
+
+---
+
+## 5. DevTools Extension
+
+The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
+and debugging capabilities for your ViewModels during development.
+
+create `devtools_options.yaml` in root directory of project.
+
+```yaml
+description: This file stores settings for Dart & Flutter DevTools.
+documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
+extensions:
+  - view_model: true
+```
+
+![devtool2.png](images/devtool2.png)
+  
+
+![devtool1.png](images/devtool1.png)

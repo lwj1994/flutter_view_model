@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:todo_list/l10n/app_localizations.dart';
 import 'package:view_model/view_model.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import '../todo_view_model.dart';
+
 import '../todo_state.dart';
+import '../todo_view_model.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});

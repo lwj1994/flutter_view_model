@@ -1,3 +1,25 @@
+## 0.4.6
+* The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
+and debugging capabilities for your ViewModels during development.
+
+create `devtools_options.yaml` in root directory of project.
+
+```yaml
+description: This file stores settings for Dart & Flutter DevTools.
+documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
+extensions:
+  - view_model: true
+```
+
+![devtool2.png](devtool2.png)  
+
+![devtool1.png](devtool1.png)
+
+
+
+* Breaking change: rename `initConfig` to `initialize`
+
+
 ## 0.4.5
 * Add `DefaultViewModelFactory` for convenient and generic ViewModel factory creation.
 
