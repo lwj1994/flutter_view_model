@@ -11,9 +11,9 @@ extensions:
   - view_model: true
 ```
 
-![devtool2.png](devtool2.png)  
+![devtool2.png](images/devtool2.png)  
 
-![devtool1.png](devtool1.png)
+![devtool1.png](images/devtool1.png)
 
 
 
