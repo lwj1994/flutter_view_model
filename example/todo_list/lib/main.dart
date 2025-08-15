@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:view_model/view_model.dart';
+
+import 'l10n/app_localizations.dart';
 import 'todo_page.dart';
 
 void main() {
+  ViewModel.initialize();
   runApp(const MyApp());
 }
 

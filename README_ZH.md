@@ -2,7 +2,9 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[English Doc](README.md)
+[ChangeLog](CHANGELOG.md)  
+
+[English Doc](README.md) | [中文文档](README_ZH.md)
 
 > 感谢 [Miolin](https://github.com/Miolin) 将 [ViewModel](https://pub.dev/packages/view_model)
 > 包的权限转移给我。
@@ -542,39 +544,19 @@ void dispose() {
 `listenState` 同样返回一个 `VoidCallback` 用于取消监听，请务必在 `State` 的 `dispose` 方法中调用它。
 
 
-## 6. 关于局部刷新
+## 6. DevTools 扩展
 
-`view_model` 本身不直接处理 UI 的“局部刷新”的粒度。当 `ViewModel` 调用 `notifyListeners()`
-时，所有 `watch` 了该 `ViewModel` 的 `StatefulWidget` 的 `build` 方法都会被调用。Flutter 框架自身会进行高效的
-Widget Diffing，仅重新渲染实际改变的部分。
+`view_model` 包包含一个强大的 DevTools 扩展，在开发过程中为您的 ViewModels 提供实时监控和调试功能。
 
-通常情况下，依赖 Flutter 的这种机制已经足够高效。一个组件的 `build` 方法主要负责描述 UI
-配置，频繁调用它本身并不会带来显著的性能开销，除非 `build` 方法内部有非常耗时的计算。
+在项目根目录创建 `devtools_options.yaml` 文件。
 
-如果确实需要更细粒度的控制，可以结合使用 Flutter 内置的 `ValueListenableBuilder`。将 `ViewModel`
-中的某个具体值包装在 `ValueNotifier` 中，并在 `ViewModel` 中更新它，然后在 UI 中使用
-`ValueListenableBuilder` 监听这个 `ValueNotifier`。
-
-```dart
-// 在 ViewModel 中:
-class MyFineGrainedViewModel extends ViewModel {
-  final ValueNotifier<String> specificData = ValueNotifier("Initial");
-
-  void updateSpecificData(String newData) {
-    specificData.value = newData;
-    // 如果还需要通知整个 ViewModel 的监听者，也可以额外调用 notifyListeners()
-  }
-}
+```yaml
+description: This file stores settings for Dart & Flutter DevTools.
+documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
+extensions:
+  - view_model: true
 ```
 
-```dart
-// 在 Widget 的 build 方法中:
-Widget buildValueListenableBuilder() {
-  return ValueListenableBuilder<String>(
-    valueListenable: viewModel.specificData, // 假设 viewModel 是 MyFineGrainedViewModel 实例
-    builder: (context, value, child) {
-      return Text(value); // 这个 Text 只在 specificData 变化时重建
-    },
-  );
-}
-```
+![devtool2.png](images/devtool2.png)  
+
+![devtool1.png](images/devtool1.png)

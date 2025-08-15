@@ -7,7 +7,7 @@ on:
 
 jobs:
   codecov-upload:
-    runs-on: self-hosted  # 指定作业运行在自托管运行器上
+    runs-on: self-hosted  # Specify job runs on self-hosted runner
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

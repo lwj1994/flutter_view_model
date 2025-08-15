@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'todo_view_model.dart';
-import 'todo_state.dart';
-import 'stats_page.dart';
+
+import 'l10n/app_localizations.dart';
 import 'search_page.dart';
+import 'stats_page.dart';
+import 'todo_state.dart';
+import 'todo_view_model.dart';
 
 class TodoViewModelFactory with ViewModelFactory<TodoViewModel> {
   @override

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 import 'counter_view_model.dart';
+import 'l10n/app_localizations.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
