@@ -2,51 +2,53 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[ChangeLog](CHANGELOG.md)  
+[更新日志](CHANGELOG.md)  
 
 [English Doc](README.md) | [中文文档](README_ZH.md)
-
-> 感谢 [Miolin](https://github.com/Miolin) 将 [ViewModel](https://pub.dev/packages/view_model)
-> 包的权限转移给我。
+> 感谢 [Miolin](https://github.com/Miolin) 将
+> [view_model](https://pub.dev/packages/view_model) 包的权限转移给我。
 
 ---
-
-`view_model` 是一个轻量级的 Flutter 状态管理库，旨在提供简洁、高效的解决方案。
 
 ## 1. 基本介绍
 
 ### 1.1 什么是 ViewModel？
 
+`view_model` 是 Flutter 应用程序最简单的状态管理解决方案。
+
 ### 1.2 核心特性
 
-* **轻量易用**：以最少的依赖和极简的 API 为设计目标，上手快，侵入性低。
-* **自动资源管理**：当没有任何 Widget 绑定(watch/read) 一个 `ViewModel` 实例时，该实例会自动调用
-  `dispose` 方法并被销毁，有效防止内存泄漏。
-* **便捷共享**：支持跨多个 Widget 共享同一个 `ViewModel` 实例，并且能以 O(1) 的时间复杂度高效查找。
+该库通过 Flutter 特定的增强功能扩展了传统的 ViewModel 模式：
 
-> **重要提示**：`ViewModel` 仅支持绑定到 `StatefulWidget`。这是因为 `StatelessWidget` 没有独立的生命周期，无法支持
-`ViewModel` 的自动销毁和状态监听机制。
+- **轻量且易于使用**：最少的依赖和极其简单的 API，便于快速集成
+- **自动资源管理**：当没有 Widget 绑定到 ViewModel 时，ViewModel 会自动销毁，防止内存泄漏
+- **高效的实例共享**：在多个 Widget 之间共享同一个 ViewModel 实例，具有 O(1) 查找性能
+- **Widget 生命周期集成**：通过 `ViewModelStateMixin` 与 Flutter 的 Widget 生命周期无缝集成
 
+> **重要提示**：`ViewModel` 仅支持绑定到 `StatefulWidget`。这是因为
+`StatelessWidget` 没有独立的生命周期，无法支持 `ViewModel` 的自动
+> 销毁和状态监听机制。
 
-> * `watchViewModel` 和 `readViewModel` 会绑定 ViewModel
-> * 当没有任何 Widget 绑定 ViewModel 时，viewModel 会自动销毁。
+> * `watchViewModel` 和 `readViewModel` 会绑定到 ViewModel。
+> * 当没有 Widget 绑定到 ViewModel 时，ViewModel 会自动销毁。
 
-### 1.3 Api 速览
+### 1.3 API 快速概览
 
 ViewModel 的方法很简单：
 
-| 方法                    | 说明                     |
+| 方法                    | 描述                     |
 |-----------------------|------------------------|
-| `watchViewModel<T>()` | 绑定 ViewModel 并自动刷新 UI  |
-| `readViewModel<T>()`  | 绑定 ViewModel，但不触发刷新 UI |
-| `ViewModel.read<T>()` | 全局读取现有的实例              |
-| `recycleViewModel()`  | 主动销毁某个实例               |
-| `listenState()`       | 监听 state 对象变化          |
-| `listen()`            | 监听 notifyListeners 调用  |
+| `watchViewModel<T>()` | 绑定到 ViewModel 并自动刷新 UI |
+| `readViewModel<T>()`  | 绑定到 ViewModel 但不触发 UI 刷新 |
+| `ViewModel.read<T>()` | 全局读取现有实例               |
+| `recycleViewModel()`  | 主动销毁特定实例               |
+| `listenState()`       | 监听状态对象的变化              |
+| `listen()`            | 监听 `notifyListeners` 调用 |
 
-## 2. 基础用法
+## 2. 基本用法
 
-本节将引导您完成 `view_model` 最基础的使用流程。这是上手此库的最佳起点。
+本节将指导您完成 `view_model` 最基本的使用过程，作为
+上手此库的最佳起点。
 
 ### 2.1 添加依赖
 
@@ -56,7 +58,7 @@ ViewModel 的方法很简单：
 dependencies:
   flutter:
     sdk: flutter
-  view_model: ^0.4.2 # 请使用最新版本
+  view_model: ^0.4.6 # 请使用最新版本
 ```
 
 然后运行 `flutter pub get`。
@@ -96,12 +98,13 @@ class MySimpleViewModel extends ViewModel {
 }
 ```
 
-在这个例子中，`MySimpleViewModel` 管理一个 `message` 字符串和一个 `counter` 整数。当这些值通过其方法更新时，会调用
-`notifyListeners()` 来通知任何正在监听此 `ViewModel` 的 Widget 进行重建。
+在这个例子中，`MySimpleViewModel` 管理一个 `message` 字符串和一个 `counter` 整数。当这些
+值通过其方法更新时，会调用 `notifyListeners()` 来通知任何正在监听此 `ViewModel` 的 Widget 进行重建。
 
 ### 2.3 创建 ViewModelFactory
 
-`ViewModelFactory` 负责 `ViewModel` 的实例化。每个 `ViewModel` 类型通常需要一个对应的 `Factory`。
+`ViewModelFactory` 负责实例化 `ViewModel`。每个 `ViewModel` 类型通常
+需要一个对应的 `Factory`。
 
 ```dart
 import 'package:view_model/view_model.dart';
@@ -120,9 +123,10 @@ class MySimpleViewModelFactory with ViewModelFactory<MySimpleViewModel> {
 
 在您的 `StatefulWidget` 中，通过混入 `ViewModelStateMixin` 来集成和使用 `ViewModel`。
 
-1. **混入 `ViewModelStateMixin`**：让您的 `State` 类混入 `ViewModelStateMixin<YourWidget>`。
-2. **使用 `watchViewModel`**：在 `State` 中通过 `watchViewModel` 方法获取或创建 `ViewModel`
-   实例。此方法会自动处理 `ViewModel` 的生命周期和依赖。
+1. **混入 `ViewModelStateMixin`**：让您的 `State` 类混入
+   `ViewModelStateMixin<YourWidget>`。
+2. **使用 `watchViewModel`**：在 `State` 中通过 `watchViewModel`
+   方法获取或创建 `ViewModel` 实例。此方法会自动处理 `ViewModel` 的生命周期和依赖。
 
 ```dart
 import 'package:flutter/material.dart';
@@ -143,7 +147,7 @@ class _MyPageState extends State<MyPage>
 
   // 2. 使用 watchViewModel 获取 ViewModel
   // 当 MyPage 第一次构建时，MySimpleViewModelFactory 的 build() 方法会被调用来创建实例。
-  // 当 MyPage dispose 时，如果该 viewModel 没有其他监听者，它也会被 dispose。
+  // 当 MyPage 被销毁时，如果此 viewModel 没有其他监听者，它也会被销毁。
   MySimpleViewModel get simpleVM =>
       watchViewModel<MySimpleViewModel>(factory: MySimpleViewModelFactory());
 
@@ -155,20 +159,20 @@ class _MyPageState extends State<MyPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text('Button pressed: ${simpleVM.counter} times'), // 访问 ViewModel 的属性
+            Text('按钮按下次数：${simpleVM.counter} 次'), // 访问 ViewModel 的属性
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                simpleVM.updateMessage("Message Updated!"); // 调用 ViewModel 的方法
+                simpleVM.updateMessage("消息已更新！"); // 调用 ViewModel 的方法
               },
-              child: const Text('Update Message'),
+              child: const Text('更新消息'),
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => simpleVM.incrementCounter(), // 调用 ViewModel 的方法
-        tooltip: 'Increment',
+        tooltip: '增加',
         child: const Icon(Icons.add),
       ),
     );
@@ -176,10 +180,11 @@ class _MyPageState extends State<MyPage>
 }
 ```
 
-### 2.5 监听 ViewModel 的通知
+### 2.5 监听 ViewModel 通知
 
-除了 UI 会自动响应 `ViewModel` 的更新外，您还可以通过 `listen` 方法来监听其 `notifyListeners()`
-调用，并执行一些副作用，例如显示 `SnackBar`、导航等。
+除了 UI 会自动响应 `ViewModel` 更新外，您还可以通过 `listen` 方法监听其
+`notifyListeners()` 调用并执行副作用，例如显示
+`SnackBar` 或导航。
 
 ```dart
 // 在 State 的 initState 或其他适当方法中
@@ -189,39 +194,41 @@ late VoidCallback _disposeViewModelListener;
 void initState() {
   super.initState();
 
-  // 获取 ViewModel 实例 (通常在 initState 中获取一次，或通过 getter 访问)
+  // 获取 ViewModel 实例（通常在 initState 中获取一次或通过 getter 访问）
   final myVm = watchViewModel<MySimpleViewModel>(factory: MySimpleViewModelFactory());
 
   _disposeViewModelListener = myVm.listen(onChanged: () {
-    print('MySimpleViewModel called notifyListeners! Current counter: ${myVm.counter}');
-    // 例如：ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action performed!')));
+    print('MySimpleViewModel 调用了 notifyListeners！当前计数器：${myVm.counter}');
+    // 例如：ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('执行了操作！')));
   });
 }
 
 @override
 void dispose() {
-  _disposeViewModelListener(); // 清理监听器，防止内存泄漏
+  _disposeViewModelListener(); // 清理监听器以防止内存泄漏
   super.dispose();
 }
 ```
 
-**注意**：`listen` 返回一个 `VoidCallback`，用于取消监听。请确保在 `State` 的 `dispose` 方法中调用它。
+**注意**：`listen` 返回一个 `VoidCallback` 用于取消监听器。确保在
+`State` 的 `dispose` 方法中调用它。
 
-## 3. 详细参数讲解
+## 3. 详细参数说明
 
 ### 3.1 ViewModelFactory
 
-`ViewModelFactory<T>` 是用于创建、配置和识别 ViewModel 实例的工厂类。它通过混入（with）使用。
+`ViewModelFactory<T>` 是用于创建、配置和识别 ViewModel
+实例的工厂类。它通过混入（with）使用。
 
-| 方法/属性      | 类型        | 是否可选   | 说明                                                                                               |
-|------------|-----------|--------|--------------------------------------------------------------------------------------------------|
-| `build()`  | `T`       | ❌ 必须实现 | 创建 ViewModel 实例的工厂方法。通常在这里传入构造参数。                                                                |
-| `key()`    | `String?` | ✅ 可选   | 为 ViewModel 提供唯一标识。具备相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/page 共享）。                             | |                              |
-| `getTag()` | `Object?` | ✅      | 为 ViewModel 添加一个 tag，可以通过 `viewModel.tag` 获取；tag 也可用于查找 ViewModel 实例：`watchViewModel(tag: tag)`。 |
+| 方法/属性      | 类型        | 可选         | 描述                                                                                                                                            |
+|------------|-----------|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| `build()`  | `T`       | ❌ 必须实现     | 创建 ViewModel 实例的工厂方法。通常在这里传递构造函数参数。                                                                                                          |
+| `key()`    | `String?` | ✅ 可选       | 为 ViewModel 提供唯一标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/页面共享）。 | |                              |
+| `getTag()` | `Object?` | ✅          | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                                                   |
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
-  // 你的自定义参数。通常用于传递给 MyViewModel
+  // 您的自定义参数，通常传递给 MyViewModel
   final String initialName;
 
   MyViewModelFactory({required this.initialName});
@@ -232,17 +239,16 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   }
 
   /// 共享 ViewModel 的 key。key 是唯一的，同一个 key 只会创建一个 ViewModel 实例。
-  /// 如果 key 为 null，则不共享
+  /// 如果 key 为 null，则不会发生共享。
   @override
   String? key() => "user-profile";
 }
-
 ```
 
 ### 3.2 watchViewModel
 
-watchViewModel<T>() 是核心方法之一，它的作用是： 获取或创建一个 ViewModel 实例，并在其变化时自动触发
-setState() 使 Widget 重建。
+`watchViewModel<T>()` 是核心方法之一，用于：获取或创建 ViewModel 实例并
+在其变化时自动触发 `setState()` 重建 Widget。
 
 ```dart
 VM watchViewModel<VM extends ViewModel>({
@@ -252,80 +258,51 @@ VM watchViewModel<VM extends ViewModel>({
 });
 ```
 
-| 参数名       | 类型                      | 是否可选 | 说明                                                                                               |
-|-----------|-------------------------|------|--------------------------------------------------------------------------------------------------|
-| `factory` | `ViewModelFactory<VM>?` | ✅    | 提供 ViewModel 的构建方式。可选，如果缓存中找不到现有实例时会使用它创建新的。                                                     |
-| `key`     | `String?`               | ✅    | 指定唯一键，支持共享同一个 ViewModel 实例。优先查找缓存中的实例。                                                           |
-| `tag`     | `Object?`               | ✅    | 为 ViewModel 添加一个 tag，可以通过 `viewModel.tag` 获取；tag 也可用于查找 ViewModel 实例：`watchViewModel(tag: tag)`。 |
+| 参数名       | 类型                      | 可选 | 描述                                                                                                                                           |
+|-----------|-------------------------|----|----------------------------------------------------------------------------------------------------------------------------------------------|
+| `factory` | `ViewModelFactory<VM>?` | ✅  | 提供 ViewModel 的构造方法。可选；如果在缓存中找不到现有实例，将使用它创建新实例。                                                                                             |
+| `key`     | `String?`               | ✅  | 指定唯一键以支持共享同一个 ViewModel 实例。首先尝试在缓存中查找具有相同 key 的实例。                                                                                           |
+| `tag`     | `Object?`               | ✅  | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                                                   |
 
 __🔍 查找逻辑优先级（重要）__
-`watchViewModel` 内部的查找与创建逻辑如下所示（按优先级执行）：
+`watchViewModel` 内部的查找和创建逻辑如下（按优先级执行
+顺序）：
 
 1. 如果传入了 key：
-    * 优先尝试从缓存中查找具有相同 key 的实例。
-    * 如果没找到， factory 存在的话，通过用 factory 获取新实例。
-    * factory 不存在，直接抛出 error
-2. 如果有 tag，从缓存中查找该类型最新创建的包含该 tag 的实例
-3. 没有任何参数时， 会尝试从缓存中查找该类型最新创建的实例
+    * 首先，尝试在缓存中查找具有相同 key 的实例。
+    * 如果存在工厂，使用工厂获取新实例。
+    * 如果没有找到工厂且没有找到实例，将抛出错误。
+2. 如果传入了 tag，尝试在缓存中查找具有相同 tag
+   的最新创建实例。
+3. 如果什么都没传入，尝试在缓存中查找此类型
+   的最新创建实例。
 
-> __⚠️如果找不到指定类型的 ViewModel 实例，将抛出异常。请确保在使用前已正确创建并注册了 ViewModel。__
+> __⚠️ 如果找不到指定类型的 ViewModel 实例，将抛出错误。确保
+在使用前已正确创建并注册了 ViewModel。__
 
-✅ 一旦找到实例，watchViewModel 会自动注册监听，并在其状态发生变化时调用 setState() 重建当前 Widget。
+✅ 一旦找到实例，`watchViewModel` 将自动注册监听并在其状态变化时调用
+`setState()` 重建当前 Widget。
 
 ### 3.3 readViewModel
 
-和 `watchViewModel` 参数一致，区别是不会触发 Widget 重建。适用于需要一次性读取 ViewModel 状态或执行操作的场景。
+它具有与 `watchViewModel` 相同的参数，但不会触发 Widget 重建。适用于
+需要读取 ViewModel 状态或执行一次性操作的场景。
 
-### 3.4 ViewModel 的生命周期
+### 3.4 ViewModel 生命周期
 
-* `watchViewModel` 和 `readViewModel` 都会绑定 ViewModel
-* 当没有任何 Widget 绑定 ViewModel 时，会自动销毁。
+- `watchViewModel` 和 `readViewModel` 都会绑定到 ViewModel。
+- 当没有 Widget 绑定到 ViewModel 时，它会自动销毁。
 
-## 4. DefaultViewModelFactory 快速工厂
+## 4. 有状态的 ViewModel (`StateViewModel<S>`)
 
-### 4.1 适用场景
+当您的业务逻辑需要管理一个清晰的、结构化的状态对象时，`StateViewModel<S>` 是一个
+更合适的选择。它强制持有一个不可变的 `state` 对象并通过
+`setState` 方法更新状态。
 
-对于不需要复杂构造逻辑的简单 ViewModel，可以直接使用该工厂，减少样板代码。
+### 4.1 定义状态类
 
-### 4.2 用法
-
-```dart
-final factory = DefaultViewModelFactory<MyViewModel>(
-  builder: () => MyViewModel(),
-  isSingleton: true, // 可选
-);
-```
-
-### 4.3 参数说明
-
-- `builder`：用于创建 ViewModel 实例的方法。
-- `key`：单例共享时的自定义 key。
-- `tag`：用于标记 ViewModel 的自定义 tag。
-- `isSingleton`：是否为单例模式。
-
-### 4.4 示例
-
-```dart
-final factory = DefaultViewModelFactory<CounterViewModel>(
-  builder: () => CounterViewModel(),
-);
-final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
-  builder: () => CounterViewModel(),
-  isSingleton: true,
-  key: 'global-counter',
-);
-```
-
-该工厂特别适用于无需复杂构造逻辑的简单 ViewModel。
-
-## 5. 带状态的 ViewModel (`StateViewModel<S>`)
-
-当您的业务逻辑需要管理一个明确的、结构化的状态对象时，`StateViewModel<S>` 是一个更合适的选择。它强制持有一个不可变的
-`state` 对象，并通过 `setState` 方法来更新状态。
-
-### 5.1 定义状态类
-
-首先，您需要定义一个状态类。强烈建议该类是不可变的，通常通过提供 `copyWith` 方法来实现。
+首先，您需要定义一个状态类。强烈建议此类是不可变的，
+通常通过提供 `copyWith` 方法来实现。
 
 ```dart
 // example: lib/my_counter_state.dart
@@ -361,7 +338,7 @@ class MyCounterState {
 }
 ```
 
-### 5.2 创建有状态的 ViewModel
+### 4.2 创建有状态的 ViewModel
 
 继承 `StateViewModel<S>`，其中 `S` 是您定义的状态类的类型。
 
@@ -369,43 +346,44 @@ class MyCounterState {
 // example: lib/my_counter_view_model.dart
 import 'package:view_model/view_model.dart';
 import 'package:flutter/foundation.dart';
-import 'my_counter_state.dart'; // 引入状态类
+import 'my_counter_state.dart'; // 导入状态类
 
 class MyCounterViewModel extends StateViewModel<MyCounterState> {
-  // 构造函数中必须通过 super 初始化 state
+  // 构造函数必须通过 super 初始化状态
   MyCounterViewModel({required MyCounterState initialState}) : super(state: initialState);
 
   void increment() {
     // 使用 setState 更新状态，它会自动处理 notifyListeners
-    setState(state.copyWith(count: state.count + 1, statusMessage: "Incremented"));
+    setState(state.copyWith(count: state.count + 1, statusMessage: "已增加"));
   }
 
   void decrement() {
     if (state.count > 0) {
-      setState(state.copyWith(count: state.count - 1, statusMessage: "Decremented"));
+      setState(state.copyWith(count: state.count - 1, statusMessage: "已减少"));
     } else {
-      setState(state.copyWith(statusMessage: "Cannot decrement below zero"));
+      setState(state.copyWith(statusMessage: "不能减少到零以下"));
     }
   }
 
   void reset() {
-    // 可以直接用新的 State 实例替换旧的
-    setState(const MyCounterState(count: 0, statusMessage: "Reset"));
+    // 您可以直接用新的 State 实例替换旧状态
+    setState(const MyCounterState(count: 0, statusMessage: "已重置"));
   }
 
   @override
   void dispose() {
-    debugPrint('Disposed MyCounterViewModel with state: $state');
+    debugPrint('已销毁 MyCounterViewModel，状态：$state');
     super.dispose();
   }
 }
 ```
 
-在 `StateViewModel` 中，您通过调用 `setState(newState)` 来更新状态。这个方法会用新的状态替换旧的状态，并自动通知所有监听者。
+在 `StateViewModel` 中，您通过调用 `setState(newState)` 来更新状态。此方法用新状态替换
+旧状态并自动通知所有监听者。
 
-### 5.3 创建 ViewModelFactory
+### 4.3 创建 ViewModelFactory
 
-为您的 `StateViewModel` 创建一个对应的 `Factory`。
+为您的 `StateViewModel` 创建对应的 `Factory`。
 
 ```dart
 // example: lib/my_counter_view_model_factory.dart
@@ -420,17 +398,18 @@ class MyCounterViewModelFactory with ViewModelFactory<MyCounterViewModel> {
 
   @override
   MyCounterViewModel build() {
-    // 在 build 方法中创建并返回 ViewModel 实例，并传入初始状态
+    // 在 build 方法中创建并返回 ViewModel 实例，传入初始状态
     return MyCounterViewModel(
-        initialState: MyCounterState(count: initialCount, statusMessage: "Initialized"));
+        initialState: MyCounterState(count: initialCount, statusMessage: "已初始化"));
   }
 }
 ```
 
-### 5.4 在 Widget 中使用有状态 ViewModel
+### 4.4 在 Widget 中使用有状态的 ViewModel
 
-在 `StatefulWidget` 中使用有状态 `ViewModel` 的方式与无状态 `ViewModel` 非常相似，主要区别在于您可以直接访问
-`viewModel.state` 来获取当前状态对象。
+在 `StatefulWidget` 中使用有状态的 `ViewModel` 与使用无状态的 `ViewModel` 非常相似，
+主要区别是您可以直接访问 `viewModel.state` 来获取当前
+状态对象。
 
 ```dart
 // example: lib/my_counter_page.dart
@@ -438,7 +417,7 @@ import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
 import 'my_counter_view_model.dart';
 import 'my_counter_view_model_factory.dart';
-// MyCounterState 会被 MyCounterViewModel 内部引用
+// MyCounterState 将被 MyCounterViewModel 内部引用
 
 class MyCounterPage extends StatefulWidget {
   const MyCounterPage({super.key});
@@ -452,18 +431,18 @@ class _MyCounterPageState extends State<MyCounterPage>
 
   MyCounterViewModel get counterVM =>
       watchViewModel<MyCounterViewModel>(
-          factory: MyCounterViewModelFactory(initialCount: 10)); // 可以传入初始值
+          factory: MyCounterViewModelFactory(initialCount: 10)); // 您可以传入初始值
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Stateful ViewModel Counter')),
+      appBar: AppBar(title: const Text('有状态的 ViewModel 计数器')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              'Count: ${counterVM.state.count}', // 直接访问 state 的属性
+              '计数：${counterVM.state.count}', // 直接访问状态的属性
               style: Theme
                   .of(context)
                   .textTheme
@@ -471,7 +450,7 @@ class _MyCounterPageState extends State<MyCounterPage>
             ),
             const SizedBox(height: 8),
             Text(
-              'Status: ${counterVM.state.statusMessage}', // 访问 state 的其他属性
+              '状态：${counterVM.state.statusMessage}', // 访问状态的其他属性
               style: Theme
                   .of(context)
                   .textTheme
@@ -486,21 +465,21 @@ class _MyCounterPageState extends State<MyCounterPage>
         children: [
           FloatingActionButton(
             onPressed: () => counterVM.increment(),
-            tooltip: 'Increment',
+            tooltip: '增加',
             child: const Icon(Icons.add),
           ),
           const SizedBox(height: 8),
           FloatingActionButton(
             onPressed: () => counterVM.decrement(),
-            tooltip: 'Decrement',
+            tooltip: '减少',
             child: const Icon(Icons.remove),
           ),
           const SizedBox(height: 8),
           FloatingActionButton.extended(
             onPressed: () => counterVM.reset(),
-            tooltip: 'Reset',
+            tooltip: '重置',
             icon: const Icon(Icons.refresh),
-            label: const Text("Reset"),
+            label: const Text("重置"),
           ),
         ],
       ),
@@ -509,54 +488,63 @@ class _MyCounterPageState extends State<MyCounterPage>
 }
 ```
 
-### 5.5 监听状态变化 (`listenState`)
+---
 
-对于 `StateViewModel`，除了通用的 `listen()` 方法外，还有一个专门的 `listenState()`
-方法，它允许您在状态对象实际发生变化时接收到旧状态和新状态。
+## 5. DefaultViewModelFactory 快速工厂
+
+### 5.1 何时使用
+
+对于不需要复杂构造逻辑的简单 ViewModel，您可以直接使用此工厂。
+
+### 5.2 用法
 
 ```dart
-// 在 State 的 initState 或其他适当方法中
-late VoidCallback _disposeStateListener;
 
-@override
-void initState() {
-  super.initState();
-
-  final myStateVM = watchViewModel<MyCounterViewModel>(factory: MyCounterViewModelFactory());
-
-  _disposeStateListener = myStateVM.listenState(
-      onChanged: (MyCounterState? previousState, MyCounterState currentState) {
-        print('State changed! Previous count: ${previousState?.count}, New count: ${currentState
-            .count}');
-        print('Message: ${currentState.statusMessage}');
-        // 例如：ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Count is now ${currentState.count}')));
-      }
-  );
-}
-
-@override
-void dispose() {
-  _disposeStateListener(); // 清理监听器
-  super.dispose();
-}
+final factory = DefaultViewModelFactory<MyViewModel>(
+  builder: () => MyViewModel(),
+  isSingleton: true, // 可选
+);
 ```
 
-`listenState` 同样返回一个 `VoidCallback` 用于取消监听，请务必在 `State` 的 `dispose` 方法中调用它。
+### 5.3 参数
 
+- `builder`：创建 ViewModel 实例的函数。
+- `key`：单例实例共享的自定义键。
+- `tag`：用于标识 ViewModel 的自定义标签。
+- `isSingleton`：是否使用单例模式。这只是为您设置唯一键的便捷方式。注意优先级低于 key 参数。
+
+### 5.4 示例
+
+```dart
+
+final factory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+  key: 'global-counter',
+);
+```
+
+此工厂特别适用于不需要复杂构造
+逻辑的简单 ViewModel。
+
+---
 
 ## 6. DevTools 扩展
 
-`view_model` 包包含一个强大的 DevTools 扩展，在开发过程中为您的 ViewModels 提供实时监控和调试功能。
+`view_model` 包包含一个强大的 DevTools 扩展，在开发过程中为您的 ViewModel 提供实时监控
+和调试功能。
 
-在项目根目录创建 `devtools_options.yaml` 文件。
+在项目根目录创建 `devtools_options.yaml`。
 
 ```yaml
 description: This file stores settings for Dart & Flutter DevTools.
 documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
 extensions:
   - view_model: true
-```
-
-![devtool2.png](images/devtool2.png)  
+![devtool2.png](images/devtool2.png)
+  
 
 ![devtool1.png](images/devtool1.png)
+```

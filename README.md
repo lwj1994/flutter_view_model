@@ -6,26 +6,24 @@
 
 [English Doc](README.md) | [中文文档](README_ZH.md)
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
-> the [ViewModel](https://pub.dev/packages/view_model) package to me.
+> the [view_model](https://pub.dev/packages/view_model) package to me.
 
 ---
-
-`view_model` is a lightweight state management library for Flutter, designed to provide concise and
-efficient solutions.
 
 ## 1. Basic Introduction
 
 ### 1.1 What is ViewModel?
 
+`view_model` is the simplest state management solution for Flutter applications.
+
 ### 1.2 Core Features
 
-- **Lightweight and Easy to Use**: Aims for minimal dependencies and extremely simple APIs, making
-  it quick to get started with low invasiveness.
-- **Automatic Resource Management**: When no Widget is bound (watched/read) to a `ViewModel`
-  instance, the instance will automatically call the `dispose` method and be destroyed, effectively
-  preventing memory leaks.
-- **Convenient Sharing**: Supports sharing the same `ViewModel` instance across multiple Widgets and
-  efficiently finds it with O(1) time complexity.
+This library extends the traditional ViewModel pattern with Flutter-specific enhancements:
+
+- **Lightweight and Easy to Use**: Minimal dependencies and extremely simple APIs for quick integration
+- **Automatic Resource Management**: ViewModels are automatically disposed when no Widgets are bound to them, preventing memory leaks
+- **Efficient Instance Sharing**: Share the same ViewModel instance across multiple Widgets with O(1) lookup performance
+- **Widget Lifecycle Integration**: Seamlessly integrates with Flutter's Widget lifecycle through `ViewModelStateMixin`
 
 > **Important Note**: `ViewModel` only supports binding to `StatefulWidget`. This is because
 `StatelessWidget` has no independent lifecycle, making it unable to support the automatic
@@ -60,7 +58,7 @@ First, add `view_model` to your project's `pubspec.yaml` file:
 dependencies:
   flutter:
     sdk: flutter
-  view_model: ^0.4.2 # Please use the latest version
+  view_model: ^0.4.6 # Please use the latest version
 ```
 
 Then run `flutter pub get`.
@@ -494,14 +492,14 @@ class _MyCounterPageState extends State<MyCounterPage>
 
 ---
 
-## 4. DefaultViewModelFactory Quick Factory
+## 5. DefaultViewModelFactory Quick Factory
 
-### 4.1 When to Use
+### 5.1 When to Use
 
 For simple ViewModels that do not require complex construction logic, you can use this factory
 directly.
 
-### 4.2 Usage
+### 5.2 Usage
 
 ```dart
 
@@ -511,14 +509,14 @@ final factory = DefaultViewModelFactory<MyViewModel>(
 );
 ```
 
-### 4.3 Parameters
+### 5.3 Parameters
 
 - `builder`: Function to create the ViewModel instance.
 - `key`: Custom key for singleton instance sharing.
 - `tag`: Custom tag for identifying the ViewModel.
 - `isSingleton`: Whether to use singleton mode. This is just a convenient way to set a unique key for you. Note that the priority is lower than the key parameter.
 
-### 4.4 Example
+### 5.4 Example
 
 ```dart
 
@@ -536,7 +534,7 @@ logic.
 
 ---
 
-## 5. DevTools Extension
+## 6. DevTools Extension
 
 The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
 and debugging capabilities for your ViewModels during development.
@@ -548,8 +546,6 @@ description: This file stores settings for Dart & Flutter DevTools.
 documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
 extensions:
   - view_model: true
-```
-
 ![devtool2.png](images/devtool2.png)
   
 
