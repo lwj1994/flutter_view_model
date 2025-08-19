@@ -516,7 +516,7 @@ final factory = DefaultViewModelFactory<MyViewModel>(
 - `builder`: Function to create the ViewModel instance.
 - `key`: Custom key for singleton instance sharing.
 - `tag`: Custom tag for identifying the ViewModel.
-- `isSingleton`: Whether to use singleton mode.
+- `isSingleton`: Whether to use singleton mode. This is just a convenient way to set a unique key for you. Note that the priority is lower than the key parameter.
 
 ### 4.4 Example
 
@@ -525,9 +525,8 @@ final factory = DefaultViewModelFactory<MyViewModel>(
 final factory = DefaultViewModelFactory<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
-final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
+final sharedFactory = DefaultViewModelFactory<CounterViewModel>(
   builder: () => CounterViewModel(),
-  isSingleton: true,
   key: 'global-counter',
 );
 ```

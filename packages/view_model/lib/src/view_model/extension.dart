@@ -1,5 +1,18 @@
 // @author luwenjie on 2025/3/25 17:24:31
 
+/// Flutter State mixin for ViewModel integration.
+///
+/// This file provides the [ViewModelStateMixin] that integrates ViewModels
+/// with Flutter's widget system. It handles:
+/// - Automatic ViewModel lifecycle management
+/// - Widget rebuilding when ViewModels change
+/// - Proper disposal and cleanup
+/// - Debug information for development tools
+///
+/// The mixin should be used with StatefulWidget's State class to enable
+/// reactive ViewModel integration.
+library;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/v4.dart';
@@ -8,6 +21,33 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
+/// Mixin that integrates ViewModels with Flutter's State lifecycle.
+///
+/// This mixin provides methods to watch and read ViewModels from within
+/// a StatefulWidget's State. It automatically handles:
+/// - ViewModel creation and caching
+/// - Widget rebuilding when ViewModels change
+/// - Proper cleanup when the widget is disposed
+/// - Debug information for development tools
+///
+/// Example usage:
+/// ```dart
+/// class MyPage extends StatefulWidget {
+///   @override
+///   State<MyPage> createState() => _MyPageState();
+/// }
+///
+/// class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
+///   MyViewModel get viewModel => watchViewModel<MyViewModel>(
+///     factory: MyViewModelFactory(),
+///   );
+///
+///   @override
+///   Widget build(BuildContext context) {
+///     return Text('Count: ${viewModel.count}');
+///   }
+/// }
+/// ```
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: () {
@@ -24,7 +64,15 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   // Cache path information to avoid repeated retrieval
   String? _cachedObjectPath;
 
-  /// add watcherName. it is useful for debug
+  /// Generates a debug-friendly name for this ViewModel watcher.
+  ///
+  /// This method creates a unique identifier that includes the file path,
+  /// line number, and class name where the ViewModel is being watched.
+  /// This information is useful for debugging and development tools.
+  ///
+  /// Returns an empty string in release mode for performance.
+  ///
+  /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
   String viewModelWatcherName() {
     if (!kDebugMode) return "";
 
@@ -32,7 +80,20 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     return pathInfo.isNotEmpty ? "$pathInfo  $runtimeType" : "$runtimeType";
   }
 
-  /// Get the file path information where the current object is located
+  /// Gets the file path and line number where this mixin is being used.
+  ///
+  /// This method analyzes the current call stack to determine the exact
+  /// location where ViewModelStateMixin is being used. It handles both
+  /// regular file paths and package: format paths.
+  ///
+  /// The result is cached to avoid repeated stack trace analysis.
+  ///
+  /// Returns:
+  /// - In debug mode: A string like "lib/pages/counter_page.dart:25"
+  /// - In release mode: An empty string
+  /// - If path cannot be determined: The runtime type as fallback
+  ///
+  /// Example output: `lib/pages/counter_page.dart:25`
   String getCurrentObjectPath() {
     if (!kDebugMode) return "";
 
@@ -50,7 +111,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       final frame = frames[i].trim();
       if (frame.isEmpty) continue;
 
-      // Extract file path information
+      // Extract file path information using regex
       final match = RegExp(r'\((.+\.dart):(\d+):(\d+)\)').firstMatch(frame);
       if (match != null) {
         final filePath = match.group(1)!;
@@ -101,14 +162,36 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     super.initState();
   }
 
-  /// trigger vm.dispose and remove it from cache
+  /// Forces disposal of a ViewModel and removes it from cache.
+  ///
+  /// This method manually disposes a ViewModel instance and triggers
+  /// a widget rebuild. Use this when you need to force recreation
+  /// of a ViewModel (e.g., after a logout or data reset).
+  ///
+  /// Parameters:
+  /// - [vm]: The ViewModel instance to dispose and remove
+  ///
+  /// Example:
+  /// ```dart
+  /// final userVM = watchViewModel<UserViewModel>();
+  /// // Later, force recreation
+  /// recycleViewModel(userVM);
+  /// ```
   void recycleViewModel<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
     setState(() {});
   }
 
-  /// get existing viewModel by [key], or throw error
-  /// if listen == true, [ViewModel] trigger rebuilding automatically.
+  /// Gets an existing ViewModel by key or throws an error if not found.
+  ///
+  /// This is an internal method that retrieves a ViewModel from the cache.
+  /// If [listen] is true, the widget will rebuild when the ViewModel changes.
+  ///
+  /// Parameters:
+  /// - [listen]: Whether to listen for ViewModel changes
+  /// - [arg]: Instance arguments containing key/tag information
+  ///
+  /// Throws [StateError] if no matching ViewModel is found.
   VM _requireExistingViewModel<VM extends ViewModel>({
     bool listen = true,
     InstanceArg arg = const InstanceArg(),
@@ -125,19 +208,36 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     return res;
   }
 
-  /// [key] ViewModelFactory.Key
-  /// [tag] ViewModelFactory.Tag
-  /// [factory] ViewModelFactory to create ViewModel.
-  /// 1. if [key] is not null, it will find existing ViewModel by key first.
-  /// 2. if has [factory] and not found by [key], it will create a new ViewModel by [factory].
-  /// 3. if [factory] is null, and [tag] is not null, it will find existing ViewModel by tag.
-  /// 4. if all is null, it will find newly created ViewModel from cache.
+  /// Watches a ViewModel and rebuilds the widget when it changes.
   ///
-  /// if not found will throw [StateError]
+  /// This is the primary method for accessing ViewModels in widgets.
+  /// It automatically handles ViewModel creation, caching, and disposal.
+  /// The widget will rebuild whenever the ViewModel notifies listeners.
   ///
-  /// watchViewModel will trigger to rebuild the widget when ViewModel state changed.
+  /// Search priority:
+  /// 1. If [key] is provided, searches for existing ViewModel by key
+  /// 2. If [factory] is provided and no key match, creates new ViewModel
+  /// 3. If [tag] is provided and no factory, searches by tag
+  /// 4. If none provided, finds most recently created ViewModel of type [VM]
   ///
-  /// `watchViewModel` and `readViewModel` will bind ViewModel, when no one bind viewModel, viewModel will be disposed automatically
+  /// Parameters:
+  /// - [factory]: Factory to create the ViewModel if needed
+  /// - [key]: Unique key for sharing ViewModel instances
+  /// - [tag]: Tag to identify ViewModel instances
+  ///
+  /// Returns the ViewModel instance.
+  ///
+  /// Throws [StateError] if no matching ViewModel is found.
+  ///
+  /// Example:
+  /// ```dart
+  /// MyViewModel get viewModel => watchViewModel<MyViewModel>(
+  ///   factory: MyViewModelFactory(),
+  ///   key: 'shared-instance', // Optional
+  /// );
+  /// ```
+  ///
+  /// Note: ViewModels are automatically disposed when no widgets are watching them.
   VM watchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
@@ -152,18 +252,37 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
         listen: true,
       );
 
-  /// [key] ViewModelFactory.Key
-  /// [tag] ViewModelFactory.Tag
-  /// [factory] ViewModelFactory to create ViewModel.
-  /// 1. if [key] is not null, it will find existing ViewModel by key first.
-  /// 2. if has [factory] and not found by [key], it will create a new ViewModel by [factory].
-  /// 3. if [factory] is null, and [tag] is not null, it will find existing ViewModel by tag.
-  /// 4. if all is null, it will find newly created ViewModel from cache.
+  /// Reads a ViewModel without triggering widget rebuilds.
   ///
-  /// if not found will throw [StateError]
+  /// This method provides access to a ViewModel without subscribing to its
+  /// changes. Use this when you need to call methods on the ViewModel but
+  /// don't want the widget to rebuild when the ViewModel changes.
   ///
-  /// readViewModel just read the ViewModel without rebuilding the widget when ViewModel state changed.
-  /// `watchViewModel` and `readViewModel` will bind ViewModel, when no one bind viewModel, viewModel will be disposed automatically
+  /// Search priority (same as [watchViewModel]):
+  /// 1. If [key] is provided, searches for existing ViewModel by key
+  /// 2. If [factory] is provided and no key match, creates new ViewModel
+  /// 3. If [tag] is provided and no factory, searches by tag
+  /// 4. If none provided, finds most recently created ViewModel of type [VM]
+  ///
+  /// Parameters:
+  /// - [factory]: Factory to create the ViewModel if needed
+  /// - [key]: Unique key for sharing ViewModel instances
+  /// - [tag]: Tag to identify ViewModel instances
+  ///
+  /// Returns the ViewModel instance.
+  ///
+  /// Throws [StateError] if no matching ViewModel is found.
+  ///
+  /// Example:
+  /// ```dart
+  /// void _onButtonPressed() {
+  ///   final vm = readViewModel<MyViewModel>();
+  ///   vm.performAction(); // Won't trigger rebuild
+  /// }
+  /// ```
+  ///
+  /// Note: The ViewModel is still bound to this widget's lifecycle and will
+  /// be disposed when no widgets are watching or reading it.
   VM readViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
@@ -219,7 +338,18 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
         listen: listen);
   }
 
-  /// if listen == true, [ViewModel] trigger rebuilding automatically.
+  /// Creates a new ViewModel using the provided factory.
+  ///
+  /// This internal method handles ViewModel creation and caching.
+  /// If [listen] is true, the widget will rebuild when the ViewModel changes.
+  ///
+  /// Parameters:
+  /// - [factory]: The factory to create the ViewModel
+  /// - [listen]: Whether to listen for ViewModel changes
+  ///
+  /// Returns the created ViewModel instance.
+  ///
+  /// Throws [StateError] if the widget has been disposed.
   VM _createViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
     bool listen = true,
@@ -244,6 +374,17 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     return res;
   }
 
+  /// Adds a listener to a ViewModel for automatic widget rebuilding.
+  ///
+  /// This internal method sets up the connection between a ViewModel and
+  /// the widget's setState method. It ensures that the widget rebuilds
+  /// when the ViewModel notifies listeners.
+  ///
+  /// The method includes safety checks to prevent rebuilds after disposal
+  /// and waits for the widget to be mounted before triggering rebuilds.
+  ///
+  /// Parameters:
+  /// - [res]: The ViewModel to listen to
   void _addListener(ViewModel res) {
     if (_stateListeners[res] != true) {
       _stateListeners[res] = true;
@@ -258,6 +399,25 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  /// Attempts to watch a ViewModel, returning null if not found.
+  ///
+  /// This is a safe version of [watchViewModel] that returns null instead
+  /// of throwing an exception when no matching ViewModel is found.
+  ///
+  /// Parameters:
+  /// - [factory]: Factory to create the ViewModel if needed
+  /// - [key]: Unique key for sharing ViewModel instances
+  /// - [tag]: Tag to identify ViewModel instances
+  ///
+  /// Returns the ViewModel instance or null if not found.
+  ///
+  /// Example:
+  /// ```dart
+  /// final vm = maybeWatchViewModel<MyViewModel>(key: 'optional-key');
+  /// if (vm != null) {
+  ///   // Use the ViewModel
+  /// }
+  /// ```
   VM? maybeWatchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
@@ -274,6 +434,23 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  /// Attempts to read a ViewModel, returning null if not found.
+  ///
+  /// This is a safe version of [readViewModel] that returns null instead
+  /// of throwing an exception when no matching ViewModel is found.
+  ///
+  /// Parameters:
+  /// - [factory]: Factory to create the ViewModel if needed
+  /// - [key]: Unique key for sharing ViewModel instances
+  /// - [tag]: Tag to identify ViewModel instances
+  ///
+  /// Returns the ViewModel instance or null if not found.
+  ///
+  /// Example:
+  /// ```dart
+  /// final vm = maybeReadViewModel<MyViewModel>(key: 'optional-key');
+  /// vm?.performAction(); // Safe call
+  /// ```
   VM? maybeReadViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
