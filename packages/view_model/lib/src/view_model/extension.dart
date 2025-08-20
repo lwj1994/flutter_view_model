@@ -53,7 +53,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     onRecreate: () {
       setState(() {});
     },
-    watcherName: viewModelWatcherName(),
+    watcherName: getViewModelWatcherName(),
   );
   final Map<ViewModel, bool> _stateListeners = {};
 
@@ -73,10 +73,10 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// Returns an empty string in release mode for performance.
   ///
   /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
-  String viewModelWatcherName() {
+  String getViewModelWatcherName() {
     if (!kDebugMode) return "";
 
-    final pathInfo = getCurrentObjectPath();
+    final pathInfo = _getCurrentObjectPath();
     return pathInfo.isNotEmpty ? "$pathInfo  $runtimeType" : "$runtimeType";
   }
 
@@ -94,7 +94,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// - If path cannot be determined: The runtime type as fallback
   ///
   /// Example output: `lib/pages/counter_page.dart:25`
-  String getCurrentObjectPath() {
+  String _getCurrentObjectPath() {
     if (!kDebugMode) return "";
 
     // Return cached result if available
