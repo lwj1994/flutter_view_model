@@ -62,13 +62,13 @@ class TodoViewModel extends StateViewModel<TodoState> {
     );
   }
 
-  // 新增：按类别筛选
+  // New: Filter by category
   List<TodoItem> getItemsByCategory(String? category) {
     if (category == null) return state.items;
     return state.items.where((item) => item.category == category).toList();
   }
 
-  // 新增：搜索功能
+  // New: Search functionality
   List<TodoItem> searchItems(String query) {
     final lowercaseQuery = query.toLowerCase();
     return state.items
@@ -80,7 +80,7 @@ class TodoViewModel extends StateViewModel<TodoState> {
         .toList();
   }
 
-  // 新增：获取统计信息
+  // New: Get statistics
   TodoStats getStats() {
     final total = state.items.length;
     final completed = state.items.where((item) => item.completed).length;

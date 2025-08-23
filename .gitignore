@@ -27,6 +27,8 @@ migrate_working_dir/
 **/doc/api/
 .dart_tool/
 build/
+# Allow devtools extension build files to be tracked
+!packages/view_model/extension/devtools/build/
 
 # FVM Version Cache
 .fvm/
