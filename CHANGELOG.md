@@ -4,6 +4,8 @@ and debugging capabilities for your ViewModels during development.
 
 create `devtools_options.yaml` in root directory of project.
 
+
+
 ```yaml
 description: This file stores settings for Dart & Flutter DevTools.
 documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
@@ -11,10 +13,8 @@ extensions:
   - view_model: true
 ```
 
-![devtool2.png](images/devtool2.png)  
-
-![devtool1.png](images/devtool1.png)
-
+![](https://i.imgur.com/5itXPYD.png)
+![](https://imgur.com/83iOQhy.png)
 
 
 * Breaking change: rename `initConfig` to `initialize`
