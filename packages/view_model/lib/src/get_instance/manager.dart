@@ -242,7 +242,7 @@ class InstanceFactory<T> {
     InstanceArg? arg,
   }) {
     return InstanceFactory<T>(
-      builder: factory ?? this.builder,
+      builder: factory ?? builder,
       arg: arg ?? this.arg,
     );
   }
