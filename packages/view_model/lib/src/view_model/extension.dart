@@ -13,8 +13,9 @@
 /// reactive ViewModel integration.
 library;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -390,11 +391,15 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       _stateListeners[res] = true;
       _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
-        while (!context.mounted) {
-          await Future.delayed(Duration.zero);
-          if (_dispose) return;
+        if (context.mounted) {
+          setState(() {});
+        } else {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (!_dispose && context.mounted) {
+              setState(() {});
+            }
+          });
         }
-        setState(() {});
       }));
     }
   }
