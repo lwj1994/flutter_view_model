@@ -29,4 +29,9 @@ class ViewModelConfig<T extends ViewModel> {
     this.tag,
     this.factory,
   });
+
+  @override
+  String toString() {
+    return '$T {key: $key, tag: $tag, factory: $factory}';
+  }
 }

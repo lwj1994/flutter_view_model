@@ -8,6 +8,8 @@
 library;
 
 import 'package:uuid/v4.dart';
+import 'package:view_model/src/view_model/dependency_handler.dart';
+import 'package:view_model/src/view_model/view_model.dart';
 
 import 'manager.dart';
 import 'store.dart';
@@ -42,6 +44,8 @@ class AutoDisposeInstanceController {
   /// List of instance handles being tracked by this controller.
   final List<InstanceHandle> _instanceNotifiers = List.empty(growable: true);
 
+  List<InstanceHandle> get instanceNotifiers => _instanceNotifiers;
+
   /// Callback function called when an instance needs to be recreated.
   ///
   /// This is typically used to trigger widget rebuilds when a ViewModel
@@ -56,6 +60,8 @@ class AutoDisposeInstanceController {
   /// Human-readable name for this watcher, typically the widget class name.
   final String watcherName;
 
+  final DependencyResolver dependencyResolver;
+
   /// Creates a new auto-dispose instance controller.
   ///
   /// Parameters:
@@ -64,6 +70,7 @@ class AutoDisposeInstanceController {
   AutoDisposeInstanceController({
     required this.onRecreate,
     required this.watcherName,
+    required this.dependencyResolver,
   });
 
   /// Unique identifier for this controller instance.
@@ -175,7 +182,12 @@ class AutoDisposeInstanceController {
   /// }
   /// ```
   Future<void> dispose() async {
-    for (var e in _instanceNotifiers) {
+    for (final e in _instanceNotifiers) {
+      if (e.instance is ViewModel) {
+        (e.instance as ViewModel)
+            .dependencyHandler
+            .removeDependencyResolver(dependencyResolver);
+      }
       e.removeWatcher(_watchId);
     }
     _instanceNotifiers.clear();

@@ -16,12 +16,14 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
+import 'dependency_handler.dart';
 import 'model.dart';
 
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
@@ -47,7 +49,7 @@ import 'model.dart';
 ///
 ///   @override
 ///   Widget build(BuildContext context) {
-///     return Text('Count: ${viewModel.count}');
+///     return Text('Count: \${viewModel.count}');
 ///   }
 /// }
 /// ```
@@ -57,6 +59,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       setState(() {});
     },
     watcherName: getViewModelWatcherName(),
+    dependencyResolver: onChildDependencyResolver,
   );
   final Map<ViewModel, bool> _stateListeners = {};
 
@@ -369,19 +372,22 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     if (_dispose) {
       throw StateError("state is disposed");
     }
-    String key = factory.key() ?? _defaultViewModelKey;
+    final String key = factory.key() ?? _defaultViewModelKey;
     final tag = factory.getTag();
-    final res = _instanceController.getInstance<VM>(
-      factory: InstanceFactory<VM>(
-        arg: InstanceArg(
-          key: key,
-          tag: tag,
-        ),
-        builder: factory.build,
-      ),
+    final res = runWithResolver(
+      () {
+        return _instanceController.getInstance<VM>(
+          factory: InstanceFactory<VM>(
+            arg: InstanceArg(
+              key: key,
+              tag: tag,
+            ),
+            builder: factory.build,
+          ),
+        )..dependencyHandler.addDependencyResolver(onChildDependencyResolver);
+      },
+      onChildDependencyResolver,
     );
-
-    res.dependencyHandler.setDependencyResolver(_onDependencyResolver);
 
     if (listen) {
       _addListener(res);
@@ -389,12 +395,13 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     return res;
   }
 
-  // ignore: unused_element, avoid_shadowing_type_parameters
-  T _onDependencyResolver<T extends ViewModel>({
+  @internal
+  // ignore: avoid_shadowing_type_parameters
+  T onChildDependencyResolver<T extends ViewModel>({
     required ViewModelDependencyConfig<T> dependency,
     bool listen = true,
   }) {
-    return _getViewModel<T>(
+    final childViewModel = _getViewModel<T>(
       factory: dependency.config.factory,
       arg: InstanceArg(
         key: dependency.config.key,
@@ -402,6 +409,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       ),
       listen: listen,
     );
+    childViewModel.dependencyHandler
+        .addDependencyResolver(onChildDependencyResolver);
+    return childViewModel;
   }
 
   /// Adds a listener to a ViewModel for automatic widget rebuilding.
@@ -420,7 +430,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       _stateListeners[res] = true;
       _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
-        if (context.mounted) {
+        if (context.mounted &&
+            SchedulerBinding.instance.schedulerPhase !=
+                SchedulerPhase.persistentCallbacks) {
           setState(() {});
         } else {
           SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -507,7 +519,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     _dispose = true;
     _stateListeners.clear();
     _instanceController.dispose();
-    for (var e in _disposes) {
+    for (final e in _disposes) {
       e.call();
     }
     super.dispose();

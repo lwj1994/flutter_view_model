@@ -1,3 +1,56 @@
+## 0.5.0
+
+* support ViewModel-to-ViewModel Access
+
+ViewModels can access other ViewModels using `readViewModel` and `watchViewModel`:
+
+- **`readViewModel`**: Access another ViewModel without reactive connection
+- **`watchViewModel`**: Create reactive dependency - automatically notifies when the watched ViewModel changes
+
+```dart
+class UserProfileViewModel extends ViewModel {
+  void loadData() {
+    // One-time access without listening
+    final authVM = readViewModel<AuthViewModel>();
+    if (authVM?.isLoggedIn == true) {
+      _fetchProfile(authVM!.userId);
+    }
+  }
+  
+  void setupReactiveAuth() {
+    // Reactive access - auto-updates when auth changes
+    final authVM = watchViewModel<AuthViewModel>();
+    // This ViewModel will be notified when authVM changes
+  }
+  
+  @override
+  void onDependencyNotify(ViewModel viewModel) {
+    // Called when watched ViewModels change
+    if (viewModel is AuthViewModel) {
+      // React to auth changes
+      _handleAuthChange(viewModel);
+    }
+  }
+  
+  void manualListening() {
+    final authVM = readViewModel<AuthViewModel>();
+    // You can also manually listen to any ViewModel
+    authVM?.listen(() {
+      // Custom listener logic
+      _handleAuthChange(authVM);
+    });
+  }
+}
+```
+
+**Note**: 
+- ViewModel-to-ViewModel `watchViewModel` does not create listening relationships between ViewModels themselves, but allows the calling ViewModel to react to changes in the watched ViewModel.
+- When using `watchViewModel`, you'll receive `onDependencyNotify` callbacks when the watched ViewModel changes.
+- You can also manually call `vm.listen()` for custom listening logic.
+
+
+
+
 ## 0.4.6
 * The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
 and debugging capabilities for your ViewModels during development.

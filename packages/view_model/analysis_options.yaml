@@ -1,4 +1,57 @@
-include: package:flutter_lints/flutter.yaml
-
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+linter:
+  # The lint rules applied to this project can be customized in the
+  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
+  # included above or to enable additional rules. A list of all available lints
+  # and their documentation is published at
+  # https://dart-lang.github.io/linter/lints/index.html.
+  #
+  # Instead of disabling a lint rule for the entire project in the
+  # section below, it can also be suppressed for a single line of code
+  # or a specific dart file by using the `// ignore: name_of_lint` and
+  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
+  # producing the lint.
+  rules:
+    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
+    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    unawaited_futures: false
+    deprecated_member_use_from_same_package: false
+    avoid_web_libraries_in_flutter: true
+    no_logic_in_create_state: true
+    prefer_const_constructors_in_immutables: true
+    sized_box_for_whitespace: true
+    sort_child_properties_last: true
+    use_build_context_synchronously: true
+    use_full_hex_values_for_flutter_colors: true
+    use_key_in_widget_constructors: true
+    prefer_const_constructors: true
+    prefer_const_literals_to_create_immutables: true
+    constant_identifier_names: true
+    non_constant_identifier_names: true
+    # missing_enum_constant_in_switch: true
+    avoid_print: true
+    void_checks: true
+    always_declare_return_types: true
+    always_specify_types: false
+    missing_whitespace_between_adjacent_strings: true
+    always_use_package_imports: false
+    avoid_relative_lib_imports: true
+    avoid_dynamic_calls: true
+    avoid_types_as_parameter_names: true
+    cancel_subscriptions: true
+    close_sinks: true
+    collection_methods_unrelated_type: true
+    prefer_final_locals: true
+    prefer_final_in_for_each: true
+    prefer_final_parameters: false
+    prefer_final_fields: true
+    prefer_const_declarations: true
+    avoid_returning_null_for_void: true
+    avoid_returning_this: true
+    avoid_unnecessary_containers: true
+    avoid_void_async: true
+    hash_and_equals: true
+    lines_longer_than_80_chars: true
+    overridden_fields: true

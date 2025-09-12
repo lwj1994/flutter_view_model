@@ -17,8 +17,9 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:meta/meta.dart';
 import 'package:uuid/v4.dart';
-import 'package:view_model/src/devtool/devtools_service.dart';
+import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
@@ -77,6 +78,19 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 /// ```
 mixin class ViewModel implements InstanceLifeCycle {
   late InstanceArg _instanceArg;
+
+  /// Tracks which dependency ViewModels this ViewModel is already listening to.
+  ///
+  /// This map prevents duplicate listener registration when the same dependency
+  /// ViewModel is accessed multiple times through [watchViewModel]. The key is
+  /// the dependency ViewModel instance, and the value is always `true` when
+  /// a listener is registered.
+  ///
+  /// This optimization ensures that:
+  /// 1. Each dependency ViewModel is only listened to once
+  /// 2. Avoids memory leaks from duplicate listeners
+  /// 3. Improves performance by preventing redundant listener setup
+  final Map<ViewModel, bool> _dependencyListeners = {};
 
   /// Gets the tag associated with this ViewModel instance.
   ///
@@ -262,10 +276,12 @@ mixin class ViewModel implements InstanceLifeCycle {
     Object? tag,
     ViewModelFactory<T>? factory,
   }) {
-    return dependencyHandler.readViewModel<T>(
+    if (isDisposed) throw StateError("$T is disposed");
+    return dependencyHandler.getViewModel<T>(
       key: key,
       tag: tag,
       factory: factory,
+      listen: false,
     );
   }
 
@@ -304,12 +320,39 @@ mixin class ViewModel implements InstanceLifeCycle {
     Object? tag,
     ViewModelFactory<T>? factory,
   }) {
-    return dependencyHandler.watchViewModel<T>(
+    if (isDisposed) throw StateError("$T is disposed");
+    final vm = dependencyHandler.getViewModel<T>(
       key: key,
       tag: tag,
       factory: factory,
+      listen: true,
     );
+
+    // Check if we're already listening to this dependency ViewModel
+    // to prevent duplicate listener registration
+    if (_dependencyListeners[vm] != true) {
+      // Register a listener to automatically notify this ViewModel
+      // when the dependency ViewModel changes
+      addDispose(vm.listen(onChanged: () {
+        onDependencyNotify(vm);
+      }));
+      // Mark this dependency as being listenedto
+      _dependencyListeners[vm] = true;
+    }
+    return vm;
   }
+
+  /// Called when a dependency ViewModel notifies changes.
+  ///
+  /// This method is called when a dependency ViewModel that this ViewModel is
+  /// listening to notifies changes. By default, it simply notifies listeners
+  /// of this ViewModel.
+  ///
+  /// Parameters:
+  /// - [vm]: The dependency ViewModel that notified changes
+  @mustCallSuper
+  @protected
+  void onDependencyNotify(ViewModel vm) {}
 
   /// Attempts to read a dependency ViewModel of type [T].
   ///
@@ -337,7 +380,61 @@ mixin class ViewModel implements InstanceLifeCycle {
     ViewModelFactory<T>? factory,
   }) {
     try {
-      return readViewModel<T>(key: key, tag: tag);
+      return readViewModel<T>(
+        key: key,
+        tag: tag,
+        factory: factory,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Attempts to watch a dependency ViewModel of type [T] with automatic change listening.
+  ///
+  /// This is a safe version of [watchViewModel] that returns `null` if the dependency
+  /// is not found or if any error occurs during the watch operation, instead of
+  /// throwing an exception.
+  ///
+  /// When successful, this method:
+  /// 1. Retrieves the dependency ViewModel (creating it if necessary via factory)
+  /// 2. Sets up automatic listening for changes from the dependency
+  /// 3. Ensures this ViewModel will be notified when the dependency changes
+  /// 4. Prevents duplicate listener registration for the same dependency
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify the specific dependency instance
+  /// - [tag]: Optional tag to identify the specific dependency instance
+  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  ///
+  /// Returns the dependency ViewModel instance if found and successfully watched,
+  /// otherwise `null`.
+  ///
+  /// Example:
+  /// ```dart
+  /// class UserProfileViewModel extends ViewModel {
+  ///   AuthViewModel? authViewModel;
+  ///
+  ///   @override
+  ///   void onInit() {
+  ///     // Safely watch auth changes, won't throw if AuthViewModel doesn't exist
+  ///     authViewModel = maybeWatchViewModel<AuthViewModel>();
+  ///   }
+  ///
+  ///   String get displayName => authViewModel?.user?.name ?? 'Guest';
+  /// }
+  /// ```
+  T? maybeWatchViewModel<T extends ViewModel>({
+    String? key,
+    Object? tag,
+    ViewModelFactory<T>? factory,
+  }) {
+    try {
+      return watchViewModel<T>(
+        key: key,
+        tag: tag,
+        factory: factory,
+      );
     } catch (e) {
       return null;
     }
@@ -371,7 +468,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   @protected
-  void addDispose(Function() block) async {
+  Future<void> addDispose(Function() block) async {
     _autoDisposeController.addDispose(block);
   }
 
@@ -405,7 +502,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// Any exceptions thrown by listeners are caught and logged to prevent
   /// one listener from affecting others.
   void notifyListeners() {
-    for (var element in _listeners) {
+    for (final element in _listeners) {
       try {
         element?.call();
       } catch (e) {
@@ -469,7 +566,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   void onCreate(InstanceArg arg) {
     _initDevtool();
     _instanceArg = arg;
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onCreate(this, arg);
     }
   }
@@ -478,7 +575,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   @mustCallSuper
   @override
   void onAddWatcher(InstanceArg arg, String newWatchId) {
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onAddWatcher(this, arg, newWatchId);
     }
   }
@@ -487,7 +584,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   @mustCallSuper
   @override
   void onRemoveWatcher(InstanceArg arg, String removedWatchId) {
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onRemoveWatcher(this, arg, removedWatchId);
     }
   }
@@ -498,8 +595,10 @@ mixin class ViewModel implements InstanceLifeCycle {
   void onDispose(InstanceArg arg) {
     _isDisposed = true;
     _autoDisposeController.dispose();
+    _dependencyListeners.clear();
+    dependencyHandler.dispose();
     dispose();
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onDispose(this, arg);
     }
   }
@@ -574,7 +673,7 @@ abstract class StateViewModel<T> with ViewModel {
 
     _streamSubscription = _store.stateStream.listen((event) async {
       if (_isDisposed) return;
-      for (var element in _stateListeners) {
+      for (final element in _stateListeners) {
         try {
           element?.call(event.previousState, event.currentState);
         } catch (e) {
@@ -582,7 +681,7 @@ abstract class StateViewModel<T> with ViewModel {
         }
       }
 
-      for (var element in _listeners) {
+      for (final element in _listeners) {
         try {
           element?.call();
         } catch (e) {
@@ -676,7 +775,6 @@ abstract class StateViewModel<T> with ViewModel {
     _listeners.clear();
     _stateListeners.clear();
     _streamSubscription.cancel();
-    dependencyHandler.clearDependency();
     super.dispose();
   }
 
@@ -698,7 +796,7 @@ class AutoDisposeController {
   ///
   /// Parameters:
   /// - [block]: The cleanup function to execute
-  void addDispose(Function() block) async {
+  Future<void> addDispose(Function() block) async {
     _disposeSet.add(block);
   }
 
@@ -707,7 +805,7 @@ class AutoDisposeController {
   /// Any exceptions thrown by disposal callbacks are caught and logged
   /// to prevent one callback from affecting others.
   void dispose() {
-    for (var element in _disposeSet) {
+    for (final element in _disposeSet) {
       try {
         element?.call();
       } catch (e) {

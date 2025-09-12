@@ -105,7 +105,7 @@
 /// 5. **Performance**: Use keys and tags for efficient instance management
 ///
 /// For more detailed documentation and examples, visit the project repository.
-library view_model;
+library;
 
 export "package:view_model/src/get_instance/store.dart" show InstanceArg;
 export "package:view_model/src/view_model/config.dart";

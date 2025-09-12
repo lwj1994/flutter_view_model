@@ -12,7 +12,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-import 'dependency_tracker.dart';
+import 'tracker.dart';
 
 /// Service for integrating ViewModel debugging with Flutter DevTools.
 ///
@@ -128,7 +128,7 @@ class DevToolsService {
   /// - Creation and disposal timestamps
   /// - List of current watchers
   Map<String, dynamic> _getViewModelData() {
-    final tracker = DependencyTracker.instance;
+    final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;
 
     final viewModels = graph.viewModelInfos.values
@@ -169,7 +169,7 @@ class DevToolsService {
   ///
   /// Each edge represents a "watches" relationship from a watcher to a ViewModel.
   Map<String, dynamic> _getDependencyGraph() {
-    final tracker = DependencyTracker.instance;
+    final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;
 
     final dependencies = <Map<String, dynamic>>[];
@@ -208,7 +208,7 @@ class DevToolsService {
   /// - Shared and orphaned instance counts
   /// - Total watcher and type counts
   Map<String, int> _getStatsFromTracker() {
-    final stats = DependencyTracker.instance.getStats();
+    final stats = DevToolTracker.instance.getStats();
 
     return {
       'totalInstances': stats.activeInstances + stats.disposedInstances,

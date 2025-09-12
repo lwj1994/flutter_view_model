@@ -35,7 +35,7 @@ class FilterControls extends StatelessWidget {
           SizedBox(
             width: 150,
             child: DropdownButtonFormField<String>(
-              value: filter,
+              initialValue: filter,
               decoration: const InputDecoration(
                 labelText: 'Filter',
                 isDense: true,
