@@ -67,7 +67,7 @@ void main() {
     });
 
     test("changeNotifier_set_state", () async {
-      late ChangeNotifierVM viewModel = ChangeNotifierVM();
+      late final ChangeNotifierVM viewModel = ChangeNotifierVM();
       var c = 0;
       viewModel.listen(onChanged: () {
         c++;

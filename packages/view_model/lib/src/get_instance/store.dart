@@ -68,7 +68,7 @@ class Store<T> {
     if (tag == null) {
       return l.firstOrNull;
     } else {
-      for (InstanceHandle<T> instance in l) {
+      for (final InstanceHandle<T> instance in l) {
         if (instance.arg.tag == tag) {
           return instance;
         }
@@ -146,7 +146,7 @@ class Store<T> {
     final instance = factory.builder!();
 
     int maxIndex = -1;
-    for (var e in _instances.values) {
+    for (final e in _instances.values) {
       if (e.index > maxIndex) {
         maxIndex = e.index;
       }

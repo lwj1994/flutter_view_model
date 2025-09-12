@@ -7,8 +7,26 @@
 /// more focused on its core responsibilities.
 library;
 
+import 'dart:async';
+
+import 'package:meta/meta.dart';
+
 import 'model.dart' as model;
 import 'view_model.dart';
+
+typedef DependencyResolver = T Function<T extends ViewModel>({
+  required model.ViewModelDependencyConfig<T> dependency,
+  bool listen,
+});
+
+const _resolverKey = #_viewModelDependencyResolver;
+
+/// Runs the given [body] in a zone with the provided dependency [resolver].
+/// This makes the resolver available to `DependencyHandler` instances created
+/// within the zone.
+R runWithResolver<R>(R Function() body, DependencyResolver resolver) {
+  return runZoned(body, zoneValues: {_resolverKey: resolver});
+}
 
 /// Handler class responsible for managing ViewModel dependencies.
 ///
@@ -29,24 +47,15 @@ import 'view_model.dart';
 ///   }
 /// }
 /// ```
+@internal
 class DependencyHandler {
-  /// List to store dependency configurations for ViewModels.
-  final List<model.ViewModelDependencyConfig> _dependencies = [];
-
   /// Callback function to resolve ViewModel dependencies.
   /// This is typically set by ViewModelStateMixin to delegate dependency resolution
   /// to the State that manages the ViewModel.
-  T Function<T extends ViewModel>({
-    required model.ViewModelDependencyConfig<T> dependency,
-    bool listen,
-  })? _dependencyResolver;
+  @internal
+  final List<DependencyResolver> dependencyResolvers = [];
 
-  /// Gets a read-only list of current dependencies.
-  List<model.ViewModelDependencyConfig> get dependencies =>
-      List.unmodifiable(_dependencies);
-
-  /// Checks if a dependency resolver is currently set.
-  bool get hasResolver => _dependencyResolver != null;
+  DependencyHandler();
 
   /// Sets the dependency resolver callback.
   ///
@@ -55,22 +64,28 @@ class DependencyHandler {
   ///
   /// Parameters:
   /// - [resolver]: Function that resolves dependencies with listen parameter
-  void setDependencyResolver(
-    T Function<T extends ViewModel>({
-      required model.ViewModelDependencyConfig<T> dependency,
-      bool listen,
-    }) resolver,
+  @internal
+  void addDependencyResolver(
+    DependencyResolver resolver,
   ) {
-    _dependencyResolver = resolver;
+    if (!dependencyResolvers.contains(resolver)) {
+      dependencyResolvers.add(resolver);
+    }
+  }
+
+  @internal
+  void removeDependencyResolver(
+    DependencyResolver resolver,
+  ) {
+    dependencyResolvers.remove(resolver);
   }
 
   /// Clears the dependency resolver callback and all stored dependencies.
   ///
   /// This should be called when the ViewModel is no longer managed by a State
   /// to prevent memory leaks and ensure clean disposal.
-  void clearDependencies() {
-    _dependencyResolver = null;
-    _dependencies.clear();
+  void dispose() {
+    dependencyResolvers.clear();
   }
 
   /// Reads a dependency ViewModel from the current context.
@@ -88,11 +103,19 @@ class DependencyHandler {
   /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
   ///
   /// Returns the requested ViewModel instance.
-  T readViewModel<T extends ViewModel>({
+  T getViewModel<T extends ViewModel>({
     String? key,
     Object? tag,
     ViewModelFactory<T>? factory,
+    bool listen = false,
   }) {
+    final resolver = dependencyResolvers.firstOrNull ??
+        (Zone.current[_resolverKey] as DependencyResolver?);
+
+    if (resolver == null) {
+      throw StateError(
+          'No dependency resolver available. ViewModel must be used within a Widget context');
+    }
     // Create dependency configuration
     final dependencyConfig = model.ViewModelDependencyConfig<T>(
       config: model.ViewModelConfig(
@@ -101,98 +124,52 @@ class DependencyHandler {
         factory: factory,
       ),
     );
-
-    // Store dependency configuration for tracking
-    _dependencies.add(dependencyConfig);
-
     // Check if there's a registered dependency resolver callback
-    if (_dependencyResolver != null) {
-      // Delegate to the registered resolver (typically from ViewModelStateMixin)
-      return _dependencyResolver!<T>(
-          dependency: dependencyConfig, listen: false);
-    }
-
-    // If no dependency resolver is registered, use static read method as fallback
-    return ViewModel.read<T>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  /// Watches a dependency ViewModel of type [T] and listens for changes.
-  ///
-  /// Similar to [readViewModel] but automatically listens for changes in the dependency
-  /// ViewModel and triggers rebuilds when the dependency changes.
-  ///
-  /// Parameters:
-  /// - [key]: Optional key to identify a specific ViewModel instance
-  /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
-  ///
-  /// Returns the requested ViewModel instance with change listening enabled.
-  T watchViewModel<T extends ViewModel>({
-    String? key,
-    Object? tag,
-    ViewModelFactory<T>? factory,
-  }) {
-    // Create dependency configuration
-    final dependencyConfig = model.ViewModelDependencyConfig<T>(
-      config: model.ViewModelConfig(
-        key: key,
-        tag: tag,
-        factory: factory,
-      ),
-    );
-
-    // Store dependency configuration for tracking
-    _dependencies.add(dependencyConfig);
-
-    // Check if there's a registered dependency resolver callback
-    if (_dependencyResolver != null) {
-      // Delegate to the registered resolver with listen=true
-      return _dependencyResolver!<T>(
-          dependency: dependencyConfig, listen: true);
-    }
-
-    // If no dependency resolver is registered, use static read method as fallback
-    // Note: Static method doesn't support listening, so this is a fallback behavior
-    return ViewModel.read<T>(
-      key: key,
-      tag: tag,
+    return resolver(
+      dependency: dependencyConfig,
+      listen: listen,
     );
   }
 
   /// Attempts to read a dependency ViewModel of type [T].
   ///
-  /// Similar to [readViewModel] but returns `null` if the dependency is not found
-  /// instead of throwing an exception.
+  /// Similar to [getViewModel] but returns `null` if the dependency is not found
+  /// instead of throwing an exception. This is useful when you want to safely
+  //
+  /// check for optional dependencies without handling exceptions.
   ///
   /// Parameters:
-  /// - [key]: Optional key to identify the specific dependency instance
-  /// - [tag]: Optional tag to identify the specific dependency instance
+  /// - [key]: Optional key to identify a specific ViewModel instance
+  /// - [tag]: Optional tag for ViewModel lookup
   /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  /// - [listen]: Whether to establish a listening relationship (default: false)
   ///
-  /// Returns the dependency ViewModel instance if found, otherwise `null`.
-  T? maybeReadViewModel<T extends ViewModel>({
+  /// Returns the requested ViewModel instance if found, otherwise `null`.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Safe dependency access
+  /// final authViewModel = dependencyHandler.maybeGetViewModel<AuthViewModel>();
+  /// if (authViewModel != null) {
+  ///   // Use the dependency
+  ///   print('User is logged in: ${authViewModel.isLoggedIn}');
+  /// }
+  /// ```
+  T? maybeGetViewModel<T extends ViewModel>({
     String? key,
     Object? tag,
     ViewModelFactory<T>? factory,
+    bool listen = false,
   }) {
     try {
-      return readViewModel<T>(key: key, tag: tag, factory: factory);
+      return getViewModel<T>(
+        key: key,
+        tag: tag,
+        factory: factory,
+        listen: listen,
+      );
     } catch (e) {
       return null;
     }
-  }
-
-  /// Gets the number of stored dependencies.
-  int get dependencyCount => _dependencies.length;
-
-  /// Checks if any dependencies are currently stored.
-  bool get hasDependencies => _dependencies.isNotEmpty;
-
-  void clearDependency() {
-    _dependencies.clear();
-    _dependencyResolver = null;
   }
 }
