@@ -22,6 +22,8 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
+import 'model.dart';
+
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
 ///
 /// This mixin provides methods to watch and read ViewModels from within
@@ -239,19 +241,23 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// ```
   ///
   /// Note: ViewModels are automatically disposed when no widgets are watching them.
+  /// Dependencies are automatically established when ViewModels call readViewModel.
   VM watchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
     Object? tag,
-  }) =>
-      _tryGetViewModel<VM>(
-        factory: factory,
-        arg: InstanceArg(
-          key: key,
-          tag: tag,
-        ),
-        listen: true,
-      );
+  }) {
+    final viewModel = _getViewModel<VM>(
+      factory: factory,
+      arg: InstanceArg(
+        key: key,
+        tag: tag,
+      ),
+      listen: true,
+    );
+
+    return viewModel;
+  }
 
   /// Reads a ViewModel without triggering widget rebuilds.
   ///
@@ -284,21 +290,25 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   ///
   /// Note: The ViewModel is still bound to this widget's lifecycle and will
   /// be disposed when no widgets are watching or reading it.
+  /// Dependencies are automatically established when ViewModels call readViewModel.
   VM readViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     String? key,
     Object? tag,
-  }) =>
-      _tryGetViewModel<VM>(
-        factory: factory,
-        arg: InstanceArg(
-          key: key,
-          tag: tag,
-        ),
-        listen: false,
-      );
+  }) {
+    final viewModel = _getViewModel<VM>(
+      factory: factory,
+      arg: InstanceArg(
+        key: key,
+        tag: tag,
+      ),
+      listen: false,
+    );
 
-  VM _tryGetViewModel<VM extends ViewModel>({
+    return viewModel;
+  }
+
+  VM _getViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     InstanceArg arg = const InstanceArg(),
     bool listen = true,
@@ -343,6 +353,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   ///
   /// This internal method handles ViewModel creation and caching.
   /// If [listen] is true, the widget will rebuild when the ViewModel changes.
+  /// Sets up dependency resolver callback to support multi-level dependencies.
   ///
   /// Parameters:
   /// - [factory]: The factory to create the ViewModel
@@ -369,10 +380,28 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
         builder: factory.build,
       ),
     );
+
+    res.dependencyHandler.setDependencyResolver(_onDependencyResolver);
+
     if (listen) {
       _addListener(res);
     }
     return res;
+  }
+
+  // ignore: unused_element, avoid_shadowing_type_parameters
+  T _onDependencyResolver<T extends ViewModel>({
+    required ViewModelDependencyConfig<T> dependency,
+    bool listen = true,
+  }) {
+    return _getViewModel<T>(
+      factory: dependency.config.factory,
+      arg: InstanceArg(
+        key: dependency.config.key,
+        tag: dependency.config.tag,
+      ),
+      listen: listen,
+    );
   }
 
   /// Adds a listener to a ViewModel for automatic widget rebuilding.
