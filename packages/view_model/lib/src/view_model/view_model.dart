@@ -77,6 +77,7 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 /// ```
 mixin class ViewModel implements InstanceLifeCycle {
   late InstanceArg _instanceArg;
+  final Map<ViewModel, bool> _dependencyListeners = {};
 
   /// Gets the tag associated with this ViewModel instance.
   ///
@@ -304,12 +305,32 @@ mixin class ViewModel implements InstanceLifeCycle {
     Object? tag,
     ViewModelFactory<T>? factory,
   }) {
-    return dependencyHandler.watchViewModel<T>(
+    final vm = dependencyHandler.readViewModel<T>(
       key: key,
       tag: tag,
       factory: factory,
     );
+    if (_dependencyListeners[vm] != true) {
+      addDispose(vm.listen(onChanged: () {
+        onDependencyNotify(vm);
+        notifyListeners();
+      }));
+      _dependencyListeners[vm] = true;
+    }
+    return vm;
   }
+
+  /// Called when a dependency ViewModel notifies changes.
+  ///
+  /// This method is called when a dependency ViewModel that this ViewModel is
+  /// listening to notifies changes. By default, it simply notifies listeners
+  /// of this ViewModel.
+  ///
+  /// Parameters:
+  /// - [vm]: The dependency ViewModel that notified changes
+  @mustCallSuper
+  @protected
+  void onDependencyNotify(ViewModel vm) {}
 
   /// Attempts to read a dependency ViewModel of type [T].
   ///
@@ -498,6 +519,8 @@ mixin class ViewModel implements InstanceLifeCycle {
   void onDispose(InstanceArg arg) {
     _isDisposed = true;
     _autoDisposeController.dispose();
+    _dependencyListeners.clear();
+    dependencyHandler.dispose();
     dispose();
     for (var element in _viewModelLifecycles) {
       element.onDispose(this, arg);

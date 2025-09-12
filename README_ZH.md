@@ -296,6 +296,54 @@ __🔍 查找逻辑优先级（重要）__
 - `watchViewModel` 和 `readViewModel` 都会绑定到 ViewModel。
 - 当没有 Widget 绑定到 ViewModel 时，它会自动销毁。
 
+### 3.5 ViewModel 之间的访问
+
+ViewModel 可以使用 `readViewModel` 和 `watchViewModel` 访问其他 ViewModel：
+
+- **`readViewModel`**：访问另一个 ViewModel 而不建立响应式连接
+- **`watchViewModel`**：创建响应式依赖 - 当被观察的 ViewModel 变化时自动通知
+
+```dart
+class UserProfileViewModel extends ViewModel {
+  void loadData() {
+    // 一次性访问，不监听
+    final authVM = readViewModel<AuthViewModel>();
+    if (authVM?.isLoggedIn == true) {
+      _fetchProfile(authVM!.userId);
+    }
+  }
+  
+  void setupReactiveAuth() {
+    // 响应式访问 - 当 auth 变化时自动更新
+    final authVM = watchViewModel<AuthViewModel>();
+    // 当 authVM 变化时，此 ViewModel 将收到通知
+  }
+  
+  @override
+  void onDependencyNotify(ViewModel viewModel) {
+    // 当被观察的 ViewModel 变化时调用
+    if (viewModel is AuthViewModel) {
+      // 响应认证变化
+      _handleAuthChange(viewModel);
+    }
+  }
+  
+  void manualListening() {
+    final authVM = readViewModel<AuthViewModel>();
+    // 您也可以手动监听任何 ViewModel
+    authVM?.listen(() {
+      // 自定义监听逻辑
+      _handleAuthChange(authVM);
+    });
+  }
+}
+```
+
+**注意**：
+- ViewModel 之间的 `watchViewModel` 不会在 ViewModel 之间创建监听关系，而是允许调用方 ViewModel 对被观察 ViewModel 的变化做出反应。
+- 使用 `watchViewModel` 时，您将收到 `onDependencyNotify` 回调，当被观察的 ViewModel 变化时。
+- 您也可以手动调用 `vm.listen()` 进行自定义监听逻辑。
+
 ## 4. 有状态的 ViewModel (`StateViewModel<S>`)
 
 当您的业务逻辑需要管理一个清晰的、结构化的状态对象时，`StateViewModel<S>` 是一个

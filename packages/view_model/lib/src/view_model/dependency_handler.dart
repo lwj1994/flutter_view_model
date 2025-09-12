@@ -38,7 +38,6 @@ class DependencyHandler {
   /// to the State that manages the ViewModel.
   T Function<T extends ViewModel>({
     required model.ViewModelDependencyConfig<T> dependency,
-    bool listen,
   })? _dependencyResolver;
 
   /// Gets a read-only list of current dependencies.
@@ -58,7 +57,6 @@ class DependencyHandler {
   void setDependencyResolver(
     T Function<T extends ViewModel>({
       required model.ViewModelDependencyConfig<T> dependency,
-      bool listen,
     }) resolver,
   ) {
     _dependencyResolver = resolver;
@@ -68,7 +66,7 @@ class DependencyHandler {
   ///
   /// This should be called when the ViewModel is no longer managed by a State
   /// to prevent memory leaks and ensure clean disposal.
-  void clearDependencies() {
+  void dispose() {
     _dependencyResolver = null;
     _dependencies.clear();
   }
@@ -108,54 +106,10 @@ class DependencyHandler {
     // Check if there's a registered dependency resolver callback
     if (_dependencyResolver != null) {
       // Delegate to the registered resolver (typically from ViewModelStateMixin)
-      return _dependencyResolver!<T>(
-          dependency: dependencyConfig, listen: false);
+      return _dependencyResolver!<T>(dependency: dependencyConfig);
     }
 
     // If no dependency resolver is registered, use static read method as fallback
-    return ViewModel.read<T>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  /// Watches a dependency ViewModel of type [T] and listens for changes.
-  ///
-  /// Similar to [readViewModel] but automatically listens for changes in the dependency
-  /// ViewModel and triggers rebuilds when the dependency changes.
-  ///
-  /// Parameters:
-  /// - [key]: Optional key to identify a specific ViewModel instance
-  /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
-  ///
-  /// Returns the requested ViewModel instance with change listening enabled.
-  T watchViewModel<T extends ViewModel>({
-    String? key,
-    Object? tag,
-    ViewModelFactory<T>? factory,
-  }) {
-    // Create dependency configuration
-    final dependencyConfig = model.ViewModelDependencyConfig<T>(
-      config: model.ViewModelConfig(
-        key: key,
-        tag: tag,
-        factory: factory,
-      ),
-    );
-
-    // Store dependency configuration for tracking
-    _dependencies.add(dependencyConfig);
-
-    // Check if there's a registered dependency resolver callback
-    if (_dependencyResolver != null) {
-      // Delegate to the registered resolver with listen=true
-      return _dependencyResolver!<T>(
-          dependency: dependencyConfig, listen: true);
-    }
-
-    // If no dependency resolver is registered, use static read method as fallback
-    // Note: Static method doesn't support listening, so this is a fallback behavior
     return ViewModel.read<T>(
       key: key,
       tag: tag,

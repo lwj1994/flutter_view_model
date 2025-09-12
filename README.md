@@ -301,6 +301,57 @@ suitable for scenarios where you need to read the ViewModel state or perform ope
 - Both `watchViewModel` and `readViewModel` will bind to the ViewModel.
 - When no Widget is bound to the ViewModel, it will be automatically destroyed.
 
+
+### 3.5 ViewModel-to-ViewModel Access
+
+ViewModels can access other ViewModels using `readViewModel` and `watchViewModel`:
+
+- **`readViewModel`**: Access another ViewModel without reactive connection
+- **`watchViewModel`**: Create reactive dependency - automatically notifies when the watched ViewModel changes
+
+```dart
+class UserProfileViewModel extends ViewModel {
+  void loadData() {
+    // One-time access without listening
+    final authVM = readViewModel<AuthViewModel>();
+    if (authVM?.isLoggedIn == true) {
+      _fetchProfile(authVM!.userId);
+    }
+  }
+  
+  void setupReactiveAuth() {
+    // Reactive access - auto-updates when auth changes
+    final authVM = watchViewModel<AuthViewModel>();
+    // This ViewModel will be notified when authVM changes
+  }
+  
+  @override
+  void onDependencyNotify(ViewModel viewModel) {
+    // Called when watched ViewModels change
+    if (viewModel is AuthViewModel) {
+      // React to auth changes
+      _handleAuthChange(viewModel);
+    }
+  }
+  
+  void manualListening() {
+    final authVM = readViewModel<AuthViewModel>();
+    // You can also manually listen to any ViewModel
+    authVM?.listen(() {
+      // Custom listener logic
+      _handleAuthChange(authVM);
+    });
+  }
+}
+```
+
+**Note**: 
+- ViewModel-to-ViewModel `watchViewModel` does not create listening relationships between ViewModels themselves, but allows the calling ViewModel to react to changes in the watched ViewModel.
+- When using `watchViewModel`, you'll receive `onDependencyNotify` callbacks when the watched ViewModel changes.
+- You can also manually call `vm.listen()` for custom listening logic.
+
+
+
 ## 4. Stateful ViewModel (`StateViewModel<S>`)
 
 When your business logic needs to manage a clear, structured state object, `StateViewModel<S>` is a
