@@ -12,7 +12,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-import '../dependency/dependency_tracker.dart';
+import 'dependency_tracker.dart';
 
 /// Service for integrating ViewModel debugging with Flutter DevTools.
 ///

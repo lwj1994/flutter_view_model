@@ -18,13 +18,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:uuid/v4.dart';
-import 'package:view_model/src/dependency/dependency_tracker.dart';
 import 'package:view_model/src/devtool/devtools_service.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
 
+import 'dependency_handler.dart';
 import 'state_store.dart';
 
 /// A ViewModel implementation that extends Flutter's [ChangeNotifier].
@@ -221,6 +221,128 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// by any widgets or other components.
   bool get hasListeners => _listeners.isNotEmpty;
 
+  /// Handler for managing ViewModel dependencies.
+  /// This encapsulates all dependency-related logic and provides a clean separation of concerns.
+  @internal
+  final DependencyHandler dependencyHandler = DependencyHandler();
+
+  /// Reads a dependency ViewModel from the current context.
+  ///
+  /// This method allows ViewModels to access other ViewModels as dependencies.
+  /// The core logic is:
+  /// 1. Host ViewModel first collects the dependency ViewModel configuration
+  /// 2. Check if host ViewModel is already associated with a State
+  /// 3. If associated, delegate to State's readViewModel/watchViewModel to register the dependency
+  /// 4. If not associated, store the dependency config for later registration
+  ///
+  /// This ensures that dependency relationships are properly managed by the Widget State
+  /// that owns the host ViewModel, maintaining consistent lifecycle management.
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify a specific ViewModel instance
+  /// - [tag]: Optional tag for ViewModel lookup
+  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  ///
+  /// Returns the requested ViewModel instance.
+  ///
+  /// Example:
+  /// ```dart
+  /// class MyViewModel extends ViewModel {
+  ///   late final UserService userService;
+  ///
+  ///   @override
+  ///   void onInit() {
+  ///     // Host ViewModel collects dependency config and delegates to State
+  ///     userService = readViewModel<UserService>();
+  ///   }
+  /// }
+  /// ```
+  T readViewModel<T extends ViewModel>({
+    String? key,
+    Object? tag,
+    ViewModelFactory<T>? factory,
+  }) {
+    return dependencyHandler.readViewModel<T>(
+      key: key,
+      tag: tag,
+      factory: factory,
+    );
+  }
+
+  /// Watches a dependency ViewModel of type [T] and listens for changes.
+  ///
+  /// Similar to [readViewModel] but automatically listens for changes in the dependency
+  /// ViewModel and triggers rebuilds when the dependency changes.
+  ///
+  /// This method allows ViewModels to access other ViewModels as dependencies with
+  /// automatic change notification. When the dependency ViewModel changes, this
+  /// ViewModel will also notify its listeners.
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify a specific ViewModel instance
+  /// - [tag]: Optional tag for ViewModel lookup
+  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  ///
+  /// Returns the requested ViewModel instance with change listening enabled.
+  ///
+  /// Example:
+  /// ```dart
+  /// class UserProfileViewModel extends ViewModel {
+  ///   late final AuthViewModel authViewModel;
+  ///
+  ///   @override
+  ///   void onInit() {
+  ///     // Watch auth changes and automatically update when auth state changes
+  ///     authViewModel = watchViewModel<AuthViewModel>();
+  ///   }
+  ///
+  ///   String get displayName => authViewModel.user?.name ?? 'Guest';
+  /// }
+  /// ```
+  T watchViewModel<T extends ViewModel>({
+    String? key,
+    Object? tag,
+    ViewModelFactory<T>? factory,
+  }) {
+    return dependencyHandler.watchViewModel<T>(
+      key: key,
+      tag: tag,
+      factory: factory,
+    );
+  }
+
+  /// Attempts to read a dependency ViewModel of type [T].
+  ///
+  /// Similar to [readViewModel] but returns `null` if the dependency is not found
+  /// instead of throwing an exception.
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify the specific dependency instance
+  /// - [tag]: Optional tag to identify the specific dependency instance
+  ///
+  /// Returns the dependency ViewModel instance if found, otherwise `null`.
+  ///
+  /// Example:
+  /// ```dart
+  /// class OptionalFeatureViewModel with ViewModel {
+  ///   String get status {
+  ///     final authViewModel = maybeReadViewModel<AuthViewModel>();
+  ///     return authViewModel?.isAuthenticated == true ? 'Authenticated' : 'Guest';
+  ///   }
+  /// }
+  /// ```
+  T? maybeReadViewModel<T extends ViewModel>({
+    String? key,
+    Object? tag,
+    ViewModelFactory<T>? factory,
+  }) {
+    try {
+      return readViewModel<T>(key: key, tag: tag);
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Removes a listener from this ViewModel.
   ///
   /// Parameters:
@@ -336,7 +458,7 @@ mixin class ViewModel implements InstanceLifeCycle {
     if (_initializedDevtool) return;
     _initializedDevtool = true;
     if (kDebugMode) {
-      _viewModelLifecycles.add(DependencyTracker.instance);
+      // _viewModelLifecycles.add(DependencyTracker.instance);
       DevToolsService.instance.initialize();
     }
   }
@@ -554,6 +676,7 @@ abstract class StateViewModel<T> with ViewModel {
     _listeners.clear();
     _stateListeners.clear();
     _streamSubscription.cancel();
+    dependencyHandler.clearDependency();
     super.dispose();
   }
 
