@@ -7,6 +7,7 @@
 /// more focused on its core responsibilities.
 library;
 
+
 import 'model.dart' as model;
 import 'view_model.dart';
 
@@ -30,19 +31,12 @@ import 'view_model.dart';
 /// }
 /// ```
 class DependencyHandler {
-  /// List to store dependency configurations for ViewModels.
-  final List<model.ViewModelDependencyConfig> _dependencies = [];
-
   /// Callback function to resolve ViewModel dependencies.
   /// This is typically set by ViewModelStateMixin to delegate dependency resolution
   /// to the State that manages the ViewModel.
   T Function<T extends ViewModel>({
     required model.ViewModelDependencyConfig<T> dependency,
   })? _dependencyResolver;
-
-  /// Gets a read-only list of current dependencies.
-  List<model.ViewModelDependencyConfig> get dependencies =>
-      List.unmodifiable(_dependencies);
 
   /// Checks if a dependency resolver is currently set.
   bool get hasResolver => _dependencyResolver != null;
@@ -68,7 +62,6 @@ class DependencyHandler {
   /// to prevent memory leaks and ensure clean disposal.
   void dispose() {
     _dependencyResolver = null;
-    _dependencies.clear();
   }
 
   /// Reads a dependency ViewModel from the current context.
@@ -99,10 +92,6 @@ class DependencyHandler {
         factory: factory,
       ),
     );
-
-    // Store dependency configuration for tracking
-    _dependencies.add(dependencyConfig);
-
     // Check if there's a registered dependency resolver callback
     if (_dependencyResolver != null) {
       // Delegate to the registered resolver (typically from ViewModelStateMixin)
@@ -139,14 +128,7 @@ class DependencyHandler {
     }
   }
 
-  /// Gets the number of stored dependencies.
-  int get dependencyCount => _dependencies.length;
-
-  /// Checks if any dependencies are currently stored.
-  bool get hasDependencies => _dependencies.isNotEmpty;
-
   void clearDependency() {
-    _dependencies.clear();
     _dependencyResolver = null;
   }
 }

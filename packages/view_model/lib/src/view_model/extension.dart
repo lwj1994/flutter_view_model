@@ -420,7 +420,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       _stateListeners[res] = true;
       _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
-        if (context.mounted) {
+        if (context.mounted &&
+            SchedulerBinding.instance.schedulerPhase !=
+                SchedulerPhase.persistentCallbacks) {
           setState(() {});
         } else {
           SchedulerBinding.instance.addPostFrameCallback((_) {
