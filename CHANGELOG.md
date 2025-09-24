@@ -44,9 +44,7 @@ class UserProfileViewModel extends ViewModel {
 ```
 
 **Note**: 
-- ViewModel-to-ViewModel `watchViewModel` does not create listening relationships between ViewModels themselves, but allows the calling ViewModel to react to changes in the watched ViewModel.
 - When using `watchViewModel`, you'll receive `onDependencyNotify` callbacks when the watched ViewModel changes.
-- You can also manually call `vm.listen()` for custom listening logic.
 
 
 
@@ -136,7 +134,13 @@ class MyViewModelFactory extends ViewModelFactory<MyViewModel> {
 find existing ViewModel by tag:
 
 ```dart
-MyViewModel get viewModel => watchViewModel<MyViewModel>(tag: 'tag');
+late final MyViewModel viewModel;
+
+@override
+void initState() {
+  super.initState();
+  viewModel = watchViewModel<MyViewModel>(tag: 'tag');
+}
 ```
 
 ## 0.4.1
