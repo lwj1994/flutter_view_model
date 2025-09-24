@@ -148,11 +148,17 @@ class _MyPageState extends State<MyPage>
     with ViewModelStateMixin<MyPage> {
   // 1. 混入 Mixin
 
-  // 2. 使用 watchViewModel 获取 ViewModel
-  // 当 MyPage 第一次构建时，MySimpleViewModelFactory 的 build() 方法会被调用来创建实例。
-  // 当 MyPage 被销毁时，如果此 viewModel 没有其他监听者，它也会被销毁。
-  MySimpleViewModel get simpleVM =>
-      watchViewModel<MySimpleViewModel>(factory: MySimpleViewModelFactory());
+  late final MySimpleViewModel simpleVM;
+
+  @override
+  void initState() {
+    super.initState();
+    // 2. 在 initState 中获取 ViewModel
+    // 当 MyPage 第一次构建时，MySimpleViewModelFactory 的 build() 方法会被调用来创建实例。
+    // 当 MyPage 被销毁时，如果此 viewModel 没有其他监听者，它也会被销毁。
+    simpleVM =
+        watchViewModel<MySimpleViewModel>(factory: MySimpleViewModelFactory());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -340,9 +346,8 @@ class UserProfileViewModel extends ViewModel {
 ```
 
 **注意**：
-- ViewModel 之间的 `watchViewModel` 不会在 ViewModel 之间创建监听关系，而是允许调用方 ViewModel 对被观察 ViewModel 的变化做出反应。
 - 使用 `watchViewModel` 时，您将收到 `onDependencyNotify` 回调，当被观察的 ViewModel 变化时。
-- 您也可以手动调用 `vm.listen()` 进行自定义监听逻辑。
+
 
 ## 4. 有状态的 ViewModel (`StateViewModel<S>`)
 
@@ -479,10 +484,14 @@ class MyCounterPage extends StatefulWidget {
 
 class _MyCounterPageState extends State<MyCounterPage>
     with ViewModelStateMixin<MyCounterPage> {
+  late final MyCounterViewModel counterVM;
 
-  MyCounterViewModel get counterVM =>
-      watchViewModel<MyCounterViewModel>(
-          factory: MyCounterViewModelFactory(initialCount: 10)); // 您可以传入初始值
+  @override
+  void initState() {
+    super.initState();
+    counterVM = watchViewModel<MyCounterViewModel>(
+        factory: MyCounterViewModelFactory(initialCount: 10)); // 您可以传入初始值
+  }
 
   @override
   Widget build(BuildContext context) {

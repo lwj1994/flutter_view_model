@@ -42,9 +42,15 @@ import 'model.dart';
 /// }
 ///
 /// class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
-///   MyViewModel get viewModel => watchViewModel<MyViewModel>(
-///     factory: MyViewModelFactory(),
-///   );
+///   late final MyViewModel viewModel;
+///
+///   @override
+///   void initState() {
+///     super.initState();
+///     viewModel = watchViewModel<MyViewModel>(
+///       factory: MyViewModelFactory(),
+///     );
+///   }
 ///
 ///   @override
 ///   Widget build(BuildContext context) {
@@ -236,10 +242,29 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   ///
   /// Example:
   /// ```dart
-  /// MyViewModel get viewModel => watchViewModel<MyViewModel>(
-  ///   factory: MyViewModelFactory(),
-  ///   key: 'shared-instance', // Optional
-  /// );
+  /// class MyWidget extends StatefulWidget {
+  ///   @override
+  ///   _MyWidgetState createState() => _MyWidgetState();
+  /// }
+  ///
+  /// class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
+  ///   late final MyViewModel viewModel;
+  ///
+  ///   @override
+  ///   void initState() {
+  ///     super.initState();
+  ///     viewModel = watchViewModel<MyViewModel>(
+  ///       factory: MyViewModelFactory(),
+  ///       key: 'shared-instance', // Optional
+  ///     );
+  ///   }
+  ///
+  ///   @override
+  ///   Widget build(BuildContext context) {
+  ///     // use viewModel here
+  ///     return Container();
+  ///   }
+  /// }
   /// ```
   ///
   /// Note: ViewModels are automatically disposed when no widgets are watching them.

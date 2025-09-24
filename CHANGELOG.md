@@ -48,6 +48,8 @@ class UserProfileViewModel extends ViewModel {
 * fix `ViewModel.read`
 
 
+
+
 ## 0.4.6
 * The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
 and debugging capabilities for your ViewModels during development.
@@ -133,7 +135,13 @@ class MyViewModelFactory extends ViewModelFactory<MyViewModel> {
 find existing ViewModel by tag:
 
 ```dart
-MyViewModel get viewModel => watchViewModel<MyViewModel>(tag: 'tag');
+late final MyViewModel viewModel;
+
+@override
+void initState() {
+  super.initState();
+  viewModel = watchViewModel<MyViewModel>(tag: 'tag');
+}
 ```
 
 ## 0.4.1
