@@ -1,1 +1,1 @@
-/Users/luwenjie/Documents/Echoingtech/view_model/packages/view_model/README.md
+packages/view_model/README.md
