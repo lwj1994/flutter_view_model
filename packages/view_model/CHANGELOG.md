@@ -1,1 +1,1 @@
-../../CHANGELOG.md
+/Users/luwenjie/Documents/Echoingtech/view_model/packages/view_model/CHANGELOG.md
