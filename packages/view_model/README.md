@@ -307,12 +307,18 @@ suitable for scenarios where you need to read the ViewModel state or perform ope
 - When no Widget is bound to the ViewModel, it will be automatically destroyed.
 
 
-### Accessing ViewModels from other ViewModels
+### 3.5 Accessing ViewModels from other ViewModels
 
 ViewModels can access other ViewModels using `readViewModel` and `watchViewModel`:
 
 - **`readViewModel`**: Access another ViewModel without creating a reactive connection.
 - **`watchViewModel`**: Create a reactive dependency - automatically get notified when the watched ViewModel changes.
+
+When a ViewModel (the HostVM ) accesses another ViewModel (the SubVM ) via watchViewModel , the framework automatically binds the SubVM 's lifecycle to the HostVM 's UI observer (i.e., the State object of the StatefulWidget ).
+
+This means both the SubVM and the HostVM are directly managed by the lifecycle of the same State object. When this State object is disposed, if neither the SubVM nor the HostVM has other observers, they will be disposed of together automatically.
+
+This mechanism ensures clear dependency relationships between ViewModels and enables efficient, automatic resource management.
 
 ```dart
 class UserProfileViewModel extends ViewModel {
@@ -329,17 +335,7 @@ class UserProfileViewModel extends ViewModel {
     final authVM = watchViewModel<AuthViewModel>();
     // This ViewModel will be notified when authVM changes
   }
-  
-  @override
-  void onDependencyNotify(ViewModel viewModel) {
-    // Called when a watched ViewModel changes
-    if (viewModel is AuthViewModel) {
-      // Respond to authentication changes
-      _handleAuthChange(viewModel);
-    }
-  }
-  
-  
+    
   void manualListening() {
     final authVM = readViewModel<AuthViewModel>();
     // You can also manually listen to any ViewModel
@@ -350,9 +346,6 @@ class UserProfileViewModel extends ViewModel {
   }
 }
 ```
-
-**Note**:
-- When using `watchViewModel`, you will receive an `onDependencyNotify` callback when the watched ViewModel changes.
 
 ## 4. Stateful ViewModel (`StateViewModel<S>`)
 
