@@ -5,7 +5,19 @@
 ViewModels can access other ViewModels using `readViewModel` and `watchViewModel`:
 
 - **`readViewModel`**: Access another ViewModel without reactive connection
-- **`watchViewModel`**: Create reactive dependency - automatically notifies when the watched ViewModel changes
+- **`watchViewModel`**: Create reactive dependency - automatically notifies when the watched
+  ViewModel changes
+
+When a ViewModel (the HostVM ) accesses another ViewModel (the SubVM ) via watchViewModel , the
+framework automatically binds the SubVM 's lifecycle to the HostVM 's UI observer (i.e., the State
+object of the StatefulWidget ).
+
+This means both the SubVM and the HostVM are directly managed by the lifecycle of the same State
+object. When this State object is disposed, if neither the SubVM nor the HostVM has other observers,
+they will be disposed of together automatically.
+
+This mechanism ensures clear dependency relationships between ViewModels and enables efficient,
+automatic resource management.
 
 ```dart
 class UserProfileViewModel extends ViewModel {
@@ -16,13 +28,13 @@ class UserProfileViewModel extends ViewModel {
       _fetchProfile(authVM!.userId);
     }
   }
-  
+
   void setupReactiveAuth() {
     // Reactive access - auto-updates when auth changes
     final authVM = watchViewModel<AuthViewModel>();
     // This ViewModel will be notified when authVM changes
   }
-  
+
   @override
   void onDependencyNotify(ViewModel viewModel) {
     // Called when watched ViewModels change
@@ -31,7 +43,7 @@ class UserProfileViewModel extends ViewModel {
       _handleAuthChange(viewModel);
     }
   }
-  
+
   void manualListening() {
     final authVM = readViewModel<AuthViewModel>();
     // You can also manually listen to any ViewModel
@@ -43,19 +55,17 @@ class UserProfileViewModel extends ViewModel {
 }
 ```
 
-**Note**: 
-- When using `watchViewModel`, you'll receive `onDependencyNotify` callbacks when the watched ViewModel changes.
+**Note**:
 
-
-
+- When using `watchViewModel`, you'll receive `onDependencyNotify` callbacks when the watched
+  ViewModel changes.
 
 ## 0.4.6
+
 * The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
-and debugging capabilities for your ViewModels during development.
+  and debugging capabilities for your ViewModels during development.
 
 create `devtools_options.yaml` in root directory of project.
-
-
 
 ```yaml
 description: This file stores settings for Dart & Flutter DevTools.
@@ -67,15 +77,14 @@ extensions:
 ![](https://i.imgur.com/5itXPYD.png)
 ![](https://imgur.com/83iOQhy.png)
 
-
 * Breaking change: rename `initConfig` to `initialize`
 
-
 ## 0.4.5
+
 * Add `DefaultViewModelFactory` for convenient and generic ViewModel factory creation.
 
-
 ## 0.4.4
+
 * Add `ViewModel.maybeRead`
 
 ## 0.4.3
