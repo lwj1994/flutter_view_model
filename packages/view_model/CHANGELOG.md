@@ -55,11 +55,6 @@ class UserProfileViewModel extends ViewModel {
 }
 ```
 
-**Note**:
-
-- When using `watchViewModel`, you'll receive `onDependencyNotify` callbacks when the watched
-  ViewModel changes.
-
 ## 0.4.6
 
 * The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
