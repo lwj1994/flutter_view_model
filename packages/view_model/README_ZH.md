@@ -309,6 +309,12 @@ ViewModel 可以使用 `readViewModel` 和 `watchViewModel` 访问其他 ViewMod
 - **`readViewModel`**：访问另一个 ViewModel 而不建立响应式连接
 - **`watchViewModel`**：创建响应式依赖 - 当被观察的 ViewModel 变化时自动通知
 
+当一个 ViewModel （宿主 HostVM ）通过 watchViewModel 访问另一个 ViewModel （子 SubVM ）时，会自动将 SubVM 的生命周期与 HostVM 的UI观察者（即 StatefulWidget 的 State 对象）进行绑定。
+
+这意味着， SubVM 和 HostVM 都直接受同一个 State 对象的生命周期管理。当这个 State 对象被销毁时，如果 SubVM 和 HostVM 都没有其他观察者，它们将被一同自动回收。
+
+这种机制确保了 ViewModel 之间的依赖关系清晰，并实现了高效、自动的资源管理。
+
 ```dart
 class UserProfileViewModel extends ViewModel {
   void loadData() {
@@ -325,14 +331,6 @@ class UserProfileViewModel extends ViewModel {
     // 当 authVM 变化时，此 ViewModel 将收到通知
   }
   
-  @override
-  void onDependencyNotify(ViewModel viewModel) {
-    // 当被观察的 ViewModel 变化时调用
-    if (viewModel is AuthViewModel) {
-      // 响应认证变化
-      _handleAuthChange(viewModel);
-    }
-  }
   
   void manualListening() {
     final authVM = readViewModel<AuthViewModel>();
@@ -344,9 +342,6 @@ class UserProfileViewModel extends ViewModel {
   }
 }
 ```
-
-**注意**：
-- 使用 `watchViewModel` 时，您将收到 `onDependencyNotify` 回调，当被观察的 ViewModel 变化时。
 
 
 ## 4. 有状态的 ViewModel (`StateViewModel<S>`)
