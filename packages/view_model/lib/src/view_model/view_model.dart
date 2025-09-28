@@ -722,6 +722,12 @@ abstract class StateViewModel<T> with ViewModel {
   /// Note: This method is protected and should only be called from within
   /// the ViewModel implementation.
   ///
+  /// This method internally uses the `isSameState` function from
+  /// [ViewModelConfig] to determine if the new state is the same as the
+  /// current state. If they are considered the same, no update will be triggered.
+  /// By default, this comparison is done by checking the memory addresses
+  /// of the state objects using `identical()`.
+  ///
   /// Example:
   /// ```dart
   /// void increment() {
