@@ -104,15 +104,15 @@ class ViewModelStateStore<S> implements StateStore<S> {
   /// if available, otherwise falls back to identity comparison.
   ///
   /// Parameters:
-  /// - [c]: Current state
-  /// - [n]: New state
+  /// - [current]: Current state
+  /// - [newState]: New state to compare against
   ///
   /// Returns `true` if the states are considered equal.
-  bool _isSameState(S c, S n) {
+  bool _isSameState(S current, S newState) {
     if (ViewModel.config.isSameState != null) {
-      return ViewModel.config.isSameState!(c, n);
+      return ViewModel.config.isSameState!(current, newState);
     } else {
-      return identical(c, n);
+      return identical(current, newState);
     }
   }
 

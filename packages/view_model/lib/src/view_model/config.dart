@@ -31,20 +31,22 @@ class ViewModelConfig {
   /// Defaults to `false` for production builds.
   final bool logEnable;
 
-  /// Custom state equality comparison function.
+  /// Custom state equality comparison function for `StateViewModel`.
   ///
-  /// This function is used to determine if two states are considered equal.
-  /// If this function returns `true`, the ViewModel will skip the update
-  /// and won't notify listeners, preventing unnecessary rebuilds.
+  /// This function is used by [StateViewModel] to determine if two states are
+  /// considered equal. If this function returns `true`, the `StateViewModel`
+  /// will skip the update and won't notify listeners, preventing unnecessary
+  /// rebuilds.
+  ///
+  /// By default, if this function is not provided, the system uses `identical()`
+  /// to compare the memory addresses of the two state objects.
   ///
   /// Parameters:
-  /// - [previous]: The previous state value
-  /// - [state]: The new state value
+  /// - [previous]: The previous state value.
+  /// - [current]: The new state value.
   ///
   /// Returns `true` if the states should be considered equal.
-  ///
-  /// If not provided, the system defaults to identity comparison (`identical()`).
-  final bool Function(dynamic previous, dynamic state)? isSameState;
+  final bool Function(dynamic previous, dynamic current)? isSameState;
 
   /// Creates a new ViewModel configuration.
   ///
