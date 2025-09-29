@@ -65,7 +65,7 @@ class CounterViewModel extends StateViewModel<CounterState> {
 ```dart
 class CounterViewModelFactory with ViewModelFactory<CounterViewModel> {
   @override
-  String? key() => 'shared-counter-viewmodel';
+  Object? key() => 'shared-counter-viewmodel';
   // ...
 }
 ```

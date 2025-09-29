@@ -104,7 +104,7 @@ class DependencyHandler {
   ///
   /// Returns the requested ViewModel instance.
   T getViewModel<T extends ViewModel>({
-    String? key,
+    Object? key,
     Object? tag,
     ViewModelFactory<T>? factory,
     bool listen = false,
@@ -156,7 +156,7 @@ class DependencyHandler {
   /// }
   /// ```
   T? maybeGetViewModel<T extends ViewModel>({
-    String? key,
+    Object? key,
     Object? tag,
     ViewModelFactory<T>? factory,
     bool listen = false,

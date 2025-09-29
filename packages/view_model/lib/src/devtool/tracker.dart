@@ -345,7 +345,7 @@ class ViewModelInfo {
   final String typeName;
 
   /// Optional key used when creating this ViewModel instance.
-  final String? key;
+  final Object? key;
 
   /// Optional tag used when creating this ViewModel instance.
   final String? tag;
@@ -403,7 +403,7 @@ class ViewModelInfo {
   ViewModelInfo copyWith({
     String? instanceId,
     String? typeName,
-    String? key,
+    Object? key,
     String? tag,
     DateTime? createTime,
     Set<String>? watchers,

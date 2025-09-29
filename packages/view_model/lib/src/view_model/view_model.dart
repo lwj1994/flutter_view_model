@@ -17,6 +17,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:meta/meta.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -121,7 +122,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///   // Use the ViewModel
   /// }
   /// ```
-  static T? maybeRead<T extends ViewModel>({String? key, Object? tag}) {
+  static T? maybeRead<T extends ViewModel>({Object? key, Object? tag}) {
     try {
       return read(key: key, tag: tag);
     } catch (e) {
@@ -151,7 +152,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// final vm = ViewModel.read<MyViewModel>(key: 'global-counter');
   /// vm.increment();
   /// ```
-  static T read<T extends ViewModel>({String? key, Object? tag}) {
+  static T read<T extends ViewModel>({Object? key, Object? tag}) {
     T? vm;
 
     /// find key firstly
@@ -271,7 +272,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   T readViewModel<T extends ViewModel>({
-    String? key,
+    Object? key,
     Object? tag,
     ViewModelFactory<T>? factory,
   }) {
@@ -315,7 +316,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   T watchViewModel<T extends ViewModel>({
-    String? key,
+    Object? key,
     Object? tag,
     ViewModelFactory<T>? factory,
   }) {
@@ -374,7 +375,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   T? maybeReadViewModel<T extends ViewModel>({
-    String? key,
+    Object? key,
     Object? tag,
     ViewModelFactory<T>? factory,
   }) {
@@ -424,7 +425,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   T? maybeWatchViewModel<T extends ViewModel>({
-    String? key,
+    Object? key,
     Object? tag,
     ViewModelFactory<T>? factory,
   }) {
@@ -833,7 +834,7 @@ class AutoDisposeController {
 ///   MyViewModel build() => MyViewModel();
 ///
 ///   @override
-///   String? key() => 'shared-instance'; // Optional: for sharing
+///   Object? key() => 'shared-instance'; // Optional: for sharing
 ///
 ///   @override
 ///   Object? getTag() => 'my-tag'; // Optional: for identification
@@ -852,9 +853,9 @@ abstract mixin class ViewModelFactory<T> {
   /// Example:
   /// ```dart
   /// @override
-  /// String? key() => 'global-counter'; // Share across app
+  /// Object? key() => 'global-counter'; // Share across app
   /// ```
-  String? key() => (singleton()) ? _defaultShareId : null;
+  Object? key() => (singleton()) ? _defaultShareId : null;
 
   /// Returns a tag to identify or categorize this ViewModel.
   ///
@@ -953,13 +954,13 @@ abstract class ViewModelLifecycle {
 /// A default generic ViewModelFactory for quickly creating ViewModel factories.
 class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
   final T Function() builder;
-  late final String? _key;
+  late final Object? _key;
   late final Object? _tag;
   final bool isSingleton;
 
   DefaultViewModelFactory({
     required this.builder,
-    String? key,
+    Object? key,
     Object? tag,
 
     /// Whether to use singleton mode. This is just a convenient way to set a unique key for you.
@@ -971,7 +972,7 @@ class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
   }
 
   @override
-  String? key() {
+  Object? key() {
     if (_key == null) {
       return super.key();
     } else {
