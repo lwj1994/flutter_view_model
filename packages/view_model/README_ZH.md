@@ -232,7 +232,7 @@ void dispose() {
 | 方法/属性      | 类型        | 可选         | 描述                                                                                                                                            |
 |------------|-----------|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
 | `build()`  | `T`       | ❌ 必须实现     | 创建 ViewModel 实例的工厂方法。通常在这里传递构造函数参数。                                                                                                          |
-| `key()`    | `String?` | ✅ 可选       | 为 ViewModel 提供唯一标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/页面共享）。 | |                              |
+| `key()`    | `Object?` | ✅ 可选       | 为 ViewModel 提供唯一标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/页面共享）。 | |                              |
 | `getTag()` | `Object?` | ✅          | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                                                   |
 
 ```dart
@@ -250,9 +250,11 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   /// 共享 ViewModel 的 key。key 是唯一的，同一个 key 只会创建一个 ViewModel 实例。
   /// 如果 key 为 null，则不会发生共享。
   @override
-  String? key() => "user-profile";
+  Object? key() => "user-profile";
 }
 ```
+
+> **重要提示**: 当使用自定义对象作为 `key` 时，为了确保 `view_model` 能够正确定位和共享 `ViewModel` 实例，您必须在该自定义对象中重写 `==` 操作符和 `hashCode` getter 方法。
 
 ### 3.2 watchViewModel
 
@@ -262,7 +264,7 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 ```dart
 VM watchViewModel<VM extends ViewModel>({
   ViewModelFactory<VM>? factory,
-  String? key,
+  Object? key,
   Object? tag,
 });
 ```
@@ -270,7 +272,7 @@ VM watchViewModel<VM extends ViewModel>({
 | 参数名       | 类型                      | 可选 | 描述                                                                                                                                           |
 |-----------|-------------------------|----|----------------------------------------------------------------------------------------------------------------------------------------------|
 | `factory` | `ViewModelFactory<VM>?` | ✅  | 提供 ViewModel 的构造方法。可选；如果在缓存中找不到现有实例，将使用它创建新实例。                                                                                             |
-| `key`     | `String?`               | ✅  | 指定唯一键以支持共享同一个 ViewModel 实例。首先尝试在缓存中查找具有相同 key 的实例。                                                                                           |
+| `key`     | `Object?`               | ✅  | 指定唯一键以支持共享同一个 ViewModel 实例。首先尝试在缓存中查找具有相同 key 的实例。                                                                                           |
 | `tag`     | `Object?`               | ✅  | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                                                   |
 
 __🔍 查找逻辑优先级（重要）__

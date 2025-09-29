@@ -1,6 +1,8 @@
+
 ## 0.5.0
 
 * support ViewModel-to-ViewModel Access
+* Breaking change: The `key` parameter in `watchViewModel`, `readViewModel`, and `ViewModel.read` has been changed from `String?` to `Object?`. This allows for the use of custom objects as keys, but requires proper implementation of `==` and `hashCode` for custom key objects.
 
 ViewModels can access other ViewModels using `readViewModel` and `watchViewModel`:
 
@@ -90,7 +92,7 @@ extensions:
 ```dart
 VM watchViewModel<VM extends ViewModel>({
   ViewModelFactory<VM>? factory,
-  String? key,
+  Object? key,
   Object? tag,
 });
 ```

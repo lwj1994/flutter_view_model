@@ -16,6 +16,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -271,7 +272,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// Dependencies are automatically established when ViewModels call readViewModel.
   VM watchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
-    String? key,
+    Object? key,
     Object? tag,
   }) {
     final viewModel = _getViewModel<VM>(
@@ -320,7 +321,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// Dependencies are automatically established when ViewModels call readViewModel.
   VM readViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
-    String? key,
+    Object? key,
     Object? tag,
   }) {
     final viewModel = _getViewModel<VM>(
@@ -396,7 +397,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     if (_dispose) {
       throw StateError("state is disposed");
     }
-    final String key = factory.key() ?? _defaultViewModelKey;
+    final Object key = factory.key() ?? _defaultViewModelKey;
     final tag = factory.getTag();
     final res = runWithResolver(
       () {
@@ -490,7 +491,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// ```
   VM? maybeWatchViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
-    String? key,
+    Object? key,
     Object? tag,
   }) {
     try {
@@ -523,7 +524,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// ```
   VM? maybeReadViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
-    String? key,
+    Object? key,
     Object? tag,
   }) {
     try {

@@ -12,7 +12,7 @@ class TodoViewModelFactory with ViewModelFactory<TodoViewModel> {
   TodoViewModel build() => TodoViewModel();
 
   @override
-  String? key() => 'shared-todo-viewmodel';
+  Object? key() => 'shared-todo-viewmodel';
 }
 
 class TodoPage extends StatefulWidget {

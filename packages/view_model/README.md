@@ -236,8 +236,10 @@ instances. It is used via mixing (with).
 | Method/Property | Type      | Optional         | Description                                                                                                                                            |
 |-----------------|-----------|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `build()`       | `T`       | ❌ Must implement | The factory method to create a ViewModel instance. Typically, constructor parameters are passed here.                                                  |
-| `key()`         | `String?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing). | |                              |
+| `key()`         | `Object?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing). |
 | `getTag()`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and  it's used by find ViewModel by `watchViewModel(tag:tag)`.                           |
+
+> **Note**: If you use a custom object as a key, you must properly override the `==` operator and `hashCode` to ensure that the ViewModel instance can be correctly retrieved from the cache.
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
@@ -254,7 +256,7 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
   /// The key for sharing the ViewModel. The key is unique, and only one ViewModel instance will be created for the same key.
   /// If the key is null, no sharing will occur.
   @override
-  String? key() => "user-profile";
+  Object? key() => "user-profile";
 }
 ```
 
@@ -266,7 +268,7 @@ automatically trigger `setState()` to rebuild the Widget when it changes.
 ```dart
 VM watchViewModel<VM extends ViewModel>({
   ViewModelFactory<VM>? factory,
-  String? key,
+  Object? key,
   Object? tag,
 });
 ```
@@ -274,7 +276,7 @@ VM watchViewModel<VM extends ViewModel>({
 | Parameter Name | Type                    | Optional | Description                                                                                                                                           |
 |----------------|-------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `factory`      | `ViewModelFactory<VM>?` | ✅        | Provides the construction method for the ViewModel. Optional; if an existing instance is not found in the cache, it will be used to create a new one. |
-| `key`          | `String?`               | ✅        | Specifies a unique key to support sharing the same ViewModel instance. First, it tries to find an instance with the same key in the cache.            |
+| `key`          | `Object?`               | ✅        | Specifies a unique key to support sharing the same ViewModel instance. First, it tries to find an instance with the same key in the cache.            |
 | `tag`          | `Object?`               | ✅        | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and  it's used by find ViewModel by `watchViewModel(tag:tag)`.                          |
 
 __🔍 Lookup Logic Priority (Important)__

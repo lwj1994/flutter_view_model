@@ -26,7 +26,7 @@ class TestPageState extends State<TestPage> with ViewModelStateMixin {
 
 class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   final String initState;
-  final String? keyV;
+  final Object? keyV;
   final Object? tag;
   final bool isSingleton;
 
@@ -36,7 +36,7 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   }
 
   @override
-  String? key() {
+  Object? key() {
     if (keyV == null) return super.key();
     return keyV;
   }
@@ -78,7 +78,7 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 
   TestViewModelFactory copyWith({
     String? initState,
-    String? keyV,
+    Object? keyV,
     bool? isSingleton,
     Object? tag,
   }) {
@@ -137,7 +137,7 @@ class DisposeErrorViewModel extends ViewModel {
 
 class TestStatelessViewModelFactory
     with ViewModelFactory<TestStatelessViewModel> {
-  final String? keyV;
+  final Object? keyV;
   final bool isSingleton;
 
   TestStatelessViewModelFactory({
@@ -151,7 +151,7 @@ class TestStatelessViewModelFactory
   }
 
   @override
-  String? key() {
+  Object? key() {
     return keyV;
   }
 

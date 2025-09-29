@@ -15,7 +15,7 @@ class ViewModelDependencyConfig<T extends ViewModel> {
 
 class ViewModelConfig<T extends ViewModel> {
   /// Optional key to identify a specific ViewModel instance
-  final String? key;
+  final Object? key;
 
   /// Optional tag for ViewModel lookup
   final Object? tag;

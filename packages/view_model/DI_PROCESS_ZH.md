@@ -95,7 +95,7 @@ class DependencyHandler {
 ```dart
 // in view_model/lib/src/view_model/view_model.dart
 
-T readViewModel<T extends ViewModel>({String? name, String? key}) {
+T readViewModel<T extends ViewModel>({String? name, Object? key}) {
   // 步骤 3.1: 调用 dependencyHandler 来获取 ViewModel
   return dependencyHandler.getViewModel<T>(
     () => ViewModel.create<T>(),

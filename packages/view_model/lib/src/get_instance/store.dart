@@ -34,7 +34,7 @@ class Store<T> {
   final _streamController = StreamController<InstanceHandle<T>>.broadcast();
 
   /// Map of cached instances keyed by their unique identifiers.
-  final Map<String, InstanceHandle<T>> _instances = {};
+  final Map<Object, InstanceHandle<T>> _instances = {};
 
   /// Finds the most recently created instance, optionally filtered by tag.
   ///
@@ -444,7 +444,7 @@ class InstanceArg {
   /// When provided, this key is used to cache and retrieve instances.
   /// Multiple requests with the same key will return the same instance.
   /// If null, a UUID will be generated automatically.
-  final String? key;
+  final Object? key;
 
   /// Logical grouping identifier for related instances.
   ///
@@ -491,7 +491,7 @@ class InstanceArg {
   }
 
   InstanceArg copyWith({
-    String? key,
+    Object? key,
     Object? tag,
     String? watchId,
   }) {
@@ -512,7 +512,7 @@ class InstanceArg {
 
   factory InstanceArg.fromMap(Map<String, dynamic> map) {
     return InstanceArg(
-      key: map['key'] as String,
+      key: map['key'],
       tag: map['tag'] as Object,
       watchId: map['watchId'] as String,
     );

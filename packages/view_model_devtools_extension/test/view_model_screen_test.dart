@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 class ViewModelInfo {
   final String id;
   final String type;
-  final String? key;
+  final Object? key;
   final String? tag;
   final bool isActive;
   final DateTime createdAt;
