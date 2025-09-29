@@ -9,7 +9,7 @@ class ViewModelA extends ViewModel {
   ViewModelA() {
     // The readViewModel<ViewModelB>() call happens here, in the constructor body.
     // This is the core scenario we are testing.
-    viewModelB = readViewModel<ViewModelB>();
+    viewModelB = readExistingViewModel<ViewModelB>();
   }
 }
 

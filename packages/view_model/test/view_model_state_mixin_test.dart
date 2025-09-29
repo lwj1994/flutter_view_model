@@ -58,8 +58,6 @@ class _CounterWidgetState extends State<CounterWidget>
           DefaultViewModelFactory<CounterViewModel>(
             builder: () => CounterViewModel(),
           ),
-      key: widget.viewModelKey,
-      tag: widget.tag,
     );
   }
 
@@ -111,11 +109,14 @@ class _UserWidgetState extends State<UserWidget>
   void initState() {
     super.initState();
     if (widget.factory != null) {
-      viewModel = watchViewModel<UserViewModel>(
-        factory: widget.factory,
-        key: widget.viewModelKey,
-        tag: widget.tag,
-      );
+      viewModel = widget.factory != null
+          ? watchViewModel<UserViewModel>(
+              factory: widget.factory!,
+            )
+          : watchCachedViewModel(
+              key: widget.viewModelKey,
+              tag: widget.tag,
+            );
     }
   }
 
@@ -500,7 +501,7 @@ class _MaybeViewModelWidgetState extends State<MaybeViewModelWidget>
   void initState() {
     super.initState();
     // Try to get ViewModel that doesn't exist
-    viewModel = maybeWatchViewModel<CounterViewModel>(
+    viewModel = maybeWatchCachedViewModel<CounterViewModel>(
       key: 'non_existent_key',
     );
   }

@@ -18,7 +18,7 @@ class _SearchPageState extends State<SearchPage>
   String? _selectedCategory;
 
   TodoViewModel get todoVM =>
-      watchViewModel<TodoViewModel>(key: 'shared-todo-viewmodel');
+      watchCachedViewModel<TodoViewModel>(key: 'shared-todo-viewmodel');
 
   @override
   void dispose() {

@@ -113,7 +113,7 @@ class CircularViewModel1 with ViewModel {
   late final CircularViewModel2 _dependency;
 
   void initializeDependencies() {
-    _dependency = readViewModel<CircularViewModel2>();
+    _dependency = readExistingViewModel<CircularViewModel2>();
   }
 }
 
@@ -122,7 +122,7 @@ class CircularViewModel2 with ViewModel {
   late final CircularViewModel1 _dependency;
 
   void initializeDependencies() {
-    _dependency = readViewModel<CircularViewModel1>();
+    _dependency = readExistingViewModel<CircularViewModel1>();
   }
 }
 
@@ -144,7 +144,7 @@ void main() {
       final orphanViewModel = SettingsViewModel();
 
       expect(
-        () => orphanViewModel.readViewModel<AuthViewModel>(),
+        () => orphanViewModel.readExistingViewModel<AuthViewModel>(),
         throwsA(isA<StateError>()),
       );
     });
@@ -153,7 +153,7 @@ void main() {
       final orphanViewModel = SettingsViewModel();
 
       expect(
-        () => orphanViewModel.readViewModel<AuthViewModel>(),
+        () => orphanViewModel.readExistingViewModel<AuthViewModel>(),
         throwsA(isA<StateError>()),
       );
     });

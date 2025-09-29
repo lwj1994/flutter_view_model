@@ -46,7 +46,7 @@ The methods of ViewModel are straightforward:
 |-----------------------|--------------------------------------------------------|
 | `watchViewModel<T>()` | Bind to the ViewModel and automatically refresh the UI |
 | `readViewModel<T>()`  | Bind to the ViewModel without triggering UI refresh    |
-| `ViewModel.read<T>()` | Globally read an existing instance                     |
+| `ViewModel.readCached<T>()` | Globally read an existing instance                     |
 | `recycleViewModel()`  | Actively destroy a specific instance                   |
 | `listenState()`       | Listen for changes in the state object                 |
 | `listen()`            | Listen for `notifyListeners` calls                     |
@@ -157,7 +157,7 @@ class _MyPageState extends State<MyPage>
   @override
   void initState() {
     super.initState();
-    // 2. Use watchViewModel to get the ViewModel
+    // 2. Use watchViewModel to create and get the ViewModel
     // When MyPage is built for the first time, the build() method of MySimpleViewModelFactory will be called to create an instance.
     // When MyPage is disposed, if this viewModel has no other listeners, it will also be disposed.
     simpleVM =
@@ -260,65 +260,129 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 }
 ```
 
-### 3.2 watchViewModel
+### 3.2 API Reference & Migration Guide
 
-`watchViewModel<T>()` is one of the core methods, used to: obtain or create a ViewModel instance and
-automatically trigger `setState()` to rebuild the Widget when it changes.
+With the latest update, the API has been refined for clarity and predictability. Here’s a breakdown of the core methods and how to migrate your existing code.
+
+#### Creating and Watching a New Instance
+
+**`watchViewModel<VM extends ViewModel>({required ViewModelFactory<VM> factory})`**
+
+This is now the **only** method to create a new `ViewModel` instance. It requires a `factory` to construct the `ViewModel`.
+
+- **Usage**: Call this when a widget needs to create and own a `ViewModel`.
+- **Migration**: If you were previously using `watchViewModel` to both create and retrieve instances, your code for creating instances remains the same. Ensure you always provide a `factory`.
 
 ```dart
-VM watchViewModel<VM extends ViewModel>({
-  ViewModelFactory<VM>? factory,
-  Object? key,
-  Object? tag,
-});
+// Before
+// Might create or retrieve a cached instance
+final myVM = watchViewModel<MyViewModel>(factory: MyViewModelFactory());
+
+// After
+// Always creates a new instance
+final myVM = watchViewModel<MyViewModel>(factory: MyViewModelFactory());
 ```
 
-| Parameter Name | Type                    | Optional | Description                                                                                                                                           |
-|----------------|-------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `factory`      | `ViewModelFactory<VM>?` | ✅        | Provides the construction method for the ViewModel. Optional; if an existing instance is not found in the cache, it will be used to create a new one. |
-| `key`          | `Object?`               | ✅        | Specifies a unique key to support sharing the same ViewModel instance. First, it tries to find an instance with the same key in the cache.            |
-| `tag`          | `Object?`               | ✅        | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and  it's used by find ViewModel by `watchViewModel(tag:tag)`.                          |
+#### Reading a New Instance Without Listening
 
-__🔍 Lookup Logic Priority (Important)__
-The internal lookup and creation logic of `watchViewModel` is as follows (executed in priority
-order):
+**`readViewModel<VM extends ViewModel>({required ViewModelFactory<VM> factory})`**
 
-1. If a key is passed in:
-    * First, attempt to find an instance with the same key in the cache.
-    * If a factory exists, use the factory to get a new instance.
-    * If no factory is found and no instance is found, an error will be thrown.
-2. If a tag is passed in, attempt to find the latest created instance which has the same tag
-   in the cache.
-3. If nothing passed in, attempt to find the latest created instance of this type
-   in the cache.
+This method is used to retrieve or create a `ViewModel` instance but **does not** subscribe the widget to its updates. It's useful for one-time actions or data retrieval.
 
-> __⚠️ If no ViewModel instance of the specified type is found, an error will be thrown. Ensure
-that the ViewModel has been correctly created and registered before use.__
+- **Behavior**:
+  - If the `factory` provides a `key`, it will first attempt to find an instance with that `key` in the cache. If not found, it creates a new instance and caches it based on the `isSingleton` setting.
+  - If the `factory` does not provide a `key`, it will create a new, **non-shared** instance.
+- **Usage**: When you need to access a `ViewModel`'s methods or initial state without causing the widget to rebuild on its subsequent changes.
 
-✅ Once an instance is found, `watchViewModel` will automatically register for listening and call
-`setState()` to rebuild the current Widget when its state changes.
+```dart
+// If MyViewModelFactory provides a key, it may retrieve a cached instance.
+// Otherwise, it always creates a new instance.
+final myVM = readViewModel<MyViewModel>(factory: MyViewModelFactory());
+```
 
-### 3.3 readViewModel
+#### Watching a Cached Instance
 
-It has the same parameters as `watchViewModel`, but it does not trigger Widget rebuilding. It is
-suitable for scenarios where you need to read the ViewModel state or perform operations once.
+**`watchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
 
-### 3.4 ViewModel Lifecycle
+Use this method to find and listen to an **existing** `ViewModel` instance from the cache. It will **throw an error** if the instance is not found.
 
-- Both `watchViewModel` and `readViewModel` will bind to the ViewModel.
+- **Usage**: In a widget that needs to react to changes in a shared `ViewModel` that was created elsewhere.
+- **Lookup Priority**: `key` -> `tag` -> `Type`.
+- **Migration**: Replace `watchViewModel(key: ...)` or `watchViewModel(tag: ...)` with `watchCachedViewModel` when you intend to retrieve a cached instance.
+
+```dart
+// Before
+// Ambiguous: could create or retrieve
+final myVM = watchViewModel<MyViewModel>(key: "shared-key");
+
+// After
+// Explicit: retrieves a cached instance or throws
+final myVM = watchCachedViewModel<MyViewModel>(key: "shared-key");
+```
+
+#### Reading a Cached Instance
+
+**`readCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
+
+Use this to find and read an **existing** `ViewModel` without subscribing to updates. It will **throw an error** if not found.
+
+- **Usage**: For one-time access to a shared `ViewModel`'s state or methods.
+- **Migration**: Replace `readViewModel(key: ...)` or `readViewModel(tag: ...)` with `readCachedViewModel`.
+
+```dart
+// Before
+final myVM = readViewModel<MyViewModel>(key: "shared-key");
+
+// After
+// Explicit: retrieves a cached instance or throws
+final myVM = readCachedViewModel<MyViewModel>(key: "shared-key");
+```
+
+#### Safely Watching a Cached Instance (Nullable)
+
+**`maybeWatchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
+
+A safe alternative to `watchCachedViewModel`. It returns `null` instead of throwing an error if the `ViewModel` is not found in the cache.
+
+- **Usage**: When a shared `ViewModel` is optional.
+
+```dart
+// Retrieves a cached instance or returns null
+final myVM = maybeWatchCachedViewModel<MyViewModel>(key: "optional-key");
+if (myVM != null) {
+  // ... use myVM
+}
+```
+
+#### Safely Reading a Cached Instance (Nullable)
+
+**`maybeReadCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
+
+A safe alternative to `readCachedViewModel`. It returns `null` if the `ViewModel` is not found.
+
+- **Usage**: For optional, one-time access to a shared `ViewModel`.
+
+```dart
+// Retrieves a cached instance or returns null
+final myVM = maybeReadCachedViewModel<MyViewModel>(key: "optional-key");
+// ...
+```
+
+### 3.3 ViewModel Lifecycle
+
+- `watchViewModel`, `readViewModel`, `watchCachedViewModel`, and `readCachedViewModel` will bind the widget to the ViewModel.
 - When no Widget is bound to the ViewModel, it will be automatically destroyed.
 
+### 3.4 Accessing ViewModels from other ViewModels
 
-### 3.5 Accessing ViewModels from other ViewModels
+ViewModels can access other ViewModels using the same API:
 
-ViewModels can access other ViewModels using `readViewModel` and `watchViewModel`:
+- **`readCachedViewModel`**: Access another ViewModel without creating a reactive connection.
+- **`watchCachedViewModel`**: Create a reactive dependency - automatically get notified when the watched ViewModel changes.
 
-- **`readViewModel`**: Access another ViewModel without creating a reactive connection.
-- **`watchViewModel`**: Create a reactive dependency - automatically get notified when the watched ViewModel changes.
+When a ViewModel (the `HostVM`) accesses another ViewModel (the `SubVM`) via `watchCachedViewModel`, the framework automatically binds the `SubVM`'s lifecycle to the `HostVM`'s UI observer (i.e., the `State` object of the `StatefulWidget`).
 
-When a ViewModel (the HostVM ) accesses another ViewModel (the SubVM ) via watchViewModel , the framework automatically binds the SubVM 's lifecycle to the HostVM 's UI observer (i.e., the State object of the StatefulWidget ).
-
-This means both the SubVM and the HostVM are directly managed by the lifecycle of the same State object. When this State object is disposed, if neither the SubVM nor the HostVM has other observers, they will be disposed of together automatically.
+This means both the `SubVM` and the `HostVM` are directly managed by the lifecycle of the same `State` object. When this `State` object is disposed, if neither the `SubVM` nor the `HostVM` has other observers, they will be disposed of together automatically.
 
 This mechanism ensures clear dependency relationships between ViewModels and enables efficient, automatic resource management.
 
@@ -326,7 +390,7 @@ This mechanism ensures clear dependency relationships between ViewModels and ena
 class UserProfileViewModel extends ViewModel {
   void loadData() {
     // One-time access, no listening
-    final authVM = readViewModel<AuthViewModel>();
+    final authVM = readCachedViewModel<AuthViewModel>();
     if (authVM?.isLoggedIn == true) {
       _fetchProfile(authVM!.userId);
     }
@@ -334,12 +398,12 @@ class UserProfileViewModel extends ViewModel {
   
   void setupReactiveAuth() {
     // Reactive access - automatically updates when auth changes
-    final authVM = watchViewModel<AuthViewModel>();
+    final authVM = watchCachedViewModel<AuthViewModel>();
     // This ViewModel will be notified when authVM changes
   }
     
   void manualListening() {
-    final authVM = readViewModel<AuthViewModel>();
+    final authVM = readCachedViewModel<AuthViewModel>();
     // You can also manually listen to any ViewModel
     authVM?.listen(() {
       // Custom listening logic

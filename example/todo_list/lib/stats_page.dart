@@ -14,7 +14,7 @@ class StatsPage extends StatefulWidget {
 class _StatsPageState extends State<StatsPage>
     with ViewModelStateMixin<StatsPage> {
   TodoViewModel get todoVM =>
-      watchViewModel<TodoViewModel>(key: 'shared-todo-viewmodel');
+      watchCachedViewModel<TodoViewModel>(key: 'shared-todo-viewmodel');
 
   @override
   Widget build(BuildContext context) {
