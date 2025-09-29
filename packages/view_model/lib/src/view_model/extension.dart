@@ -16,6 +16,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
