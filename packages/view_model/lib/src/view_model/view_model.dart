@@ -287,7 +287,7 @@ mixin class ViewModel implements InstanceLifeCycle {
     );
   }
 
-  T readExistingViewModel<T extends ViewModel>({
+  T readCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
@@ -352,7 +352,7 @@ mixin class ViewModel implements InstanceLifeCycle {
     return vm;
   }
 
-  T watchExistingViewModel<T extends ViewModel>({
+  T watchCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
@@ -411,12 +411,12 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///   }
   /// }
   /// ```
-  T? maybeReadExistingViewModel<T extends ViewModel>({
+  T? maybeReadCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
     try {
-      return readExistingViewModel<T>(
+      return readCachedViewModel<T>(
         key: key,
         tag: tag,
       );
@@ -465,12 +465,12 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///   String get displayName => _auth?.user?.name ?? 'Guest';
   /// }
   /// ```
-  T? maybeWatchExistingViewModel<T extends ViewModel>({
+  T? maybeWatchCacheViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
     try {
-      return watchExistingViewModel<T>(
+      return watchCachedViewModel<T>(
         key: key,
         tag: tag,
       );
