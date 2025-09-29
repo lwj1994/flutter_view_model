@@ -17,7 +17,6 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:meta/meta.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -57,7 +56,8 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 ///
 /// This mixin provides core functionality for ViewModels including:
 /// - Lifecycle management through [InstanceLifeCycle]
-/// - Listener management for reactive updates
+/// - Listener
+/// management for reactive updates
 /// - Static methods for reading existing ViewModels
 /// - Integration with the ViewModel system
 ///
@@ -106,25 +106,28 @@ mixin class ViewModel implements InstanceLifeCycle {
 
   /// Attempts to read a ViewModel instance by [key] or [tag].
   ///
-  /// Returns `null` if no matching ViewModel is found, unlike [read] which
+  /// Returns `null` if no matching ViewModel is found, unlike [readCached] which
   /// throws an exception.
   ///
+  /// This method is useful for safely accessing a cached ViewModel without
+  /// causing an error if it doesn't exist.
+  ///
   /// Parameters:
-  /// - [key]: The unique key to search for
-  /// - [tag]: The tag to search for
+  /// - [key]: The unique key to search for.
+  /// - [tag]: The tag to search for.
   ///
   /// Returns the ViewModel instance if found, otherwise `null`.
   ///
   /// Example:
   /// ```dart
-  /// final vm = ViewModel.maybeRead<MyViewModel>(key: 'my-key');
+  /// final vm = ViewModel.maybeReadCached<MyViewModel>(key: 'my-key');
   /// if (vm != null) {
   ///   // Use the ViewModel
   /// }
   /// ```
-  static T? maybeRead<T extends ViewModel>({Object? key, Object? tag}) {
+  static T? maybeReadCached<T extends ViewModel>({Object? key, Object? tag}) {
     try {
-      return read(key: key, tag: tag);
+      return readCached(key: key, tag: tag);
     } catch (e) {
       return null;
     }
@@ -133,26 +136,29 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// Reads a ViewModel instance by [key] or [tag].
   ///
   /// This method searches for an existing ViewModel instance using the following priority:
-  /// 1. If [key] is provided, searches by the unique key first
-  /// 2. If [tag] is provided, searches by the tag
-  /// 3. If neither is provided, finds the most recently created instance of type [T]
+  /// 1. If [key] is provided, it searches by the unique key.
+  /// 2. If [tag] is provided, it searches by the tag.
+  /// 3. If neither is provided, it finds the most recently created instance of type [T].
+  ///
+  /// This method is for accessing already-created and cached ViewModels.
+  /// It does not create new instances.
   ///
   /// Parameters:
-  /// - [key]: The unique key from [ViewModelFactory.key]
-  /// - [tag]: The tag from [ViewModelFactory.getTag]
+  /// - [key]: The unique key from [ViewModelFactory.key].
+  /// - [tag]: The tag from [ViewModelFactory.getTag].
   ///
   /// Returns the matching ViewModel instance.
   ///
-  /// Throws [StateError] if:
-  /// - No matching ViewModel is found
-  /// - The found ViewModel has been disposed
+  /// Throws a [StateError] if:
+  /// - No matching ViewModel is found.
+  /// - The found ViewModel has been disposed.
   ///
   /// Example:
   /// ```dart
-  /// final vm = ViewModel.read<MyViewModel>(key: 'global-counter');
+  /// final vm = ViewModel.readCached<MyViewModel>(key: 'global-counter');
   /// vm.increment();
   /// ```
-  static T read<T extends ViewModel>({Object? key, Object? tag}) {
+  static T readCached<T extends ViewModel>({Object? key, Object? tag}) {
     T? vm;
 
     /// find key firstly
@@ -272,16 +278,24 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   T readViewModel<T extends ViewModel>({
-    Object? key,
-    Object? tag,
-    ViewModelFactory<T>? factory,
+    required ViewModelFactory<T> factory,
   }) {
     if (isDisposed) throw StateError("$T is disposed");
     return dependencyHandler.getViewModel<T>(
-      key: key,
-      tag: tag,
       factory: factory,
       listen: false,
+    );
+  }
+
+  T readExistingViewModel<T extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    if (isDisposed) throw StateError("$T is disposed");
+    return dependencyHandler.getViewModel<T>(
+      listen: false,
+      key: key,
+      tag: tag,
     );
   }
 
@@ -316,15 +330,36 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   T watchViewModel<T extends ViewModel>({
+    required ViewModelFactory<T> factory,
+  }) {
+    if (isDisposed) throw StateError("$T is disposed");
+    final vm = dependencyHandler.getViewModel<T>(
+      factory: factory,
+      listen: true,
+    );
+
+    // Check if we're already listening to this dependency ViewModel
+    // to prevent duplicate listener registration
+    if (_dependencyListeners[vm] != true) {
+      // Register a listener to automatically notify this ViewModel
+      // when the dependency ViewModel changes
+      addDispose(vm.listen(onChanged: () {
+        onDependencyNotify(vm);
+      }));
+      // Mark this dependency as being listenedto
+      _dependencyListeners[vm] = true;
+    }
+    return vm;
+  }
+
+  T watchExistingViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
-    ViewModelFactory<T>? factory,
   }) {
     if (isDisposed) throw StateError("$T is disposed");
     final vm = dependencyHandler.getViewModel<T>(
       key: key,
       tag: tag,
-      factory: factory,
       listen: true,
     );
 
@@ -356,7 +391,8 @@ mixin class ViewModel implements InstanceLifeCycle {
 
   /// Attempts to read a dependency ViewModel of type [T].
   ///
-  /// Similar to [readViewModel] but returns `null` if the dependency is not found
+  /// Similar to [readViewModel] but returns `null` if the dependency is not
+  /// found
   /// instead of throwing an exception.
   ///
   /// Parameters:
@@ -370,34 +406,36 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// class OptionalFeatureViewModel with ViewModel {
   ///   String get status {
   ///     final authViewModel = maybeReadViewModel<AuthViewModel>();
-  ///     return authViewModel?.isAuthenticated == true ? 'Authenticated' : 'Guest';
+  ///     return authViewModel?.isAuthenticated == true ? 'Authenticated' :
+  ///     'Guest';
   ///   }
   /// }
   /// ```
-  T? maybeReadViewModel<T extends ViewModel>({
+  T? maybeReadExistingViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
-    ViewModelFactory<T>? factory,
   }) {
     try {
-      return readViewModel<T>(
+      return readExistingViewModel<T>(
         key: key,
         tag: tag,
-        factory: factory,
       );
     } catch (e) {
       return null;
     }
   }
 
-  /// Attempts to watch a dependency ViewModel of type [T] with automatic change listening.
+  /// Attempts to watch a dependency ViewModel of type [T] with automatic change
+  /// listening.
   ///
-  /// This is a safe version of [watchViewModel] that returns `null` if the dependency
+  /// This is a safe version of [watchViewModel] that returns `null` if the
+  /// dependency
   /// is not found or if any error occurs during the watch operation, instead of
   /// throwing an exception.
   ///
   /// When successful, this method:
-  /// 1. Retrieves the dependency ViewModel (creating it if necessary via factory)
+  /// 1. Retrieves the dependency ViewModel (creating it if necessary via
+  ///    factory)
   /// 2. Sets up automatic listening for changes from the dependency
   /// 3. Ensures this ViewModel will be notified when the dependency changes
   /// 4. Prevents duplicate listener registration for the same dependency
@@ -405,9 +443,11 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// Parameters:
   /// - [key]: Optional key to identify the specific dependency instance
   /// - [tag]: Optional tag to identify the specific dependency instance
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  /// - [factory]: Optional factory for creating the ViewModel if it doesn't
+  /// exist
   ///
-  /// Returns the dependency ViewModel instance if found and successfully watched,
+  /// Returns the dependency ViewModel instance if found and successfully
+  /// watched,
   /// otherwise `null`.
   ///
   /// Example:
@@ -417,23 +457,22 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///
   ///   @override
   ///   void onInit() {
-  ///     // Safely watch auth changes, won't throw if AuthViewModel doesn't exist
-  ///     authViewModel = maybeWatchViewModel<AuthViewModel>();
+  ///     // Safely watch auth changes; won't throw if AuthViewModel doesn't
+  ///     exist.
+  ///     _auth = maybeWatchExistingViewModel<AuthViewModel>();
   ///   }
   ///
-  ///   String get displayName => authViewModel?.user?.name ?? 'Guest';
+  ///   String get displayName => _auth?.user?.name ?? 'Guest';
   /// }
   /// ```
-  T? maybeWatchViewModel<T extends ViewModel>({
+  T? maybeWatchExistingViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
-    ViewModelFactory<T>? factory,
   }) {
     try {
-      return watchViewModel<T>(
+      return watchExistingViewModel<T>(
         key: key,
         tag: tag,
-        factory: factory,
       );
     } catch (e) {
       return null;
@@ -448,10 +487,12 @@ mixin class ViewModel implements InstanceLifeCycle {
     _listeners.remove(listener);
   }
 
-  /// Adds a dispose callback that will be executed when this ViewModel is disposed.
+  /// Adds a dispose callback that will be executed when this ViewModel is
+  /// disposed.
   ///
   /// This is useful for cleaning up resources like streams, timers, or other
-  /// subscriptions that need to be disposed when the ViewModel is no longer needed.
+  /// subscriptions that need to be disposed when the ViewModel is no longer
+  /// needed.
   ///
   /// Parameters:
   /// - [block]: The cleanup function to execute on disposal
@@ -472,7 +513,8 @@ mixin class ViewModel implements InstanceLifeCycle {
     _autoDisposeController.addDispose(block);
   }
 
-  /// Adds a listener to this ViewModel that will be called when [notifyListeners] is invoked.
+  /// Adds a listener to this ViewModel that will be called when
+  /// [notifyListeners] is invoked.
   ///
   /// Returns a function that can be called to remove the listener.
   ///
@@ -513,7 +555,8 @@ mixin class ViewModel implements InstanceLifeCycle {
 
   /// Initializes the ViewModel system.
   ///
-  /// This method must be called before using any ViewModels in your application.
+  /// This method must be called before using any ViewModels in your
+  /// application.
   /// It sets up the global configuration and lifecycle observers.
   ///
   /// Parameters:
@@ -769,7 +812,8 @@ abstract class StateViewModel<T> with ViewModel {
 
   /// Gets the current state.
   ///
-  /// This is the main way to access the current state from outside the ViewModel.
+  /// This is the main way to access the current state from outside the
+  /// ViewModel.
   T get state {
     return _store.state;
   }
@@ -848,7 +892,8 @@ abstract mixin class ViewModelFactory<T> {
   /// ViewModels with the same key will be shared across different widgets.
   /// If this returns `null`, a new instance will be created each time.
   ///
-  /// By default, returns a shared ID if [singleton] is `true`, otherwise `null`.
+  /// By default, returns a shared ID if [singleton] is `true`, otherwise
+  /// `null`.
   ///
   /// Example:
   /// ```dart
@@ -861,7 +906,7 @@ abstract mixin class ViewModelFactory<T> {
   ///
   /// Tags can be used to find ViewModels by category rather than type.
   /// The tag is accessible via [ViewModel.tag] and can be used with
-  /// [ViewModel.read] to find ViewModels by tag.
+  /// [ViewModel.readCached] to find ViewModels by tag.
   ///
   /// Example:
   /// ```dart
@@ -963,7 +1008,8 @@ class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
     Object? key,
     Object? tag,
 
-    /// Whether to use singleton mode. This is just a convenient way to set a unique key for you.
+    /// Whether to use singleton mode. This is just a convenient way to
+    /// set a unique key for you.
     /// Note that the priority is lower than the key parameter.
     this.isSingleton = false,
   }) {

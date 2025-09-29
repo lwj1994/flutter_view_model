@@ -24,7 +24,7 @@ void main() {
       expect(find.text('initState'), findsOneWidget);
 
       (testKey.currentState as TestPageState)
-          .readViewModel<TestViewModel>()
+          .readCachedViewModel<TestViewModel>()
           .setState("hi");
       await tester.pumpAndSettle();
       expect(find.text('hi'), findsOneWidget);
@@ -127,7 +127,7 @@ void main() {
       final state = testKey.currentState as TestPageState;
 
       expect(
-        () => state.readViewModel<TestViewModel>(key: "non_existent"),
+        () => state.readCachedViewModel<TestViewModel>(key: "non_existent"),
         throwsA(isA<StateError>()),
       );
     });
@@ -156,9 +156,9 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.readViewModel<TestViewModel>(tag: "1");
-      final vm2 = state2.readViewModel<TestViewModel>();
-      final vm3 = ViewModel.read<TestViewModel>();
+      final vm1 = state.readCachedViewModel<TestViewModel>(tag: "1");
+      final vm2 = state2.readCachedViewModel<TestViewModel>();
+      final vm3 = ViewModel.readCached<TestViewModel>();
 
       print(vm1.state);
       print(vm2.state);
@@ -194,9 +194,9 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.readViewModel<TestViewModel>();
-      final vm2 = state2.readViewModel<TestViewModel>();
-      final vm3 = ViewModel.read<TestViewModel>();
+      final vm1 = state.readCachedViewModel<TestViewModel>();
+      final vm2 = state2.readCachedViewModel<TestViewModel>();
+      final vm3 = ViewModel.readCached<TestViewModel>();
 
       print(vm1.state);
       print(vm2.state);
@@ -232,7 +232,7 @@ void main() {
       final vm1 = state.readViewModel(factory: fc);
 
       final vm2 = state2.readViewModel(factory: fc);
-      final vm3 = state2.readViewModel<TestViewModel>();
+      final vm3 = state2.readCachedViewModel<TestViewModel>();
       print(vm1.state);
       print(vm2.state);
       print(vm3.state);
@@ -257,7 +257,7 @@ void main() {
         factory: fc,
       );
 
-      final vm2 = state.readViewModel<TestViewModel>(key: "key");
+      final vm2 = state.readCachedViewModel<TestViewModel>(key: "key");
 
       assert(vm == vm2);
       vm2.setState("2");
@@ -282,7 +282,7 @@ void main() {
         factory: fc,
       );
 
-      final vm2 = state.readViewModel<TestViewModel>();
+      final vm2 = state.readCachedViewModel<TestViewModel>();
 
       assert(vm == vm2);
       vm2.setState("2");
@@ -386,10 +386,9 @@ void main() {
         factory: fc,
       );
 
-      final vm2 = state.readViewModel<TestViewModel>();
+      final vm2 = state.readCachedViewModel<TestViewModel>();
       assert(vm == vm2);
-      final TestViewModel vm3 =
-          state.readViewModel<TestViewModel>(key: "2", factory: fc);
+      final TestViewModel vm3 = state.readViewModel<TestViewModel>(factory: fc);
       assert(vm == vm3);
     });
   });

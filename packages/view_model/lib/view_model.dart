@@ -17,7 +17,8 @@
 ///   debugging and visualization
 /// - **Memory Leak Prevention**: Automatic cleanup and disposal when ViewModels
 ///   are no longer needed
-/// - **Flexible Configuration**: Customizable behavior through global configuration
+/// - **Flexible Configuration**: Customizable behavior through global
+///                               configuration
 ///
 /// ## Basic Usage
 ///
@@ -98,7 +99,8 @@
 ///
 /// ## Best Practices
 ///
-/// 1. **Single Responsibility**: Keep ViewModels focused on specific functionality
+/// 1. **Single Responsibility**: Keep ViewModels focused on specific
+///                               functionality
 /// 2. **Immutable State**: Use immutable state objects when possible
 /// 3. **Proper Disposal**: Let the framework handle disposal automatically
 /// 4. **Testing**: ViewModels can be easily unit tested in isolation

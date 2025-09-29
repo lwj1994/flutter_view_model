@@ -1,8 +1,8 @@
 /// DevTools integration service for ViewModel debugging.
 ///
 /// This file provides integration with Flutter DevTools, enabling developers
-/// to inspect ViewModel instances, dependency relationships, and usage statistics
-/// through the DevTools extension interface.
+/// to inspect ViewModel instances, dependency relationships, and usage
+/// statistics through the DevTools extension interface.
 ///
 /// The service exposes ViewModel data through service extensions that can be
 /// consumed by DevTools panels for visualization and debugging.
@@ -17,8 +17,9 @@ import 'tracker.dart';
 /// Service for integrating ViewModel debugging with Flutter DevTools.
 ///
 /// This singleton service provides communication between the ViewModel system
-/// and Flutter DevTools extension. It exposes ViewModel data, dependency graphs,
-/// and statistics through service extensions that can be consumed by DevTools.
+/// and Flutter DevTools extension. It exposes ViewModel data, dependency
+/// graphs, and statistics through service extensions that can be consumed by
+/// DevTools.
 ///
 /// Key features:
 /// - Real-time ViewModel instance monitoring

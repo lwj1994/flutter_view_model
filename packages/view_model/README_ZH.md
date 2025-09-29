@@ -233,7 +233,7 @@ void dispose() {
 |------------|-----------|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
 | `build()`  | `T`       | ❌ 必须实现     | 创建 ViewModel 实例的工厂方法。通常在这里传递构造函数参数。                                                                                                          |
 | `key()`    | `Object?` | ✅ 可选       | 为 ViewModel 提供唯一标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/页面共享）。 | |                              |
-| `getTag()` | `Object?` | ✅          | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                                                   |
+| `getTag()` | `Object?` | ✅          | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchCachedViewModel(tag:tag)` 查找 ViewModel。                                                   |
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
@@ -256,64 +256,129 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 
 > **重要提示**: 当使用自定义对象作为 `key` 时，为了确保 `view_model` 能够正确定位和共享 `ViewModel` 实例，您必须在该自定义对象中重写 `==` 操作符和 `hashCode` getter 方法。
 
-### 3.2 watchViewModel
+### 3.2 API 参考与迁移指南
 
-`watchViewModel<T>()` 是核心方法之一，用于：获取或创建 ViewModel 实例并
-在其变化时自动触发 `setState()` 重建 Widget。
+随着最新的更新，API 已经过优化，以提高清晰度和可预测性。以下是核心方法的详细说明以及如何迁移现有代码。
+
+#### 创建并监听新实例
+
+**`watchViewModel<VM extends ViewModel>({required ViewModelFactory<VM> factory})`**
+
+现在，这是创建新 `ViewModel` 实例的**唯一**方法。它需要一个 `factory` 来构造 `ViewModel`。
+
+- **用途**：当一个 Widget 需要创建并拥有一个 `ViewModel` 时调用。
+- **迁移**：如果您之前使用 `watchViewModel` 来创建和获取实例，那么您创建实例的代码保持不变。请确保始终提供 `factory`。
 
 ```dart
-VM watchViewModel<VM extends ViewModel>({
-  ViewModelFactory<VM>? factory,
-  Object? key,
-  Object? tag,
-});
+// 之前
+// 可能创建或获取一个缓存的实例
+final myVM = watchViewModel<MyViewModel>(factory: MyViewModelFactory());
+
+// 之后
+// 总是创建一个新实例
+final myVM = watchViewModel<MyViewModel>(factory: MyViewModelFactory());
 ```
 
-| 参数名       | 类型                      | 可选 | 描述                                                                                                                                           |
-|-----------|-------------------------|----|----------------------------------------------------------------------------------------------------------------------------------------------|
-| `factory` | `ViewModelFactory<VM>?` | ✅  | 提供 ViewModel 的构造方法。可选；如果在缓存中找不到现有实例，将使用它创建新实例。                                                                                             |
-| `key`     | `Object?`               | ✅  | 指定唯一键以支持共享同一个 ViewModel 实例。首先尝试在缓存中查找具有相同 key 的实例。                                                                                           |
-| `tag`     | `Object?`               | ✅  | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                                                   |
+#### 创建新实例但不监听
 
-__🔍 查找逻辑优先级（重要）__
-`watchViewModel` 内部的查找和创建逻辑如下（按优先级执行
-顺序）：
+**`readViewModel<VM extends ViewModel>({required ViewModelFactory<VM> factory})`**
 
-1. 如果传入了 key：
-   * 首先，尝试在缓存中查找具有相同 key 的实例。
-   * 如果存在工厂，使用工厂获取新实例。
-   * 如果没有找到工厂且没有找到实例，将抛出错误。
-2. 如果传入了 tag，尝试在缓存中查找具有相同 tag
-   的最新创建实例。
-3. 如果什么都没传入，尝试在缓存中查找此类型
-   的最新创建实例。
+此方法用于获取或创建一个 `ViewModel` 实例，但**不会**让 Widget 订阅其更新。它适用于一次性操作或数据检索。
 
-> __⚠️ 如果找不到指定类型的 ViewModel 实例，将抛出错误。确保
-在使用前已正确创建并注册了 ViewModel。__
+- **行为**：
+  - 如果 `factory` 提供了 `key`，它将首先尝试从缓存中查找具有该 `key` 的实例。如果找不到，则创建一个新实例并根据 `isSingleton` 的设置决定是否缓存它。
+  - 如果 `factory` 未提供 `key`，它将创建一个**不会被共享**的新实例。
+- **用途**：当您需要访问 `ViewModel` 的方法或初始状态，而不希望 Widget 因其后续变化而重建时。
 
-✅ 一旦找到实例，`watchViewModel` 将自动注册监听并在其状态变化时调用
-`setState()` 重建当前 Widget。
+```dart
+// 如果 MyViewModelFactory 提供了 key，则可能获取缓存实例
+// 否则，总是创建一个新实例
+final myVM = readViewModel<MyViewModel>(factory: MyViewModelFactory());
+```
 
-### 3.3 readViewModel
+#### 监听缓存实例
 
-它具有与 `watchViewModel` 相同的参数，但不会触发 Widget 重建。适用于
-需要读取 ViewModel 状态或执行一次性操作的场景。
+**`watchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
 
-### 3.4 ViewModel 生命周期
+使用此方法从缓存中查找并监听一个**现有**的 `ViewModel` 实例。如果未找到实例，它将**抛出错误**。
 
-- `watchViewModel` 和 `readViewModel` 都会绑定到 ViewModel。
+- **用途**：在一个需要对共享 `ViewModel` 的变化做出反应的 Widget 中使用，该 `ViewModel` 是在别处创建的。
+- **查找优先级**：`key` -> `tag` -> `Type`。
+- **迁移**：当您打算获取缓存实例时，请将 `watchViewModel(key: ...)` 或 `watchViewModel(tag: ...)` 替换为 `watchCachedViewModel`。
+
+```dart
+// 之前
+// 模糊不清：可能创建或获取
+final myVM = watchViewModel<MyViewModel>(key: "shared-key");
+
+// 之后
+// 明确：获取缓存实例或抛出错误
+final myVM = watchCachedViewModel<MyViewModel>(key: "shared-key");
+```
+
+#### 读取缓存实例
+
+**`readCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
+
+使用此方法查找并读取一个**现有**的 `ViewModel`，而不订阅更新。如果未找到，它将**抛出错误**。
+
+- **用途**：用于一次性访问共享 `ViewModel` 的状态或方法。
+- **迁移**：将 `readViewModel(key: ...)` 或 `readViewModel(tag: ...)` 替换为 `readCachedViewModel`。
+
+```dart
+// 之前
+final myVM = readViewModel<MyViewModel>(key: "shared-key");
+
+// 之后
+// 明确：获取缓存实例或抛出错误
+final myVM = readCachedViewModel<MyViewModel>(key: "shared-key");
+```
+
+#### 安全地监听缓存实例（可空）
+
+**`maybeWatchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
+
+`watchCachedViewModel` 的安全替代方案。如果在缓存中未找到 `ViewModel`，它将返回 `null` 而不是抛出错误。
+
+- **用途**：当共享的 `ViewModel` 是可选的时。
+
+```dart
+// 获取缓存实例或返回 null
+final myVM = maybeWatchCachedViewModel<MyViewModel>(key: "optional-key");
+if (myVM != null) {
+  // ... 使用 myVM
+}
+```
+
+#### 安全地读取缓存实例（可空）
+
+**`maybeReadCachedViewModel<VM extends ViewModel>({Object? key, Object? tag})`**
+
+`readCachedViewModel` 的安全替代方案。如果未找到 `ViewModel`，它将返回 `null`。
+
+- **用途**：用于对共享 `ViewModel` 的可选一次性访问。
+
+```dart
+// 获取缓存实例或返回 null
+final myVM = maybeReadCachedViewModel<MyViewModel>(key: "optional-key");
+// ...
+```
+
+### 3.3 ViewModel 生命周期
+
+- `watchViewModel`、`readViewModel`、`watchCachedViewModel` 和 `readCachedViewModel` 都会将 Widget 绑定到 ViewModel。
 - 当没有 Widget 绑定到 ViewModel 时，它会自动销毁。
 
-### 3.5 ViewModel 之间的访问
+### 3.4 ViewModel 之间的访问
 
-ViewModel 可以使用 `readViewModel` 和 `watchViewModel` 访问其他 ViewModel：
+ViewModel 可以使用相同的 API 访问其他 ViewModel：
 
-- **`readViewModel`**：访问另一个 ViewModel 而不建立响应式连接
-- **`watchViewModel`**：创建响应式依赖 - 当被观察的 ViewModel 变化时自动通知
+- **`readCachedViewModel`**：访问另一个 ViewModel 而不建立响应式连接。
+- **`watchCachedViewModel`**：创建响应式依赖 - 当被观察的 ViewModel 变化时自动通知。
 
-当一个 ViewModel （宿主 HostVM ）通过 watchViewModel 访问另一个 ViewModel （子 SubVM ）时，会自动将 SubVM 的生命周期与 HostVM 的UI观察者（即 StatefulWidget 的 State 对象）进行绑定。
+当一个 ViewModel（`HostVM`）通过 `watchCachedViewModel` 访问另一个 ViewModel（`SubVM`）时，框架会自动将 `SubVM` 的生命周期与 `HostVM` 的 UI 观察者（即 `StatefulWidget` 的 `State` 对象）进行绑定。
 
-这意味着， SubVM 和 HostVM 都直接受同一个 State 对象的生命周期管理。当这个 State 对象被销毁时，如果 SubVM 和 HostVM 都没有其他观察者，它们将被一同自动回收。
+这意味着，`SubVM` 和 `HostVM` 都直接受同一个 `State` 对象的生命周期管理。当这个 `State` 对象被销毁时，如果 `SubVM` 和 `HostVM` 都没有其他观察者，它们将被一同自动回收。
 
 这种机制确保了 ViewModel 之间的依赖关系清晰，并实现了高效、自动的资源管理。
 
@@ -321,7 +386,7 @@ ViewModel 可以使用 `readViewModel` 和 `watchViewModel` 访问其他 ViewMod
 class UserProfileViewModel extends ViewModel {
   void loadData() {
     // 一次性访问，不监听
-    final authVM = readViewModel<AuthViewModel>();
+    final authVM = readCachedViewModel<AuthViewModel>();
     if (authVM?.isLoggedIn == true) {
       _fetchProfile(authVM!.userId);
     }
@@ -329,13 +394,13 @@ class UserProfileViewModel extends ViewModel {
   
   void setupReactiveAuth() {
     // 响应式访问 - 当 auth 变化时自动更新
-    final authVM = watchViewModel<AuthViewModel>();
+    final authVM = watchCachedViewModel<AuthViewModel>();
     // 当 authVM 变化时，此 ViewModel 将收到通知
   }
   
   
   void manualListening() {
-    final authVM = readViewModel<AuthViewModel>();
+    final authVM = readCachedViewModel<AuthViewModel>();
     // 您也可以手动监听任何 ViewModel
     authVM?.listen(() {
       // 自定义监听逻辑
