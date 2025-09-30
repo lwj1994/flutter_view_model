@@ -156,7 +156,7 @@ mixin class ViewModel implements InstanceLifeCycle {
     }
 
     // find newly cache
-    vm = instanceManager.get<T>(
+    vm ??= instanceManager.get<T>(
       factory: InstanceFactory<T>(
           arg: InstanceArg(
         tag: tag,
