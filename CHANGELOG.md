@@ -1,3 +1,6 @@
+## 0.4.7
+* fix `ViewModel.read`
+
 ## 0.4.6
 * The `view_model` package includes a powerful DevTools extension that provides real-time monitoring
 and debugging capabilities for your ViewModels during development.
