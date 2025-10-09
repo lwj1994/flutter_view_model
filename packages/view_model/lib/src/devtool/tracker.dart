@@ -40,13 +40,13 @@ import '../view_model/view_model.dart';
 /// // Clean up
 /// removeListener();
 /// ```
-class DependencyTracker extends ViewModelLifecycle {
-  static final DependencyTracker _instance = DependencyTracker._();
+class DevToolTracker extends ViewModelLifecycle {
+  static final DevToolTracker _instance = DevToolTracker._();
 
   /// Gets the singleton instance of the dependency tracker.
-  static DependencyTracker get instance => _instance;
+  static DevToolTracker get instance => _instance;
 
-  DependencyTracker._();
+  DevToolTracker._();
 
   /// Maps watcher IDs to the set of ViewModel type names they watch.
   ///
@@ -345,7 +345,7 @@ class ViewModelInfo {
   final String typeName;
 
   /// Optional key used when creating this ViewModel instance.
-  final String? key;
+  final Object? key;
 
   /// Optional tag used when creating this ViewModel instance.
   final String? tag;
@@ -403,7 +403,7 @@ class ViewModelInfo {
   ViewModelInfo copyWith({
     String? instanceId,
     String? typeName,
-    String? key,
+    Object? key,
     String? tag,
     DateTime? createTime,
     Set<String>? watchers,

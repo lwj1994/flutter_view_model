@@ -1,8 +1,8 @@
 /// DevTools integration service for ViewModel debugging.
 ///
 /// This file provides integration with Flutter DevTools, enabling developers
-/// to inspect ViewModel instances, dependency relationships, and usage statistics
-/// through the DevTools extension interface.
+/// to inspect ViewModel instances, dependency relationships, and usage
+/// statistics through the DevTools extension interface.
 ///
 /// The service exposes ViewModel data through service extensions that can be
 /// consumed by DevTools panels for visualization and debugging.
@@ -12,13 +12,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-import '../dependency/dependency_tracker.dart';
+import 'tracker.dart';
 
 /// Service for integrating ViewModel debugging with Flutter DevTools.
 ///
 /// This singleton service provides communication between the ViewModel system
-/// and Flutter DevTools extension. It exposes ViewModel data, dependency graphs,
-/// and statistics through service extensions that can be consumed by DevTools.
+/// and Flutter DevTools extension. It exposes ViewModel data, dependency
+/// graphs, and statistics through service extensions that can be consumed by
+/// DevTools.
 ///
 /// Key features:
 /// - Real-time ViewModel instance monitoring
@@ -128,7 +129,7 @@ class DevToolsService {
   /// - Creation and disposal timestamps
   /// - List of current watchers
   Map<String, dynamic> _getViewModelData() {
-    final tracker = DependencyTracker.instance;
+    final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;
 
     final viewModels = graph.viewModelInfos.values
@@ -169,7 +170,7 @@ class DevToolsService {
   ///
   /// Each edge represents a "watches" relationship from a watcher to a ViewModel.
   Map<String, dynamic> _getDependencyGraph() {
-    final tracker = DependencyTracker.instance;
+    final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;
 
     final dependencies = <Map<String, dynamic>>[];
@@ -208,7 +209,7 @@ class DevToolsService {
   /// - Shared and orphaned instance counts
   /// - Total watcher and type counts
   Map<String, int> _getStatsFromTracker() {
-    final stats = DependencyTracker.instance.getStats();
+    final stats = DevToolTracker.instance.getStats();
 
     return {
       'totalInstances': stats.activeInstances + stats.disposedInstances,

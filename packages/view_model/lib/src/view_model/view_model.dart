@@ -17,14 +17,15 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:meta/meta.dart';
 import 'package:uuid/v4.dart';
-import 'package:view_model/src/dependency/dependency_tracker.dart';
-import 'package:view_model/src/devtool/devtools_service.dart';
+import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
 
+import 'dependency_handler.dart';
 import 'state_store.dart';
 
 /// A ViewModel implementation that extends Flutter's [ChangeNotifier].
@@ -56,7 +57,8 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 ///
 /// This mixin provides core functionality for ViewModels including:
 /// - Lifecycle management through [InstanceLifeCycle]
-/// - Listener management for reactive updates
+/// - Listener
+/// management for reactive updates
 /// - Static methods for reading existing ViewModels
 /// - Integration with the ViewModel system
 ///
@@ -78,6 +80,19 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 mixin class ViewModel implements InstanceLifeCycle {
   late InstanceArg _instanceArg;
 
+  /// Tracks which dependency ViewModels this ViewModel is already listening to.
+  ///
+  /// This map prevents duplicate listener registration when the same dependency
+  /// ViewModel is accessed multiple times through [watchViewModel]. The key is
+  /// the dependency ViewModel instance, and the value is always `true` when
+  /// a listener is registered.
+  ///
+  /// This optimization ensures that:
+  /// 1. Each dependency ViewModel is only listened to once
+  /// 2. Avoids memory leaks from duplicate listeners
+  /// 3. Improves performance by preventing redundant listener setup
+  final Map<ViewModel, bool> _dependencyListeners = {};
+
   /// Gets the tag associated with this ViewModel instance.
   ///
   /// The tag is set by the [ViewModelFactory.getTag] method and can be used
@@ -92,25 +107,28 @@ mixin class ViewModel implements InstanceLifeCycle {
 
   /// Attempts to read a ViewModel instance by [key] or [tag].
   ///
-  /// Returns `null` if no matching ViewModel is found, unlike [read] which
+  /// Returns `null` if no matching ViewModel is found, unlike [readCached] which
   /// throws an exception.
   ///
+  /// This method is useful for safely accessing a cached ViewModel without
+  /// causing an error if it doesn't exist.
+  ///
   /// Parameters:
-  /// - [key]: The unique key to search for
-  /// - [tag]: The tag to search for
+  /// - [key]: The unique key to search for.
+  /// - [tag]: The tag to search for.
   ///
   /// Returns the ViewModel instance if found, otherwise `null`.
   ///
   /// Example:
   /// ```dart
-  /// final vm = ViewModel.maybeRead<MyViewModel>(key: 'my-key');
+  /// final vm = ViewModel.maybeReadCached<MyViewModel>(key: 'my-key');
   /// if (vm != null) {
   ///   // Use the ViewModel
   /// }
   /// ```
-  static T? maybeRead<T extends ViewModel>({String? key, Object? tag}) {
+  static T? maybeReadCached<T extends ViewModel>({Object? key, Object? tag}) {
     try {
-      return read(key: key, tag: tag);
+      return readCached(key: key, tag: tag);
     } catch (e) {
       return null;
     }
@@ -119,26 +137,29 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// Reads a ViewModel instance by [key] or [tag].
   ///
   /// This method searches for an existing ViewModel instance using the following priority:
-  /// 1. If [key] is provided, searches by the unique key first
-  /// 2. If [tag] is provided, searches by the tag
-  /// 3. If neither is provided, finds the most recently created instance of type [T]
+  /// 1. If [key] is provided, it searches by the unique key.
+  /// 2. If [tag] is provided, it searches by the tag.
+  /// 3. If neither is provided, it finds the most recently created instance of type [T].
+  ///
+  /// This method is for accessing already-created and cached ViewModels.
+  /// It does not create new instances.
   ///
   /// Parameters:
-  /// - [key]: The unique key from [ViewModelFactory.key]
-  /// - [tag]: The tag from [ViewModelFactory.getTag]
+  /// - [key]: The unique key from [ViewModelFactory.key].
+  /// - [tag]: The tag from [ViewModelFactory.getTag].
   ///
   /// Returns the matching ViewModel instance.
   ///
-  /// Throws [StateError] if:
-  /// - No matching ViewModel is found
-  /// - The found ViewModel has been disposed
+  /// Throws a [StateError] if:
+  /// - No matching ViewModel is found.
+  /// - The found ViewModel has been disposed.
   ///
   /// Example:
   /// ```dart
-  /// final vm = ViewModel.read<MyViewModel>(key: 'global-counter');
+  /// final vm = ViewModel.readCached<MyViewModel>(key: 'global-counter');
   /// vm.increment();
   /// ```
-  static T read<T extends ViewModel>({String? key, Object? tag}) {
+  static T readCached<T extends ViewModel>({Object? key, Object? tag}) {
     T? vm;
 
     /// find key firstly
@@ -221,6 +242,244 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// by any widgets or other components.
   bool get hasListeners => _listeners.isNotEmpty;
 
+  /// Handler for managing ViewModel dependencies.
+  /// This encapsulates all dependency-related logic and provides a clean separation of concerns.
+  @internal
+  final DependencyHandler dependencyHandler = DependencyHandler();
+
+  /// Reads a dependency ViewModel from the current context.
+  ///
+  /// This method allows ViewModels to access other ViewModels as dependencies.
+  /// The core logic is:
+  /// 1. Host ViewModel first collects the dependency ViewModel configuration
+  /// 2. Check if host ViewModel is already associated with a State
+  /// 3. If associated, delegate to State's readViewModel/watchViewModel to register the dependency
+  /// 4. If not associated, store the dependency config for later registration
+  ///
+  /// This ensures that dependency relationships are properly managed by the Widget State
+  /// that owns the host ViewModel, maintaining consistent lifecycle management.
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify a specific ViewModel instance
+  /// - [tag]: Optional tag for ViewModel lookup
+  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  ///
+  /// Returns the requested ViewModel instance.
+  ///
+  /// Example:
+  /// ```dart
+  /// class MyViewModel extends ViewModel {
+  ///   late final UserService userService;
+  ///
+  ///   @override
+  ///   void onInit() {
+  ///     // Host ViewModel collects dependency config and delegates to State
+  ///     userService = readViewModel<UserService>();
+  ///   }
+  /// }
+  /// ```
+  T readViewModel<T extends ViewModel>({
+    required ViewModelFactory<T> factory,
+  }) {
+    if (isDisposed) throw StateError("$T is disposed");
+    return dependencyHandler.getViewModel<T>(
+      factory: factory,
+      listen: false,
+    );
+  }
+
+  T readCachedViewModel<T extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    if (isDisposed) throw StateError("$T is disposed");
+    return dependencyHandler.getViewModel<T>(
+      listen: false,
+      key: key,
+      tag: tag,
+    );
+  }
+
+  /// Watches a dependency ViewModel of type [T] and listens for changes.
+  ///
+  /// Similar to [readViewModel] but automatically listens for changes in the dependency
+  /// ViewModel and triggers rebuilds when the dependency changes.
+  ///
+  /// This method allows ViewModels to access other ViewModels as dependencies with
+  /// automatic change notification. When the dependency ViewModel changes, this
+  /// ViewModel will also notify its listeners.
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify a specific ViewModel instance
+  /// - [tag]: Optional tag for ViewModel lookup
+  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  ///
+  /// Returns the requested ViewModel instance with change listening enabled.
+  ///
+  /// Example:
+  /// ```dart
+  /// class UserProfileViewModel extends ViewModel {
+  ///   late final AuthViewModel authViewModel;
+  ///
+  ///   @override
+  ///   void onInit() {
+  ///     // Watch auth changes and automatically update when auth state changes
+  ///     authViewModel = watchViewModel<AuthViewModel>();
+  ///   }
+  ///
+  ///   String get displayName => authViewModel.user?.name ?? 'Guest';
+  /// }
+  /// ```
+  T watchViewModel<T extends ViewModel>({
+    required ViewModelFactory<T> factory,
+  }) {
+    if (isDisposed) throw StateError("$T is disposed");
+    final vm = dependencyHandler.getViewModel<T>(
+      factory: factory,
+      listen: true,
+    );
+
+    // Check if we're already listening to this dependency ViewModel
+    // to prevent duplicate listener registration
+    if (_dependencyListeners[vm] != true) {
+      // Register a listener to automatically notify this ViewModel
+      // when the dependency ViewModel changes
+      addDispose(vm.listen(onChanged: () {
+        onDependencyNotify(vm);
+      }));
+      // Mark this dependency as being listenedto
+      _dependencyListeners[vm] = true;
+    }
+    return vm;
+  }
+
+  T watchCachedViewModel<T extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    if (isDisposed) throw StateError("$T is disposed");
+    final vm = dependencyHandler.getViewModel<T>(
+      key: key,
+      tag: tag,
+      listen: true,
+    );
+
+    // Check if we're already listening to this dependency ViewModel
+    // to prevent duplicate listener registration
+    if (_dependencyListeners[vm] != true) {
+      // Register a listener to automatically notify this ViewModel
+      // when the dependency ViewModel changes
+      addDispose(vm.listen(onChanged: () {
+        onDependencyNotify(vm);
+      }));
+      // Mark this dependency as being listenedto
+      _dependencyListeners[vm] = true;
+    }
+    return vm;
+  }
+
+  /// Called when a dependency ViewModel notifies changes.
+  ///
+  /// This method is called when a dependency ViewModel that this ViewModel is
+  /// listening to notifies changes. By default, it simply notifies listeners
+  /// of this ViewModel.
+  ///
+  /// Parameters:
+  /// - [vm]: The dependency ViewModel that notified changes
+  @mustCallSuper
+  @protected
+  void onDependencyNotify(ViewModel vm) {}
+
+  /// Attempts to read a dependency ViewModel of type [T].
+  ///
+  /// Similar to [readViewModel] but returns `null` if the dependency is not
+  /// found
+  /// instead of throwing an exception.
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify the specific dependency instance
+  /// - [tag]: Optional tag to identify the specific dependency instance
+  ///
+  /// Returns the dependency ViewModel instance if found, otherwise `null`.
+  ///
+  /// Example:
+  /// ```dart
+  /// class OptionalFeatureViewModel with ViewModel {
+  ///   String get status {
+  ///     final authViewModel = maybeReadViewModel<AuthViewModel>();
+  ///     return authViewModel?.isAuthenticated == true ? 'Authenticated' :
+  ///     'Guest';
+  ///   }
+  /// }
+  /// ```
+  T? maybeReadCachedViewModel<T extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    try {
+      return readCachedViewModel<T>(
+        key: key,
+        tag: tag,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Attempts to watch a dependency ViewModel of type [T] with automatic change
+  /// listening.
+  ///
+  /// This is a safe version of [watchViewModel] that returns `null` if the
+  /// dependency
+  /// is not found or if any error occurs during the watch operation, instead of
+  /// throwing an exception.
+  ///
+  /// When successful, this method:
+  /// 1. Retrieves the dependency ViewModel (creating it if necessary via
+  ///    factory)
+  /// 2. Sets up automatic listening for changes from the dependency
+  /// 3. Ensures this ViewModel will be notified when the dependency changes
+  /// 4. Prevents duplicate listener registration for the same dependency
+  ///
+  /// Parameters:
+  /// - [key]: Optional key to identify the specific dependency instance
+  /// - [tag]: Optional tag to identify the specific dependency instance
+  /// - [factory]: Optional factory for creating the ViewModel if it doesn't
+  /// exist
+  ///
+  /// Returns the dependency ViewModel instance if found and successfully
+  /// watched,
+  /// otherwise `null`.
+  ///
+  /// Example:
+  /// ```dart
+  /// class UserProfileViewModel extends ViewModel {
+  ///   AuthViewModel? authViewModel;
+  ///
+  ///   @override
+  ///   void onInit() {
+  ///     // Safely watch auth changes; won't throw if AuthViewModel doesn't
+  ///     exist.
+  ///     _auth = maybeWatchExistingViewModel<AuthViewModel>();
+  ///   }
+  ///
+  ///   String get displayName => _auth?.user?.name ?? 'Guest';
+  /// }
+  /// ```
+  T? maybeWatchCacheViewModel<T extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    try {
+      return watchCachedViewModel<T>(
+        key: key,
+        tag: tag,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Removes a listener from this ViewModel.
   ///
   /// Parameters:
@@ -229,10 +488,12 @@ mixin class ViewModel implements InstanceLifeCycle {
     _listeners.remove(listener);
   }
 
-  /// Adds a dispose callback that will be executed when this ViewModel is disposed.
+  /// Adds a dispose callback that will be executed when this ViewModel is
+  /// disposed.
   ///
   /// This is useful for cleaning up resources like streams, timers, or other
-  /// subscriptions that need to be disposed when the ViewModel is no longer needed.
+  /// subscriptions that need to be disposed when the ViewModel is no longer
+  /// needed.
   ///
   /// Parameters:
   /// - [block]: The cleanup function to execute on disposal
@@ -249,11 +510,12 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   @protected
-  void addDispose(Function() block) async {
+  Future<void> addDispose(Function() block) async {
     _autoDisposeController.addDispose(block);
   }
 
-  /// Adds a listener to this ViewModel that will be called when [notifyListeners] is invoked.
+  /// Adds a listener to this ViewModel that will be called when
+  /// [notifyListeners] is invoked.
   ///
   /// Returns a function that can be called to remove the listener.
   ///
@@ -283,7 +545,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// Any exceptions thrown by listeners are caught and logged to prevent
   /// one listener from affecting others.
   void notifyListeners() {
-    for (var element in _listeners) {
+    for (final element in _listeners) {
       try {
         element?.call();
       } catch (e) {
@@ -294,7 +556,8 @@ mixin class ViewModel implements InstanceLifeCycle {
 
   /// Initializes the ViewModel system.
   ///
-  /// This method must be called before using any ViewModels in your application.
+  /// This method must be called before using any ViewModels in your
+  /// application.
   /// It sets up the global configuration and lifecycle observers.
   ///
   /// Parameters:
@@ -336,7 +599,7 @@ mixin class ViewModel implements InstanceLifeCycle {
     if (_initializedDevtool) return;
     _initializedDevtool = true;
     if (kDebugMode) {
-      _viewModelLifecycles.add(DependencyTracker.instance);
+      // _viewModelLifecycles.add(DependencyTracker.instance);
       DevToolsService.instance.initialize();
     }
   }
@@ -347,7 +610,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   void onCreate(InstanceArg arg) {
     _initDevtool();
     _instanceArg = arg;
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onCreate(this, arg);
     }
   }
@@ -356,7 +619,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   @mustCallSuper
   @override
   void onAddWatcher(InstanceArg arg, String newWatchId) {
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onAddWatcher(this, arg, newWatchId);
     }
   }
@@ -365,7 +628,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   @mustCallSuper
   @override
   void onRemoveWatcher(InstanceArg arg, String removedWatchId) {
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onRemoveWatcher(this, arg, removedWatchId);
     }
   }
@@ -376,8 +639,10 @@ mixin class ViewModel implements InstanceLifeCycle {
   void onDispose(InstanceArg arg) {
     _isDisposed = true;
     _autoDisposeController.dispose();
+    _dependencyListeners.clear();
+    dependencyHandler.dispose();
     dispose();
-    for (var element in _viewModelLifecycles) {
+    for (final element in _viewModelLifecycles) {
       element.onDispose(this, arg);
     }
   }
@@ -452,7 +717,7 @@ abstract class StateViewModel<T> with ViewModel {
 
     _streamSubscription = _store.stateStream.listen((event) async {
       if (_isDisposed) return;
-      for (var element in _stateListeners) {
+      for (final element in _stateListeners) {
         try {
           element?.call(event.previousState, event.currentState);
         } catch (e) {
@@ -460,7 +725,7 @@ abstract class StateViewModel<T> with ViewModel {
         }
       }
 
-      for (var element in _listeners) {
+      for (final element in _listeners) {
         try {
           element?.call();
         } catch (e) {
@@ -502,6 +767,12 @@ abstract class StateViewModel<T> with ViewModel {
   /// Note: This method is protected and should only be called from within
   /// the ViewModel implementation.
   ///
+  /// This method internally uses the `isSameState` function from
+  /// [ViewModelConfig] to determine if the new state is the same as the
+  /// current state. If they are considered the same, no update will be triggered.
+  /// By default, this comparison is done by checking the memory addresses
+  /// of the state objects using `identical()`.
+  ///
   /// Example:
   /// ```dart
   /// void increment() {
@@ -542,7 +813,8 @@ abstract class StateViewModel<T> with ViewModel {
 
   /// Gets the current state.
   ///
-  /// This is the main way to access the current state from outside the ViewModel.
+  /// This is the main way to access the current state from outside the
+  /// ViewModel.
   T get state {
     return _store.state;
   }
@@ -575,7 +847,7 @@ class AutoDisposeController {
   ///
   /// Parameters:
   /// - [block]: The cleanup function to execute
-  void addDispose(Function() block) async {
+  Future<void> addDispose(Function() block) async {
     _disposeSet.add(block);
   }
 
@@ -584,7 +856,7 @@ class AutoDisposeController {
   /// Any exceptions thrown by disposal callbacks are caught and logged
   /// to prevent one callback from affecting others.
   void dispose() {
-    for (var element in _disposeSet) {
+    for (final element in _disposeSet) {
       try {
         element?.call();
       } catch (e) {
@@ -607,7 +879,7 @@ class AutoDisposeController {
 ///   MyViewModel build() => MyViewModel();
 ///
 ///   @override
-///   String? key() => 'shared-instance'; // Optional: for sharing
+///   Object? key() => 'shared-instance'; // Optional: for sharing
 ///
 ///   @override
 ///   Object? getTag() => 'my-tag'; // Optional: for identification
@@ -621,20 +893,21 @@ abstract mixin class ViewModelFactory<T> {
   /// ViewModels with the same key will be shared across different widgets.
   /// If this returns `null`, a new instance will be created each time.
   ///
-  /// By default, returns a shared ID if [singleton] is `true`, otherwise `null`.
+  /// By default, returns a shared ID if [singleton] is `true`, otherwise
+  /// `null`.
   ///
   /// Example:
   /// ```dart
   /// @override
-  /// String? key() => 'global-counter'; // Share across app
+  /// Object? key() => 'global-counter'; // Share across app
   /// ```
-  String? key() => (singleton()) ? _defaultShareId : null;
+  Object? key() => (singleton()) ? _defaultShareId : null;
 
   /// Returns a tag to identify or categorize this ViewModel.
   ///
   /// Tags can be used to find ViewModels by category rather than type.
   /// The tag is accessible via [ViewModel.tag] and can be used with
-  /// [ViewModel.read] to find ViewModels by tag.
+  /// [ViewModel.readCached] to find ViewModels by tag.
   ///
   /// Example:
   /// ```dart
@@ -727,16 +1000,17 @@ abstract class ViewModelLifecycle {
 /// A default generic ViewModelFactory for quickly creating ViewModel factories.
 class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
   final T Function() builder;
-  late final String? _key;
+  late final Object? _key;
   late final Object? _tag;
   final bool isSingleton;
 
   DefaultViewModelFactory({
     required this.builder,
-    String? key,
+    Object? key,
     Object? tag,
 
-    /// Whether to use singleton mode. This is just a convenient way to set a unique key for you.
+    /// Whether to use singleton mode. This is just a convenient way to
+    /// set a unique key for you.
     /// Note that the priority is lower than the key parameter.
     this.isSingleton = false,
   }) {
@@ -745,7 +1019,7 @@ class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
   }
 
   @override
-  String? key() {
+  Object? key() {
     if (_key == null) {
       return super.key();
     } else {

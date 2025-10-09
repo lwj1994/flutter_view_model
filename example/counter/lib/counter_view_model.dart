@@ -30,5 +30,5 @@ class CounterViewModelFactory with ViewModelFactory<CounterViewModel> {
   CounterViewModel build() => CounterViewModel(state: const CounterState());
 
   @override
-  String? key() => 'shared-counter-viewmodel';
+  Object? key() => 'shared-counter-viewmodel';
 }
