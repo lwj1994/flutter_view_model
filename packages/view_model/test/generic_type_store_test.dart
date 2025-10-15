@@ -13,6 +13,7 @@ void main() {
     });
 
     assert(GenericVM<String> != GenericVM<dynamic>);
+    assert(GenericVM<String> != GenericVM<String?>);
     testWidgets(
         'Cached reads for GenericVM<String> and GenericVM<dynamic> are isolated',
         (tester) async {

@@ -278,6 +278,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///   }
   /// }
   /// ```
+  @protected
   T readViewModel<T extends ViewModel>({
     required ViewModelFactory<T> factory,
   }) {
@@ -288,6 +289,7 @@ mixin class ViewModel implements InstanceLifeCycle {
     );
   }
 
+  @protected
   T readCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
@@ -330,6 +332,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///   String get displayName => authViewModel.user?.name ?? 'Guest';
   /// }
   /// ```
+  @protected
   T watchViewModel<T extends ViewModel>({
     required ViewModelFactory<T> factory,
   }) {
@@ -347,12 +350,13 @@ mixin class ViewModel implements InstanceLifeCycle {
       addDispose(vm.listen(onChanged: () {
         onDependencyNotify(vm);
       }));
-      // Mark this dependency as being listenedto
+      // Mark this dependency as being listened to
       _dependencyListeners[vm] = true;
     }
     return vm;
   }
 
+  @protected
   T watchCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
@@ -412,6 +416,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///   }
   /// }
   /// ```
+  @protected
   T? maybeReadCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
@@ -466,6 +471,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   ///   String get displayName => _auth?.user?.name ?? 'Guest';
   /// }
   /// ```
+  @protected
   T? maybeWatchCacheViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
