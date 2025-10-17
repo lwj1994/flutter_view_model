@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../../images/logo.svg" alt="ViewModel 标志" height="96" />
+  <img src="https://youke1.picui.cn/s1/2025/10/17/68f20115693e6.png" alt="ViewModel 标志" height="96" />
 </p>
 
 # view_model
