@@ -14,10 +14,12 @@ platforms:
   windows:
 
 topics:
-  - vm
+  - state-management
   - view-model
+  - caching
+  - dependency-injection
+  - vm
   - state
-  - state-manager
 
 environment:
   sdk: ^3.0.0
