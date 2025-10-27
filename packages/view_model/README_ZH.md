@@ -36,21 +36,40 @@
 > * `watchViewModel` 和 `readViewModel` 会绑定到 ViewModel。
 > * 当没有 Widget 绑定到 ViewModel 时，ViewModel 会自动销毁。
 
-### 1.3 关于局部更新
+### 1.3 更新粒度
 
-不支持局部更新，因为本质上没什么大的收益：https://github.com/lwj1994/flutter_view_model/issues/13
+本库采用粗粒度更新：当 `ViewModel` 调用 `notifyListeners()` 时，所有已绑定且处于监听状态的
+Widget 会重建。本库不提供字段级的监听或基于信号的细粒度更新。
+
+要控制重建范围，建议将 UI 按职责拆分为更小的组件，并只绑定这些组件所需的 `ViewModel`。
+可以使用 `ViewModelWatcher`/`CachedViewModelWatcher` 在不混入 `ViewModelStateMixin` 的情况下实现绑定和监听。
+设计缘由详见 issue #13：https://github.com/lwj1994/flutter_view_model/issues/13
 ### 1.4 API 快速概览
 
 ViewModel 的方法很简单：
 
 | 方法                    | 描述                     |
 |-----------------------|------------------------|
-| `watchViewModel<T>()` | 绑定到 ViewModel 并自动刷新 UI |
-| `readViewModel<T>()`  | 绑定到 ViewModel 但不触发 UI 刷新 |
-| `ViewModel.read<T>()` | 全局读取现有实例               |
+| `watchViewModel<T>() / watchCachedViewModel<T>()` | 监听 ViewModel 并在变化时重建 UI |
+| `readViewModel<T>() / readCachedViewModel<T>()`  | 仅绑定不监听；不触发 UI 重建      |
+| `ViewModel.readCached<T>() / ViewModel.maybeReadCached<T>()` | 全局访问已存在实例（可空安全版本） |
 | `recycleViewModel()`  | 主动销毁特定实例               |
 | `listenState()`       | 监听状态对象的变化              |
 | `listen()`            | 监听 `notifyListeners` 调用 |
+
+### 1.5 术语约定
+
+为避免歧义，本文档统一采用以下术语：
+
+- 绑定（Bind）：建立 Widget 与 `ViewModel`（或 `ViewModel` 与 `ViewModel`）的关系。
+  `read*` 和 `watch*` 方法都会绑定；仅绑定不代表会触发重建。
+- 监听（Listen）：订阅 `ViewModel` 的变化。`watch*` API 与 `*Watcher` 组件会监听，并在
+  `notifyListeners()` 调用时收到更新。
+- 重建（Rebuild）：处于监听状态时，`notifyListeners()` 会触发 UI 重建。
+- 缓存实例（Cached Instance）：已经存在于缓存中的 `ViewModel`。通过
+  `readCachedViewModel<T>() / watchCachedViewModel<T>()` 或
+  `ViewModel.readCached<T>() / ViewModel.maybeReadCached<T>()` 访问。
+- 回收（Recycle）：通过 `recycleViewModel()` 主动销毁并移除某个 `ViewModel` 实例。
 
 ## 2. 基本用法
 
@@ -65,7 +84,7 @@ ViewModel 的方法很简单：
 dependencies:
   flutter:
     sdk: flutter
-  view_model: ^0.4.6 # 请使用最新版本
+  view_model: ^0.5.1 # 请使用最新版本
 ```
 
 然后运行 `flutter pub get`。
@@ -192,6 +211,59 @@ class _MyPageState extends State<MyPage>
   }
 }
 ```
+ 
+#### 可选方案：ViewModelWatcher（无需混入）
+
+如果不希望在 `State` 中混入 `ViewModelStateMixin`，可以使用便捷组件 `ViewModelWatcher`。
+它内部调用 `watchViewModel`，当 `ViewModel` 触发 `notifyListeners()` 时会自动重建。
+
+```dart
+// 示例：无需混入 ViewModelStateMixin 的用法
+ViewModelWatcher<MySimpleViewModel>(
+  factory: MySimpleViewModelFactory(),
+  builder: (context, vm) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(vm.message),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: () => vm.updateMessage("消息已更新！"),
+          child: const Text('更新消息'),
+        ),
+      ],
+    );
+  },
+)
+```
+
+#### 监听缓存实例：CachedViewModelWatcher
+
+使用 `CachedViewModelWatcher` 监听一个已存在于缓存中的 `ViewModel`。它内部使用
+`watchCachedViewModel`，在 `notifyListeners()` 时重建。为避免与 Widget 的 `Key` 混淆，
+请使用 `vmKey` 传入 ViewModel 的键，或通过 `tag` 查找。
+
+```dart
+// 示例：使用 CachedViewModelWatcher 绑定到已存在实例
+CachedViewModelWatcher<MySimpleViewModel>(
+  vmKey: "shared-key", // 或：tag: "shared-tag"
+  builder: (context, vm) {
+    return Row(
+      children: [
+        Expanded(child: Text(vm.message)),
+        IconButton(
+          onPressed: () => vm.incrementCounter(),
+          icon: const Icon(Icons.add),
+        ),
+      ],
+    );
+  },
+)
+```
+
+提示：
+- `ViewModelWatcher` 与 `CachedViewModelWatcher` 都会订阅更新，并在 `notifyListeners()` 时重建。
+- 若只需要一次性读取且不希望重建，请在 `State` 中使用 `readViewModel` 或 `readCachedViewModel`。
 
 ### 2.5 监听 ViewModel 通知
 

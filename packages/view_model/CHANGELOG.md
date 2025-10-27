@@ -1,3 +1,10 @@
+## 0.5.1
+- Add `ViewModelWatcher` and `CachedViewModelWatcher` widgets for binding and
+  listening without mixing in `ViewModelStateMixin`;
+  Naming: use `vmKey` in `CachedViewModelWatcher` to avoid confusion with
+  widget `Key`.
+
+
 ## 0.5.0
 
 * **Breaking Change & API Refinement**: Major overhaul of ViewModel access
