@@ -17,7 +17,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:meta/meta.dart';
+import 'package:meta/meta.dart' show internal;
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/get_instance/manager.dart';

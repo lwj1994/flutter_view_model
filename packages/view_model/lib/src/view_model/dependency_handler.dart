@@ -9,7 +9,7 @@ library;
 
 import 'dart:async';
 
-import 'package:meta/meta.dart';
+import 'package:meta/meta.dart' show internal;
 
 import 'model.dart' as model;
 import 'view_model.dart';
