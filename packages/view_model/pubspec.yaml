@@ -19,7 +19,6 @@ topics:
   - caching
   - dependency-injection
   - vm
-  - state
 
 environment:
   sdk: ^3.0.0
@@ -29,6 +28,7 @@ dependencies:
   flutter:
     sdk: flutter
   uuid: ^4.4.2
+  meta: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
