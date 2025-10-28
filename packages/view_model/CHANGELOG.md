@@ -4,6 +4,43 @@
   Naming: use `vmKey` in `CachedViewModelWatcher` to avoid confusion with
   widget `Key`.
 
+```dart
+// Example: Using ViewModelWatcher without mixing ViewModelStateMixin
+ViewModelWatcher<MySimpleViewModel>(
+  factory: MySimpleViewModelFactory(),
+  builder: (context, vm) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(vm.message),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: () => vm.updateMessage("Message Updated!"),
+          child: const Text('Update Message'),
+        ),
+      ],
+    );
+  },
+)
+```
+
+```dart
+// Example: Using CachedViewModelWatcher to bind to an existing instance
+CachedViewModelWatcher<MySimpleViewModel>(
+  vmKey: "shared-key", // or: tag: "shared-tag"
+  builder: (context, vm) {
+    return Row(
+      children: [
+        Expanded(child: Text(vm.message)),
+        IconButton(
+          onPressed: () => vm.incrementCounter(),
+          icon: const Icon(Icons.add),
+        ),
+      ],
+    );
+  },
+)
+```
 
 ## 0.5.0
 
