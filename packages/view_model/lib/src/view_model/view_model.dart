@@ -15,6 +15,7 @@
 library;
 
 import 'dart:async';
+import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:meta/meta.dart' show internal;
@@ -132,6 +133,26 @@ mixin class ViewModel implements InstanceLifeCycle {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Executes the given [block] and automatically calls [notifyListeners] when
+  /// it completes.
+  ///
+  /// This is a convenience wrapper to ensure that any asynchronous or 
+  /// synchronous
+  /// update logic always triggers a UI refresh, preventing missed 
+  /// notifications.
+  ///
+  /// Example:
+  /// ```dart
+  /// await update(() async {
+  ///   await repository.save(data);
+  ///   _counter++;
+  /// });
+  /// ```
+  Future<void> update(FutureOr<dynamic> Function() block) async {
+    await block.call();
+    notifyListeners();
   }
 
   /// Reads a ViewModel instance by [key] or [tag].
