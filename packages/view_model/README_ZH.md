@@ -9,6 +9,7 @@
 [更新日志](CHANGELOG.md)
 
 [English Doc](README.md) | [中文文档](README_ZH.md)
+
 > 感谢 [Miolin](https://github.com/Miolin) 将
 > [view_model](https://pub.dev/packages/view_model) 包的权限转移给我。
 
@@ -30,32 +31,30 @@
 - **Widget 生命周期集成**：通过 `ViewModelStateMixin` 与 Flutter 的 Widget 生命周期无缝集成
 
 > **重要提示**：`ViewModel` 仅支持绑定到 `StatefulWidget`。这是因为
-`StatelessWidget` 没有独立的生命周期，无法支持 `ViewModel` 的自动
+> `StatelessWidget` 没有独立的生命周期，无法支持 `ViewModel` 的自动
 > 销毁和状态监听机制。
 
-> * `watchViewModel` 和 `readViewModel` 会绑定到 ViewModel。
-> * 当没有 Widget 绑定到 ViewModel 时，ViewModel 会自动销毁。
+> - `watchViewModel` 和 `readViewModel` 会绑定到 ViewModel。
+> - 当没有 Widget 绑定到 ViewModel 时，ViewModel 会自动销毁。
 
 ### 1.3 更新粒度
 
-本库采用粗粒度更新：当 `ViewModel` 调用 `notifyListeners()` 时，所有已绑定且处于监听状态的
-Widget 会重建。本库不提供字段级的监听或基于信号的细粒度更新。
+如果您需要基于特定值而不是整个 ViewModel 进行细粒度更新，您可以使用 ObserverBuilder 和 ObservableValue 的组合。这种模式非常适合您希望某个 widget 仅在特定数据片段发生更改时才重建的场景。
 
-要控制重建范围，建议将 UI 按职责拆分为更小的组件，并只绑定这些组件所需的 `ViewModel`。
-可以使用 `ViewModelWatcher`/`CachedViewModelWatcher` 在不混入 `ViewModelStateMixin` 的情况下实现绑定和监听。
-设计缘由详见 issue #13：https://github.com/lwj1994/flutter_view_model/issues/13
+有关详细用法和示例，请参阅 [ObservableValue 和 ObserverBuilder 文档](value_observer_doc.md) 。
+
 ### 1.4 API 快速概览
 
 ViewModel 的方法很简单：
 
-| 方法                    | 描述                     |
-|-----------------------|------------------------|
-| `watchViewModel<T>() / watchCachedViewModel<T>()` | 监听 ViewModel 并在变化时重建 UI |
-| `readViewModel<T>() / readCachedViewModel<T>()`  | 仅绑定不监听；不触发 UI 重建      |
+| 方法                                                         | 描述                               |
+| ------------------------------------------------------------ | ---------------------------------- |
+| `watchViewModel<T>() / watchCachedViewModel<T>()`            | 监听 ViewModel 并在变化时重建 UI   |
+| `readViewModel<T>() / readCachedViewModel<T>()`              | 仅绑定不监听；不触发 UI 重建       |
 | `ViewModel.readCached<T>() / ViewModel.maybeReadCached<T>()` | 全局访问已存在实例（可空安全版本） |
-| `recycleViewModel()`  | 主动销毁特定实例               |
-| `listenState()`       | 监听状态对象的变化              |
-| `listen()`            | 监听 `notifyListeners` 调用 |
+| `recycleViewModel()`                                         | 主动销毁特定实例                   |
+| `listenState()`                                              | 监听状态对象的变化                 |
+| `listen()`                                                   | 监听 `notifyListeners` 调用        |
 
 ### 1.5 术语约定
 
@@ -211,7 +210,7 @@ class _MyPageState extends State<MyPage>
   }
 }
 ```
- 
+
 #### 可选方案：ViewModelWatcher（无需混入）
 
 如果不希望在 `State` 中混入 `ViewModelStateMixin`，可以使用便捷组件 `ViewModelWatcher`。
@@ -262,6 +261,7 @@ CachedViewModelWatcher<MySimpleViewModel>(
 ```
 
 提示：
+
 - `ViewModelWatcher` 与 `CachedViewModelWatcher` 都会订阅更新，并在 `notifyListeners()` 时重建。
 - 若只需要一次性读取且不希望重建，请在 `State` 中使用 `readViewModel` 或 `readCachedViewModel`。
 
@@ -305,11 +305,11 @@ void dispose() {
 `ViewModelFactory<T>` 是用于创建、配置和识别 ViewModel
 实例的工厂类。它通过混入（with）使用。
 
-| 方法/属性      | 类型        | 可选         | 描述                                                                                                                                            |
-|------------|-----------|------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| `build()`  | `T`       | ❌ 必须实现     | 创建 ViewModel 实例的工厂方法。通常在这里传递构造函数参数。                                                                                                          |
-| `key()`    | `Object?` | ✅ 可选       | 为 ViewModel 提供唯一标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/页面共享）。 | |                              |
-| `getTag()` | `Object?` | ✅          | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchCachedViewModel(tag:tag)` 查找 ViewModel。                                                   |
+| 方法/属性  | 类型      | 可选        | 描述                                                                                                                  |
+| ---------- | --------- | ----------- | --------------------------------------------------------------------------------------------------------------------- | --- | --- |
+| `build()`  | `T`       | ❌ 必须实现 | 创建 ViewModel 实例的工厂方法。通常在这里传递构造函数参数。                                                           |
+| `key()`    | `Object?` | ✅ 可选     | 为 ViewModel 提供唯一标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨 widget/页面共享）。                     |     |     |
+| `getTag()` | `Object?` | ✅          | 为 ViewModel 实例添加标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchCachedViewModel(tag:tag)` 查找 ViewModel。 |
 
 ```dart
 class MyViewModelFactory with ViewModelFactory<MyViewModel> {
@@ -467,14 +467,14 @@ class UserProfileViewModel extends ViewModel {
       _fetchProfile(authVM!.userId);
     }
   }
-  
+
   void setupReactiveAuth() {
     // 响应式访问 - 当 auth 变化时自动更新
     final authVM = watchCachedViewModel<AuthViewModel>();
     // 当 authVM 变化时，此 ViewModel 将收到通知
   }
-  
-  
+
+
   void manualListening() {
     final authVM = readCachedViewModel<AuthViewModel>();
     // 您也可以手动监听任何 ViewModel
@@ -485,7 +485,6 @@ class UserProfileViewModel extends ViewModel {
   }
 }
 ```
-
 
 ## 4. 有状态的 ViewModel (`StateViewModel<S>`)
 
@@ -742,7 +741,6 @@ documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-exte
 extensions:
   - view_model: true
 ```
-
 
 ![](https://i.imgur.com/5itXPYD.png)
 ![](https://imgur.com/83iOQhy.png)

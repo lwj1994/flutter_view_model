@@ -1,4 +1,43 @@
+## 0.7.0
+
+- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI updates.
+
+```dart
+final observable = ObservableValue<int>(0);
+observable.value = 20;
+
+ObserverBuilder<int>(
+            observable: observable,
+            builder: (context) {
+              return Text(observable.value.toString());
+            },
+)
+
+
+
+
+// observe 2 value
+ObserverBuilder2<int>(
+            observable1: observable1,
+            observable2: observable2,
+            builder: (context) {
+              return Text(observable.value.toString());
+            },
+)
+
+// observe 3 value
+ObserverBuilder3<int>(
+            observable1: observable1,
+            observable2: observable2,
+            observable3: observable3,
+            builder: (context) {
+              return Text(observable.value.toString());
+            },
+)
+```
+
 ## 0.6.0
+
 - Add `ViewModelWatcher` and `CachedViewModelWatcher` widgets for binding and
   listening without mixing in `ViewModelStateMixin`;
   Naming: use `vmKey` in `CachedViewModelWatcher` to avoid confusion with
@@ -44,27 +83,27 @@ CachedViewModelWatcher<MySimpleViewModel>(
 
 ## 0.5.0
 
-* **Breaking Change & API Refinement**: Major overhaul of ViewModel access
+- **Breaking Change & API Refinement**: Major overhaul of ViewModel access
   methods to clarify responsibilities and improve predictability.
-    - **`watchViewModel` / `readViewModel`**:
-        - Now primarily responsible for creating new ViewModel instances.
-        - The `factory` parameter is now **mandatory**.
-        - Behavior depends on the provided `factory`:
-            - If the `factory` includes a `key`, the instance is created and
-              cached (or retrieved if already cached).
-            - If the `factory` has no `key`, a new, non-shared instance is created every time.
-    - **New Methods for Cached Access**:
-        - Introduced `watchCachedViewModel` and `readCachedViewModel` to explicitly
-          find existing, cached ViewModel instances by `key` or `tag`.
-        - Introduced `maybeWatchCachedViewModel` and `maybeReadCachedViewModel` for
-          safely accessing cached instances without throwing errors if not found.
-    - **Migration Guide**:
-        - To create/watch a new instance: Continue using `watchViewModel` but you
-          **must** provide a `factory`.
-        - To find an existing instance: Replace `watchViewModel(key: ...)` with
-          `watchCachedViewModel(key: ...)` or `readCachedViewModel(key: ...)`.
-* support ViewModel-to-ViewModel Access
-* Breaking change: The `key` parameter in `watchViewModel`, `readViewModel`,
+  - **`watchViewModel` / `readViewModel`**:
+    - Now primarily responsible for creating new ViewModel instances.
+    - The `factory` parameter is now **mandatory**.
+    - Behavior depends on the provided `factory`:
+      - If the `factory` includes a `key`, the instance is created and
+        cached (or retrieved if already cached).
+      - If the `factory` has no `key`, a new, non-shared instance is created every time.
+  - **New Methods for Cached Access**:
+    - Introduced `watchCachedViewModel` and `readCachedViewModel` to explicitly
+      find existing, cached ViewModel instances by `key` or `tag`.
+    - Introduced `maybeWatchCachedViewModel` and `maybeReadCachedViewModel` for
+      safely accessing cached instances without throwing errors if not found.
+  - **Migration Guide**:
+    - To create/watch a new instance: Continue using `watchViewModel` but you
+      **must** provide a `factory`.
+    - To find an existing instance: Replace `watchViewModel(key: ...)` with
+      `watchCachedViewModel(key: ...)` or `readCachedViewModel(key: ...)`.
+- support ViewModel-to-ViewModel Access
+- Breaking change: The `key` parameter in `watchViewModel`, `readViewModel`,
   and `ViewModel.read` has been changed from `String?` to `Object?`. This
   allows for the use of custom objects as keys, but requires proper
   implementation of `==` and `hashCode` for custom key objects.
@@ -117,14 +156,14 @@ class UserProfileViewModel extends ViewModel {
 
 ## 0.4.7
 
-* fix `ViewModel.read`
+- fix `ViewModel.read`
 
 ## 0.4.6
 
-* The `view_model` package includes a powerful DevTools extension that provides
+- The `view_model` package includes a powerful DevTools extension that provides
   real-time monitoring and debugging capabilities for your ViewModels during
   development.
-* create `devtools_options.yaml` in root directory of project.
+- create `devtools_options.yaml` in root directory of project.
 
 ```yaml
 description: This file stores settings for Dart & Flutter DevTools.
@@ -136,21 +175,21 @@ extensions:
 ![](https://i.imgur.com/5itXPYD.png)
 ![](https://imgur.com/83iOQhy.png)
 
-* Breaking change: rename `initConfig` to `initialize`
+- Breaking change: rename `initConfig` to `initialize`
 
 ## 0.4.5
 
-* Add `DefaultViewModelFactory` for convenient and generic ViewModel factory
+- Add `DefaultViewModelFactory` for convenient and generic ViewModel factory
   creation.
 
 ## 0.4.4
 
-* Add `ViewModel.maybeRead`
+- Add `ViewModel.maybeRead`
 
 ## 0.4.3
 
-* Add `maybeWatchViewModel` and `maybeReadViewModel`
-* update `watchViewModel` find logic
+- Add `maybeWatchViewModel` and `maybeReadViewModel`
+- update `watchViewModel` find logic
 
 ```dart
 VM watchViewModel<VM extends ViewModel>({
@@ -161,37 +200,37 @@ VM watchViewModel<VM extends ViewModel>({
 ```
 
 | Parameter Name | Type                    | Optional | Description                                                                  |
-|----------------|-------------------------|----------|------------------------------------------------------------------------------|
-| `factory`      | `ViewModelFactory<VM>?` | ✅        | Provides the construction method for the ViewModel. Optional; if an          |
+| -------------- | ----------------------- | -------- | ---------------------------------------------------------------------------- |
+| `factory`      | `ViewModelFactory<VM>?` | ✅       | Provides the construction method for the ViewModel. Optional; if an          |
 |                |                         |          | existing instance is not found in the cache, it will be used to create a new |
 |                |                         |          | one.                                                                         |
-| `key`          | `String?`               | ✅        | Specifies a unique key to support sharing the same ViewModel instance.       |
+| `key`          | `String?`               | ✅       | Specifies a unique key to support sharing the same ViewModel instance.       |
 |                |                         |          | First, it tries to find an instance with the same key in the cache.          |
-| `tag`          | `Object?`               | ✅        | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and  it's      |
+| `tag`          | `Object?`               | ✅       | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's       |
 |                |                         |          | used by find ViewModel by `watchViewModel(tag:tag)`.                         |
 
-__🔍 Lookup Logic Priority (Important)__
+**🔍 Lookup Logic Priority (Important)**
 The internal lookup and creation logic of `watchViewModel` is as follows
 (executed in priority order):
 
 1. If a key is passed in:
 
-* First, attempt to find an instance with the same key in the cache.
-* If a factory exists, use the factory to get a new instance.
-* If no factory is found and no instance is found, an error will be thrown.
+- First, attempt to find an instance with the same key in the cache.
+- If a factory exists, use the factory to get a new instance.
+- If no factory is found and no instance is found, an error will be thrown.
 
 2. If a tag is passed in, attempt to find the latest created instance which has
    the same tag in the cache.
 3. If nothing passed in, attempt to find the latest created instance of this
    type in the cache.
 
-> __⚠️ If no ViewModel instance of the specified type is found, an error will be
-thrown. Ensure that the ViewModel has been correctly created and registered
-before use.__
+> **⚠️ If no ViewModel instance of the specified type is found, an error will be
+> thrown. Ensure that the ViewModel has been correctly created and registered
+> before use.**
 
 ## 0.4.2
 
-* Support find existing ViewModel by tag
+- Support find existing ViewModel by tag
 
 set tag in `ViewModelFactory.getTag()`:
 
@@ -221,22 +260,22 @@ void initState() {
 
 _Breaking change:_
 
-* Use `recycleViewModel` instead of `refreshViewModel`.
+- Use `recycleViewModel` instead of `refreshViewModel`.
 
 ## 0.4.0
 
 _Breaking change:_
 
-* Use `ViewModel` instead of `StatelessViewModel`.
-* Use `StateViewModel` instead of `ViewModel`.
-* Use either `watchViewModel` or `readViewModel` instead of `getViewModel`/
+- Use `ViewModel` instead of `StatelessViewModel`.
+- Use `StateViewModel` instead of `ViewModel`.
+- Use either `watchViewModel` or `readViewModel` instead of `getViewModel`/
   `requireExistingViewModel`.
-* Use `StateViewModel.listenState` instead of `ViewModel.listen`.
-* Use `ViewModel.listen` instead of `ViewModel.addListener`.
+- Use `StateViewModel.listenState` instead of `ViewModel.listen`.
+- Use `ViewModel.listen` instead of `ViewModel.addListener`.
 
-* Support `ViewModel.read<T>` to read existing view model globally.
+- Support `ViewModel.read<T>` to read existing view model globally.
 
 ## 0.3.0
 
-* transfer to https://github.com/lwj1994/flutter_view_model. thank
+- transfer to https://github.com/lwj1994/flutter_view_model. thank
   to [Miolin](https://github.com/Miolin)

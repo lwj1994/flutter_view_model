@@ -30,15 +30,9 @@ This library extends the traditional ViewModel pattern with Flutter-specific enh
 
 
 ### 1.3 Update Granularity
+If you need fine-grained updates based on specific values rather than the entire `ViewModel`, you can use the `ObserverBuilder` and `ObservableValue` combination. This pattern is ideal for scenarios where you want a widget to rebuild only when a particular piece of data changes.
 
-This library uses coarse-grained updates: when a `ViewModel` calls
-`notifyListeners()`, any bound and listening widget will rebuild. It does not
-provide field-level reactivity or signal-based fine-grained updates.
-
-To keep rebuild scopes small, split UI into smaller widgets and bind only to
-the `ViewModel`s they need. Use `ViewModelWatcher`/`CachedViewModelWatcher` to
-bind and listen without mixing in `ViewModelStateMixin`. See rationale in
-issue #13: https://github.com/lwj1994/flutter_view_model/issues/13
+For detailed usage and examples, please refer to the [ObservableValue and ObserverBuilder Documentation](value_observer_doc.md).
 
 ### 1.4 API Quick Overview
 
