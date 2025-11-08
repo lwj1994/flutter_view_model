@@ -5,17 +5,17 @@ import 'package:view_model/view_model.dart';
 import 'test_widget.dart';
 
 void main() {
-  group('ViewModelWatcher & CachedViewModelWatcher', () {
+  group('ViewModelBuilder & CachedViewModelBuilder', () {
     setUp(() {
       ViewModel.initialize(config: ViewModelConfig(logEnable: true));
     });
 
-    testWidgets('ViewModelWatcher rebuilds when ViewModel state changes',
+    testWidgets('ViewModelBuilder rebuilds when ViewModel state changes',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
-        home: ViewModelWatcher<TestViewModel>(
+        home: ViewModelBuilder<TestViewModel>(
           factory: const TestViewModelFactory(initState: "initState"),
-          builder: (context, vm) => Text(vm.state),
+          builder: (vm) => Text(vm.state),
         ),
       ));
 
@@ -28,7 +28,8 @@ void main() {
       expect(find.text('updated'), findsOneWidget);
     });
 
-    testWidgets('CachedViewModelWatcher binds by vmKey and rebuilds on change',
+    testWidgets(
+        'CachedViewModelBuilder binds by shareKey and rebuilds on change',
         (tester) async {
       const factory =
           TestViewModelFactory(initState: 'key-init', keyV: 'vm-key');
@@ -37,10 +38,10 @@ void main() {
         home: Column(children: [
           // Create the instance via TestPage (uses watchViewModel internally)
           const TestPage(factory: factory),
-          CachedViewModelWatcher<TestViewModel>(
+          CachedViewModelBuilder<TestViewModel>(
             key: const Key('cached-widget'),
-            vmKey: 'vm-key',
-            builder: (context, vm) => Text('cached:${vm.state}'),
+            shareKey: 'vm-key',
+            builder: (vm) => Text('cached:${vm.state}'),
           ),
         ]),
       ));
@@ -56,7 +57,7 @@ void main() {
       expect(find.text('cached:key-updated'), findsOneWidget);
     });
 
-    testWidgets('CachedViewModelWatcher binds by tag and rebuilds on change',
+    testWidgets('CachedViewModelBuilder binds by tag and rebuilds on change',
         (tester) async {
       const factory = TestViewModelFactory(initState: 'tag-init', tag: 't1');
 
@@ -64,9 +65,9 @@ void main() {
         home: Column(children: [
           // Create the instance via TestPage (uses watchViewModel internally)
           const TestPage(factory: factory),
-          CachedViewModelWatcher<TestViewModel>(
+          CachedViewModelBuilder<TestViewModel>(
             tag: 't1',
-            builder: (context, vm) => Text('cached:${vm.state}'),
+            builder: (vm) => Text('cached:${vm.state}'),
           ),
         ]),
       ));
@@ -82,12 +83,12 @@ void main() {
       expect(find.text('cached:tag-updated'), findsOneWidget);
     });
 
-    testWidgets('CachedViewModelWatcher renders nothing when instance missing',
+    testWidgets('CachedViewModelBuilder renders nothing when instance missing',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
-        home: CachedViewModelWatcher<TestViewModel>(
-          vmKey: 'non-existent',
-          builder: (context, vm) => const Text('should-not-render'),
+        home: CachedViewModelBuilder<TestViewModel>(
+          shareKey: 'non-existent',
+          builder: (vm) => const Text('should-not-render'),
         ),
       ));
 

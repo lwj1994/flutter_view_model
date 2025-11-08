@@ -114,4 +114,4 @@ export "package:view_model/src/observer/value_observer.dart";
 export "package:view_model/src/view_model/config.dart";
 export "package:view_model/src/view_model/extension.dart";
 export "package:view_model/src/view_model/view_model.dart";
-export "package:view_model/src/view_model/watcher.dart";
+export "package:view_model/src/view_model/builder.dart";

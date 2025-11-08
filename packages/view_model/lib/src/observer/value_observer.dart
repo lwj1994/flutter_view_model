@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/view_model.dart';
 
 /// A class that holds a value and can be observed by an [ObserverBuilder].
@@ -12,41 +13,37 @@ class ObservableValue<T> {
   /// If not provided, a unique key is automatically created, making the value local.
   final Object shareKey;
 
-  T _value;
+  final T initialValue;
 
-  /// The current value.
-  /// It reads from the local cache first. If a shared ViewModel is found,
-  /// it syncs with the state from the ViewModel.
+  /// Returns the current value proxied from the underlying shared StateViewModel.
+  /// The value is sourced from the shared instance identified by `shareKey`.
   T get value {
-    final vm =
-        ViewModel.maybeReadCached<_ObserveDataViewModel<T>>(key: shareKey);
-    if (vm != null && vm.state != _value) {
-      _value = vm.state;
-    }
-    return _value;
+    return _vm.state;
   }
 
+  late _ObserveDataViewModel<T> _vm;
+
+  /// Updates the underlying shared StateViewModel state and notifies observers.
   set value(T newValue) {
-    if (value == newValue) return;
-
-    _value = newValue; // Always update the local value
-
-    final vm =
-        ViewModel.maybeReadCached<_ObserveDataViewModel<T>>(key: shareKey);
-
-    if (vm != null) {
-      // ignore: invalid_use_of_protected_member
-      vm.setState(newValue);
-    }
+    // ignore: invalid_use_of_protected_member
+    _vm.setState(newValue);
   }
 
   /// Creates an observable value.
   ///
   /// If a [shareKey] is provided, it will be used to identify this value.
   /// Otherwise, a unique key is automatically created, making this value local.
-  ObservableValue(T initialValue, {Object? shareKey})
-      : _value = initialValue,
-        shareKey = shareKey ?? Object();
+  ObservableValue(this.initialValue, {Object? shareKey})
+      : this.shareKey = shareKey ?? Object() {
+    _vm = instanceManager.get<_ObserveDataViewModel<T>>(
+        factory: InstanceFactory(
+            builder: () {
+              return _ObserveDataViewModelFactory<T>(
+                      data: initialValue, shareKey: this.shareKey)
+                  .build();
+            },
+            arg: InstanceArg(key: this.shareKey)));
+  }
 }
 
 class _ObserveDataViewModelFactory<T>
@@ -78,7 +75,9 @@ class _ObserveDataViewModel<T> extends StateViewModel<T> {
 /// value changes.
 class ObserverBuilder<T> extends StatefulWidget {
   final ObservableValue<T> observable;
-  final Widget Function(BuildContext) builder;
+
+  /// Builder that receives the latest value; `BuildContext` is not required.
+  final Widget Function(T value) builder;
 
   const ObserverBuilder({
     required this.observable,
@@ -94,34 +93,14 @@ class ObserverBuilder<T> extends StatefulWidget {
 
 class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
     with ViewModelStateMixin<ObserverBuilder<T>> {
-  late _ObserveDataViewModel<T> _viewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    if (T == dynamic) {
-      throw UnsupportedError(
-          "ObserverBuilder<T> requires a specific type 'T', but 'dynamic' was provided. "
-          "Please specify a concrete type (e.g., ObserverBuilder<int>(...)).");
-    }
-    _init();
-  }
-
-  void _init() {
-    _viewModel = watchViewModel<_ObserveDataViewModel<T>>(
-      factory: _ObserveDataViewModelFactory<T>(
-        data: widget.observable.value,
-        shareKey: widget.observable.shareKey,
-      ),
-    );
-  }
-
+  /// Subscribes to the shared StateViewModel identified by `observable.shareKey`
+  /// and passes its current state to `builder` as `data`.
   @override
   Widget build(BuildContext context) {
-    // Rebuilds when the view model's state changes.
-    // The builder can access the latest value via `widget.observable.value`.
-    _viewModel.state;
-    return widget.builder(context);
+    // Rebuilds when the view model's state changes; latest value is provided to `builder`.
+    return widget.builder(watchCachedViewModel<_ObserveDataViewModel<T>>(
+      key: widget.observable.shareKey,
+    ).state);
   }
 }
 
@@ -130,7 +109,9 @@ class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
 class ObserverBuilder2<T1, T2> extends StatefulWidget {
   final ObservableValue<T1> observable1;
   final ObservableValue<T2> observable2;
-  final Widget Function(BuildContext) builder;
+
+  /// Builder that receives latest values from two observables; no `BuildContext` needed.
+  final Widget Function(T1 value1, T2 value2) builder;
 
   const ObserverBuilder2({
     required this.observable1,
@@ -147,37 +128,20 @@ class ObserverBuilder2<T1, T2> extends StatefulWidget {
 
 class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
     with ViewModelStateMixin<ObserverBuilder2<T1, T2>> {
-  late _ObserveDataViewModel<T1> _viewModel1;
-  late _ObserveDataViewModel<T2> _viewModel2;
-
-  @override
-  void initState() {
-    super.initState();
-    if (T1 == dynamic || T2 == dynamic) {
-      throw UnsupportedError(
-          "ObserverBuilder2<T1, T2> requires specific types, but 'dynamic' was provided.");
-    }
-    _viewModel1 = watchViewModel<_ObserveDataViewModel<T1>>(
-      factory: _ObserveDataViewModelFactory<T1>(
-        data: widget.observable1.value,
-        shareKey: widget.observable1.shareKey,
-      ),
-    );
-    _viewModel2 = watchViewModel<_ObserveDataViewModel<T2>>(
-      factory: _ObserveDataViewModelFactory<T2>(
-        data: widget.observable2.value,
-        shareKey: widget.observable2.shareKey,
-      ),
-    );
-  }
-
+  /// Subscribes to two shared StateViewModels identified by `observable1.shareKey`
+  /// and `observable2.shareKey`, passing their current states to `builder` as
+  /// `value1` and `value2`.
   @override
   Widget build(BuildContext context) {
-    // Rebuilds when any of the view models' state changes.
-    // The builder can access the latest values via `widget.observableX.value`.
-    _viewModel1.state;
-    _viewModel2.state;
-    return widget.builder(context);
+    // Rebuilds when any view model's state changes; latest values are passed to `builder`.
+    return widget.builder(
+      watchCachedViewModel<_ObserveDataViewModel<T1>>(
+        key: widget.observable1.shareKey,
+      ).state,
+      watchCachedViewModel<_ObserveDataViewModel<T2>>(
+        key: widget.observable2.shareKey,
+      ).state,
+    );
   }
 }
 
@@ -187,7 +151,9 @@ class ObserverBuilder3<T1, T2, T3> extends StatefulWidget {
   final ObservableValue<T1> observable1;
   final ObservableValue<T2> observable2;
   final ObservableValue<T3> observable3;
-  final Widget Function(BuildContext) builder;
+
+  /// Builder that receives latest values from three observables; no `BuildContext` needed.
+  final Widget Function(T1 value1, T2 value2, T3 value3) builder;
 
   const ObserverBuilder3({
     required this.observable1,
@@ -206,44 +172,22 @@ class ObserverBuilder3<T1, T2, T3> extends StatefulWidget {
 class _ObserverBuilder3State<T1, T2, T3>
     extends State<ObserverBuilder3<T1, T2, T3>>
     with ViewModelStateMixin<ObserverBuilder3<T1, T2, T3>> {
-  late _ObserveDataViewModel<T1> _viewModel1;
-  late _ObserveDataViewModel<T2> _viewModel2;
-  late _ObserveDataViewModel<T3> _viewModel3;
-
-  @override
-  void initState() {
-    super.initState();
-    if (T1 == dynamic || T2 == dynamic || T3 == dynamic) {
-      throw UnsupportedError(
-          "ObserverBuilder3<T1, T2, T3> requires specific types, but 'dynamic' was provided.");
-    }
-    _viewModel1 = watchViewModel<_ObserveDataViewModel<T1>>(
-      factory: _ObserveDataViewModelFactory<T1>(
-        data: widget.observable1.value,
-        shareKey: widget.observable1.shareKey,
-      ),
-    );
-    _viewModel2 = watchViewModel<_ObserveDataViewModel<T2>>(
-      factory: _ObserveDataViewModelFactory<T2>(
-        data: widget.observable2.value,
-        shareKey: widget.observable2.shareKey,
-      ),
-    );
-    _viewModel3 = watchViewModel<_ObserveDataViewModel<T3>>(
-      factory: _ObserveDataViewModelFactory<T3>(
-        data: widget.observable3.value,
-        shareKey: widget.observable3.shareKey,
-      ),
-    );
-  }
-
+  /// Subscribes to three shared StateViewModels identified by each observable's
+  /// `shareKey`, passing their current states to `builder` as `value1`, `value2`,
+  /// and `value3`.
   @override
   Widget build(BuildContext context) {
-    // Rebuilds when any of the view models' state changes.
-    // The builder can access the latest values via `widget.observableX.value`.
-    _viewModel1.state;
-    _viewModel2.state;
-    _viewModel3.state;
-    return widget.builder(context);
+    // Rebuilds when any view model's state changes; latest values are passed to `builder`.
+    return widget.builder(
+      watchCachedViewModel<_ObserveDataViewModel<T1>>(
+        key: widget.observable1.shareKey,
+      ).state,
+      watchCachedViewModel<_ObserveDataViewModel<T2>>(
+        key: widget.observable2.shareKey,
+      ).state,
+      watchCachedViewModel<_ObserveDataViewModel<T3>>(
+        key: widget.observable3.shareKey,
+      ).state,
+    );
   }
 }

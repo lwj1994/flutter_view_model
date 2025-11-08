@@ -85,13 +85,15 @@ Column(
   children: [
     ObserverBuilder<int>(
       observable: counter,
-      builder: (context) {
+      builder: (value) {
         // This Text widget will rebuild whenever counter.value changes
-        return Text('Counter: ${counter.value}');
+        return Text('Counter: ${value}');
       },
     ),
     ElevatedButton(
-      onPressed: () => counter.value++,
+      onPressed: () {
+        counter.value = counter.value + 1;   
+     },
       child: Text('Increment'),
     )
   ],
@@ -118,8 +120,8 @@ final lastName = ObservableValue<String>('Doe');
 ObserverBuilder2<String, String>(
   observable1: firstName,
   observable2: lastName,
-  builder: (context) {
-    return Text('Full Name: ${firstName.value} ${lastName.value}');
+  builder: (firstName, lastName) {
+    return Text('Full Name: ${firstName} ${lastName}');
   },
 )
 ```
@@ -147,7 +149,7 @@ final sharedCounterA = ObservableValue<int>(0, shareKey: 'global_counter');
 
 ObserverBuilder<int>(
   observable: sharedCounterA,
-  builder: (context) => Text('Counter in A: ${sharedCounterA.value}'),
+  builder: (value) => Text('Counter in A: ${value}'),
 );
 ElevatedButton(
   onPressed: () => sharedCounterA.value++,
@@ -160,7 +162,7 @@ final sharedCounterB = ObservableValue<int>(0, shareKey: 'global_counter');
 
 ObserverBuilder<int>(
   observable: sharedCounterB,
-  builder: (context) => Text('Counter in B: ${sharedCounterB.value}'),
+  builder: (value) => Text('Counter in B: ${value}'),
 );
 ```
 

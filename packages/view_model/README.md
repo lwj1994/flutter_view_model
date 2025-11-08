@@ -206,15 +206,15 @@ class _MyPageState extends State<MyPage>
 }
 ```
 
-#### Alternative: ViewModelWatcher (no mixin required)
+#### Alternative: ViewModelBuilder (no mixin required)
 
-If you prefer not to mix `ViewModelStateMixin` into your `State`, you can use the convenient `ViewModelWatcher` widget. It internally calls `watchViewModel`, and will rebuild when the `ViewModel` triggers `notifyListeners()`.
+If you prefer not to mix `ViewModelStateMixin` into your `State`, you can use the convenient `ViewModelBuilder` widget. It internally calls `watchViewModel`, and will rebuild when the `ViewModel` triggers `notifyListeners()`.
 
 ```dart
-// Example: Using ViewModelWatcher without mixing ViewModelStateMixin
-ViewModelWatcher<MySimpleViewModel>(
+// Example: Using ViewModelBuilder without mixing ViewModelStateMixin
+ViewModelBuilder<MySimpleViewModel>(
   factory: MySimpleViewModelFactory(),
-  builder: (context, vm) {
+  builder: (vm) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -230,15 +230,15 @@ ViewModelWatcher<MySimpleViewModel>(
 )
 ```
 
-#### Listening to a cached instance: CachedViewModelWatcher
+#### Listening to a cached instance: CachedViewModelBuilder
 
-Use `CachedViewModelWatcher` to listen to an existing `ViewModel` from the cache. It internally uses `watchCachedViewModel`, and rebuilds when `notifyListeners()` is called. To avoid confusion with the widget's `Key`, pass the ViewModel key via `vmKey`, or locate by `tag`.
+Use `CachedViewModelBuilder` to listen to an existing `ViewModel` from the cache. It internally uses `watchCachedViewModel`, and rebuilds when `notifyListeners()` is called. To avoid confusion with the widget's `Key`, pass the ViewModel key via `shareKey`, or locate by `tag`.
 
 ```dart
-// Example: Using CachedViewModelWatcher to bind to an existing instance
-CachedViewModelWatcher<MySimpleViewModel>(
-  vmKey: "shared-key", // or: tag: "shared-tag"
-  builder: (context, vm) {
+// Example: Using CachedViewModelBuilder to bind to an existing instance
+CachedViewModelBuilder<MySimpleViewModel>(
+  shareKey: "shared-key", // or: tag: "shared-tag"
+  builder: (vm) {
     return Row(
       children: [
         Expanded(child: Text(vm.message)),
@@ -253,7 +253,7 @@ CachedViewModelWatcher<MySimpleViewModel>(
 ```
 
 Note:
-- Both `ViewModelWatcher` and `CachedViewModelWatcher` subscribe to updates and rebuild on `notifyListeners()`.
+- Both `ViewModelBuilder` and `CachedViewModelBuilder` subscribe to updates and rebuild on `notifyListeners()`.
 - For one-time reads that do not rebuild, use `readViewModel` or `readCachedViewModel` in your `State`.
 
 ### 2.5 Listening to ViewModel Notifications

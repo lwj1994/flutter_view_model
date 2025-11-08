@@ -211,16 +211,16 @@ class _MyPageState extends State<MyPage>
 }
 ```
 
-#### 可选方案：ViewModelWatcher（无需混入）
+#### 可选方案：ViewModelBuilder（无需混入）
 
-如果不希望在 `State` 中混入 `ViewModelStateMixin`，可以使用便捷组件 `ViewModelWatcher`。
+如果不希望在 `State` 中混入 `ViewModelStateMixin`，可以使用便捷组件 `ViewModelBuilder`。
 它内部调用 `watchViewModel`，当 `ViewModel` 触发 `notifyListeners()` 时会自动重建。
 
 ```dart
 // 示例：无需混入 ViewModelStateMixin 的用法
-ViewModelWatcher<MySimpleViewModel>(
+ViewModelBuilder<MySimpleViewModel>(
   factory: MySimpleViewModelFactory(),
-  builder: (context, vm) {
+  builder: (vm) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -236,17 +236,17 @@ ViewModelWatcher<MySimpleViewModel>(
 )
 ```
 
-#### 监听缓存实例：CachedViewModelWatcher
+#### 监听缓存实例：CachedViewModelBuilder
 
-使用 `CachedViewModelWatcher` 监听一个已存在于缓存中的 `ViewModel`。它内部使用
+使用 `CachedViewModelBuilder` 监听一个已存在于缓存中的 `ViewModel`。它内部使用
 `watchCachedViewModel`，在 `notifyListeners()` 时重建。为避免与 Widget 的 `Key` 混淆，
-请使用 `vmKey` 传入 ViewModel 的键，或通过 `tag` 查找。
+请使用 `shareKey` 传入 ViewModel 的键，或通过 `tag` 查找。
 
 ```dart
-// 示例：使用 CachedViewModelWatcher 绑定到已存在实例
-CachedViewModelWatcher<MySimpleViewModel>(
-  vmKey: "shared-key", // 或：tag: "shared-tag"
-  builder: (context, vm) {
+// 示例：使用 CachedViewModelBuilder 绑定到已存在实例
+CachedViewModelBuilder<MySimpleViewModel>(
+  shareKey: "shared-key", // 或：tag: "shared-tag"
+  builder: (vm) {
     return Row(
       children: [
         Expanded(child: Text(vm.message)),
@@ -262,7 +262,7 @@ CachedViewModelWatcher<MySimpleViewModel>(
 
 提示：
 
-- `ViewModelWatcher` 与 `CachedViewModelWatcher` 都会订阅更新，并在 `notifyListeners()` 时重建。
+- `ViewModelBuilder` 与 `CachedViewModelBuilder` 都会订阅更新，并在 `notifyListeners()` 时重建。
 - 若只需要一次性读取且不希望重建，请在 `State` 中使用 `readViewModel` 或 `readCachedViewModel`。
 
 ### 2.5 监听 ViewModel 通知
