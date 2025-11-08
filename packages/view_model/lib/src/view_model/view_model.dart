@@ -15,10 +15,9 @@
 library;
 
 import 'dart:async';
-import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
+// import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
 
 import 'package:flutter/foundation.dart';
-import 'package:meta/meta.dart' show internal;
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -129,7 +128,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// ```
   static T? maybeReadCached<T extends ViewModel>({Object? key, Object? tag}) {
     try {
-      return readCached(key: key, tag: tag);
+      return readCached<T>(key: key, tag: tag);
     } catch (e) {
       return null;
     }
@@ -138,9 +137,9 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// Executes the given [block] and automatically calls [notifyListeners] when
   /// it completes.
   ///
-  /// This is a convenience wrapper to ensure that any asynchronous or 
+  /// This is a convenience wrapper to ensure that any asynchronous or
   /// synchronous
-  /// update logic always triggers a UI refresh, preventing missed 
+  /// update logic always triggers a UI refresh, preventing missed
   /// notifications.
   ///
   /// Example:
@@ -193,7 +192,10 @@ mixin class ViewModel implements InstanceLifeCycle {
           )),
         );
       } catch (e) {
-        //
+        // rethrow if tag is null
+        if (tag == null) {
+          rethrow;
+        }
       }
     }
 
