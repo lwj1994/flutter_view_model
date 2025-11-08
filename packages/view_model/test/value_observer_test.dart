@@ -35,8 +35,8 @@ void main() {
         MaterialApp(
           home: ObserverBuilder<int>(
             observable: observable,
-            builder: (context) {
-              return Text(observable.value.toString());
+            builder: (v) {
+              return Text(v.toString());
             },
           ),
         ),
@@ -51,8 +51,8 @@ void main() {
         MaterialApp(
           home: ObserverBuilder<int>(
             observable: observable,
-            builder: (context) {
-              return Text(observable.value.toString());
+            builder: (v) {
+              return Text(v.toString());
             },
           ),
         ),
@@ -73,8 +73,8 @@ void main() {
         MaterialApp(
           home: ObserverBuilder(
             observable: observable,
-            builder: (context) {
-              return Text(observable.value.toString());
+            builder: (v) {
+              return Text(v.toString());
             },
           ),
         ),
@@ -97,8 +97,8 @@ void main() {
           home: ObserverBuilder2<int, String>(
             observable1: observable1,
             observable2: observable2,
-            builder: (context) {
-              return Text('${observable1.value} ${observable2.value}');
+            builder: (v1, v2) {
+              return Text('${v1} ${v2}');
             },
           ),
         ),
@@ -122,8 +122,8 @@ void main() {
           home: ObserverBuilder2<int, String>(
             observable1: observable1,
             observable2: observable2,
-            builder: (context) {
-              return Text('${observable1.value} ${observable2.value}');
+            builder: (v1, v2) {
+              return Text('${v1} ${v2}');
             },
           ),
         ),
@@ -151,9 +151,8 @@ void main() {
             observable1: observable1,
             observable2: observable2,
             observable3: observable3,
-            builder: (context) {
-              return Text(
-                  '${observable1.value} ${observable2.value} ${observable3.value}');
+            builder: (v1, v2, v3) {
+              return Text('${v1} ${v2} ${v3}');
             },
           ),
         ),
@@ -189,11 +188,11 @@ void main() {
             children: [
               ObserverBuilder<int>(
                 observable: observable1,
-                builder: (context) => Text('Builder1: ${observable1.value}'),
+                builder: (v) => Text('Builder1: ${v}'),
               ),
               ObserverBuilder<int>(
                 observable: observable2,
-                builder: (context) => Text('Builder2: ${observable2.value}'),
+                builder: (v) => Text('Builder2: ${v}'),
               ),
             ],
           ),

@@ -1,15 +1,24 @@
 ## 0.7.0
+- Rename `ViewModelWatcher` to `ViewModelBuilder`
+- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/value_observer_doc.md)
+- Add `ViewModel#update`, we often forget calling `notifylistenr()`
+  ```dart
+  await update(() async {
+    await repository.save(data);
+     _counter++;
+  });
+  ```
 
-- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI updates.
 
 ```dart
-final observable = ObservableValue<int>(0);
+// shareKey for share value cross any widget
+final observable = ObservableValue<int>(0, shareKey: share);
 observable.value = 20;
 
 ObserverBuilder<int>(
             observable: observable,
-            builder: (context) {
-              return Text(observable.value.toString());
+            builder: (v) {
+              return Text(v.toString());
             },
 )
 
@@ -20,8 +29,8 @@ ObserverBuilder<int>(
 ObserverBuilder2<int>(
             observable1: observable1,
             observable2: observable2,
-            builder: (context) {
-              return Text(observable.value.toString());
+            builder: (v1,v2) {
+              //
             },
 )
 
@@ -30,24 +39,24 @@ ObserverBuilder3<int>(
             observable1: observable1,
             observable2: observable2,
             observable3: observable3,
-            builder: (context) {
-              return Text(observable.value.toString());
+            builder: (v1,v2,v3) {
+              
             },
 )
 ```
 
 ## 0.6.0
 
-- Add `ViewModelWatcher` and `CachedViewModelWatcher` widgets for binding and
+- Add `ViewModelBuilder` and `CachedViewModelBuilder` widgets for binding and
   listening without mixing in `ViewModelStateMixin`;
-  Naming: use `vmKey` in `CachedViewModelWatcher` to avoid confusion with
+  Naming: use `shareKey` in `CachedViewModelBuilder` to avoid confusion with
   widget `Key`.
 
 ```dart
-// Example: Using ViewModelWatcher without mixing ViewModelStateMixin
-ViewModelWatcher<MySimpleViewModel>(
+// Example: Using ViewModelBuilder without mixing ViewModelStateMixin
+ViewModelBuilder<MySimpleViewModel>(
   factory: MySimpleViewModelFactory(),
-  builder: (context, vm) {
+  builder: (vm) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -64,10 +73,10 @@ ViewModelWatcher<MySimpleViewModel>(
 ```
 
 ```dart
-// Example: Using CachedViewModelWatcher to bind to an existing instance
-CachedViewModelWatcher<MySimpleViewModel>(
-  vmKey: "shared-key", // or: tag: "shared-tag"
-  builder: (context, vm) {
+// Example: Using CachedViewModelBuilder to bind to an existing instance
+CachedViewModelBuilder<MySimpleViewModel>(
+  shareKey: "shared-key", // or: tag: "shared-tag"
+  builder: (vm) {
     return Row(
       children: [
         Expanded(child: Text(vm.message)),

@@ -63,7 +63,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     onRecreate: () {
       setState(() {});
     },
-    watcherName: getViewModelWatcherName(),
+    watcherName: getViewModelBuilderName(),
     dependencyResolver: onChildDependencyResolver,
   );
   final Map<ViewModel, bool> _stateListeners = {};
@@ -84,7 +84,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// Returns an empty string in release mode for performance.
   ///
   /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
-  String getViewModelWatcherName() {
+  String getViewModelBuilderName() {
     if (!kDebugMode) return "";
 
     final pathInfo = _getCurrentObjectPath();

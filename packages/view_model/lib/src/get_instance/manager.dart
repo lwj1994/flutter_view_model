@@ -98,6 +98,17 @@ class InstanceManager {
     return getNotifier(factory: factory).instance;
   }
 
+  T? maybeGet<T>({
+    InstanceFactory<T>? factory,
+  }) {
+    try {
+      return get(factory: factory);
+    } catch (e) {
+      //
+      return null;
+    }
+  }
+
   /// Gets an instance handle for a ViewModel.
   ///
   /// This is the core method for retrieving ViewModel instances. It handles

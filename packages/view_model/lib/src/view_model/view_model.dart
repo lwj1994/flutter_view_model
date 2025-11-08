@@ -294,8 +294,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// class MyViewModel extends ViewModel {
   ///   late final UserService userService;
   ///
-  ///   @override
-  ///   void onInit() {
+  ///   MyViewModel() {
   ///     // Host ViewModel collects dependency config and delegates to State
   ///     userService = readViewModel<UserService>();
   ///   }
@@ -346,8 +345,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// class UserProfileViewModel extends ViewModel {
   ///   late final AuthViewModel authViewModel;
   ///
-  ///   @override
-  ///   void onInit() {
+  ///   UserProfileViewModel() {
   ///     // Watch auth changes and automatically update when auth state changes
   ///     authViewModel = watchViewModel<AuthViewModel>();
   ///   }
@@ -484,8 +482,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// class UserProfileViewModel extends ViewModel {
   ///   AuthViewModel? authViewModel;
   ///
-  ///   @override
-  ///   void onInit() {
+  ///   UserProfileViewModel() {
   ///     // Safely watch auth changes; won't throw if AuthViewModel doesn't
   ///     exist.
   ///     _auth = maybeWatchExistingViewModel<AuthViewModel>();
