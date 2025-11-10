@@ -15,8 +15,6 @@
 library;
 
 import 'dart:async';
-// import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
-
 import 'package:flutter/foundation.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
@@ -24,6 +22,8 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
+// ignore: unnecessary_import
+import 'package:meta/meta.dart' show internal;
 
 import 'dependency_handler.dart';
 import 'state_store.dart';
