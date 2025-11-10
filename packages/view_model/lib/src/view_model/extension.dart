@@ -21,6 +21,8 @@ import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
+// ignore: unnecessary_import
+import 'package:meta/meta.dart' show internal;
 
 import 'dependency_handler.dart';
 import 'model.dart';
