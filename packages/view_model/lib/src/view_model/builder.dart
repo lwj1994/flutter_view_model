@@ -4,7 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
-/// A convenient widget that does not require mixing `ViewModelStateMixin` into `State`.
+/// A convenient widget that does not require mixing
+/// `ViewModelStateMixin` into `State`.
 ///
 /// Behavior: internally uses `watchViewModel`. When the `ViewModel` calls
 /// `notifyListeners()`, this widget rebuilds so the UI reflects the changes.

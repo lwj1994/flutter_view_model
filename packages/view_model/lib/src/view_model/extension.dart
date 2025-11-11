@@ -65,12 +65,15 @@ import 'model.dart';
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// Listener for widget visibility changes.
   ///
-  /// This listener allows external code to control pause/resume semantics.
-  /// Call `viewModelVisibleListeners.onPause()` to mark the page as paused (covered),
-  /// and `viewModelVisibleListeners.onResume()` to mark it as resumed and trigger a
-  /// refresh. You can wire these to your own `RouteObserver` or any visibility
-  /// mechanism. When paused, updates from bound ViewModels are ignored; on
-  /// resume, a forced refresh occurs.
+  /// This listener lets external code control pause/resume semantics.
+  /// Call `viewModelVisibleListeners.onPause()` to mark the page
+  /// as paused (covered).
+  /// Call `viewModelVisibleListeners.onResume()` to mark it resumed
+  /// and trigger a refresh.
+  /// You can wire these to your own `RouteObserver` or visibility
+  /// mechanism.
+  /// When paused, updates from bound ViewModels are ignored.
+  /// On resume, a forced refresh occurs.
   late final ViewModelVisibleListener viewModelVisibleListeners =
       ViewModelVisibleListener(_rebuildState);
 
@@ -131,7 +134,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     final stackTrace = StackTrace.current;
     final frames = stackTrace.toString().split('\n');
 
-    // Skip stack frames until we find the host class that uses ViewModelStateMixin
+    // Skip stack frames until we find the host class
+    // that uses ViewModelStateMixin
     for (int i = 1; i < frames.length; i++) {
       final frame = frames[i].trim();
       if (frame.isEmpty) continue;

@@ -156,10 +156,12 @@ mixin class ViewModel implements InstanceLifeCycle {
 
   /// Reads a ViewModel instance by [key] or [tag].
   ///
-  /// This method searches for an existing ViewModel instance using the following priority:
+  /// This method searches for an existing ViewModel instance
+  /// using the following priority:
   /// 1. If [key] is provided, it searches by the unique key.
   /// 2. If [tag] is provided, it searches by the tag.
-  /// 3. If neither is provided, it finds the most recently created instance of type [T].
+  /// 3. If neither is provided, it finds the most recently
+  /// created instance of type [T].
   ///
   /// This method is for accessing already-created and cached ViewModels.
   /// It does not create new instances.
@@ -266,7 +268,8 @@ mixin class ViewModel implements InstanceLifeCycle {
   bool get hasListeners => _listeners.isNotEmpty;
 
   /// Handler for managing ViewModel dependencies.
-  /// This encapsulates all dependency-related logic and provides a clean separation of concerns.
+  /// This encapsulates all dependency-related logic and
+  /// provides a clean separation of concerns.
   @internal
   final DependencyHandler dependencyHandler = DependencyHandler();
 
@@ -276,10 +279,12 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// The core logic is:
   /// 1. Host ViewModel first collects the dependency ViewModel configuration
   /// 2. Check if host ViewModel is already associated with a State
-  /// 3. If associated, delegate to State's readViewModel/watchViewModel to register the dependency
+  /// 3. If associated, delegate to State's
+  /// readViewModel/watchViewModel to register the dependency
   /// 4. If not associated, store the dependency config for later registration
   ///
-  /// This ensures that dependency relationships are properly managed by the Widget State
+  /// This ensures that dependency relationships are properly
+  /// managed by the Widget State
   /// that owns the host ViewModel, maintaining consistent lifecycle management.
   ///
   /// Parameters:
@@ -326,7 +331,8 @@ mixin class ViewModel implements InstanceLifeCycle {
 
   /// Watches a dependency ViewModel of type [T] and listens for changes.
   ///
-  /// Similar to [readViewModel] but automatically listens for changes in the dependency
+  /// Similar to [readViewModel] but automatically listens
+  /// for changes in the dependency
   /// ViewModel and triggers rebuilds when the dependency changes.
   ///
   /// This method allows ViewModels to access other ViewModels as dependencies with
@@ -684,7 +690,8 @@ mixin class ViewModel implements InstanceLifeCycle {
 /// capabilities. It automatically handles state changes, notifications, and
 /// provides both general listeners and state-specific listeners.
 ///
-/// The state is immutable - each change creates a new state instance via [setState].
+/// The state is immutable - each change creates a new state
+/// instance via [setState].
 ///
 /// Example:
 /// ```dart
