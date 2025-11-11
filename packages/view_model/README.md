@@ -290,22 +290,23 @@ void dispose() {
 `dispose` method of `State`.
 
 ### 2.6 RouteAware Auto Pause (delay rebuilds when page is paused)
+- You can manually control pause/resume via `viewModelVisibleListeners` exposed by `ViewModelStateMixin`.
+  Call `viewModelVisibleListeners.onPause()` when the page is covered, and `viewModelVisibleListeners.onResume()`
+  when it becomes visible again. Wire these methods to your own `RouteObserver` or any visibility  mechanism.
 
-When a `State` mixes in `ViewModelStateMixin`, it becomes `RouteAware` via the framework's
-`RouteObserver` integration. The behavior is:
+Example:
 
-- On `didPushNext` (a new route covers the current page), the page pauses rebuilds and ignores
-  updates coming from bound ViewModels.
-- On `didPopNext` (the covering route is popped), the page resumes and performs a forced refresh
-  exactly once to reflect the latest state.
+```dart
+class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, RouteAware {
+  void didPushNext() {
+    viewModelVisibleListeners.onPause();
+  }
 
-Setup requirements:
-
-- Register the same `RouteObserver` instance in your app: `navigatorObservers:
-  [ViewModel.config.getRouteObserver()]`.
-- Alternatively, set a custom `RouteObserver` globally via `ViewModel.initialize(config: ViewModelConfig(routeObserver: yourObserver))`, then register it with `navigatorObservers: [yourObserver]` to ensure one shared instance across the app (including nested Navigators).
-- If you use nested `Navigator`s, register this observer in each `Navigator` that hosts pages using
-  `ViewModelStateMixin`.
+  void didPopNext() {
+    viewModelVisibleListeners.onResume(); // triggers one refresh
+  }
+}
+```
 
 
 ## 3. Detailed Parameter Explanation

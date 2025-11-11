@@ -1,13 +1,13 @@
-/// RouteAware behavior tests for ViewModelStateMixin.
+/// Route visibility pause/resume tests for ViewModelStateMixin.
 ///
-/// This test verifies that when a new route is pushed on top of a page
-/// using `ViewModelStateMixin`, the page pauses rebuilds (ignores updates),
-/// and when the top route is popped, it resumes and triggers a refresh.
+/// This test verifies manual pause/resume using `visibleListeners`:
+/// - When `onPause()` is invoked, the page ignores ViewModel updates.
+/// - When `onResume()` is invoked, the page refreshes once and reflects
+///   the latest state.
 ///
 /// The test uses a simple `CounterViewModel` and a `CounterPage` widget.
-/// It asserts that updates made while covered do not reflect immediately,
-/// and after popping the covering route, the underlying page refreshes to
-/// show the latest state.
+/// It asserts that updates made while paused do not reflect immediately,
+/// and after resuming, the page shows the latest state.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/view_model.dart';
@@ -51,7 +51,7 @@ class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
     );
   }
 
-  /// Builds the widget tree showing current count and a button to push a route.
+  /// Builds the widget tree showing current count.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,52 +59,22 @@ class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
       body: Center(
         child: Text('${_vm.count}', key: const Key('counter-text')),
       ),
-      floatingActionButton: FloatingActionButton(
-        key: const Key('push-overlay-btn'),
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const OverlayPage()),
-          );
-        },
-        child: const Icon(Icons.open_in_new),
-      ),
     );
   }
 }
 
-/// A simple overlay page used to cover [CounterPage] during the test.
-class OverlayPage extends StatelessWidget {
-  const OverlayPage({super.key});
-
-  /// Builds a minimal scaffold to act as a covering route.
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Overlay')),
-      body: Center(
-        child: ElevatedButton(
-          key: const Key('pop-overlay-btn'),
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Pop'),
-        ),
-      ),
-    );
-  }
-}
-
-/// Ensures route-aware pause/resume semantics:
-/// - When a new route is pushed (didPushNext), underlying page pauses rebuilds.
+/// Ensures manual pause/resume semantics:
+/// - When `onPause()` is called, underlying page pauses rebuilds.
 /// - Updates while paused are ignored by the page.
-/// - When the top route is popped (didPopNext), the page resumes and refreshes.
+/// - When `onResume()` is called, the page resumes and refreshes once.
 void main() {
   testWidgets(
-      'ViewModelStateMixin pauses while covered and refreshes on return',
+      'ViewModelStateMixin ignores updates while paused and refreshes on resume',
       (tester) async {
-    // Build app with registered RouteObserver from ViewModelConfig.
+    // Build app.
     await tester.pumpWidget(
-      MaterialApp(
-        navigatorObservers: [ViewModel.config.getRouteObserver()],
-        home: const CounterPage(),
+      const MaterialApp(
+        home: CounterPage(),
       ),
     );
 
@@ -119,10 +89,10 @@ void main() {
     await tester.pump();
     expect(find.text('1'), findsOneWidget);
 
-    // Push overlay route to cover CounterPage (didPushNext => pause).
-    await tester.tap(find.byKey(const Key('push-overlay-btn')));
-    await tester.pumpAndSettle();
-    expect(find.text('Overlay'), findsOneWidget);
+    // Pause page manually.
+    final state = tester.state(find.byType(CounterPage)) as _CounterPageState;
+    state.viewModelVisibleListeners.onPause();
+    await tester.pump();
 
     // While covered, perform an update; underlying page should ignore it.
     vm.increment(); // expected count becomes 2, but page is paused
@@ -131,8 +101,8 @@ void main() {
     // The underlying page's text '2' should not appear yet.
     expect(find.text('2'), findsNothing);
 
-    // Pop overlay (didPopNext => resume + forced refresh).
-    await tester.tap(find.byKey(const Key('pop-overlay-btn')));
+    // Resume page manually (forced refresh).
+    state.viewModelVisibleListeners.onResume();
     await tester.pumpAndSettle();
 
     // After resume, the page refreshes and shows the latest count (2).

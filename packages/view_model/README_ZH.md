@@ -298,18 +298,25 @@ void dispose() {
 **注意**：`listen` 返回一个 `VoidCallback` 用于取消监听器。确保在
 `State` 的 `dispose` 方法中调用它。
 
-### 2.6 RouteAware 自动暂停（页面暂停时延迟重建）
+### 2.6 RouteAware 自动暂停（页面暂停时避免刷新）
 
-当 `State` 混入 `ViewModelStateMixin` 时，它会通过框架的 `RouteObserver` 集成成为 `RouteAware`。行为如下：
+- 您可以通过 `ViewModelStateMixin` 暴露的 `viewModelVisibleListeners` 手动控制暂停/恢复。
+  页面被覆盖时调用 `viewModelVisibleListeners.onPause()`；重新可见时调用 `viewModelVisibleListeners.onResume()`。
+  这些方法可以与您自己的 `RouteObserver` 或任何可见性机制进行绑定。
 
-- 在 `didPushNext`（有新路由覆盖当前页面）时，页面暂停重建，并忽略来自已绑定 ViewModel 的更新。
-- 在 `didPopNext`（覆盖的路由被弹出）时，页面恢复，并执行一次强制刷新，以反映最新状态。
+示例：
 
-使用前提：
+```dart
+class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, RouteAware {
+  void didPushNext() {
+    viewModelVisibleListeners.onPause();
+  }
 
-- 在应用中注册同一个 `RouteObserver` 实例：`navigatorObservers: [ViewModel.config.getRouteObserver()]`。
-- 或者，通过 `ViewModel.initialize(config: ViewModelConfig(routeObserver: yourObserver))` 全局设置自定义 `RouteObserver`，然后在 `navigatorObservers: [yourObserver]` 中注册它，以确保整个应用（包括嵌套 Navigator）共享同一个实例。
-- 如果使用嵌套的 `Navigator`，请在每个承载使用 `ViewModelStateMixin` 的页面的 `Navigator` 中注册该观察者。
+  void didPopNext() {
+    viewModelVisibleListeners.onResume(); // triggers one refresh
+  }
+}
+```
 
 ## 3. 详细参数说明
 
