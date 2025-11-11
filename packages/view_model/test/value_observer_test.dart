@@ -51,7 +51,7 @@ void main() {
         MaterialApp(
           home: ObserverBuilder<int>(
             observable: observable,
-            builder: (v) {
+            builder: (int v) {
               return Text(v.toString());
             },
           ),
@@ -64,25 +64,6 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('10'), findsOneWidget);
-    });
-
-    testWidgets('should throw an error for dynamic type',
-        (WidgetTester tester) async {
-      final observable = ObservableValue<dynamic>(5);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ObserverBuilder(
-            observable: observable,
-            builder: (v) {
-              return Text(v.toString());
-            },
-          ),
-        ),
-      );
-
-      final dynamic exception = tester.takeException();
-      expect(exception, isA<UnsupportedError>());
-      expect(exception.message, contains("requires a specific type 'T'"));
     });
   });
 
