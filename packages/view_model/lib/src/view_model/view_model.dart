@@ -739,6 +739,49 @@ abstract class StateViewModel<T> with ViewModel {
     };
   }
 
+  /// Adds a listener for a selected property derived from the state.
+  ///
+  /// This method observes changes to a specific field or computed value of
+  /// the state, rather than the entire state object. It invokes [onChanged]
+  /// only when the selected property's value changes according to [equals].
+  ///
+  /// Parameters:
+  /// - [selector]: Selector function that maps the full state `T` to the watched
+  ///   property `S` (e.g., `(s) => s.count`).
+  /// - [onChanged]: Callback receiving `(previousSelected, currentSelected)`.
+  ///
+  /// Returns a function to remove this listener.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Function-level comment: Listen to only the `count` field changes.
+  /// final remove = vm.listenStateSelect<int>(
+  ///   selector: (s) => s.count,
+  ///   onChanged: (prev, curr) {
+  ///     // React only when `count` changes
+  ///   },
+  /// );
+  /// ```
+  Function() listenStateSelect<S>({
+    required S Function(T state) selector,
+    required void Function(S? previous, S current) onChanged,
+  }) {
+    final eq = ViewModel.config.isSameState ?? ((a, b) => a == b);
+    // Wrap into a full-state listener to reuse the existing dispatch path.
+    // ignore: prefer_final_locals
+    Function(T? previous, T state) wrapper = (prevState, currState) {
+      final S? prevSel = prevState == null ? null : selector(prevState);
+      final S currSel = selector(currState);
+      if (!eq(prevSel, currSel)) {
+        onChanged(prevSel, currSel);
+      }
+    };
+    _stateListeners.add(wrapper);
+    return () {
+      _stateListeners.remove(wrapper);
+    };
+  }
+
   late final T initState;
   late final StreamSubscription _streamSubscription;
 

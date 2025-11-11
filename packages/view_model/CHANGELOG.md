@@ -1,6 +1,6 @@
 ## 0.7.0
 ### RouteAware Auto Pause (delay rebuilds when page is paused)
-- You can manually control pause/resume via `viewModelVisibleListeners` exposed by `ViewModelStateMixin`.
+- can manually control pause/resume via `viewModelVisibleListeners` exposed by `ViewModelStateMixin`.
   Call `viewModelVisibleListeners.onPause()` when the page is covered, and `viewModelVisibleListeners.onResume()`
   when it becomes visible again. Wire these methods to your own `RouteObserver` or any visibility  mechanism.
 
@@ -23,7 +23,6 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
 ---
 
 - Rename `ViewModelWatcher` to `ViewModelBuilder`
-- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/value_observer_doc.md)
 - Add `ViewModel#update`, we often forget calling `notifylistenr()`
   ```dart
   await update(() async {
@@ -31,7 +30,9 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
      _counter++;
   });
   ```
+- Add `StateViewModel#listenStateSelect` to listen value diff.
 
+- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/value_observer_doc.md)
 
 ```dart
 // shareKey for share value cross any widget
