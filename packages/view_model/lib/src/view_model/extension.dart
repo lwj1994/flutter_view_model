@@ -20,6 +20,7 @@ import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
+import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 // ignore: unnecessary_import
 import 'package:meta/meta.dart' show internal;
@@ -60,19 +61,23 @@ import 'model.dart';
 ///   }
 /// }
 /// ```
-mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
+mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
+    implements RouteAware {
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: () {
-      setState(() {});
+      _rebuildState();
     },
     watcherName: getViewModelBuilderName(),
     dependencyResolver: onChildDependencyResolver,
   );
   final Map<ViewModel, bool> _stateListeners = {};
-
+  PageRoute? _currentRoute;
   final _defaultViewModelKey = const UuidV4().generate();
   final List<Function()> _disposes = [];
   bool _dispose = false;
+
+  // Route-aware pause/resume state
+  bool _paused = false;
 
   // Cache path information to avoid repeated retrieval
   String? _cachedObjectPath;
@@ -175,6 +180,30 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     super.initState();
   }
 
+  /// Subscribes to global RouteObserver to receive RouteAware callbacks.
+  ///
+  /// Manage RouteObserver subscription when dependencies change.
+  /// - Unsubscribe from previous route before subscribing to the new one
+  /// - Subscribe only when `ModalRoute.of(context)` yields a `PageRoute`
+  @override
+  @mustCallSuper
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final observer = ViewModel.config.getRouteObserver();
+    if (observer is RouteObserver) {
+      final route = ModalRoute.of(context);
+      if (route is PageRoute && _currentRoute != route) {
+        if (_currentRoute != null) {
+          observer.unsubscribe(this);
+        }
+        _currentRoute = route;
+        observer.subscribe(this, route);
+      }
+    } else {
+      viewModelLog("RouteObserver is not a RouteObserver!");
+    }
+  }
+
   /// Forces disposal of a ViewModel and removes it from cache.
   ///
   /// This method manually disposes a ViewModel instance and triggers
@@ -186,13 +215,13 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   ///
   /// Example:
   /// ```dart
-  /// final userVM = watchViewModel<UserViewModel>();
+  /// final userVM = watchViewModel<UserViewModel>(factory:);
   /// // Later, force recreation
   /// recycleViewModel(userVM);
   /// ```
   void recycleViewModel<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
-    setState(() {});
+    _rebuildState();
   }
 
   /// Gets an existing ViewModel by key or throws an error if not found.
@@ -478,17 +507,14 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       _stateListeners[res] = true;
       _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
-        if (context.mounted &&
-            SchedulerBinding.instance.schedulerPhase !=
-                SchedulerPhase.persistentCallbacks) {
-          setState(() {});
-        } else {
-          SchedulerBinding.instance.addPostFrameCallback((_) {
-            if (!_dispose && context.mounted) {
-              setState(() {});
-            }
-          });
+        // When paused, ignore updates; we'll blindly refresh on resume.
+        if (_paused) {
+          viewModelLog(
+            "${T} is paused in ${_currentRoute?.settings.name}, delay rebuild",
+          );
+          return;
         }
+        _rebuildState();
       }));
     }
   }
@@ -539,6 +565,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  // Removed buffering logic: we no longer track pending changes while paused.
+
   @override
   @mustCallSuper
   void dispose() {
@@ -548,6 +576,54 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     for (final e in _disposes) {
       e.call();
     }
+    _currentRoute = null;
+    final observer = ViewModel.config.getRouteObserver();
+    if (observer is RouteObserver) {
+      observer.unsubscribe(
+        this,
+      );
+    }
+
     super.dispose();
+  }
+
+  void _rebuildState() {
+    if (_dispose) return;
+    if (context.mounted &&
+        SchedulerBinding.instance.schedulerPhase !=
+            SchedulerPhase.persistentCallbacks) {
+      setState(() {});
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_dispose && context.mounted) {
+          setState(() {});
+        }
+      });
+    }
+  }
+
+  @override
+  void didPop() {}
+
+  @override
+  void didPush() {}
+
+  /// RouteAware callback when the next route above this one is popped.
+  ///
+  /// Resume rebuilding and trigger a forced refresh so that any updates
+  /// missed during the paused period are reflected in the UI.
+  @override
+  void didPopNext() {
+    _paused = false;
+    _rebuildState();
+  }
+
+  /// RouteAware callback when a new route is pushed above this one.
+  ///
+  /// Pause rebuilding while this page is obscured to avoid unnecessary UI
+  /// updates. Changes during this period are ignored; we refresh on resume.
+  @override
+  void didPushNext() {
+    _paused = true;
   }
 }

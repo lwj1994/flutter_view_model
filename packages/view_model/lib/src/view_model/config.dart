@@ -5,6 +5,8 @@
 /// state comparison logic.
 library;
 
+import 'package:flutter/widgets.dart';
+
 /// Global configuration for ViewModel behavior.
 ///
 /// This class allows customization of ViewModel system behavior including
@@ -48,13 +50,23 @@ class ViewModelConfig {
   /// Returns `true` if the states should be considered equal.
   final bool Function(dynamic previous, dynamic current)? isSameState;
 
+  final RouteObserver<Route<dynamic>>? routeObserver;
+
   /// Creates a new ViewModel configuration.
   ///
   /// Parameters:
   /// - [logEnable]: Whether to enable debug logging (defaults to `false`)
   /// - [isSameState]: Custom state equality function (optional)
+  /// - [routeObserver]: Custom route observer (optional)
   ViewModelConfig({
     this.logEnable = false,
     this.isSameState,
+    this.routeObserver,
   });
+
+  NavigatorObserver getRouteObserver() {
+    return this.routeObserver ?? defaultRouteObserver;
+  }
 }
+
+final defaultRouteObserver = RouteObserver<Route<dynamic>>();
