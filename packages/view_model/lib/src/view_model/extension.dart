@@ -24,6 +24,7 @@ import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 // ignore: unnecessary_import
 import 'package:meta/meta.dart' show internal;
+import 'package:view_model/src/view_model/visible_lifecycle.dart';
 
 import 'dependency_handler.dart';
 import 'model.dart';
@@ -61,8 +62,18 @@ import 'model.dart';
 ///   }
 /// }
 /// ```
-mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
-    implements RouteAware {
+mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
+  /// Listener for widget visibility changes.
+  ///
+  /// This listener allows external code to control pause/resume semantics.
+  /// Call `viewModelVisibleListeners.onPause()` to mark the page as paused (covered),
+  /// and `viewModelVisibleListeners.onResume()` to mark it as resumed and trigger a
+  /// refresh. You can wire these to your own `RouteObserver` or any visibility
+  /// mechanism. When paused, updates from bound ViewModels are ignored; on
+  /// resume, a forced refresh occurs.
+  late final ViewModelVisibleListener viewModelVisibleListeners =
+      ViewModelVisibleListener(_rebuildState);
+
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: () {
       _rebuildState();
@@ -71,13 +82,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     dependencyResolver: onChildDependencyResolver,
   );
   final Map<ViewModel, bool> _stateListeners = {};
-  PageRoute? _currentRoute;
   final _defaultViewModelKey = const UuidV4().generate();
   final List<Function()> _disposes = [];
   bool _dispose = false;
-
-  // Route-aware pause/resume state
-  bool _paused = false;
 
   // Cache path information to avoid repeated retrieval
   String? _cachedObjectPath;
@@ -178,30 +185,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   @mustCallSuper
   void initState() {
     super.initState();
-  }
-
-  /// Subscribes to global RouteObserver to receive RouteAware callbacks.
-  ///
-  /// Manage RouteObserver subscription when dependencies change.
-  /// - Unsubscribe from previous route before subscribing to the new one
-  /// - Subscribe only when `ModalRoute.of(context)` yields a `PageRoute`
-  @override
-  @mustCallSuper
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final observer = ViewModel.config.getRouteObserver();
-    if (observer is RouteObserver) {
-      final route = ModalRoute.of(context);
-      if (route is PageRoute && _currentRoute != route) {
-        if (_currentRoute != null) {
-          observer.unsubscribe(this);
-        }
-        _currentRoute = route;
-        observer.subscribe(this, route);
-      }
-    } else {
-      viewModelLog("RouteObserver is not a RouteObserver!");
-    }
   }
 
   /// Forces disposal of a ViewModel and removes it from cache.
@@ -508,9 +491,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
       _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
         // When paused, ignore updates; we'll blindly refresh on resume.
-        if (_paused) {
+        if (!viewModelVisibleListeners.isResumed) {
           viewModelLog(
-            "${T} is paused in ${_currentRoute?.settings.name}, delay rebuild",
+            "${T} is paused, delay rebuild",
           );
           return;
         }
@@ -576,14 +559,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     for (final e in _disposes) {
       e.call();
     }
-    _currentRoute = null;
-    final observer = ViewModel.config.getRouteObserver();
-    if (observer is RouteObserver) {
-      observer.unsubscribe(
-        this,
-      );
-    }
-
     super.dispose();
   }
 
@@ -600,30 +575,5 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
         }
       });
     }
-  }
-
-  @override
-  void didPop() {}
-
-  @override
-  void didPush() {}
-
-  /// RouteAware callback when the next route above this one is popped.
-  ///
-  /// Resume rebuilding and trigger a forced refresh so that any updates
-  /// missed during the paused period are reflected in the UI.
-  @override
-  void didPopNext() {
-    _paused = false;
-    _rebuildState();
-  }
-
-  /// RouteAware callback when a new route is pushed above this one.
-  ///
-  /// Pause rebuilding while this page is obscured to avoid unnecessary UI
-  /// updates. Changes during this period are ignored; we refresh on resume.
-  @override
-  void didPushNext() {
-    _paused = true;
   }
 }
