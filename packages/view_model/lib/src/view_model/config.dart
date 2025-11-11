@@ -5,8 +5,6 @@
 /// state comparison logic.
 library;
 
-import 'package:flutter/widgets.dart';
-
 /// Global configuration for ViewModel behavior.
 ///
 /// This class allows customization of ViewModel system behavior including
