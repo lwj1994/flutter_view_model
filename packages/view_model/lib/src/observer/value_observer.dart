@@ -97,7 +97,8 @@ class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
   /// and passes its current state to `builder` as `data`.
   @override
   Widget build(BuildContext context) {
-    // Rebuilds when the view model's state changes; latest value is provided to `builder`.
+    // Rebuilds when the view model's state changes; latest value
+    // is provided to `builder`.
     return widget.builder(watchCachedViewModel<_ObserveDataViewModel<T>>(
       key: widget.observable.shareKey,
     ).state);
@@ -110,7 +111,8 @@ class ObserverBuilder2<T1, T2> extends StatefulWidget {
   final ObservableValue<T1> observable1;
   final ObservableValue<T2> observable2;
 
-  /// Builder that receives latest values from two observables; no `BuildContext` needed.
+  /// Builder that receives latest values from two observables;
+  /// no `BuildContext` needed.
   final Widget Function(T1 value1, T2 value2) builder;
 
   const ObserverBuilder2({
@@ -133,7 +135,8 @@ class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
   /// `value1` and `value2`.
   @override
   Widget build(BuildContext context) {
-    // Rebuilds when any view model's state changes; latest values are passed to `builder`.
+    // Rebuilds when any view model's state changes; latest values
+    // are passed to `builder`.
     return widget.builder(
       watchCachedViewModel<_ObserveDataViewModel<T1>>(
         key: widget.observable1.shareKey,
@@ -152,7 +155,8 @@ class ObserverBuilder3<T1, T2, T3> extends StatefulWidget {
   final ObservableValue<T2> observable2;
   final ObservableValue<T3> observable3;
 
-  /// Builder that receives latest values from three observables; no `BuildContext` needed.
+  /// Builder that receives latest values from three observables;
+  /// no `BuildContext` needed.
   final Widget Function(T1 value1, T2 value2, T3 value3) builder;
 
   const ObserverBuilder3({
@@ -177,7 +181,8 @@ class _ObserverBuilder3State<T1, T2, T3>
   /// and `value3`.
   @override
   Widget build(BuildContext context) {
-    // Rebuilds when any view model's state changes; latest values are passed to `builder`.
+    // Rebuilds when any view model's state changes; latest values
+    // are passed to `builder`.
     return widget.builder(
       watchCachedViewModel<_ObserveDataViewModel<T1>>(
         key: widget.observable1.shareKey,

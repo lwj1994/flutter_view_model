@@ -60,7 +60,8 @@ class DependencyHandler {
   /// Sets the dependency resolver callback.
   ///
   /// This should only be called by ViewModelStateMixin or similar framework code.
-  /// The resolver is responsible for actually creating or retrieving ViewModel instances.
+  /// The resolver is responsible for creating or retrieving
+  /// ViewModel instances.
   ///
   /// Parameters:
   /// - [resolver]: Function that resolves dependencies with listen parameter

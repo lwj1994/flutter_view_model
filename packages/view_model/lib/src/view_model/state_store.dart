@@ -261,7 +261,8 @@ class ViewModelError {
 /// Example:
 /// ```dart
 /// stateStream.listen((diffState) {
-///   print('State changed from ${diffState.previousState} to ${diffState.currentState}');
+///   print('State changed from ${diffState.previousState} to
+///   ${diffState.currentState}');
 ///
 ///   // React to specific changes
 ///   if (diffState.previousState?.isLoading == true &&
