@@ -22,7 +22,7 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
 
 ---
 
-- Rename `ViewModelWatcher` to `ViewModelBuilder`
+- __BreakingChange__: Rename `ViewModelWatcher` to `ViewModelBuilder`
 - Add `ViewModel#update`, we often forget calling `notifylistenr()`
   ```dart
   await update(() async {
