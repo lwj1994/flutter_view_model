@@ -24,6 +24,7 @@ import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
 // ignore: unnecessary_import
 import 'package:meta/meta.dart' show internal;
+import 'package:view_model/src/view_model/interface.dart';
 
 import 'dependency_handler.dart';
 import 'state_store.dart';
@@ -77,7 +78,7 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 ///   }
 /// }
 /// ```
-mixin class ViewModel implements InstanceLifeCycle {
+mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   late InstanceArg _instanceArg;
 
   /// Tracks which dependency ViewModels this ViewModel is already listening to.
@@ -317,6 +318,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   }
 
   @protected
+  @override
   T readCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
@@ -327,6 +329,13 @@ mixin class ViewModel implements InstanceLifeCycle {
       key: key,
       tag: tag,
     );
+  }
+
+  @protected
+  @override
+  void recycleViewModel<T extends ViewModel>(T viewModel) {
+    if (isDisposed) throw StateError("$T is disposed");
+    dependencyHandler.recycleViewModel(viewModel);
   }
 
   /// Watches a dependency ViewModel of type [T] and listens for changes.
@@ -360,6 +369,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   @protected
+  @override
   T watchViewModel<T extends ViewModel>({
     required ViewModelFactory<T> factory,
   }) {
@@ -384,6 +394,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   }
 
   @protected
+  @override
   T watchCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
@@ -444,6 +455,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   @protected
+  @override
   T? maybeReadCachedViewModel<T extends ViewModel>({
     Object? key,
     Object? tag,
@@ -498,12 +510,13 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   @protected
-  T? maybeWatchCacheViewModel<T extends ViewModel>({
+  @override
+  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
     try {
-      return watchCachedViewModel<T>(
+      return watchCachedViewModel<VM>(
         key: key,
         tag: tag,
       );

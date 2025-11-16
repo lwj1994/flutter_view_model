@@ -173,4 +173,17 @@ class DependencyHandler {
       return null;
     }
   }
+
+  /// Recycles a previously created ViewModel instance.
+  ///
+  /// This method allows ViewModels to be cached and reused,
+  /// potentially improving performance by avoiding repeated creation.
+  ///
+  /// Parameters:
+  /// - [viewModel]: The ViewModel instance to be recycled.
+  ///
+  void recycleViewModel<T extends ViewModel>(T viewModel) {
+    //
+    throw UnimplementedError("todo");
+  }
 }

@@ -54,6 +54,7 @@ ViewModel 的方法很简单：
 | `ViewModel.readCached<T>() / ViewModel.maybeReadCached<T>()` | 全局访问已存在实例（可空安全版本） |
 | `recycleViewModel()`                                         | 主动销毁特定实例                   |
 | `listenState()`                                              | 监听状态对象的变化                 |
+| `listenStateSelect()`                                        | 监听状态对象某个属性/选择器的变化  |
 | `listen()`                                                   | 监听 `notifyListeners` 调用        |
 
 ### 1.5 术语约定
@@ -117,11 +118,35 @@ class MySimpleViewModel extends ViewModel {
   @override
   void dispose() {
     // 在此清理资源，例如关闭 StreamControllers 等
-    debugPrint('MySimpleViewModel disposed');
+debugPrint('MySimpleViewModel disposed');
     super.dispose();
   }
 }
 ```
+
+当这些值发生变化时，调用 `notifyListeners()` 会通知订阅的 Widgets。
+
+### 2.3 仅监听某个属性（选择器）
+
+如果你只需要观察状态中的某个字段（或计算值），可以使用带选择器的 `listenStateSelect<S>()`：
+
+```dart
+// Function-level comment: Observe only the `count` field changes.
+final remove = vm.listenStateSelect<int>(
+  selector: (s) => s.count,
+  onChanged: (prev, curr) {
+    // 仅在 count 变化时响应
+  },
+);
+```
+
+- `selector`：将完整状态 `T` 映射为所选值 `S` 的选择器。
+- `onChanged`：回调收到 `(previousSelected, currentSelected)`。
+- `equals`：可选的比较函数，决定何时视为“变化”，默认使用 `==`。
+
+说明：`listenState()` 保持不变，继续观察整个状态的 `(previous, current)`。
+新增的 `listenStateSelect()` 在不破坏现有 API 的前提下，实现了你期望的语义：
+`listenStateSelect(selector: () => a.x, onChange(x1, x2))`。
 
 在这个例子中，`MySimpleViewModel` 管理一个 `message` 字符串和一个 `counter` 整数。当这些
 值通过其方法更新时，会调用 `notifyListeners()` 来通知任何正在监听此 `ViewModel` 的 Widget 进行重建。
@@ -297,26 +322,6 @@ void dispose() {
 
 **注意**：`listen` 返回一个 `VoidCallback` 用于取消监听器。确保在
 `State` 的 `dispose` 方法中调用它。
-
-### 2.6 RouteAware 自动暂停（页面暂停时避免刷新）
-
-- 您可以通过 `ViewModelStateMixin` 暴露的 `viewModelVisibleListeners` 手动控制暂停/恢复。
-  页面被覆盖时调用 `viewModelVisibleListeners.onPause()`；重新可见时调用 `viewModelVisibleListeners.onResume()`。
-  这些方法可以与您自己的 `RouteObserver` 或任何可见性机制进行绑定。
-
-示例：
-
-```dart
-class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, RouteAware {
-  void didPushNext() {
-    viewModelVisibleListeners.onPause();
-  }
-
-  void didPopNext() {
-    viewModelVisibleListeners.onResume(); // triggers one refresh
-  }
-}
-```
 
 ## 3. 详细参数说明
 
