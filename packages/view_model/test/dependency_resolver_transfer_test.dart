@@ -140,7 +140,7 @@ void main() {
 }
 
 extension on ViewModelStateMixin {
-  DependencyResolver get resolver => onChildDependencyResolver;
+  DependencyResolver get resolver => attacher.onChildDependencyResolver;
 }
 
 // Extension to access private list of resolvers

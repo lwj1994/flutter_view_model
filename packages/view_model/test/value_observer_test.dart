@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/src/observer/value_observer.dart';
+import 'package:view_model/src/view_model/value_observer.dart';
 
 void main() {
   group('ObservableValue', () {

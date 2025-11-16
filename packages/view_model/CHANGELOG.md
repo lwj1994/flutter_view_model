@@ -1,3 +1,54 @@
+## 0.8.0
+- Added support for `ViewModelStatelessMixin` on `StatelessWidget`. but prefer using `ViewModelStateMixin` on `StatefulWidget`.
+
+```dart
+class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
+  const MyWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Not recommended to get the ViewModel inside build.
+    // Prefer using ViewModelStateMixin on a State. 
+    final viewModel = watchViewModel<MyViewModel>(
+      factory: MyViewModelFactory(),
+    );
+    return Text('Hello World');
+  }
+}
+```
+
+- Add `StateViewModelValueWatcher` to watch value changes on `StateViewModel`.
+
+```dart
+class MyWidget extends State with ViewModelStateMixin {
+  const MyWidget({super.key});
+  late final MyViewModel stateViewModel;
+  @override
+  void initState() {
+    super.initState();
+    stateViewModel = readViewModel<MyViewModel>(
+      factory: MyViewModelFactory(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch value changes on `stateViewModel` and rebuild only when `name` or `age` changes.
+    return StateViewModelValueWatcher<MyViewModel>(
+      stateViewModel: stateViewModel,
+      selectors: [(state) => state.name, (state) => state.age],
+      builder: (state) {
+        return Text('Name: \${state.name}, Age: \${state.age}');
+      },
+    );
+  }
+}
+```
+
+
+
+
+
 ## 0.7.0
 ### RouteAware Auto Pause (delay rebuilds when page is paused)
 - can manually control pause/resume via `viewModelVisibleListeners` exposed by `ViewModelStateMixin`.

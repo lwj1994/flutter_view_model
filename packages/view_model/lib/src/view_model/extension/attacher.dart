@@ -1,68 +1,26 @@
-// @author luwenjie on 2025/3/25 17:24:31
-
-/// Flutter State mixin for ViewModel integration.
-///
-/// This file provides the [ViewModelStateMixin] that integrates ViewModels
-/// with Flutter's widget system. It handles:
-/// - Automatic ViewModel lifecycle management
-/// - Widget rebuilding when ViewModels change
-/// - Proper disposal and cleanup
-/// - Debug information for development tools
-///
-/// The mixin should be used with StatefulWidget's State class to enable
-/// reactive ViewModel integration.
-library;
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
+import 'package:view_model/src/view_model/dependency_handler.dart';
+import 'package:view_model/src/view_model/interface.dart';
+import 'package:view_model/src/view_model/model.dart';
 import 'package:view_model/src/view_model/view_model.dart';
-// ignore: unnecessary_import
-import 'package:meta/meta.dart' show internal;
 import 'package:view_model/src/view_model/visible_lifecycle.dart';
 
-import 'dependency_handler.dart';
-import 'model.dart';
+///
+class ViewModelAttacher implements ViewModelCreateInterface {
+  bool _dispose = false;
+  final Function() rebuildState;
 
-/// Mixin that integrates ViewModels with Flutter's State lifecycle.
-///
-/// This mixin provides methods to watch and read ViewModels from within
-/// a StatefulWidget's State. It automatically handles:
-/// - ViewModel creation and caching
-/// - Widget rebuilding when ViewModels change
-/// - Proper cleanup when the widget is disposed
-/// - Debug information for development tools
-///
-/// Example usage:
-/// ```dart
-/// class MyPage extends StatefulWidget {
-///   @override
-///   State<MyPage> createState() => _MyPageState();
-/// }
-///
-/// class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
-///   late final MyViewModel viewModel;
-///
-///   @override
-///   void initState() {
-///     super.initState();
-///     viewModel = watchViewModel<MyViewModel>(
-///       factory: MyViewModelFactory(),
-///     );
-///   }
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return Text('Count: \${viewModel.count}');
-///   }
-/// }
-/// ```
-mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
+  /// Creates a [ViewModelAttacher] with the callback used to trigger rebuild
+  /// when resuming.
+  ViewModelAttacher(this.rebuildState);
+
+  bool get isDisposed => _dispose;
+
   /// Listener for widget visibility changes.
   ///
   /// This listener lets external code control pause/resume semantics.
@@ -75,11 +33,11 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// When paused, updates from bound ViewModels are ignored.
   /// On resume, a forced refresh occurs.
   late final ViewModelVisibleListener viewModelVisibleListeners =
-      ViewModelVisibleListener(_rebuildState);
+      ViewModelVisibleListener(rebuildState);
 
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: () {
-      _rebuildState();
+      rebuildState();
     },
     watcherName: getViewModelBuilderName(),
     dependencyResolver: onChildDependencyResolver,
@@ -87,7 +45,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   final Map<ViewModel, bool> _stateListeners = {};
   final _defaultViewModelKey = const UuidV4().generate();
   final List<Function()> _disposes = [];
-  bool _dispose = false;
 
   // Cache path information to avoid repeated retrieval
   String? _cachedObjectPath;
@@ -185,12 +142,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     return _cachedObjectPath!;
   }
 
-  @override
-  @mustCallSuper
-  void initState() {
-    super.initState();
-  }
-
   /// Forces disposal of a ViewModel and removes it from cache.
   ///
   /// This method manually disposes a ViewModel instance and triggers
@@ -208,7 +159,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   /// ```
   void recycleViewModel<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
-    _rebuildState();
+    rebuildState();
   }
 
   /// Gets an existing ViewModel by key or throws an error if not found.
@@ -273,6 +224,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   ///   }
   /// }
   /// ```
+  @override
   VM watchViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
   }) {
@@ -497,11 +449,11 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
         // When paused, ignore updates; we'll blindly refresh on resume.
         if (!viewModelVisibleListeners.isResumed) {
           viewModelLog(
-            "${T} is paused, delay rebuild",
+            "Widget is paused, delay rebuild",
           );
           return;
         }
-        _rebuildState();
+        rebuildState();
       }));
     }
   }
@@ -538,6 +490,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  /// Safe read for a cached ViewModel without listening.
+  /// Returns `null` instead of throwing when no matching instance
+  /// is found by `key` or `tag`.
   VM? maybeReadCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -552,9 +507,10 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  // Removed buffering logic: we no longer track pending changes while paused.
+  /// Called when the host widget or element attaches to the tree.
+  /// Reserved for future setup steps. No-op currently.
+  void attach() {}
 
-  @override
   @mustCallSuper
   void dispose() {
     _dispose = true;
@@ -562,22 +518,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     _instanceController.dispose();
     for (final e in _disposes) {
       e.call();
-    }
-    super.dispose();
-  }
-
-  void _rebuildState() {
-    if (_dispose) return;
-    if (context.mounted &&
-        SchedulerBinding.instance.schedulerPhase !=
-            SchedulerPhase.persistentCallbacks) {
-      setState(() {});
-    } else {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (!_dispose && context.mounted) {
-          setState(() {});
-        }
-      });
     }
   }
 }

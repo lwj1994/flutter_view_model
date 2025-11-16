@@ -5,50 +5,66 @@
 /// lifecycle management, dependency tracking, and seamless integration with
 /// Flutter's widget system.
 ///
-/// ## Key Features
+/// ## Quick Start
+///
+/// - **Watch**: `watchViewModel<T>()` / `watchCachedViewModel<T>()`
+/// - **Read**: `readViewModel<T>()` / `readCachedViewModel<T>()`
+/// - **Global**: `ViewModel.readCached<T>()` / `ViewModel.maybeReadCached<T>()`
+/// - **Recycle**: `recycleViewModel(vm)`
+/// - **Effects**: `listen(onChanged)` / `listenState` / `listenStateSelect`
+///
+/// ## Core Features
 ///
 /// - **Automatic Lifecycle Management**: ViewModels are automatically created,
-///   cached, and disposed based on widget lifecycle
-/// - **Dependency Tracking**: Comprehensive tracking of ViewModel dependencies
-///   and relationships for debugging and optimization
-/// - **State Management**: Built-in state management with change notifications
-///   and previous state tracking
-/// - **DevTools Integration**: Full integration with Flutter DevTools for
-///   debugging and visualization
-/// - **Memory Leak Prevention**: Automatic cleanup and disposal when ViewModels
-///   are no longer needed
-/// - **Flexible Configuration**: Customizable behavior through global
-///                               configuration
+///   cached, and disposed based on widget lifecycle.
+/// - **Instance Reuse**: Share a single ViewModel instance across multiple
+///   widgets using keys or tags.
+/// - **Value-level Rebuilds**: Optimize performance by rebuilding only the
+///   widgets that depend on specific state values.
+/// - **Stateful ViewModel**: Manage immutable state with `StateViewModel<S>`
+///   and update it using `setState(newState)`.
+/// - **Dependency Injection**: Decouple ViewModels from widgets and from
+///   each other.
+/// - **DevTools Extension**: Monitor and debug ViewModels in real-time with
+///   the Flutter DevTools extension.
 ///
 /// ## Basic Usage
 ///
 /// ```dart
 /// // 1. Create a ViewModel
-/// class CounterViewModel extends ViewModel<int> {
-///   CounterViewModel() : super(0);
+/// class CounterViewModel extends ViewModel {
+///   int _counter = 0;
+///   int get counter => _counter;
 ///
 ///   void increment() {
-///     setState(state + 1);
+///     update(() {
+///       _counter++;
+///     });
 ///   }
 /// }
 ///
-/// // 2. Use in a widget
+/// // 2. Create a factory
+/// class CounterFactory with ViewModelFactory<CounterViewModel> {
+///   @override
+///   CounterViewModel build() => CounterViewModel();
+/// }
+///
+/// // 3. Use in a widget
 /// class CounterWidget extends StatefulWidget {
 ///   @override
 ///   _CounterWidgetState createState() => _CounterWidgetState();
 /// }
 ///
-/// class _CounterWidgetState extends State<CounterWidget>
-///     with ViewModelStateMixin {
+/// class _CounterWidgetState extends State<CounterWidget> with ViewModelStateMixin {
+///   late final counterVM = watchViewModel<CounterViewModel>(factory: CounterFactory());
+///
 ///   @override
 ///   Widget build(BuildContext context) {
-///     final counter = watchViewModel<CounterViewModel>();
-///
 ///     return Column(
 ///       children: [
-///         Text('Count: ${counter.state}'),
+///         Text('Count: ${counterVM.counter}'),
 ///         ElevatedButton(
-///           onPressed: counter.increment,
+///           onPressed: counterVM.increment,
 ///           child: Text('Increment'),
 ///         ),
 ///       ],
@@ -56,63 +72,14 @@
 ///   }
 /// }
 /// ```
-///
-/// ## Advanced Features
-///
-/// ### Custom Configuration
-/// ```dart
-/// ViewModel.config = ViewModelConfig(
-///   logEnable: true,
-///   isSameState: (previous, current) => previous?.id == current?.id,
-/// );
-/// ```
-///
-/// ### Instance Management
-/// ```dart
-/// // Create with specific key
-/// final viewModel = watchViewModel<MyViewModel>(
-///   factory: InstanceFactory<MyViewModel>(
-///     builder: () => MyViewModel(customData),
-///     arg: InstanceArg(key: 'unique_key'),
-///   ),
-/// );
-///
-/// // Force recreation
-/// recycleViewModel(viewModel);
-/// ```
-///
-/// ### DevTools Integration
-/// ```dart
-/// // Initialize DevTools service (usually done automatically)
-/// DevToolsService.instance.initialize();
-/// ```
-///
-/// ## Architecture
-///
-/// The framework consists of several key components:
-///
-/// - **ViewModel**: Base class for all ViewModels with state management
-/// - **ViewModelStateMixin**: Mixin for widgets to integrate with ViewModels
-/// - **InstanceManager**: Manages ViewModel instance lifecycle
-/// - **DependencyTracker**: Tracks relationships between ViewModels and widgets
-/// - **DevToolsService**: Provides debugging integration with Flutter DevTools
-///
-/// ## Best Practices
-///
-/// 1. **Single Responsibility**: Keep ViewModels focused on specific
-///                               functionality
-/// 2. **Immutable State**: Use immutable state objects when possible
-/// 3. **Proper Disposal**: Let the framework handle disposal automatically
-/// 4. **Testing**: ViewModels can be easily unit tested in isolation
-/// 5. **Performance**: Use keys and tags for efficient instance management
-///
-/// For more detailed documentation and examples, visit the project repository.
 library;
 
 export "package:view_model/src/get_instance/store.dart" show InstanceArg;
-export "package:view_model/src/observer/value_observer.dart";
-export "package:view_model/src/view_model/config.dart";
-export "package:view_model/src/view_model/extension.dart";
-export "package:view_model/src/view_model/view_model.dart";
 export "package:view_model/src/view_model/builder.dart";
+export "package:view_model/src/view_model/config.dart";
+export "package:view_model/src/view_model/extension/stateful_extension.dart";
+export "package:view_model/src/view_model/extension/stateless_extension.dart";
+export "package:view_model/src/view_model/value_observer.dart";
+export "package:view_model/src/view_model/value_watcher.dart";
+export "package:view_model/src/view_model/view_model.dart";
 export "package:view_model/src/view_model/visible_lifecycle.dart";

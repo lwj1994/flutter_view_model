@@ -91,7 +91,7 @@ void main() {
 
     // Pause page manually.
     final state = tester.state(find.byType(CounterPage)) as _CounterPageState;
-    state.viewModelVisibleListeners.onPause();
+    state.attacher.viewModelVisibleListeners.onPause();
     await tester.pump();
 
     // While covered, perform an update; underlying page should ignore it.
@@ -102,7 +102,7 @@ void main() {
     expect(find.text('2'), findsNothing);
 
     // Resume page manually (forced refresh).
-    state.viewModelVisibleListeners.onResume();
+    state.attacher.viewModelVisibleListeners.onResume();
     await tester.pumpAndSettle();
 
     // After resume, the page refreshes and shows the latest count (2).
