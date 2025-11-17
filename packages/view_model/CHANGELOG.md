@@ -1,4 +1,20 @@
 ## 0.8.0
+- Support internal PageRouteAware to auto controller pause/resume [PAUSE_RESUME_LIFECYCLE_DOC.md](PAUSE_RESUME_LIFECYCLE.md)
+
+```dart
+// register [ViewModel.routeObserver] to navigatorObservers.
+class App {
+  Widget build(context) {
+    return MaterialApp(
+      navigatorObservers: [ViewModel.routeObserver],
+      // ... other properties
+    );
+  }
+}
+
+
+```
+
 
 - Fix Devtool
 - Added support for `ViewModelStatelessMixin` on `StatelessWidget`. but prefer using
@@ -95,32 +111,30 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
 final observable = ObservableValue<int>(0, shareKey: share);
 observable.value = 20;
 
-ObserverBuilder<int>
-(
-observable: observable,
-builder: (v) {
-return Text(v.toString());
-},
-)
+ObserverBuilder<int>(observable: observable, 
+        builder: (v) {
+          return Text(v.toString());
+        },
+      )
 
 
 // observe 2 value
 ObserverBuilder2<int>(
-observable1: observable1,
-observable2: observable2,
-builder: (v1,v2) {
-//
-},
+        observable1: observable1,
+        observable2: observable2,
+        builder: (v1,v2) {
+          //
+        },
 )
 
 // observe 3 value
 ObserverBuilder3<int>(
-observable1: observable1,
-observable2: observable2,
-observable3: observable3,
-builder: (v1,v2,v3) {
+            observable1: observable1,
+            observable2: observable2,
+            observable3: observable3,
+            builder: (v1,v2,v3) {
 
-},
+            },  
 )
 ```
 

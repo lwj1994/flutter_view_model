@@ -41,7 +41,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
     onRecreate: () {
       rebuildState();
     },
-    watcherName: getBinderName(),
+    binderName: getBinderName(),
     dependencyResolver: onChildDependencyResolver,
   );
   final Map<ViewModel, bool> _stateListeners = {};

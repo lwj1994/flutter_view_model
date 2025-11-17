@@ -18,6 +18,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
+import 'package:view_model/src/view_model/route_aware.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/visible_lifecycle.dart';
@@ -62,7 +63,21 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     rebuildState: _rebuildState,
     getBinderName: getViewModelBinderName,
   );
+
+  /// A fallback for pageRouteAware is implemented here.
+  late final _pageRouteAwareController = PageRouteAwareController(
+    ViewModel.routeObserver,
+    onPause: viewModelVisibleListeners.onPause,
+    onResume: viewModelVisibleListeners.onResume,
+  );
+
   final _stackPathLocator = StackPathLocator();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pageRouteAwareController.subscribe(context);
+  }
 
   @override
   VM watchViewModel<VM extends ViewModel>({
@@ -138,6 +153,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   void dispose() {
     super.dispose();
     attacher.dispose();
+    _pageRouteAwareController.unsubscribe();
   }
 
   void _rebuildState() {
@@ -165,7 +181,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   ///
   /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
   String getViewModelBinderName() {
-    if (!kDebugMode) return "";
+    if (!kDebugMode) return "$runtimeType";
 
     final pathInfo = _stackPathLocator.getCurrentObjectPath();
     return pathInfo.isNotEmpty ? "$pathInfo\n$runtimeType" : "$runtimeType";

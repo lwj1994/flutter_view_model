@@ -14,7 +14,7 @@ import 'test_widget.dart';
 void main() {
   group('ViewModel.readCached Tests', () {
     setUp(() {
-      ViewModel.initialize(config: ViewModelConfig(logEnable: true));
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
     testWidgets('should find ViewModel by key', (tester) async {

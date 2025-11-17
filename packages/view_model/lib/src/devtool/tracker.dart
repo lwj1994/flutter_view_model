@@ -147,7 +147,7 @@ class DevToolTracker extends ViewModelLifecycle {
 
     _typeToInstances.putIfAbsent(typeName, () => {}).add(instanceId);
 
-    viewModelLog('📱 ViewModel Created: $typeName (id: $instanceId)');
+    viewModelLog("📱 onCreated, $instanceId");
 
     _notifyListeners();
   }
@@ -177,7 +177,7 @@ class DevToolTracker extends ViewModelLifecycle {
       );
     }
 
-    viewModelLog('🔗 Watcher Added: $newWatchId -> $typeName');
+    viewModelLog("🔗 onAddWatcher, $instanceId");
 
     _notifyListeners();
   }
@@ -214,7 +214,7 @@ class DevToolTracker extends ViewModelLifecycle {
       _viewModelInfos[instanceId] = info.copyWith(watchers: newWatchers);
     }
 
-    viewModelLog('🔌 Watcher Removed: $removedWatchId -> $typeName');
+    viewModelLog('🔌 onRemoveWatcher, watcherId:$removedWatchId $instanceId');
     _notifyListeners();
   }
 
@@ -255,7 +255,7 @@ class DevToolTracker extends ViewModelLifecycle {
       }
     }
 
-    viewModelLog('🗑️ ViewModel Disposed: $typeName (id: $instanceId)');
+    viewModelLog('🗑️ onDisposed, $instanceId');
     _notifyListeners();
   }
 
@@ -269,8 +269,18 @@ class DevToolTracker extends ViewModelLifecycle {
   /// - [arg]: The instance arguments containing key and other metadata
   ///
   /// Returns a unique string identifier for the instance.
+  ///
+  /// Uses `identityHashCode` for stable per‑instance identity even when
+  /// `hashCode` is overridden. Includes readable `key` and `tag` values to
+  /// help correlate instances in logs and DevTools.
   String _getInstanceId(ViewModel viewModel, InstanceArg arg) {
-    return '${viewModel.runtimeType}_${arg.key}_${viewModel.hashCode}';
+    final type = viewModel.runtimeType.toString();
+    final vmId = identityHashCode(viewModel);
+    final keyStr =
+        arg.key == null ? 'null' : '${arg.key}#${identityHashCode(arg.key)}';
+    final tagStr =
+        arg.tag == null ? 'null' : '${arg.tag}#${identityHashCode(arg.tag)}';
+    return '$type(hash: $vmId, key: $keyStr, tag: $tagStr)';
   }
 
   /// Clears all tracking data.

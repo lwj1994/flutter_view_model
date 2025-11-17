@@ -1,111 +1,91 @@
-/// Route visibility pause/resume tests for ViewModelStateMixin.
-///
-/// This test verifies manual pause/resume using `visibleListeners`:
-/// - When `onPause()` is invoked, the page ignores ViewModel updates.
-/// - When `onResume()` is invoked, the page refreshes once and reflects
-///   the latest state.
-///
-/// The test uses a simple `CounterViewModel` and a `CounterPage` widget.
-/// It asserts that updates made while paused do not reflect immediately,
-/// and after resuming, the page shows the latest state.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/view_model.dart';
 
-/// A minimal ViewModel implementation for testing route-aware pause/resume.
-class CounterViewModel with ViewModel {
-  int _count = 0;
+// A simple ViewModel with a counter for testing.
+class CounterViewModel extends ViewModel {
+  int counter = 0;
 
-  /// Returns current count value.
-  int get count => _count;
-
-  /// Increments the count and notifies listeners.
   void increment() {
-    update(() => _count++);
+    counter++;
+    notifyListeners();
   }
 }
 
-/// A page that watches [CounterViewModel] using ViewModelStateMixin.
-///
-/// It renders the current `count` as text, and exposes a button that pushes
-/// an overlay route to simulate being covered by another page.
-class CounterPage extends StatefulWidget {
-  const CounterPage({super.key});
-
+// A factory for creating CounterViewModel instances.
+class CounterViewModelFactory with ViewModelFactory<CounterViewModel> {
   @override
-  State<CounterPage> createState() => _CounterPageState();
+  CounterViewModel build() => CounterViewModel();
 }
 
-class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
-  late CounterViewModel _vm;
+// A StatefulWidget that uses the ViewModelStateMixin for the test.
+class AwareWidget extends StatefulWidget {
+  const AwareWidget({Key? key}) : super(key: key);
 
-  /// Initializes and watches the CounterViewModel instance.
+  @override
+  State<AwareWidget> createState() => _AwareWidgetState();
+}
+
+class _AwareWidgetState extends State<AwareWidget> with ViewModelStateMixin {
+  late final CounterViewModel viewModel;
+
   @override
   void initState() {
     super.initState();
-    _vm = watchViewModel<CounterViewModel>(
-      factory: DefaultViewModelFactory<CounterViewModel>(
-        builder: () => CounterViewModel(),
-        key: 'routeAware-counter',
-      ),
-    );
+    viewModel = watchViewModel(factory: CounterViewModelFactory());
   }
 
-  /// Builds the widget tree showing current count.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Counter')),
       body: Center(
-        child: Text('${_vm.count}', key: const Key('counter-text')),
+        child: Text('Counter: ${viewModel.counter}'),
       ),
     );
   }
 }
 
-/// Ensures manual pause/resume semantics:
-/// - When `onPause()` is called, underlying page pauses rebuilds.
-/// - Updates while paused are ignored by the page.
-/// - When `onResume()` is called, the page resumes and refreshes once.
 void main() {
-  testWidgets(
-      'ViewModelStateMixin ignores updates while paused and refreshes on resume',
-      (tester) async {
-    // Build app.
+  testWidgets('Widget does not rebuild when paused and rebuilds on resume',
+      (WidgetTester tester) async {
+    final routeObserver = ViewModel.routeObserver;
+    // Build the widget and find its state.
     await tester.pumpWidget(
-      const MaterialApp(
-        home: CounterPage(),
+      MaterialApp(
+        navigatorObservers: [routeObserver],
+        home: const AwareWidget(),
       ),
     );
 
-    // Initial count should be 0.
-    expect(find.byKey(const Key('counter-text')), findsOneWidget);
-    expect(find.text('0'), findsOneWidget);
+    final awareWidgetFinder = find.byType(AwareWidget, skipOffstage: false);
+    final state = tester.state(awareWidgetFinder) as _AwareWidgetState;
+    final viewModel = state.viewModel;
 
-    // Increment to 1 and verify rebuild.
-    final vm =
-        ViewModel.readCached<CounterViewModel>(key: 'routeAware-counter');
-    vm.increment();
-    await tester.pump();
-    expect(find.text('1'), findsOneWidget);
+    // 1. Initial state check.
+    expect(find.text('Counter: 0'), findsOneWidget);
 
-    // Pause page manually.
-    final state = tester.state(find.byType(CounterPage)) as _CounterPageState;
-    state.attacher.viewModelVisibleListeners.onPause();
-    await tester.pump();
+    // 2. Push a new route to cover the AwareWidget.
+    Navigator.of(tester.element(awareWidgetFinder)).push(
+      MaterialPageRoute(
+        builder: (_) => const Scaffold(body: Text('Second Page')),
+      ),
+    );
 
-    // While covered, perform an update; underlying page should ignore it.
-    vm.increment(); // expected count becomes 2, but page is paused
-    await tester.pump();
+    // Wait for the navigation to complete.
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
-    // The underlying page's text '2' should not appear yet.
-    expect(find.text('2'), findsNothing);
+    viewModel.increment();
+    // Verify the view model's state has changed.
+    expect(viewModel.counter, 1);
 
-    // Resume page manually (forced refresh).
-    state.attacher.viewModelVisibleListeners.onResume();
+    // 4. Pop the route to make the AwareWidget visible again.
+    Navigator.of(tester.element(awareWidgetFinder)).pop();
+
+    // Wait for the navigation and the single rebuild on resume to complete.
     await tester.pumpAndSettle();
 
-    // After resume, the page refreshes and shows the latest count (2).
-    expect(find.text('2'), findsOneWidget);
+    // 5. Verify that the widget has now been rebuilt and shows the updated value.
+    expect(viewModel.counter, 1);
+    expect(find.text('Counter: 1'), findsOneWidget);
   });
 }

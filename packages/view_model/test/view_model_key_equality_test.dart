@@ -26,7 +26,7 @@ class TestViewModel extends StateViewModel<int> {
 void main() {
   group('ViewModel Key Equality Tests', () {
     setUp(() {
-      ViewModel.initialize(config: ViewModelConfig(logEnable: true));
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
     tearDown(() {});

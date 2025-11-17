@@ -8,7 +8,7 @@ void main() {
     late TestViewModel viewModel;
 
     setUpAll(() {
-      ViewModel.initialize(config: ViewModelConfig(logEnable: true));
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
     setUp(() {

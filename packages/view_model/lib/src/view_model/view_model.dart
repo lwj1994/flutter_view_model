@@ -16,6 +16,7 @@ library;
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/devtool/tracker.dart';
@@ -81,6 +82,7 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 /// ```
 mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   late InstanceArg _instanceArg;
+  static RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
   /// Tracks which dependency ViewModels this ViewModel is already listening to.
   ///
@@ -780,13 +782,13 @@ abstract class StateViewModel<T> with ViewModel {
     required S Function(T state) selector,
     required void Function(S? previous, S current) onChanged,
   }) {
-    final eq = ViewModel.config.isSameState ?? ((a, b) => a == b);
+    final equals = ViewModel.config.equals ?? ((a, b) => a == b);
     // Wrap into a full-state listener to reuse the existing dispatch path.
     // ignore: prefer_final_locals
     Function(T? previous, T state) wrapper = (prevState, currState) {
       final S? prevSel = prevState == null ? null : selector(prevState);
       final S currSel = selector(currState);
-      if (!eq(prevSel, currSel)) {
+      if (!equals(prevSel, currSel)) {
         onChanged(prevSel, currSel);
       }
     };

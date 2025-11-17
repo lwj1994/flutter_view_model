@@ -42,7 +42,7 @@ class StackPathLocator {
             f.line != null) // Ensure line number is available
         .map((f) => '${f.uri.path}:${f.line}') // Format to path:line
         .toSet() // Remove duplicates
-        .take(5) // Take the first 3 unique locations
+        .take(10) // Take the first unique locations
         .toList();
 
     if (externalLocations.isNotEmpty) {

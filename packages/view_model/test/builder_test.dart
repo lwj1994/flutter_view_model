@@ -7,7 +7,7 @@ import 'test_widget.dart';
 void main() {
   group('ViewModelBuilder & CachedViewModelBuilder', () {
     setUp(() {
-      ViewModel.initialize(config: ViewModelConfig(logEnable: true));
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
     testWidgets('ViewModelBuilder rebuilds when ViewModel state changes',
