@@ -42,8 +42,9 @@ final vm2 = watchCachedViewModel<UserViewModel>(key: 'user:$id'); // same
 
 ## Value‑level Rebuilds
 
-- Prefer `ValueNotifier` + `ValueListenableBuilder` for fine‑grained UI
-- If you like signals, define them inside your ViewModel and bind widgets
+- For fine-grained UI updates, use `ValueNotifier` with `ValueListenableBuilder`.
+- For more dynamic scenarios, `ObservableValue` and `ObserverBuilder` offer more flexibility.
+- To rebuild only when a specific value within a `StateViewModel` changes, use `StateViewModelValueWatcher`.
 
 ```dart
 final title = ValueNotifier('Hello');

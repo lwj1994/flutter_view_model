@@ -1,5 +1,8 @@
 ## 0.8.0
-- Added support for `ViewModelStatelessMixin` on `StatelessWidget`. but prefer using `ViewModelStateMixin` on `StatefulWidget`.
+
+- Fix Devtool
+- Added support for `ViewModelStatelessMixin` on `StatelessWidget`. but prefer using
+  `ViewModelStateMixin` on `StatefulWidget`.
 
 ```dart
 class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
@@ -22,7 +25,9 @@ class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
 ```dart
 class MyWidget extends State with ViewModelStateMixin {
   const MyWidget({super.key});
+
   late final MyViewModel stateViewModel;
+
   @override
   void initState() {
     super.initState();
@@ -45,15 +50,16 @@ class MyWidget extends State with ViewModelStateMixin {
 }
 ```
 
-
-
-
-
 ## 0.7.0
+
 ### RouteAware Auto Pause (delay rebuilds when page is paused)
-- can manually control pause/resume via `viewModelVisibleListeners` exposed by `ViewModelStateMixin`.
-  Call `viewModelVisibleListeners.onPause()` when the page is covered, and `viewModelVisibleListeners.onResume()`
-  when it becomes visible again. Wire these methods to your own `RouteObserver` or any visibility  mechanism.
+
+- can manually control pause/resume via `viewModelVisibleListeners` exposed by
+  `ViewModelStateMixin`.
+  Call `viewModelVisibleListeners.onPause()` when the page is covered, and
+  `viewModelVisibleListeners.onResume()`
+  when it becomes visible again. Wire these methods to your own `RouteObserver` or any visibility
+  mechanism.
 
 Example:
 
@@ -69,8 +75,6 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
 }
 ```
 
-
-
 ---
 
 - __BreakingChange__: Rename `ViewModelWatcher` to `ViewModelBuilder`
@@ -83,40 +87,40 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
   ```
 - Add `StateViewModel#listenStateSelect` to listen value diff.
 
-- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/value_observer_doc.md)
+- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI
+  updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/value_observer_doc.md)
 
 ```dart
 // shareKey for share value cross any widget
 final observable = ObservableValue<int>(0, shareKey: share);
 observable.value = 20;
 
-ObserverBuilder<int>(
-            observable: observable,
-            builder: (v) {
-              return Text(v.toString());
-            },
+ObserverBuilder<int>
+(
+observable: observable,
+builder: (v) {
+return Text(v.toString());
+},
 )
-
-
 
 
 // observe 2 value
 ObserverBuilder2<int>(
-            observable1: observable1,
-            observable2: observable2,
-            builder: (v1,v2) {
-              //
-            },
+observable1: observable1,
+observable2: observable2,
+builder: (v1,v2) {
+//
+},
 )
 
 // observe 3 value
 ObserverBuilder3<int>(
-            observable1: observable1,
-            observable2: observable2,
-            observable3: observable3,
-            builder: (v1,v2,v3) {
-              
-            },
+observable1: observable1,
+observable2: observable2,
+observable3: observable3,
+builder: (v1,v2,v3) {
+
+},
 )
 ```
 
@@ -129,39 +133,41 @@ ObserverBuilder3<int>(
 
 ```dart
 // Example: Using ViewModelBuilder without mixing ViewModelStateMixin
-ViewModelBuilder<MySimpleViewModel>(
-  factory: MySimpleViewModelFactory(),
-  builder: (vm) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(vm.message),
-        const SizedBox(height: 8),
-        ElevatedButton(
-          onPressed: () => vm.updateMessage("Message Updated!"),
-          child: const Text('Update Message'),
-        ),
-      ],
-    );
-  },
+ViewModelBuilder<MySimpleViewModel>
+(
+factory: MySimpleViewModelFactory(),
+builder: (vm) {
+return Column(
+mainAxisSize: MainAxisSize.min,
+children: [
+Text(vm.message),
+const SizedBox(height: 8),
+ElevatedButton(
+onPressed: () => vm.updateMessage("Message Updated!"),
+child: const Text('Update Message'),
+),
+],
+);
+},
 )
 ```
 
 ```dart
 // Example: Using CachedViewModelBuilder to bind to an existing instance
-CachedViewModelBuilder<MySimpleViewModel>(
-  shareKey: "shared-key", // or: tag: "shared-tag"
-  builder: (vm) {
-    return Row(
-      children: [
-        Expanded(child: Text(vm.message)),
-        IconButton(
-          onPressed: () => vm.incrementCounter(),
-          icon: const Icon(Icons.add),
-        ),
-      ],
-    );
-  },
+CachedViewModelBuilder<MySimpleViewModel>
+(
+shareKey: "shared-key", // or: tag: "shared-tag"
+builder: (vm) {
+return Row(
+children: [
+Expanded(child: Text(vm.message)),
+IconButton(
+onPressed: () => vm.incrementCounter(),
+icon: const Icon(Icons.add),
+),
+],
+);
+},
 )
 ```
 
@@ -169,23 +175,23 @@ CachedViewModelBuilder<MySimpleViewModel>(
 
 - **Breaking Change & API Refinement**: Major overhaul of ViewModel access
   methods to clarify responsibilities and improve predictability.
-  - **`watchViewModel` / `readViewModel`**:
-    - Now primarily responsible for creating new ViewModel instances.
-    - The `factory` parameter is now **mandatory**.
-    - Behavior depends on the provided `factory`:
-      - If the `factory` includes a `key`, the instance is created and
-        cached (or retrieved if already cached).
-      - If the `factory` has no `key`, a new, non-shared instance is created every time.
-  - **New Methods for Cached Access**:
-    - Introduced `watchCachedViewModel` and `readCachedViewModel` to explicitly
-      find existing, cached ViewModel instances by `key` or `tag`.
-    - Introduced `maybeWatchCachedViewModel` and `maybeReadCachedViewModel` for
-      safely accessing cached instances without throwing errors if not found.
-  - **Migration Guide**:
-    - To create/watch a new instance: Continue using `watchViewModel` but you
-      **must** provide a `factory`.
-    - To find an existing instance: Replace `watchViewModel(key: ...)` with
-      `watchCachedViewModel(key: ...)` or `readCachedViewModel(key: ...)`.
+    - **`watchViewModel` / `readViewModel`**:
+        - Now primarily responsible for creating new ViewModel instances.
+        - The `factory` parameter is now **mandatory**.
+        - Behavior depends on the provided `factory`:
+            - If the `factory` includes a `key`, the instance is created and
+              cached (or retrieved if already cached).
+            - If the `factory` has no `key`, a new, non-shared instance is created every time.
+    - **New Methods for Cached Access**:
+        - Introduced `watchCachedViewModel` and `readCachedViewModel` to explicitly
+          find existing, cached ViewModel instances by `key` or `tag`.
+        - Introduced `maybeWatchCachedViewModel` and `maybeReadCachedViewModel` for
+          safely accessing cached instances without throwing errors if not found.
+    - **Migration Guide**:
+        - To create/watch a new instance: Continue using `watchViewModel` but you
+          **must** provide a `factory`.
+        - To find an existing instance: Replace `watchViewModel(key: ...)` with
+          `watchCachedViewModel(key: ...)` or `readCachedViewModel(key: ...)`.
 - support ViewModel-to-ViewModel Access
 - Breaking change: The `key` parameter in `watchViewModel`, `readViewModel`,
   and `ViewModel.read` has been changed from `String?` to `Object?`. This
@@ -284,13 +290,13 @@ VM watchViewModel<VM extends ViewModel>({
 ```
 
 | Parameter Name | Type                    | Optional | Description                                                                  |
-| -------------- | ----------------------- | -------- | ---------------------------------------------------------------------------- |
-| `factory`      | `ViewModelFactory<VM>?` | ✅       | Provides the construction method for the ViewModel. Optional; if an          |
+|----------------|-------------------------|----------|------------------------------------------------------------------------------|
+| `factory`      | `ViewModelFactory<VM>?` | ✅        | Provides the construction method for the ViewModel. Optional; if an          |
 |                |                         |          | existing instance is not found in the cache, it will be used to create a new |
 |                |                         |          | one.                                                                         |
-| `key`          | `String?`               | ✅       | Specifies a unique key to support sharing the same ViewModel instance.       |
+| `key`          | `String?`               | ✅        | Specifies a unique key to support sharing the same ViewModel instance.       |
 |                |                         |          | First, it tries to find an instance with the same key in the cache.          |
-| `tag`          | `Object?`               | ✅       | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's       |
+| `tag`          | `Object?`               | ✅        | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's       |
 |                |                         |          | used by find ViewModel by `watchViewModel(tag:tag)`.                         |
 
 **🔍 Lookup Logic Priority (Important)**

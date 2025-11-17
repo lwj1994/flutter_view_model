@@ -13,12 +13,13 @@
 /// reactive ViewModel integration.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
+import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
-// ignore: unnecessary_import
 import 'package:view_model/src/view_model/visible_lifecycle.dart';
 
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
@@ -57,7 +58,11 @@ import 'package:view_model/src/view_model/visible_lifecycle.dart';
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     implements ViewModelCreateInterface {
   @visibleForTesting
-  late final ViewModelAttacher attacher = ViewModelAttacher(_rebuildState);
+  late final ViewModelAttacher attacher = ViewModelAttacher(
+    rebuildState: _rebuildState,
+    getBinderName: getViewModelBinderName,
+  );
+  final _stackPathLocator = StackPathLocator();
 
   @override
   VM watchViewModel<VM extends ViewModel>({
@@ -148,5 +153,21 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
         }
       });
     }
+  }
+
+  /// Generates a debug-friendly name for this ViewModel watcher.
+  ///
+  /// This method creates a unique identifier that includes the file path,
+  /// line number, and class name where the ViewModel is being watched.
+  /// This information is useful for debugging and development tools.
+  ///
+  /// Returns an empty string in release mode for performance.
+  ///
+  /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
+  String getViewModelBinderName() {
+    if (!kDebugMode) return "";
+
+    final pathInfo = _stackPathLocator.getCurrentObjectPath();
+    return pathInfo.isNotEmpty ? "$pathInfo\n$runtimeType" : "$runtimeType";
   }
 }

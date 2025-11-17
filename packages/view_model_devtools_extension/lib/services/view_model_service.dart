@@ -185,7 +185,7 @@ class ViewModelInfo {
       createdAt: DateTime.parse(json['createdAt'] as String),
       lastUpdated: json['disposeTime'] != null
           ? DateTime.parse(json['disposeTime'] as String)
-          : null,
+          : DateTime.parse(json['createdAt'] as String),
     );
   }
 }
