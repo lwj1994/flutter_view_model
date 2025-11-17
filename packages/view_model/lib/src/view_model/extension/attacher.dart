@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:meta/meta.dart' show internal;
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -411,8 +412,8 @@ class ViewModelAttacher implements ViewModelCreateInterface {
     return res;
   }
 
-  @internal
   // ignore: avoid_shadowing_type_parameters
+  @internal
   T onChildDependencyResolver<T extends ViewModel>({
     required ViewModelDependencyConfig<T> dependency,
     bool listen = true,
