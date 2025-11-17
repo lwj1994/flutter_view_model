@@ -44,6 +44,7 @@ class CounterStatelessWidget extends StatelessWidget
 
 /// Stateless widget that shares a ViewModel instance via a key.
 /// First watch creates the instance, second watch reads cached one.
+
 class SharedCountersStateless extends StatelessWidget
     with ViewModelStatelessMixin {
   SharedCountersStateless({super.key});

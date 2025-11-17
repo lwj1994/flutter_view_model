@@ -12,6 +12,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:view_model/src/log.dart';
+
 import 'tracker.dart';
 
 /// Service for integrating ViewModel debugging with Flutter DevTools.
@@ -86,12 +88,16 @@ class DevToolsService {
   /// - `ext.view_model.getViewModelData`: Returns ViewModel instances and stats
   /// - `ext.view_model.getDependencyGraph`: Returns dependency graph data
   void _registerServiceExtensions() {
+    viewModelLog("DevTool registerExtension: ext.view_model.getViewModelData");
     developer.registerExtension('ext.view_model.getViewModelData',
         (method, parameters) async {
       try {
         final data = _getViewModelData();
-        return developer.ServiceExtensionResponse.result(jsonEncode(data));
+        final res = jsonEncode(data);
+        viewModelLog("DevTool _getViewModelData suucess: $res");
+        return developer.ServiceExtensionResponse.result(res);
       } catch (e) {
+        viewModelLog("DevTool _getViewModelData error: $e");
         return developer.ServiceExtensionResponse.error(
           developer.ServiceExtensionResponse.extensionError,
           'DevTools extension error: Unable to retrieve ViewModel data. Please ensure ViewModels are properly configured.',

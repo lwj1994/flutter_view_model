@@ -9,7 +9,7 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/log.dart';
 
@@ -361,7 +361,6 @@ class InstanceHandle<T> with ChangeNotifier {
     _tryCallInstanceDispose();
     _instance = null;
     watchIds.clear();
-    _instance = null;
   }
 }
 

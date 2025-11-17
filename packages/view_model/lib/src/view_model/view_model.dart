@@ -18,6 +18,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
+import 'package:view_model/src/devtool/tracker.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
@@ -644,7 +645,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     if (_initializedDevtool) return;
     _initializedDevtool = true;
     if (kDebugMode) {
-      // _viewModelLifecycles.add(DependencyTracker.instance);
+      _viewModelLifecycles.add(DevToolTracker.instance);
       DevToolsService.instance.initialize();
     }
   }

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:view_model/view_model.dart';
 
 import 'counter_page.dart';
 import 'l10n/app_localizations.dart';
 
 void main() {
+  ViewModel.initialize(
+      config: ViewModelConfig(
+    logEnable: true,
+  ));
   runApp(const MyApp());
 }
 

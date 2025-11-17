@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
+import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 /// Stateless integration for ViewModel access from widgets.
@@ -9,10 +11,12 @@ import 'package:view_model/src/view_model/view_model.dart';
 /// reading ViewModels with or without listening.
 mixin ViewModelStatelessMixin on StatelessWidget
     implements ViewModelCreateInterface {
-  _StatelessViewModelElement? _element;
-
-  @visibleForTesting
-  _StatelessViewModelElement get viewModelElement => _element!;
+  late final _StatelessViewModelElement _viewModelElement =
+      _StatelessViewModelElement(
+    this,
+    getBinderName: getViewModelBinderName,
+  );
+  final _stackPathLocator = StackPathLocator();
 
   /// Creates the custom Element that carries the attacher.
   /// The Element owns the `ViewModelAttacher` and connects
@@ -20,17 +24,14 @@ mixin ViewModelStatelessMixin on StatelessWidget
   /// widget.
   @override
   StatelessElement createElement() {
-    if (_element == null) {
-      _element = _StatelessViewModelElement(this);
-    }
-    return _element!;
+    return _viewModelElement;
   }
 
   /// Watches a cached ViewModel and rebuilds when it changes.
   /// Finds by `key` or `tag`. Does not create new instances.
   @override
   VM watchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    return _element!._attacher.watchCachedViewModel(
+    return _viewModelElement._attacher.watchCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -40,21 +41,21 @@ mixin ViewModelStatelessMixin on StatelessWidget
   @override
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
-    return _element!._attacher.watchViewModel(
+    return _viewModelElement._attacher.watchViewModel(
       factory: factory,
     );
   }
 
   @override
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
-    _element!._attacher.recycleViewModel(viewModel);
+    _viewModelElement._attacher.recycleViewModel(viewModel);
   }
 
   /// Safe watch for cached ViewModel, returns `null` when not found.
   @override
   VM? maybeWatchCachedViewModel<VM extends ViewModel>(
       {Object? key, Object? tag}) {
-    return _element!._attacher.maybeWatchCachedViewModel(
+    return _viewModelElement._attacher.maybeWatchCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -64,7 +65,7 @@ mixin ViewModelStatelessMixin on StatelessWidget
   @override
   VM? maybeReadCachedViewModel<VM extends ViewModel>(
       {Object? key, Object? tag}) {
-    return _element!._attacher.maybeReadCachedViewModel(
+    return _viewModelElement._attacher.maybeReadCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -73,7 +74,7 @@ mixin ViewModelStatelessMixin on StatelessWidget
   /// Reads a cached ViewModel without listening for changes.
   @override
   VM readCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    return _element!._attacher.readCachedViewModel(
+    return _viewModelElement._attacher.readCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -83,9 +84,16 @@ mixin ViewModelStatelessMixin on StatelessWidget
   @override
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
-    return _element!._attacher.readViewModel(
+    return _viewModelElement._attacher.readViewModel(
       factory: factory,
     );
+  }
+
+  String getViewModelBinderName() {
+    if (!kDebugMode) return "";
+
+    final pathInfo = _stackPathLocator.getCurrentObjectPath();
+    return pathInfo.isNotEmpty ? "$pathInfo  $runtimeType" : "$runtimeType";
   }
 }
 
@@ -94,10 +102,13 @@ mixin ViewModelStatelessMixin on StatelessWidget
 /// to `markNeedsBuild`. Manages attach and dispose with element
 /// lifecycle.
 class _StatelessViewModelElement extends StatelessElement {
-  late final ViewModelAttacher _attacher =
-      ViewModelAttacher(this.markNeedsBuild);
+  final String Function() getBinderName;
+  late final ViewModelAttacher _attacher = ViewModelAttacher(
+    rebuildState: this.markNeedsBuild,
+    getBinderName: getBinderName,
+  );
 
-  _StatelessViewModelElement(super.widget);
+  _StatelessViewModelElement(super.widget, {required this.getBinderName});
 
   /// Attaches the element and starts ViewModel listening.
   @override

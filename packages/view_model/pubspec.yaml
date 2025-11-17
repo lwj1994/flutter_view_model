@@ -1,6 +1,6 @@
 name: view_model
 description: "view model for flutter. Simple and Lightweight & Cross - Widget Sharing & Automatic Resource Disposal"
-version: 0.7.0
+version: 0.8.0-dev.0
 homepage: https://github.com/lwj1994/flutter_view_model
 repository: https://github.com/lwj1994/flutter_view_model
 issue_tracker: https://github.com/lwj1994/flutter_view_model/issues
@@ -29,6 +29,7 @@ dependencies:
     sdk: flutter
   uuid: ^4.4.2
   meta: any
+  stack_trace: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

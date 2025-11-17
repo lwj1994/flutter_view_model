@@ -15,10 +15,11 @@ import 'package:view_model/src/view_model/visible_lifecycle.dart';
 class ViewModelAttacher implements ViewModelCreateInterface {
   bool _dispose = false;
   final Function() rebuildState;
+  final String Function() getBinderName;
 
   /// Creates a [ViewModelAttacher] with the callback used to trigger rebuild
   /// when resuming.
-  ViewModelAttacher(this.rebuildState);
+  ViewModelAttacher({required this.rebuildState, required this.getBinderName});
 
   bool get isDisposed => _dispose;
 
@@ -40,108 +41,12 @@ class ViewModelAttacher implements ViewModelCreateInterface {
     onRecreate: () {
       rebuildState();
     },
-    watcherName: getViewModelBuilderName(),
+    watcherName: getBinderName(),
     dependencyResolver: onChildDependencyResolver,
   );
   final Map<ViewModel, bool> _stateListeners = {};
   final _defaultViewModelKey = const UuidV4().generate();
   final List<Function()> _disposes = [];
-
-  // Cache path information to avoid repeated retrieval
-  String? _cachedObjectPath;
-
-  /// Generates a debug-friendly name for this ViewModel watcher.
-  ///
-  /// This method creates a unique identifier that includes the file path,
-  /// line number, and class name where the ViewModel is being watched.
-  /// This information is useful for debugging and development tools.
-  ///
-  /// Returns an empty string in release mode for performance.
-  ///
-  /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
-  String getViewModelBuilderName() {
-    if (!kDebugMode) return "";
-
-    final pathInfo = _getCurrentObjectPath();
-    return pathInfo.isNotEmpty ? "$pathInfo  $runtimeType" : "$runtimeType";
-  }
-
-  /// Gets the file path and line number where this mixin is being used.
-  ///
-  /// This method analyzes the current call stack to determine the exact
-  /// location where ViewModelStateMixin is being used. It handles both
-  /// regular file paths and package: format paths.
-  ///
-  /// The result is cached to avoid repeated stack trace analysis.
-  ///
-  /// Returns:
-  /// - In debug mode: A string like "lib/pages/counter_page.dart:25"
-  /// - In release mode: An empty string
-  /// - If path cannot be determined: The runtime type as fallback
-  ///
-  /// Example output: `lib/pages/counter_page.dart:25`
-  String _getCurrentObjectPath() {
-    if (!kDebugMode) return "";
-
-    // Return cached result if available
-    if (_cachedObjectPath != null) {
-      return _cachedObjectPath!;
-    }
-
-    // Get current call stack
-    final stackTrace = StackTrace.current;
-    final frames = stackTrace.toString().split('\n');
-
-    // Skip stack frames until we find the host class
-    // that uses ViewModelStateMixin
-    for (int i = 1; i < frames.length; i++) {
-      final frame = frames[i].trim();
-      if (frame.isEmpty) continue;
-
-      // Extract file path information using regex
-      final match = RegExp(r'\((.+\.dart):(\d+):(\d+)\)').firstMatch(frame);
-      if (match != null) {
-        final filePath = match.group(1)!;
-        final line = match.group(2)!;
-        final fileName = filePath.split('/').last;
-
-        // Skip frames from extension.dart itself, find the host class
-        if (!fileName.contains('extension.dart')) {
-          // Handle package: format paths
-          String relativePath = filePath;
-          if (filePath.startsWith('package:')) {
-            // For package: paths, extract only the lib/ part
-            final packageMatch =
-                RegExp(r'package:([^/]+)/(.+)').firstMatch(filePath);
-            if (packageMatch != null) {
-              final pathAfterPackage = packageMatch.group(2)!;
-              // If path doesn't start with lib/, add it
-              if (!pathAfterPackage.startsWith('lib/')) {
-                relativePath = 'lib/$pathAfterPackage';
-              } else {
-                relativePath = pathAfterPackage;
-              }
-            }
-          } else {
-            // For regular file paths, extract from lib/ directory
-            final libIndex = filePath.indexOf('/lib/');
-            if (libIndex != -1) {
-              relativePath = filePath
-                  .substring(libIndex + 1); // Remove leading slash, keep lib/
-            }
-          }
-
-          // Return relative path and line number, cache the result
-          _cachedObjectPath = "$relativePath:$line";
-          return _cachedObjectPath!;
-        }
-      }
-    }
-
-    // Fallback to runtimeType if path cannot be retrieved
-    _cachedObjectPath = "$runtimeType";
-    return _cachedObjectPath!;
-  }
 
   /// Forces disposal of a ViewModel and removes it from cache.
   ///
