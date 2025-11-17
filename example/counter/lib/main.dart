@@ -8,7 +8,7 @@ import 'l10n/app_localizations.dart';
 void main() {
   ViewModel.initialize(
       config: ViewModelConfig(
-    logEnable: true,
+    isLoggingEnabled: true,
   ));
   runApp(const MyApp());
 }

@@ -123,7 +123,7 @@ class Store<T> {
   /// Throws [StateError] if no cached instance exists and no builder is provided.
   InstanceHandle<T> getNotifier({required InstanceFactory<T> factory}) {
     final realKey = factory.arg.key ?? const UuidV4().generate();
-    final watchId = factory.arg.watchId;
+    final watchId = factory.arg.binderId;
     final arg = factory.arg.copyWith(
       key: realKey,
     );
@@ -325,7 +325,7 @@ class InstanceHandle<T> with ChangeNotifier {
     if (_instance is InstanceLifeCycle) {
       (_instance as InstanceLifeCycle).onCreate(arg);
     }
-    _addWatcher(arg.watchId);
+    _addWatcher(arg.binderId);
   }
 
   /// Adds a new watcher to this instance.
@@ -457,7 +457,7 @@ class InstanceArg {
   /// This ID is used for lifecycle tracking and automatic cleanup.
   /// When the watcher is disposed, the instance can be automatically
   /// cleaned up if no other watchers remain.
-  final String? watchId;
+  final String? binderId;
 
 //<editor-fold desc="Data Methods">
   /// Creates new instance arguments.
@@ -465,11 +465,11 @@ class InstanceArg {
   /// Parameters:
   /// - [key]: Unique identifier for caching (optional)
   /// - [tag]: Logical grouping identifier (optional)
-  /// - [watchId]: Watcher identifier for lifecycle tracking (optional)
+  /// - [binderId]: Watcher identifier for lifecycle tracking (optional)
   const InstanceArg({
     this.key,
     this.tag,
-    this.watchId,
+    this.binderId,
   });
 
   @override
@@ -479,25 +479,29 @@ class InstanceArg {
           runtimeType == other.runtimeType &&
           key == other.key &&
           tag == other.tag &&
-          watchId == other.watchId);
+          binderId == other.binderId);
 
   @override
-  int get hashCode => key.hashCode ^ tag.hashCode ^ watchId.hashCode;
+  int get hashCode => key.hashCode ^ tag.hashCode ^ binderId.hashCode;
 
   @override
   String toString() {
-    return 'InstanceArg{' ' key: $key,' ' tag: $tag,' ' watchId: $watchId,' '}';
+    return 'InstanceArg{'
+        ' key: $key,'
+        ' tag: $tag,'
+        ' watchId: $binderId,'
+        '}';
   }
 
   InstanceArg copyWith({
     Object? key,
     Object? tag,
-    String? watchId,
+    String? binderId,
   }) {
     return InstanceArg(
       key: key ?? this.key,
       tag: tag ?? this.tag,
-      watchId: watchId ?? this.watchId,
+      binderId: binderId ?? this.binderId,
     );
   }
 
@@ -505,7 +509,7 @@ class InstanceArg {
     return {
       'key': key,
       'tag': tag,
-      'watchId': watchId,
+      'binderId': binderId,
     };
   }
 
@@ -513,7 +517,7 @@ class InstanceArg {
     return InstanceArg(
       key: map['key'],
       tag: map['tag'] as Object,
-      watchId: map['watchId'] as String,
+      binderId: map['binderId'] as String,
     );
   }
 

@@ -58,7 +58,7 @@ class AutoDisposeInstanceController {
   final Map<Object, bool> _notifierListeners = {};
 
   /// Human-readable name for this watcher, typically the widget class name.
-  final String watcherName;
+  final String binderName;
 
   final DependencyResolver dependencyResolver;
 
@@ -66,10 +66,10 @@ class AutoDisposeInstanceController {
   ///
   /// Parameters:
   /// - [onRecreate]: Callback for handling instance recreation events
-  /// - [watcherName]: Descriptive name for this watcher context
+  /// - [binderName]: Descriptive name for this watcher context
   AutoDisposeInstanceController({
     required this.onRecreate,
-    required this.watcherName,
+    required this.binderName,
     required this.dependencyResolver,
   });
 
@@ -80,7 +80,7 @@ class AutoDisposeInstanceController {
   ///
   /// This ID is used to identify this specific watcher in the ViewModel
   /// dependency tracking system.
-  String get _watchId => "$watcherName:$_uuid";
+  String get _binderId => "$binderName(id=$_uuid)";
 
   /// Gets a ViewModel instance with automatic lifecycle management.
   ///
@@ -116,7 +116,7 @@ class AutoDisposeInstanceController {
     factory = (factory ?? InstanceFactory<T>());
     factory = factory.copyWith(
       arg: factory.arg.copyWith(
-        watchId: _watchId,
+        binderId: _binderId,
       ),
     );
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
@@ -188,7 +188,7 @@ class AutoDisposeInstanceController {
             .dependencyHandler
             .removeDependencyResolver(dependencyResolver);
       }
-      e.removeWatcher(_watchId);
+      e.removeWatcher(_binderId);
     }
     _instanceNotifiers.clear();
   }

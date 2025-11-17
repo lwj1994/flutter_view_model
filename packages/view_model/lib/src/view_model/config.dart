@@ -13,8 +13,8 @@ library;
 /// Example:
 /// ```dart
 /// final config = ViewModelConfig(
-///   logEnable: true,
-///   isSameState: (previous, current) {
+///   isLoggingEnabled: true,
+///   equals: (previous, current) {
 ///     // Custom equality logic
 ///     return previous?.id == current?.id;
 ///   },
@@ -29,32 +29,36 @@ class ViewModelConfig {
   /// When enabled, the ViewModel system will output debug information
   /// about state changes, lifecycle events, and other operations.
   /// Defaults to `false` for production builds.
-  final bool logEnable;
+  final bool isLoggingEnabled;
 
-  /// Custom state equality comparison function for `StateViewModel`.
+  /// A global custom equality comparison function.
   ///
-  /// This function is used by [StateViewModel] to determine if two states are
-  /// considered equal. If this function returns `true`, the `StateViewModel`
-  /// will skip the update and won't notify listeners, preventing unnecessary
-  /// rebuilds.
+  /// This function is used to determine if two values are considered equal,
+  /// and it is utilized in two main places:
+  /// 1. By `StateViewModel` to compare the previous and new states.
+  /// 2. By the `listen` method's selector to compare the previous and new
+  ///    selected values.
   ///
-  /// By default, if this function is not provided, the system uses `identical()`
-  /// to compare the memory addresses of the two state objects.
+  /// If this function returns `true`, the update is skipped, preventing
+  /// unnecessary notifications and rebuilds.
+  ///
+  /// If not provided, `StateViewModel` defaults to `identical()`, while the
+  /// `listen` selector defaults to the `==` operator.
   ///
   /// Parameters:
-  /// - [previous]: The previous state value.
-  /// - [current]: The new state value.
+  /// - [previous]: The previous value.
+  /// - [current]: The new value.
   ///
-  /// Returns `true` if the states should be considered equal.
-  final bool Function(dynamic previous, dynamic current)? isSameState;
+  /// Returns `true` if the values should be considered equal.
+  final bool Function(dynamic previous, dynamic current)? equals;
 
   /// Creates a new ViewModel configuration.
   ///
   /// Parameters:
-  /// - [logEnable]: Whether to enable debug logging (defaults to `false`)
-  /// - [isSameState]: Custom state equality function (optional)
+  /// - [isLoggingEnabled]: Whether to enable debug logging (defaults to `false`)
+  /// - [equals]: Custom state equality function (optional)
   ViewModelConfig({
-    this.logEnable = false,
-    this.isSameState,
+    this.isLoggingEnabled = false,
+    this.equals,
   });
 }

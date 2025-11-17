@@ -136,7 +136,7 @@ class InstanceManager {
       throw StateError("T is dynamic");
     }
     if (factory == null || factory.isEmpty()) {
-      final watchId = factory?.arg.watchId;
+      final watchId = factory?.arg.binderId;
       final tag = factory?.arg.tag;
       // find newly T instance
       final find = _getStore<T>().findNewlyInstance(
@@ -150,7 +150,7 @@ class InstanceManager {
       if (watchId != null) {
         final factory = InstanceFactory<T>(
             arg: InstanceArg(
-          watchId: watchId,
+          binderId: watchId,
           key: find.arg.key,
           tag: find.arg.tag,
         ));
@@ -223,7 +223,7 @@ class InstanceFactory<T> {
   factory InstanceFactory.watch({required String watchId}) {
     return InstanceFactory(
       arg: InstanceArg(
-        watchId: watchId,
+        binderId: watchId,
       ),
     );
   }

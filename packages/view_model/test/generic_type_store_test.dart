@@ -9,7 +9,7 @@ import 'package:view_model/view_model.dart';
 void main() {
   group('Generic type store isolation', () {
     setUp(() {
-      ViewModel.initialize(config: ViewModelConfig(logEnable: true));
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
     assert(GenericVM<String> != GenericVM<dynamic>);

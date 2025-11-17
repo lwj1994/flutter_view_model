@@ -109,8 +109,8 @@ class ViewModelStateStore<S> implements StateStore<S> {
   ///
   /// Returns `true` if the states are considered equal.
   bool _isSameState(S current, S newState) {
-    if (ViewModel.config.isSameState != null) {
-      return ViewModel.config.isSameState!(current, newState);
+    if (ViewModel.config.equals != null) {
+      return ViewModel.config.equals!(current, newState);
     } else {
       return identical(current, newState);
     }

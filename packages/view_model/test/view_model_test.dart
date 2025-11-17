@@ -32,7 +32,7 @@ class MyViewModelLifecycle extends ViewModelLifecycle {
 void main() {
   group('stateless_view_model state', () {
     setUp(() {
-      ViewModel.initialize(config: ViewModelConfig(logEnable: true));
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
     test("dispose error", () async {
@@ -41,7 +41,7 @@ void main() {
         builder: () {
           return DisposeErrorViewModel();
         },
-        arg: const InstanceArg(watchId: "watchId1"),
+        arg: const InstanceArg(binderId: "watchId1"),
       ));
       final vmIns = vm.instance;
       vm.recycle();

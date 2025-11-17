@@ -14,7 +14,7 @@ import 'package:view_model/view_model.dart';
 ///
 /// This function provides centralized logging for all ViewModel-related
 /// operations. It respects the global logging configuration set in
-/// [ViewModel.config.logEnable] and only outputs messages when logging
+/// [ViewModel.config.isLoggingEnabled] and only outputs messages when logging
 /// is enabled.
 ///
 /// The function uses Flutter's [debugPrint] to ensure proper output
@@ -27,19 +27,19 @@ import 'package:view_model/view_model.dart';
 /// Example:
 /// ```dart
 /// // Enable logging in configuration
-/// ViewModel.config = ViewModelConfig(logEnable: true);
+/// ViewModel.config = ViewModelConfig(isLoggingEnabled: true);
 ///
 /// // Log messages will now appear
 /// viewModelLog('ViewModel created: MyViewModel');
 /// viewModelLog('State updated: ${newState}');
 ///
 /// // Disable logging
-/// ViewModel.config = ViewModelConfig(logEnable: false);
+/// ViewModel.config = ViewModelConfig(isLoggingEnabled: false);
 ///
 /// // This message will not appear
 /// viewModelLog('This will not be logged');
 /// ```
 void viewModelLog(String s) {
-  if (!ViewModel.config.logEnable) return;
+  if (!ViewModel.config.isLoggingEnabled) return;
   debugPrint("view_model:  $s");
 }

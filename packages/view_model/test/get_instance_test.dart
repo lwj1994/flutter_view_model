@@ -11,7 +11,7 @@ import 'test_model.dart';
 void main() {
   group('get_instance', () {
     setUp(() {
-      ViewModel.initialize(config: ViewModelConfig(logEnable: true));
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
     test('key = null', () {
       final factory = InstanceFactory<TestModel>(
