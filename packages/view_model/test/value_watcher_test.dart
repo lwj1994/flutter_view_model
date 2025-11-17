@@ -45,7 +45,7 @@ void main() {
           home: StateViewModelValueWatcher<TestState>(
             viewModel: viewModel,
             selectors: const [],
-            builder: (state) => const Text('Count: \${state.count}'),
+            builder: (state) => Text('Count: ${state.count}'),
           ),
         ),
       );
@@ -60,7 +60,7 @@ void main() {
           home: StateViewModelValueWatcher<TestState>(
             viewModel: viewModel,
             selectors: [(state) => state.count],
-            builder: (state) => const Text('Count: \${state.count}'),
+            builder: (state) => Text('Count: ${state.count}'),
           ),
         ),
       );
@@ -83,7 +83,7 @@ void main() {
             selectors: [(state) => state.name],
             builder: (state) {
               buildCount++;
-              return const Text('Name: \${state.name}');
+              return Text('Name: ${state.name}');
             },
           ),
         ),
@@ -108,7 +108,7 @@ void main() {
             viewModel: viewModel,
             selectors: [(state) => state.count, (state) => state.name],
             builder: (state) =>
-                const Text('Count: \${state.count}, Name: \${state.name}'),
+                Text('Count: ${state.count}, Name: ${state.name}'),
           ),
         ),
       );
@@ -134,7 +134,7 @@ void main() {
           home: StateViewModelValueWatcher<TestState>(
             viewModel: viewModel,
             selectors: [(state) => state.count],
-            builder: (state) => const Text('Count: \${state.count}'),
+            builder: (state) => Text('Count: ${state.count}'),
           ),
         ),
       );
@@ -147,7 +147,7 @@ void main() {
           home: StateViewModelValueWatcher<TestState>(
             viewModel: newViewModel,
             selectors: [(state) => state.count],
-            builder: (state) => const Text('Count: \${state.count}'),
+            builder: (state) => Text('Count: ${state.count}'),
           ),
         ),
       );
@@ -176,7 +176,7 @@ void main() {
             viewModel: viewModel,
             selectors: selectors,
             builder: (state) =>
-                const Text('Count: \${state.count}, Name: \${state.name}'),
+                Text('Count: ${state.count}, Name: ${state.name}'),
           ),
         ),
       );
@@ -197,7 +197,7 @@ void main() {
             viewModel: viewModel,
             selectors: selectors,
             builder: (state) =>
-                const Text('Count: \${state.count}, Name: \${state.name}'),
+                Text('Count: ${state.count}, Name: ${state.name}'),
           ),
         ),
       );
@@ -215,7 +215,7 @@ void main() {
           home: StateViewModelValueWatcher<TestState>(
             viewModel: viewModel,
             selectors: [(state) => state.count],
-            builder: (state) => const Text('Count: \${state.count}'),
+            builder: (state) => Text('Count: ${state.count}'),
           ),
         ),
       );
