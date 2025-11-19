@@ -16,8 +16,11 @@ import 'package:view_model/src/view_model/view_model.dart';
 class PauseAwareController {
   // A callback triggered when the view model should pause.
   final Function() onWidgetPause;
+
   // A callback triggered when the view model should resume.
   final Function() onWidgetResume;
+
+  final String binderName;
 
   /// Creates a [PauseAwareController] with the given pause/resume callbacks.
   ///
@@ -30,12 +33,14 @@ class PauseAwareController {
     required this.onWidgetPause,
     required this.onWidgetResume,
     required this.providers,
+    required this.binderName,
   }) {
     _setupSubscriptions();
   }
 
   // A list of providers that determine the pause state.
   final List<ViewModelPauseProvider> providers;
+
   // Holds subscriptions to the pause state streams of the providers.
   final List<StreamSubscription<bool>> _subscriptions = [];
 
@@ -48,7 +53,8 @@ class PauseAwareController {
 
   // Subscribes to all providers to listen for pause state changes.
   void _setupSubscriptions() {
-    viewModelLog('[PageRouteAwareController] Setting up subscriptions with ' +
+    viewModelLog('''
+$binderName [PageRouteAwareController] Setting up subscriptions with ''' +
         '${providers.length} providers.');
     for (final provider in providers) {
       _subscriptions.add(provider.onPauseStateChanged.listen((shouldPause) {
@@ -60,9 +66,6 @@ class PauseAwareController {
   // Handles a pause state change signaled by a single provider.
   void _handleProviderStateChange(
       ViewModelPauseProvider provider, bool shouldPause) {
-    viewModelLog(
-        '[PageRouteAwareController] Provider ${provider.runtimeType} ' +
-            'signaled pause state: $shouldPause');
     _providerPauseStates[provider] = shouldPause;
     _reevaluatePauseState();
   }
@@ -83,24 +86,19 @@ class PauseAwareController {
 
   // Updates the view model's pause/resume state and triggers callbacks.
   void _updatePauseState() {
-    viewModelLog('[PageRouteAwareController] Updating pause state: ' +
-        'isPaused=$_isPausedByProviders');
     if (_isPausedByProviders) {
-      viewModelLog('[PageRouteAwareController] -> Calling onPause()');
+      viewModelLog(
+          '$binderName [PageRouteAwareController] -> Calling onPause()');
       onWidgetPause();
-      // notify viewModel.onPause
     } else {
-      viewModelLog('[PageRouteAwareController] -> Calling onResume()');
-      // notify viewModel.onResume
-
+      viewModelLog(
+          '$binderName [PageRouteAwareController] -> Calling onResume()');
       onWidgetResume();
     }
   }
 
   /// Disposes the controller and all its subscriptions.
   void dispose() {
-    viewModelLog('[PageRouteAwareController] Disposing controller and ' +
-        'cancelling subscriptions.');
     for (final sub in _subscriptions) {
       sub.cancel();
     }
@@ -117,27 +115,29 @@ class PauseAwareController {
 class PageRoutePauseProvider implements ViewModelPauseProvider, RouteAware {
   // The stream controller that broadcasts pause state changes.
   final _controller = StreamController<bool>.broadcast();
-  final Set<PageRoute> _subscribedRoutes = {};
+  final List<PageRoute> _subscribedRoutes = [];
   final RouteObserver<PageRoute> _observer = ViewModel.routeObserver;
+  final String binderName;
+
+  /// Creates a [PageRoutePauseProvider] with the given binder name.
+  PageRoutePauseProvider({required this.binderName});
 
   /// Subscribes the provider to a specific route.
   ///
   /// This method ensures that the provider is only subscribed once to each
   /// route, preventing duplicate subscriptions.
   void subscribe(PageRoute route) {
-    if (_subscribedRoutes.add(route)) {
-      unsubscribe(_observer);
-      _observer.subscribe(this, route);
-      viewModelLog(
-          '[PageRoutePauseProvider] Subscribed to route: ${route.settings.name}');
-    }
+    if (_subscribedRoutes.contains(route)) return;
+    unsubscribe(_observer);
+    _subscribedRoutes.add(route);
+    _observer.subscribe(this, route);
   }
 
   /// Unsubscribes the provider from all routes.
   void unsubscribe(RouteObserver<PageRoute> observer) {
+    if (_subscribedRoutes.isEmpty) return;
     observer.unsubscribe(this);
     _subscribedRoutes.clear();
-    viewModelLog('[PageRoutePauseProvider] Unsubscribed from all routes.');
   }
 
   @override

@@ -75,7 +75,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     _viewModelPauseProviders.remove(provider);
   }
 
-  final _routePauseProvider = PageRoutePauseProvider();
+  late final _routePauseProvider = PageRoutePauseProvider(
+    binderName: getViewModelBinderName(),
+  );
 
   /// A fallback for pageRouteAware is implemented here.
   late final _pauseAwareController = PauseAwareController(
@@ -87,6 +89,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
       _routePauseProvider,
       ..._viewModelPauseProviders,
     ],
+    binderName: getViewModelBinderName(),
   );
 
   final _stackPathLocator = StackPathLocator();
@@ -171,6 +174,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   void dispose() {
     super.dispose();
     attacher.dispose();
+    _pauseAwareController.dispose();
     _viewModelPauseProviders.clear();
   }
 
