@@ -65,6 +65,7 @@ void main() {
         providers: [provider1, provider2, provider3],
         onWidgetPause: () => pauseCount++,
         onWidgetResume: () => resumeCount++,
+        binderName: 'test',
       );
     });
 

@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
-import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
+import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
@@ -117,7 +118,7 @@ mixin ViewModelStatelessMixin on StatelessWidget
 class _StatelessViewModelElement extends StatelessElement {
   final String Function() getBinderName;
   late final ViewModelAttacher _attacher = ViewModelAttacher(
-    rebuildState: this.markNeedsBuild,
+    rebuildState: _rebuildState,
     getBinderName: getBinderName,
     pauseAwareController: _pauseAwareController,
   );
@@ -130,7 +131,8 @@ class _StatelessViewModelElement extends StatelessElement {
       providers: [
         AppPauseLifecycleProvider(),
         ...pauseProviders,
-      ]);
+      ],
+      binderName: getBinderName());
 
   _StatelessViewModelElement(super.widget,
       {required this.getBinderName, required this.pauseProviders});
@@ -145,7 +147,7 @@ class _StatelessViewModelElement extends StatelessElement {
   void _onResume() {
     // ignore: invalid_use_of_protected_member
     _attacher.performForAllViewModels((viewModel) => viewModel.onResume(this));
-    markNeedsBuild();
+    _rebuildState();
   }
 
   void _onPause() {
@@ -153,11 +155,27 @@ class _StatelessViewModelElement extends StatelessElement {
     _attacher.performForAllViewModels((viewModel) => viewModel.onPause(this));
   }
 
+  void _rebuildState() {
+    if (!mounted) return;
+    if (mounted &&
+        SchedulerBinding.instance.schedulerPhase !=
+            SchedulerPhase.persistentCallbacks) {
+      markNeedsBuild();
+    } else {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          markNeedsBuild();
+        }
+      });
+    }
+  }
+
   /// Disposes ViewModel listeners when the element is removed.
   @override
   void unmount() {
     super.unmount();
     _attacher.dispose();
+    _pauseAwareController.dispose();
     pauseProviders.clear();
   }
 }
