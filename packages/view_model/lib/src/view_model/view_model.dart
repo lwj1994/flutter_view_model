@@ -82,7 +82,8 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 /// ```
 mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   late InstanceArg _instanceArg;
-  static RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+  static final RouteObserver<PageRoute> routeObserver =
+      RouteObserver<PageRoute>();
 
   /// Tracks which dependency ViewModels this ViewModel is already listening to.
   ///
