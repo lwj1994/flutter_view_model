@@ -53,9 +53,6 @@ class PauseAwareController {
 
   // Subscribes to all providers to listen for pause state changes.
   void _setupSubscriptions() {
-    viewModelLog('''
-$binderName [PageRouteAwareController] Setting up subscriptions with ''' +
-        '${providers.length} providers.');
     for (final provider in providers) {
       _subscriptions.add(provider.onPauseStateChanged.listen((shouldPause) {
         _handleProviderStateChange(provider, shouldPause);
