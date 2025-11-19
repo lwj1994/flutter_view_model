@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
+import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
@@ -15,8 +17,19 @@ mixin ViewModelStatelessMixin on StatelessWidget
       _StatelessViewModelElement(
     this,
     getBinderName: getViewModelBinderName,
+    pauseProviders: _viewModelPauseProviders,
   );
   final _stackPathLocator = StackPathLocator();
+
+  final List<ViewModelPauseProvider> _viewModelPauseProviders = [];
+
+  void addViewModelPauseProvider(ViewModelPauseProvider provider) {
+    _viewModelPauseProviders.add(provider);
+  }
+
+  void removeViewModelPauseProvider(ViewModelPauseProvider provider) {
+    _viewModelPauseProviders.remove(provider);
+  }
 
   /// Creates the custom Element that carries the attacher.
   /// The Element owns the `ViewModelAttacher` and connects
@@ -106,15 +119,38 @@ class _StatelessViewModelElement extends StatelessElement {
   late final ViewModelAttacher _attacher = ViewModelAttacher(
     rebuildState: this.markNeedsBuild,
     getBinderName: getBinderName,
+    pauseAwareController: _pauseAwareController,
   );
 
-  _StatelessViewModelElement(super.widget, {required this.getBinderName});
+  final List<ViewModelPauseProvider> pauseProviders;
+
+  late final _pauseAwareController = PauseAwareController(
+      onWidgetPause: _onPause,
+      onWidgetResume: _onResume,
+      providers: [
+        AppPauseLifecycleProvider(),
+        ...pauseProviders,
+      ]);
+
+  _StatelessViewModelElement(super.widget,
+      {required this.getBinderName, required this.pauseProviders});
 
   /// Attaches the element and starts ViewModel listening.
   @override
   void mount(Element? parent, dynamic newSlot) {
-    super.mount(parent, newSlot);
     _attacher.attach();
+    super.mount(parent, newSlot);
+  }
+
+  void _onResume() {
+    // ignore: invalid_use_of_protected_member
+    _attacher.performForAllViewModels((viewModel) => viewModel.onResume(this));
+    markNeedsBuild();
+  }
+
+  void _onPause() {
+    // ignore: invalid_use_of_protected_member
+    _attacher.performForAllViewModels((viewModel) => viewModel.onPause(this));
   }
 
   /// Disposes ViewModel listeners when the element is removed.
@@ -122,5 +158,6 @@ class _StatelessViewModelElement extends StatelessElement {
   void unmount() {
     super.unmount();
     _attacher.dispose();
+    pauseProviders.clear();
   }
 }

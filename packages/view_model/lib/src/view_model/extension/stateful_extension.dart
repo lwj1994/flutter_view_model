@@ -18,10 +18,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
-import 'package:view_model/src/view_model/route_aware.dart';
+import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
-import 'package:view_model/src/view_model/visible_lifecycle.dart';
 
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
 ///
@@ -62,13 +62,31 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   late final ViewModelAttacher attacher = ViewModelAttacher(
     rebuildState: _rebuildState,
     getBinderName: getViewModelBinderName,
+    pauseAwareController: _pauseAwareController,
   );
 
+  final List<ViewModelPauseProvider> _viewModelPauseProviders = [];
+
+  void addViewModelPauseProvider(ViewModelPauseProvider provider) {
+    _viewModelPauseProviders.add(provider);
+  }
+
+  void removeViewModelPauseProvider(ViewModelPauseProvider provider) {
+    _viewModelPauseProviders.remove(provider);
+  }
+
+  final _routePauseProvider = PageRoutePauseProvider();
+
   /// A fallback for pageRouteAware is implemented here.
-  late final _pageRouteAwareController = PageRouteAwareController(
-    ViewModel.routeObserver,
-    onPause: viewModelVisibleListeners.onPause,
-    onResume: viewModelVisibleListeners.onResume,
+  late final _pauseAwareController = PauseAwareController(
+    onWidgetPause: _onPause,
+    onWidgetResume: _onResume,
+    providers: [
+      ViewModelManualPauseProvider(),
+      AppPauseLifecycleProvider(),
+      _routePauseProvider,
+      ..._viewModelPauseProviders,
+    ],
   );
 
   final _stackPathLocator = StackPathLocator();
@@ -76,7 +94,10 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _pageRouteAwareController.subscribe(context);
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      _routePauseProvider.subscribe(route);
+    }
   }
 
   @override
@@ -92,9 +113,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     attacher.recycleViewModel(viewModel);
   }
-
-  ViewModelVisibleListener get viewModelVisibleListeners =>
-      attacher.viewModelVisibleListeners;
 
   @override
   VM watchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
@@ -153,7 +171,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   void dispose() {
     super.dispose();
     attacher.dispose();
-    _pageRouteAwareController.unsubscribe();
+    _viewModelPauseProviders.clear();
   }
 
   void _rebuildState() {
@@ -185,5 +203,16 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
 
     final pathInfo = _stackPathLocator.getCurrentObjectPath();
     return pathInfo.isNotEmpty ? "$pathInfo\n$runtimeType" : "$runtimeType";
+  }
+
+  void _onResume() {
+    // ignore: invalid_use_of_protected_member
+    attacher.performForAllViewModels((viewModel) => viewModel.onResume(this));
+    _rebuildState();
+  }
+
+  void _onPause() {
+    // ignore: invalid_use_of_protected_member
+    attacher.performForAllViewModels((viewModel) => viewModel.onPause(this));
   }
 }

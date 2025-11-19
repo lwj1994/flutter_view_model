@@ -82,4 +82,5 @@ export "package:view_model/src/view_model/extension/stateless_extension.dart";
 export "package:view_model/src/view_model/value_observer.dart";
 export "package:view_model/src/view_model/value_watcher.dart";
 export "package:view_model/src/view_model/view_model.dart";
-export "package:view_model/src/view_model/visible_lifecycle.dart";
+export "package:view_model/src/view_model/pause_provider.dart"
+    show ViewModelManualPauseProvider, ViewModelPauseProvider;

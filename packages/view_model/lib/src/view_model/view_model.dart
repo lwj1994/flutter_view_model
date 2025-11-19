@@ -698,6 +698,14 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   @protected
   @mustCallSuper
   void dispose() {}
+
+  @protected
+  @mustCallSuper
+  void onResume(dynamic widget) {}
+
+  @protected
+  @mustCallSuper
+  void onPause(dynamic widget) {}
 }
 
 /// Abstract base class for ViewModels that manage state of type [T].

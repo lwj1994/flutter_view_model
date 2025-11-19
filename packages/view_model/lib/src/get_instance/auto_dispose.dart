@@ -140,6 +140,18 @@ class AutoDisposeInstanceController {
     return notifier.instance;
   }
 
+  /// Executes an action for all tracked ViewModel instances.
+  ///
+  /// This method iterates through all tracked instance notifiers and applies
+  /// the given action to each ViewModel instance.
+  void performForAllInstances(void Function(ViewModel viewModel) action) {
+    for (final notifier in _instanceNotifiers) {
+      if (notifier.instance is ViewModel) {
+        action(notifier.instance as ViewModel);
+      }
+    }
+  }
+
   /// Forces disposal and recreation of a specific ViewModel instance.
   ///
   /// This method removes the specified instance from tracking and forces
