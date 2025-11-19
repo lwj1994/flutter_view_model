@@ -89,7 +89,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
       _routePauseProvider,
       ..._viewModelPauseProviders,
     ],
-    binderName: getViewModelBinderName(),
+    binderName: getViewModelBinderName,
   );
 
   final _stackPathLocator = StackPathLocator();

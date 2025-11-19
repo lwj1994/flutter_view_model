@@ -107,7 +107,7 @@ mixin ViewModelStatelessMixin on StatelessWidget
     if (!kDebugMode) return "";
 
     final pathInfo = _stackPathLocator.getCurrentObjectPath();
-    return pathInfo.isNotEmpty ? "$pathInfo  $runtimeType" : "$runtimeType";
+    return pathInfo.isNotEmpty ? "$pathInfo#$runtimeType" : "$runtimeType";
   }
 }
 
@@ -132,7 +132,7 @@ class _StatelessViewModelElement extends StatelessElement {
         AppPauseLifecycleProvider(),
         ...pauseProviders,
       ],
-      binderName: getBinderName());
+      binderName: getBinderName);
 
   _StatelessViewModelElement(super.widget,
       {required this.getBinderName, required this.pauseProviders});

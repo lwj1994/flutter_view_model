@@ -7,6 +7,9 @@ class StackPathLocator {
   // Cache path information to avoid repeated retrieval
   String? _cachedObjectPath;
 
+  bool get ready =>
+      _cachedObjectPath != null && _cachedObjectPath?.isNotEmpty == true;
+
   /// Gets the file path and line number where this mixin is being used.
   ///
   /// This method analyzes the current call stack to determine the exact
@@ -31,26 +34,37 @@ class StackPathLocator {
 
     final frames = Trace.current().frames;
 
-    // Find the first 3 unique frames that are not part of the view_model
-    // package, the Flutter framework, or the Dart core libraries.
-    final externalLocations = frames
-        .where((f) =>
-            f.package != null &&
-            f.package != 'view_model' &&
-            f.package != 'stack_trace' &&
-            f.package != 'flutter_test' &&
-            f.package != 'flutter' &&
-            !f.isCore &&
-            f.line != null) // Ensure line number is available
-        .map((f) => '${f.uri.path}:${f.line}') // Format to path:line
-        .toSet() // Remove duplicates
-        .take(10) // Take the first unique locations
-        .toList();
+    Frame? relevantFrame;
 
-    if (externalLocations.isNotEmpty) {
-      _cachedObjectPath = externalLocations.join('#');
+    // Skip the frames for Trace.current() and this method itself, then find the
+    // first frame that isn't from the core libraries or testing frameworks.
+    final candidateFrames = frames.skip(1);
+
+    for (final f in candidateFrames) {
+      final packageName = f.package;
+      if (f.isCore ||
+          packageName == 'flutter' ||
+          packageName == 'flutter_test' ||
+          packageName == 'test_api' ||
+          packageName == 'stack_trace' ||
+          packageName == 'view_model') {
+        continue;
+      }
+      // The first frame that isn't a core/framework/test library is the one.
+      relevantFrame = f;
+      break;
+    }
+
+    if (relevantFrame != null) {
+      final path = relevantFrame.uri.path;
+      final line = relevantFrame.line;
+      final member = relevantFrame.member ?? '';
+      // The member might be 'ClassName.methodName' or just 'functionName'.
+      // We'll take the part before the first dot to get the class/widget name.
+      final className = member.split('.').first;
+      _cachedObjectPath = '$path:$line $className';
     } else {
-      // Fallback to runtimeType if path cannot be retrieved
+      // Fallback if a suitable frame cannot be found
       _cachedObjectPath = "";
     }
 

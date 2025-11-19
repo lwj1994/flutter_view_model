@@ -177,7 +177,7 @@ class DevToolTracker extends ViewModelLifecycle {
       );
     }
 
-    viewModelLog("🔗 onAddWatcher, $instanceId");
+    viewModelLog("🔗 onAddWatcher, watcherId: $newWatchId, $instanceId");
 
     _notifyListeners();
   }
@@ -214,7 +214,7 @@ class DevToolTracker extends ViewModelLifecycle {
       _viewModelInfos[instanceId] = info.copyWith(watchers: newWatchers);
     }
 
-    viewModelLog('🔌 onRemoveWatcher, watcherId:$removedWatchId $instanceId');
+    viewModelLog('🔌 onRemoveWatcher, watcherId: $removedWatchId $instanceId');
     _notifyListeners();
   }
 

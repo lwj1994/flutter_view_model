@@ -20,7 +20,7 @@ class PauseAwareController {
   // A callback triggered when the view model should resume.
   final Function() onWidgetResume;
 
-  final String binderName;
+  final String Function() binderName;
 
   /// Creates a [PauseAwareController] with the given pause/resume callbacks.
   ///
@@ -85,11 +85,11 @@ class PauseAwareController {
   void _updatePauseState() {
     if (_isPausedByProviders) {
       viewModelLog(
-          '$binderName [PageRouteAwareController] -> Calling onPause()');
+          '${binderName()} [PageRouteAwareController] -> Calling onPause()');
       onWidgetPause();
     } else {
       viewModelLog(
-          '$binderName [PageRouteAwareController] -> Calling onResume()');
+          '${binderName()} [PageRouteAwareController] -> Calling onResume()');
       onWidgetResume();
     }
   }
