@@ -37,6 +37,8 @@ class StackPathLocator {
         .where((f) =>
             f.package != null &&
             f.package != 'view_model' &&
+            f.package != 'stack_trace' &&
+            f.package != 'flutter_test' &&
             f.package != 'flutter' &&
             !f.isCore &&
             f.line != null) // Ensure line number is available
@@ -46,10 +48,10 @@ class StackPathLocator {
         .toList();
 
     if (externalLocations.isNotEmpty) {
-      _cachedObjectPath = externalLocations.join('\n') + '\n';
+      _cachedObjectPath = externalLocations.join('#');
     } else {
       // Fallback to runtimeType if path cannot be retrieved
-      _cachedObjectPath = "$runtimeType\n";
+      _cachedObjectPath = "";
     }
 
     return _cachedObjectPath!;

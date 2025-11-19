@@ -206,7 +206,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     if (!kDebugMode) return "$runtimeType";
 
     final pathInfo = _stackPathLocator.getCurrentObjectPath();
-    return pathInfo.isNotEmpty ? "$pathInfo\n$runtimeType" : "$runtimeType";
+    return pathInfo.isNotEmpty ? "$pathInfo#$runtimeType" : "$runtimeType";
   }
 
   void _onResume() {
