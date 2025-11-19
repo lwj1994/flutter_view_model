@@ -8,34 +8,25 @@ import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/dependency_handler.dart';
 import 'package:view_model/src/view_model/interface.dart';
 import 'package:view_model/src/view_model/model.dart';
+import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/view_model.dart';
-import 'package:view_model/src/view_model/visible_lifecycle.dart';
 
 ///
 class ViewModelAttacher implements ViewModelCreateInterface {
   bool _dispose = false;
   final Function() rebuildState;
   final String Function() getBinderName;
+  final PauseAwareController pauseAwareController;
 
   /// Creates a [ViewModelAttacher] with the callback used to trigger rebuild
   /// when resuming.
-  ViewModelAttacher({required this.rebuildState, required this.getBinderName});
+  ViewModelAttacher({
+    required this.rebuildState,
+    required this.getBinderName,
+    required this.pauseAwareController,
+  });
 
   bool get isDisposed => _dispose;
-
-  /// Listener for widget visibility changes.
-  ///
-  /// This listener lets external code control pause/resume semantics.
-  /// Call `viewModelVisibleListeners.onPause()` to mark the page
-  /// as paused (covered).
-  /// Call `viewModelVisibleListeners.onResume()` to mark it resumed
-  /// and trigger a refresh.
-  /// You can wire these to your own `RouteObserver` or visibility
-  /// mechanism.
-  /// When paused, updates from bound ViewModels are ignored.
-  /// On resume, a forced refresh occurs.
-  late final ViewModelVisibleListener viewModelVisibleListeners =
-      ViewModelVisibleListener(rebuildState);
 
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: () {
@@ -353,7 +344,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
       _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
         // When paused, ignore updates; we'll blindly refresh on resume.
-        if (!viewModelVisibleListeners.isResumed) {
+        if (pauseAwareController.isPaused) {
           viewModelLog(
             "Widget is paused, delay rebuild",
           );
@@ -411,6 +402,12 @@ class ViewModelAttacher implements ViewModelCreateInterface {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Executes an action for all created ViewModels.
+  @internal
+  void performForAllViewModels(void Function(ViewModel viewModel) action) {
+    _instanceController.performForAllInstances(action);
   }
 
   /// Called when the host widget or element attaches to the tree.

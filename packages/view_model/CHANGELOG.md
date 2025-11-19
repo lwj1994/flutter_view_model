@@ -1,5 +1,8 @@
 ## 0.8.0
-- Support internal PageRouteAware to auto controller pause/resume [PAUSE_RESUME_LIFECYCLE_DOC.md](PAUSE_RESUME_LIFECYCLE.md)
+- **BREAKING CHANGE**: Reworked the `ViewModel` pause/resume lifecycle to a more robust and extensible provider-based architecture.
+  - Default providers `PageRoutePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app lifecycle events.
+  - Added `ViewModelManualPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
+  - For details on the new API and migration, see the [Pause/Resume Lifecycle Documentation](PAUSE_RESUME_LIFECYCLE.md).
 
 ```dart
 // register [ViewModel.routeObserver] to navigatorObservers.
