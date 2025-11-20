@@ -4,6 +4,8 @@
 
 # view_model
 
+> Flutter 中缺失的 ViewModel
+
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
 [更新日志](CHANGELOG.md)
@@ -15,26 +17,28 @@
 
 ---
 
-## 快速上手
+## 快速开始
 
-`view_model` 是 Flutter 应用中最简单的状态管理解决方案。
+- 监听 (Watch): `watchViewModel<T>()` / `watchCachedViewModel<T>()`
+- 读取 (Read): `readViewModel<T>()` / `readCachedViewModel<T>()`
+- 全局 (Global): `ViewModel.readCached<T>() / maybeReadCached<T>()`
+- 回收 (Recycle): `recycleViewModel(vm)`
+- 副作用 (Effects): `listen(onChanged)` / `listenState` / `listenStateSelect`
 
-### 核心特性
+## 复用实例
 
-- **轻量且易于使用**：API 设计简洁，上手快。
-- **自动生命周期管理**：当没有任何 Widget 监听时，`ViewModel` 会自动销毁，防止内存泄漏。
-- **高效实例共享**：通过唯一的 `key` 在不同 Widget 间共享 `ViewModel`，查找性能为 O(1)。
-- **生命周期感知**：与 `StatefulWidget` 的生命周期无缝集成。
-- **状态与视图分离**：将业务逻辑从 UI 中分离，使代码更清晰、可维护。
+- Key: 在 factory 中设置 `key()` → 所有 widget 共享同一个实例
+- Tag: 设置 `tag()` → 通过 `watchCachedViewModel(tag)` 绑定最新实例
+- 任意参数: 传递任意 `Object` 作为 key/tag (例如 `'user:$id'`)
 
-> **重要提示**：`ViewModel` 仅支持与 `StatefulWidget` 绑定，因为 `StatelessWidget` 缺少独立的生命周期来支持自动销毁和监听。
-
-### 术语
-
-- **绑定（Bind）**：将 Widget 与 `ViewModel` 关联。`read*` 和 `watch*` 都会执行绑定。
-- **监听（Listen）**：订阅 `ViewModel` 的变化。`watch*` API 会进行监听。
-- **重建（Rebuild）**：当 `notifyListeners()` 被调用时，监听中的 Widget 会重建。
-- **缓存实例（Cached Instance）**：已存在于缓存中的 `ViewModel` 实例。
+```dart
+final f = DefaultViewModelFactory<UserViewModel>(
+  builder: () => UserViewModel(userId: id),
+  key: 'user:$id',
+);
+final vm1 = watchViewModel(factory: f);
+final vm2 = watchCachedViewModel<UserViewModel>(key: 'user:$id'); // 相同
+```
 
 ## 基本用法
 
@@ -158,6 +162,15 @@ void dispose() {
   super.dispose();
 }
 ```
+
+### 可见性 暂停/恢复
+
+[文档](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
+
+### 暂停/恢复 生命周期
+
+暂停/恢复生命周期由 `ViewModelPauseProvider` 管理。默认情况下，
+`PageRoutePauseProvider`、`TickModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理暂停/恢复。
 
 ## 详细参数说明
 

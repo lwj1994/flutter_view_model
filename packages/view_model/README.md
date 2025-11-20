@@ -248,7 +248,7 @@ void dispose() {
 ### Pause/Resume Lifecycle
 
 The pause/resume lifecycle is managed by `ViewModelPauseProvider`s. By default,
-`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming based
+`PageRoutePauseProvider`, `TickModePauseProvider` and `AppPauseProvider` handle pausing/resuming based
 on route visibility and app lifecycle events, respectively.
 
 ## Detailed Parameter Explanation
