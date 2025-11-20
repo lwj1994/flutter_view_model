@@ -1,6 +1,6 @@
 ## 0.8.0
 - **BREAKING CHANGE**: Reworked the `ViewModel` pause/resume lifecycle to a more robust and extensible provider-based architecture.
-  - Default providers `PageRoutePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app lifecycle events.
+  - Default providers `PageRoutePauseProvider`, `TickModePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app lifecycle events.
   - Added `ViewModelManualPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
   - For details on the new API and migration, see the [Pause/Resume Lifecycle Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md).
 
