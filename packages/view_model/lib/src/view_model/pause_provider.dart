@@ -45,11 +45,11 @@ class ViewModelManualPauseProvider implements ViewModelPauseProvider {
 
 /// A [ViewModelPauseProvider] that signals pause/resume based on the
 /// application's lifecycle state ([AppLifecycleState]).
-class AppPauseLifecycleProvider implements ViewModelPauseProvider {
+class AppPauseProvider implements ViewModelPauseProvider {
   final _controller = StreamController<bool>.broadcast();
   StreamSubscription<AppLifecycleState>? _subscription;
 
-  AppPauseLifecycleProvider() {
+  AppPauseProvider() {
     _subscription = AppLifecycleObserver().stream.listen((state) {
       if (state == AppLifecycleState.hidden) {
         _controller.add(true); // Should pause
@@ -82,6 +82,7 @@ class TickModePauseProvider extends ViewModelManualPauseProvider {
     _notifier?.removeListener(_onChange);
     _notifier = notifier;
     notifier.addListener(_onChange);
+    _onChange();
   }
 
   void _onChange() {

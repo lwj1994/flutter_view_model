@@ -2,7 +2,7 @@
 - **BREAKING CHANGE**: Reworked the `ViewModel` pause/resume lifecycle to a more robust and extensible provider-based architecture.
   - Default providers `PageRoutePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app lifecycle events.
   - Added `ViewModelManualPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
-  - For details on the new API and migration, see the [Pause/Resume Lifecycle Documentation](PAUSE_RESUME_LIFECYCLE.md).
+  - For details on the new API and migration, see the [Pause/Resume Lifecycle Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md).
 
 ```dart
 // register [ViewModel.routeObserver] to navigatorObservers.
@@ -107,7 +107,7 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
 - Add `StateViewModel#listenStateSelect` to listen value diff.
 
 - Add `ObserverBuilder` family of widgets for fine-grained, reactive UI
-  updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/value_observer_doc.md)
+  updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/value_observer_doc.md)
 
 ```dart
 // shareKey for share value cross any widget
