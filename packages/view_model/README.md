@@ -243,12 +243,12 @@ void dispose() {
 
 ### Visibility pause/resume
 
-[doc](PAUSE_RESUME_LIFECYCLE.md)
+[doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
 
 ### Pause/Resume Lifecycle
 
 The pause/resume lifecycle is managed by `ViewModelPauseProvider`s. By default,
-`PageRoutePauseProvider` and `AppPauseProvider` handle pausing/resuming based
+`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming based
 on route visibility and app lifecycle events, respectively.
 
 ## Detailed Parameter Explanation

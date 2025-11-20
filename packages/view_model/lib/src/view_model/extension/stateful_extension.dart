@@ -84,17 +84,22 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   late final _routePauseProvider = PageRoutePauseProvider();
   late final TickModePauseProvider _tickModePauseProvider =
       TickModePauseProvider();
+  late final _appPauseProvider = AppPauseProvider();
 
   /// A fallback for pageRouteAware is implemented here.
   late final _pauseAwareController = PauseAwareController(
     onWidgetPause: _onPause,
     onWidgetResume: _onResume,
     providers: [
-      ViewModelManualPauseProvider(),
-      AppPauseLifecycleProvider(),
+      _appPauseProvider,
       _routePauseProvider,
       _tickModePauseProvider,
       ..._viewModelPauseProviders,
+    ],
+    disposableProviders: [
+      _appPauseProvider,
+      _routePauseProvider,
+      _tickModePauseProvider,
     ],
     binderName: getViewModelBinderName,
   );

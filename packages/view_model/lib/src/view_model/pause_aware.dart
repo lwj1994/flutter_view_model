@@ -25,7 +25,7 @@ class PauseAwareController {
   /// Creates a [PauseAwareController] with the given pause/resume callbacks.
   ///
   /// If no [providers] are provided, it defaults to using Flutter's standard
-  /// [PageRoutePauseProvider] and [AppPauseLifecycleProvider].
+  /// [PageRoutePauseProvider] and [AppPauseProvider].
   ///
   /// For custom lifecycle sources (e.g., mixed-stack environments), provide
   /// a list of your custom [ViewModelPauseProvider] implementations.
@@ -34,12 +34,16 @@ class PauseAwareController {
     required this.onWidgetResume,
     required this.providers,
     required this.binderName,
-  }) {
+    List<ViewModelPauseProvider>? disposableProviders,
+  }) : _disposableProviders = disposableProviders ?? [] {
     _setupSubscriptions();
   }
 
   // A list of providers that determine the pause state.
   final List<ViewModelPauseProvider> providers;
+
+  // Providers that should be disposed when this controller is disposed.
+  final List<ViewModelPauseProvider> _disposableProviders;
 
   // Holds subscriptions to the pause state streams of the providers.
   final List<StreamSubscription<bool>> _subscriptions = [];
@@ -100,7 +104,7 @@ class PauseAwareController {
       sub.cancel();
     }
     _subscriptions.clear();
-    for (final provider in providers) {
+    for (final provider in _disposableProviders) {
       provider.dispose();
     }
     _providerPauseStates.clear();

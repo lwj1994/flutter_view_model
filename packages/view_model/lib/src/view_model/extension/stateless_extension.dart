@@ -131,12 +131,17 @@ class _StatelessViewModelElement extends StatelessElement {
 
   final List<ViewModelPauseProvider> pauseProviders;
 
+  late final _appPauseProvider = AppPauseProvider();
+
   late final _pauseAwareController = PauseAwareController(
       onWidgetPause: _onPause,
       onWidgetResume: _onResume,
       providers: [
-        AppPauseLifecycleProvider(),
+        _appPauseProvider,
         ...pauseProviders,
+      ],
+      disposableProviders: [
+        _appPauseProvider,
       ],
       binderName: getBinderName);
 
