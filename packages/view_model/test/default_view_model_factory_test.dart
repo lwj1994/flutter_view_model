@@ -28,7 +28,7 @@ void main() {
       expect(factory.builder, isNotNull);
       expect(factory.isSingleton, false);
       expect(factory.key(), isNull);
-      expect(factory.getTag(), isNull);
+      expect(factory.tag(), isNull);
     });
 
     test('should build ViewModel instance correctly', () {
@@ -91,7 +91,7 @@ void main() {
         tag: customTag,
       );
 
-      expect(factory.getTag(), equals(customTag));
+      expect(factory.tag(), equals(customTag));
     });
 
     test('should handle object tag correctly', () {
@@ -101,7 +101,7 @@ void main() {
         tag: customTag,
       );
 
-      expect(factory.getTag(), equals(customTag));
+      expect(factory.tag(), equals(customTag));
     });
 
     test('should handle null tag correctly', () {
@@ -110,7 +110,7 @@ void main() {
         tag: null,
       );
 
-      expect(factory.getTag(), isNull);
+      expect(factory.tag(), isNull);
     });
 
     test('should work with StateViewModel', () {
@@ -137,7 +137,7 @@ void main() {
       );
 
       expect(factory.key(), equals(customKey));
-      expect(factory.getTag(), equals(customTag));
+      expect(factory.tag(), equals(customTag));
       expect(factory.singleton(), isTrue);
 
       final viewModel = factory.build();
@@ -180,7 +180,7 @@ void main() {
         tag: TestTag.primary,
       );
 
-      expect(factory.getTag(), equals(TestTag.primary));
+      expect(factory.tag(), equals(TestTag.primary));
     });
 
     test('should maintain immutability of configuration', () {
@@ -197,8 +197,8 @@ void main() {
       // Multiple calls should return same values
       expect(factory.key(), equals(originalKey));
       expect(factory.key(), equals(originalKey));
-      expect(factory.getTag(), equals(originalTag));
-      expect(factory.getTag(), equals(originalTag));
+      expect(factory.tag(), equals(originalTag));
+      expect(factory.tag(), equals(originalTag));
       expect(factory.singleton(), isTrue);
       expect(factory.singleton(), isTrue);
     });

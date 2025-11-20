@@ -163,13 +163,13 @@ void dispose() {
 
 ### ViewModelFactory
 
-Factory 用于创建和识别实例。使用 `key()` 共享一个实例，使用 `getTag()` 进行分组/发现。
+Factory 用于创建和识别实例。使用 `key()` 共享一个实例，使用 `tag()` 进行分组/发现。
 
 | 方法/属性 | 类型      | 可选          | 描述                                                                                                                                            |
 | --------------- | --------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `build()`       | `T`       | ❌ 必须实现 | 创建 ViewModel 实例的工厂方法。通常在这里传递构造函数参数。                                                  |
 | `key()`         | `Object?` | ✅ 可选       | 为 ViewModel 提供唯一的标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨小部件/页面共享）。 |
-| `getTag()`      | `Object?` | ✅                | 为 ViewModel 实例添加一个标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                            |
+| `tag()`      | `Object?` | ✅                | 为 ViewModel 实例添加一个标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchViewModel(tag:tag)` 查找 ViewModel。                            |
 
 > **注意**：如果使用自定义 key 对象，请实现 `==` 和 `hashCode` 以确保正确的缓存查找。
 

@@ -49,7 +49,7 @@ void main() {
     testWidgets('should find ViewModel by tag', (tester) async {
       const testTag = 'test_tag_456';
       const testFactory = TestViewModelFactory(
-        tag: testTag,
+        tagV: testTag,
         initState: 'tagged_state',
       );
 
@@ -87,7 +87,7 @@ void main() {
       );
 
       const tagFactory = TestViewModelFactory(
-        tag: testTag,
+        tagV: testTag,
         initState: 'tag_state',
       );
 

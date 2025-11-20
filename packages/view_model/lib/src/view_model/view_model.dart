@@ -100,7 +100,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
 
   /// Gets the tag associated with this ViewModel instance.
   ///
-  /// The tag is set by the [ViewModelFactory.getTag] method and can be used
+  /// The tag is set by the [ViewModelFactory.tag] method and can be used
   /// to identify or categorize ViewModel instances.
   Object? get tag => _instanceArg.tag;
 
@@ -173,7 +173,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   ///
   /// Parameters:
   /// - [key]: The unique key from [ViewModelFactory.key].
-  /// - [tag]: The tag from [ViewModelFactory.getTag].
+  /// - [tag]: The tag from [ViewModelFactory.tag].
   ///
   /// Returns the matching ViewModel instance.
   ///
@@ -699,14 +699,6 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   @protected
   @mustCallSuper
   void dispose() {}
-
-  @protected
-  @mustCallSuper
-  void onResume(dynamic widget) {}
-
-  @protected
-  @mustCallSuper
-  void onPause(dynamic widget) {}
 }
 
 /// Abstract base class for ViewModels that manage state of type [T].
@@ -983,7 +975,7 @@ class AutoDisposeController {
 ///   Object? key() => 'shared-instance'; // Optional: for sharing
 ///
 ///   @override
-///   Object? getTag() => 'my-tag'; // Optional: for identification
+///   Object? tag() => 'my-tag'; // Optional: for identification
 /// }
 /// ```
 abstract mixin class ViewModelFactory<T> {
@@ -1013,9 +1005,9 @@ abstract mixin class ViewModelFactory<T> {
   /// Example:
   /// ```dart
   /// @override
-  /// Object? getTag() => 'user-data';
+  /// Object? tag() => 'user-data';
   /// ```
-  Object? getTag() => null;
+  Object? tag() => null;
 
   /// Creates and returns a new instance of the ViewModel.
   ///
@@ -1129,7 +1121,7 @@ class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
   }
 
   @override
-  Object? getTag() => _tag;
+  Object? tag() => _tag;
 
   @override
   T build() => builder();
