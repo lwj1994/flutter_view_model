@@ -28,7 +28,7 @@
 ## Reuse One Instance
 
 - Key: set `key()` in factory → all widgets share the same instance
-- Tag: set `getTag()` → bind newest instance via `watchCachedViewModel(tag)`
+- Tag: set `tag()` → bind newest instance via `watchCachedViewModel(tag)`
 - Any param: pass any `Object` as key/tag (e.g. `'user:$id'`)
 
 ```dart
@@ -256,13 +256,13 @@ on route visibility and app lifecycle events, respectively.
 ### ViewModelFactory
 
 Factory creates and identifies instances. Use `key()` to share one instance,
-use `getTag()` to group/discover.
+use `tag()` to group/discover.
 
 | Method/Property | Type      | Optional          | Description                                                                                                                                            |
 | --------------- | --------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `build()`       | `T`       | ❌ Must implement | The factory method to create a ViewModel instance. Typically, constructor parameters are passed here.                                                  |
 | `key()`         | `Object?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing). |
-| `getTag()`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's used by find ViewModel by `watchViewModel(tag:tag)`.                            |
+| `tag()`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's used by find ViewModel by `watchViewModel(tag:tag)`.                            |
 
 > **Note**: If you use a custom key object, implement `==` and `hashCode` to
 > ensure correct cache lookup.

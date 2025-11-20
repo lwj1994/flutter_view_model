@@ -59,7 +59,7 @@ void main() {
 
     testWidgets('CachedViewModelBuilder binds by tag and rebuilds on change',
         (tester) async {
-      const factory = TestViewModelFactory(initState: 'tag-init', tag: 't1');
+      const factory = TestViewModelFactory(initState: 'tag-init', tagV: 't1');
 
       await tester.pumpWidget(MaterialApp(
         home: Column(children: [

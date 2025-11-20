@@ -114,10 +114,9 @@ class PageRoutePauseProvider implements ViewModelPauseProvider, RouteAware {
   final _controller = StreamController<bool>.broadcast();
   final List<PageRoute> _subscribedRoutes = [];
   final RouteObserver<PageRoute> _observer = ViewModel.routeObserver;
-  final String binderName;
 
   /// Creates a [PageRoutePauseProvider] with the given binder name.
-  PageRoutePauseProvider({required this.binderName});
+  PageRoutePauseProvider();
 
   /// Subscribes the provider to a specific route.
   ///

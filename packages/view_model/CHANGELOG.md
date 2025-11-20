@@ -339,13 +339,13 @@ The internal lookup and creation logic of `watchViewModel` is as follows
 
 - Support find existing ViewModel by tag
 
-set tag in `ViewModelFactory.getTag()`:
+set tag in `ViewModelFactory.tag()`:
 
 ```dart
 class MyViewModelFactory extends ViewModelFactory<MyViewModel> {
 
   @override
-  Object? getTag() {
+  Object? tag() {
     return 'tag';
   }
 }

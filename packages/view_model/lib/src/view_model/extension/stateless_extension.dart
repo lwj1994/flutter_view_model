@@ -22,6 +22,12 @@ mixin ViewModelStatelessMixin on StatelessWidget
   );
   final _stackPathLocator = StackPathLocator();
 
+  /// Returns true if the widget is currently considered paused.
+  ///
+  /// This state is determined by the [PauseAwareController] and its registered
+  /// [ViewModelPauseProvider]s. When paused, ViewModel updates are suppressed.
+  bool get isPaused => _viewModelElement._pauseAwareController.isPaused;
+
   final List<ViewModelPauseProvider> _viewModelPauseProviders = [];
 
   void addViewModelPauseProvider(ViewModelPauseProvider provider) {
@@ -145,15 +151,10 @@ class _StatelessViewModelElement extends StatelessElement {
   }
 
   void _onResume() {
-    // ignore: invalid_use_of_protected_member
-    _attacher.performForAllViewModels((viewModel) => viewModel.onResume(this));
     _rebuildState();
   }
 
-  void _onPause() {
-    // ignore: invalid_use_of_protected_member
-    _attacher.performForAllViewModels((viewModel) => viewModel.onPause(this));
-  }
+  void _onPause() {}
 
   void _rebuildState() {
     if (!mounted) return;

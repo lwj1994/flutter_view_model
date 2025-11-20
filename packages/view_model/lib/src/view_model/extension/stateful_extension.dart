@@ -65,6 +65,12 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     pauseAwareController: _pauseAwareController,
   );
 
+  /// Returns true if the widget is currently considered paused.
+  ///
+  /// This state is determined by the [PauseAwareController] and its registered
+  /// [ViewModelPauseProvider]s. When paused, ViewModel updates are suppressed.
+  bool get isPaused => _pauseAwareController.isPaused;
+
   final List<ViewModelPauseProvider> _viewModelPauseProviders = [];
 
   void addViewModelPauseProvider(ViewModelPauseProvider provider) {
@@ -75,9 +81,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     _viewModelPauseProviders.remove(provider);
   }
 
-  late final _routePauseProvider = PageRoutePauseProvider(
-    binderName: getViewModelBinderName(),
-  );
+  late final _routePauseProvider = PageRoutePauseProvider();
+  late final TickModePauseProvider _tickModePauseProvider =
+      TickModePauseProvider();
 
   /// A fallback for pageRouteAware is implemented here.
   late final _pauseAwareController = PauseAwareController(
@@ -87,6 +93,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
       ViewModelManualPauseProvider(),
       AppPauseLifecycleProvider(),
       _routePauseProvider,
+      _tickModePauseProvider,
       ..._viewModelPauseProviders,
     ],
     binderName: getViewModelBinderName,
@@ -97,6 +104,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _tickModePauseProvider.subscribe(TickerMode.getNotifier(context));
     final route = ModalRoute.of(context);
     if (route is PageRoute) {
       _routePauseProvider.subscribe(route);
@@ -210,13 +218,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   }
 
   void _onResume() {
-    // ignore: invalid_use_of_protected_member
-    attacher.performForAllViewModels((viewModel) => viewModel.onResume(this));
     _rebuildState();
   }
 
-  void _onPause() {
-    // ignore: invalid_use_of_protected_member
-    attacher.performForAllViewModels((viewModel) => viewModel.onPause(this));
-  }
+  void _onPause() {}
 }

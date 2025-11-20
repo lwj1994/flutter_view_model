@@ -286,7 +286,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
       throw StateError("state is disposed");
     }
     final Object key = factory.key() ?? _defaultViewModelKey;
-    final tag = factory.getTag();
+    final tag = factory.tag();
     final res = runWithResolver(
       () {
         return _instanceController.getInstance<VM>(

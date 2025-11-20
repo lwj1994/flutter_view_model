@@ -135,7 +135,7 @@ void main() {
     testWidgets('state share exiting viewModel by tag', (tester) async {
       final testKey = GlobalKey();
       final testKey2 = GlobalKey();
-      const fc = TestViewModelFactory(initState: "initState", tag: "1");
+      const fc = TestViewModelFactory(initState: "initState", tagV: "1");
       await tester.pumpWidget(MaterialApp(
           home: Column(
         children: [

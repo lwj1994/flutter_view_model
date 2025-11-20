@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:view_model/src/view_model/app_lifecycle_observer.dart';
 
@@ -66,5 +67,37 @@ class AppPauseLifecycleProvider implements ViewModelPauseProvider {
     _subscription?.cancel();
     _subscription = null;
     _controller.close();
+  }
+}
+
+/// A [ViewModelPauseProvider] that pauses/resumes based on [TickerMode].
+///
+/// This provider is useful for pausing ViewModels when their widget is
+/// in a hidden state within a [TabBarView] or other [TickerMode] controlled
+/// environments. When [TickerMode] is disabled (false), the ViewModel is paused.
+class TickModePauseProvider extends ViewModelManualPauseProvider {
+  ValueListenable<bool>? _notifier;
+  void subscribe(ValueListenable<bool> notifier) {
+    if (_notifier == notifier) return;
+    _notifier?.removeListener(_onChange);
+    _notifier = notifier;
+    notifier.addListener(_onChange);
+  }
+
+  void _onChange() {
+    final v = _notifier?.value;
+    if (v == null) return;
+    if (v) {
+      resume();
+    } else {
+      pause();
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _notifier?.removeListener(_onChange);
+    _notifier = null;
   }
 }
