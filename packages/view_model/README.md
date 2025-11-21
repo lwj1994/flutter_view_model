@@ -16,6 +16,19 @@
 > the [view_model](https://pub.dev/packages/view_model) package to me.
 
 ---
+## Design Philosophy
+
+**ViewModel is designed specifically for UI logic and interaction, not just data flow.**
+
+Unlike general-purpose state management solutions (like Riverpod, which treats everything as a Provider), `view_model` focuses on the **Presentation Layer**.
+
+- **For UI**: It manages the lifecycle of the UI (Pause/Resume), handles user interactions, and converts data into UI state.
+- **Not for Data**: Complex data caching, combination, and transformation should be handled by the **Repository/Data Layer** (where Riverpod/Signals shines).
+- **Collaboration**: ViewModels depend on each other to "coordinate actions" (e.g., "User logged out -> Clear Cart UI"), rather than just "deriving data".
+
+Use `view_model` to build a smart, lifecycle-aware UI layer, and leave the heavy data lifting to the data layer.
+
+---
 
 ## Quick Start
 
@@ -24,12 +37,19 @@
 - Global: `ViewModel.readCached<T>() / maybeReadCached<T>()`
 - Recycle: `recycleViewModel(vm)`
 - Effects: `listen(onChanged)` / `listenState` / `listenStateSelect`
+- Dependencies: `watchCachedViewModel<T>()` / `readCachedViewModel<T>()` in ViewModel
 
 ## Reuse One Instance
 
 - Key: set `key()` in factory → all widgets share the same instance
 - Tag: set `tag()` → bind newest instance via `watchCachedViewModel(tag)`
 - Any param: pass any `Object` as key/tag (e.g. `'user:$id'`)
+
+> [!IMPORTANT]
+> When using custom objects as `key` or `tag`, ensure they properly implement 
+> `==` operator and `hashCode` for correct cache lookup. You can use 
+> third-party libraries like [equatable](https://pub.dev/packages/equatable) 
+> or [freezed](https://pub.dev/packages/freezed) to simplify this implementation.
 
 ```dart
 final f = DefaultViewModelFactory<UserViewModel>(
@@ -294,14 +314,13 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 ### ViewModel → ViewModel dependencies
 
 Inside a ViewModel, use `readCachedViewModel` (non‑reactive) or
-`watchCachedViewModel` (reactive) to depend on other ViewModels. The host’s
-widget State manages the dependency lifecycle for you.
+`watchCachedViewModel` (reactive) to access other ViewModels.
 
-When a ViewModel (the `HostVM`) accesses another ViewModel (the `SubVM`) via `watchCachedViewModel`, the framework automatically binds the `SubVM`'s lifecycle to the `HostVM`'s UI observer (i.e., the `State` object of the `StatefulWidget`).
+**Key Concept**: Although it looks like ViewModels depend on each other, they actually all attach to the **same Widget's State**. The dependency structure is **flat** (only 1 level deep) - all ViewModels are managed by the same `State` object. ViewModels only have **listening relationships** with each other, not nested dependencies.
 
-This means both the `SubVM` and the `HostVM` are directly managed by the lifecycle of the same `State` object. When this `State` object is disposed, if neither the `SubVM` nor the `HostVM` has other observers, they will be disposed of together automatically.
-
-This mechanism ensures clear dependency relationships between ViewModels and enables efficient, automatic resource management.
+- **Lifecycle**: When `HostVM` accesses `SubVM` via `watchCachedViewModel`, both attach to the same Widget `State`.
+- **Cleanup**: When the `State` is disposed, all attached ViewModels are disposed together (if no other widgets watch them).
+- **Coordination**: ViewModels listen to each other to coordinate actions, staying in the same UI layer.
 
 ```dart
 class UserProfileViewModel extends ViewModel {
@@ -335,6 +354,13 @@ class UserProfileViewModel extends ViewModel {
 Use `StateViewModel<S>` when you prefer an immutable `state` object and
 updates via `setState(newState)`. Supports `listenState(prev, next)` for
 state‑specific reactions.
+
+> [!NOTE]
+> By default, `StateViewModel` uses `identical()` to compare state instances 
+> (comparing object references, not content). This means `setState()` will 
+> trigger a rebuild only when you provide a new state instance. You can 
+> customize this comparison behavior globally via the `equals` function in 
+> `ViewModel.initialize()` (see [Initialization](#initialization) section).
 
 ### Defining the State Class
 
