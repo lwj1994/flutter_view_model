@@ -16,6 +16,19 @@
 > [view_model](https://pub.dev/packages/view_model) 包的权限转移给我。
 
 ---
+## 设计理念
+
+**ViewModel 是专门为 UI 逻辑和服务而生的，而不是为了处理复杂的数据流。**
+
+Riverpod 等通用状态管理方案倾向于把所有东西都变成 Provider，而 `view_model` 的定位非常明确：**只做表现层 (Presentation Layer) 该做的事**。
+
+- **为 UI 服务**: 它负责管理 UI 的生命周期（比如页面暂停/恢复时该干嘛）、响应用户的点击操作、把数据转换成 UI 能直接展示的状态。
+- **不碰复杂数据**: 那些复杂的数据缓存、拼接、转换逻辑，应该交给下层的 **Repository/Data Layer** 去做（这才是 Riverpod/Signals 发光发热的地方）。
+- **兄弟协作**: ViewModel 之间的依赖更多是为了“协同干活”（比如：“用户退出了 -> 购物车 ViewModel 你把东西清一下”），而不是为了“计算数据”。
+
+**一句话总结：用 `view_model` 来构建聪明、懂生命周期的 UI 层，把脏活累活留给数据层。**
+
+---
 
 ## 快速开始
 
@@ -24,12 +37,19 @@
 - 全局 (Global): `ViewModel.readCached<T>() / maybeReadCached<T>()`
 - 回收 (Recycle): `recycleViewModel(vm)`
 - 副作用 (Effects): `listen(onChanged)` / `listenState` / `listenStateSelect`
+- 依赖 (Dependencies): 在 ViewModel 中使用 `watchCachedViewModel<T>()` / `readCachedViewModel<T>()`
 
 ## 复用实例
 
 - Key: 在 factory 中设置 `key()` → 所有 widget 共享同一个实例
 - Tag: 设置 `tag()` → 通过 `watchCachedViewModel(tag)` 绑定最新实例
 - 任意参数: 传递任意 `Object` 作为 key/tag (例如 `'user:$id'`)
+
+> [!IMPORTANT]
+> 当使用自定义对象作为 `key` 或 `tag` 时，请确保正确实现 `==` 运算符和 
+> `hashCode` 方法，以保证缓存查找的准确性。可以使用第三方库如 
+> [equatable](https://pub.dev/packages/equatable) 或 
+> [freezed](https://pub.dev/packages/freezed) 来简化实现。
 
 ```dart
 final f = DefaultViewModelFactory<UserViewModel>(
@@ -212,13 +232,13 @@ class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 
 ### ViewModel → ViewModel 依赖
 
-在 ViewModel 内部，使用 `readCachedViewModel`（非反应式）或 `watchCachedViewModel`（反应式）来依赖其他 ViewModel。宿主的 Widget State 会为你管理依赖生命周期。
+在 ViewModel 内部，使用 `readCachedViewModel`（非反应式）或 `watchCachedViewModel`（反应式）来访问其他 ViewModel。
 
-当一个 ViewModel（`HostVM`）通过 `watchCachedViewModel` 访问另一个 ViewModel（`SubVM`）时，框架会自动将 `SubVM` 的生命周期绑定到 `HostVM` 的 UI 观察者（即 `StatefulWidget` 的 `State` 对象）。
+**核心概念**：虽然看起来 ViewModel 之间是互相依赖，但实际上它们都挂靠到**同一个 Widget 的 State**。依赖结构是**平层的**（只有 1 层深度）—— 所有 ViewModel 都由同一个 `State` 对象管理。ViewModel 之间只存在**监听关系**，而非嵌套依赖。
 
-这意味着 `SubVM` 和 `HostVM` 都由同一个 `State` 对象的生命周期直接管理。当这个 `State` 对象被销毁时，如果 `SubVM` 和 `HostVM` 都没有其他观察者，它们将一起被自动销毁。
-
-这种机制确保了 ViewModel 之间清晰的依赖关系，并实现了高效、自动的资源管理。
+- **生命周期**：当 `HostVM` 通过 `watchCachedViewModel` 访问 `SubVM` 时，两者都挂靠到同一个 Widget `State`。
+- **清理机制**：当 `State` 被销毁时，所有挂靠的 ViewModel 会一起被销毁（如果没有其他 Widget 监听它们）。
+- **协作方式**：ViewModel 之间通过监听来协调动作，保持在同一个 UI 层。
 
 ```dart
 class UserProfileViewModel extends ViewModel {
@@ -250,6 +270,12 @@ class UserProfileViewModel extends ViewModel {
 ## 有状态的 ViewModel (`StateViewModel<S>`)
 
 当你更喜欢使用不可变的 `state` 对象并通过 `setState(newState)` 进行更新时，请使用 `StateViewModel<S>`。支持 `listenState(prev, next)` 以进行特定于状态的反应。
+
+> [!NOTE]
+> 默认情况下，`StateViewModel` 使用 `identical()` 来比较 state 实例（比较对象引用，
+> 而非内容）。这意味着只有当你提供一个新的 state 实例时，`setState()` 才会触发重建。
+> 你可以通过在 `ViewModel.initialize()` 中配置 `equals` 函数来全局自定义这种比较
+> 行为（参见[初始化](#初始化)部分）。
 
 ### 定义 State 类
 
@@ -525,7 +551,22 @@ class MyLifecycleViewModel extends ViewModel with ViewModelLifecycle {
       );
 ## 值级别重建
 
-`view_model` 支持通过 `ValueNotifier` 进行值级别的重建，允许你只在特定数据发生变化时才重建小部件，从而实现更精细的性能优化。
+### StateViewModelValueWatcher
+
+对于 `StateViewModel`，你可以使用 `StateViewModelValueWatcher` 来监听 `state` 中特定属性的变化。它需要一个 `selector` 函数来提取要观察的值。
+
+```dart
+// 假设 MyCounterState 有一个 'count' 属性
+
+StateViewModelValueWatcher<MyCounterViewModel, int>(
+  viewModel: counterVM, // 你的 StateViewModel 实例
+  selector: (state) => state.count, // 选择要观察的属性
+  builder: (context, count) {
+    // 当 'count' 变化时，这个 Text 小部件会重建
+    return Text("Count: $count");
+  },
+);
+```
 
 ### ValueNotifier 和 ObservableValue
 
@@ -586,22 +627,6 @@ class MyPage extends StatelessWidget {
 }
 ```
 
-### StateViewModelValueWatcher
-
-对于 `StateViewModel`，你可以使用 `StateViewModelValueWatcher` 来监听 `state` 中特定属性的变化。它需要一个 `selector` 函数来提取要观察的值。
-
-```dart
-// 假设 MyCounterState 有一个 'count' 属性
-
-StateViewModelValueWatcher<MyCounterViewModel, int>(
-  viewModel: counterVM, // 你的 StateViewModel 实例
-  selector: (state) => state.count, // 选择要观察的属性
-  builder: (context, count) {
-    // 当 'count' 变化时，这个 Text 小部件会重建
-    return Text("Count: $count");
-  },
-);
-```
 
 ## DevTools 扩展
 

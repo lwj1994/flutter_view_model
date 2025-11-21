@@ -327,6 +327,13 @@ class ViewModelAttacher implements ViewModelCreateInterface {
     return childViewModel;
   }
 
+  bool _hasMissedUpdates = false;
+  bool get hasMissedUpdates => _hasMissedUpdates;
+
+  void consumeMissedUpdates() {
+    _hasMissedUpdates = false;
+  }
+
   /// Adds a listener to a ViewModel for automatic widget rebuilding.
   ///
   /// This internal method sets up the connection between a ViewModel and
@@ -345,8 +352,9 @@ class ViewModelAttacher implements ViewModelCreateInterface {
         if (_dispose) return;
         // When paused, ignore updates; we'll blindly refresh on resume.
         if (pauseAwareController.isPaused) {
+          _hasMissedUpdates = true;
           viewModelLog(
-            "Widget is paused, delay rebuild",
+            "${getBinderName()} is paused, delay rebuild",
           );
           return;
         }

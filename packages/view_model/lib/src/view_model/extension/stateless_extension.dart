@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
@@ -17,7 +18,7 @@ mixin ViewModelStatelessMixin on StatelessWidget
   late final _StatelessViewModelElement _viewModelElement =
       _StatelessViewModelElement(
     this,
-    getBinderName: getViewModelBinderName,
+    getViewModelBinderName: getViewModelBinderName,
     pauseProviders: _viewModelPauseProviders,
   );
   final _stackPathLocator = StackPathLocator();
@@ -122,10 +123,10 @@ mixin ViewModelStatelessMixin on StatelessWidget
 /// to `markNeedsBuild`. Manages attach and dispose with element
 /// lifecycle.
 class _StatelessViewModelElement extends StatelessElement {
-  final String Function() getBinderName;
+  final String Function() getViewModelBinderName;
   late final ViewModelAttacher _attacher = ViewModelAttacher(
     rebuildState: _rebuildState,
-    getBinderName: getBinderName,
+    getBinderName: getViewModelBinderName,
     pauseAwareController: _pauseAwareController,
   );
 
@@ -143,10 +144,10 @@ class _StatelessViewModelElement extends StatelessElement {
       disposableProviders: [
         _appPauseProvider,
       ],
-      binderName: getBinderName);
+      binderName: getViewModelBinderName);
 
   _StatelessViewModelElement(super.widget,
-      {required this.getBinderName, required this.pauseProviders});
+      {required this.getViewModelBinderName, required this.pauseProviders});
 
   /// Attaches the element and starts ViewModel listening.
   @override
@@ -156,7 +157,12 @@ class _StatelessViewModelElement extends StatelessElement {
   }
 
   void _onResume() {
-    _rebuildState();
+    if (_attacher.hasMissedUpdates) {
+      viewModelLog(
+          "${getViewModelBinderName()} Resume with missed updates, rebuilding");
+      _attacher.consumeMissedUpdates();
+      _rebuildState();
+    }
   }
 
   void _onPause() {}

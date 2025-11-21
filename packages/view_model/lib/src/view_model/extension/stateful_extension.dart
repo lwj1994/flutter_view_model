@@ -18,6 +18,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
+import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/util.dart';
@@ -223,7 +224,12 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   }
 
   void _onResume() {
-    _rebuildState();
+    if (attacher.hasMissedUpdates) {
+      viewModelLog(
+          "${getViewModelBinderName()} Resume with missed updates, rebuilding");
+      attacher.consumeMissedUpdates();
+      _rebuildState();
+    }
   }
 
   void _onPause() {}

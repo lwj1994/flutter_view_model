@@ -1,11 +1,8 @@
 # ViewModel Pause/Resume Lifecycle
 
-The `view_model` package provides a powerful lifecycle mechanism for `ViewModel`s tied to widget visibility. This is primarily handled by `ViewModelStateMixin`. When a widget is not visible, its associated `ViewModel` can be "paused". In this state, notifications from the `ViewModel` that would normally trigger UI updates are suppressed. When the widget becomes visible again, the `ViewModel` is "resumed", and the mixin triggers a single `setState()` to ensure the UI reflects the latest `ViewModel` state.
-
 This is particularly useful for:
-- Stopping background tasks (like animations, timers, or data polling) when the user navigates away from a screen, thus saving CPU and battery.
-- Refreshing data when the user returns to a screen.
-- Preventing unnecessary UI updates for widgets that are not on screen by batching them into a single update on resume.
+- **Pausing UI Updates**: When a widget is paused (e.g., navigated away from), it stops responding to ViewModel state changes, preventing unnecessary rebuilds.
+- **Resuming UI Updates**: When the widget resumes (e.g., navigated back to), it automatically checks for missed updates and rebuilds if necessary.
 
 
 ## How It Works
@@ -23,10 +20,12 @@ The core components are:
 1.  **`PauseAwareController`**: The brain of the operation. It subscribes to all providers and calls the `ViewModel`'s `onPause()` or `onResume()` methods based on their combined state.
 2.  **`ViewModelPauseProvider`**: A source of pause/resume events. The package includes default providers for common scenarios, but you can create your own for custom logic.
 
-By default, `ViewModelWidget` and `ViewModelStateMixin` automatically set up a `PauseAwareController` with three standard providers:
+By default, `ViewModelStateMixin` (for `StatefulWidget`) automatically sets up a `PauseAwareController` with three standard providers:
 -   **`PageRoutePauseProvider`**: Uses `RouteAware` to pause the `ViewModel` when a new route is pushed on top of its widget or when the widget's route is popped.
 -   **`AppPauseLifecycleProvider`**: Uses `WidgetsBindingObserver` to pause the `ViewModel` when the entire application is sent to the background.
 -   **`TickModePauseProvider`**: Automatically pauses the `ViewModel` when the widget is in a hidden state within a `TabBarView` or `PageView` (controlled by `TickerMode`).
+
+`ViewModelStatelessMixin` (for `StatelessWidget`) only includes the **`AppPauseLifecycleProvider`** by default.
 
 ## Automatic Pause/Resume
 
@@ -69,6 +68,11 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
     } else {
         _manualPauseProvider.resume();
     }
+  }
+
+  void dispose(){
+    super.dispose()
+    _manualPauseProvider.dispose();
   }
 }
 ```
