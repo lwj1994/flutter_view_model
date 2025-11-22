@@ -2,16 +2,17 @@
 
 /// Core ViewModel implementation for Flutter applications.
 ///
-/// This file contains the main ViewModel classes and interfaces that provide
-/// a reactive state management solution for Flutter apps. It includes:
+/// This file contains the main ViewModel classes and interfaces that provide a
+/// reactive state management solution for Flutter apps. It includes:
 /// - [ViewModel]: Base mixin for stateless ViewModels
 /// - [StateViewModel]: Abstract class for stateful ViewModels
 /// - [ViewModelFactory]: Factory interface for creating ViewModels
 /// - [DefaultViewModelFactory]: Default implementation of ViewModelFactory
 /// - [ViewModelLifecycle]: Interface for ViewModel lifecycle callbacks
 ///
-/// The ViewModel system provides automatic lifecycle management, dependency
-/// injection, and integration with Flutter's widget system through mixins.
+/// The ViewModel system provides automatic lifecycle management,
+/// dependency injection, and integration with Flutter's widget
+/// system through mixins.
 library;
 
 import 'dart:async';
@@ -34,8 +35,9 @@ import 'state_store.dart';
 /// A ViewModel implementation that extends Flutter's [ChangeNotifier].
 ///
 /// This class provides compatibility with existing Flutter code that uses
-/// [ChangeNotifier] while adding ViewModel capabilities. The [addListener]
-/// method is overridden to use the ViewModel's [listen] method internally.
+/// [ChangeNotifier] while adding ViewModel capabilities. The
+/// [addListener] method
+/// is overridden to use the ViewModel's [listen] method internally.
 ///
 /// Example:
 /// ```dart
@@ -60,13 +62,12 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 ///
 /// This mixin provides core functionality for ViewModels including:
 /// - Lifecycle management through [InstanceLifeCycle]
-/// - Listener
-/// management for reactive updates
+/// - Listener management for reactive updates
 /// - Static methods for reading existing ViewModels
 /// - Integration with the ViewModel system
 ///
-/// ViewModels using this mixin are automatically managed by the system
-/// and will be disposed when no longer needed.
+/// ViewModels using this mixin are automatically managed by the system and will
+/// be disposed when no longer needed.
 ///
 /// Example:
 /// ```dart
@@ -88,9 +89,10 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   /// Tracks which dependency ViewModels this ViewModel is already listening to.
   ///
   /// This map prevents duplicate listener registration when the same dependency
-  /// ViewModel is accessed multiple times through [watchViewModel]. The key is
-  /// the dependency ViewModel instance, and the value is always `true` when
-  /// a listener is registered.
+  /// ViewModel is accessed multiple times through [watchViewModel]. The
+  /// key is the
+  /// dependency ViewModel instance, and the value is always `true` when a
+  /// listener is registered.
   ///
   /// This optimization ensures that:
   /// 1. Each dependency ViewModel is only listened to once
@@ -100,8 +102,8 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
 
   /// Gets the tag associated with this ViewModel instance.
   ///
-  /// The tag is set by the [ViewModelFactory.tag] method and can be used
-  /// to identify or categorize ViewModel instances.
+  /// The tag is set by the [ViewModelFactory.tag] method and can be used to
+  /// identify or categorize ViewModel instances.
   Object? get tag => _instanceArg.tag;
 
   static bool _initialized = false;
@@ -112,11 +114,12 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
 
   /// Attempts to read a ViewModel instance by [key] or [tag].
   ///
-  /// Returns `null` if no matching ViewModel is found, unlike [readCached] which
-  /// throws an exception.
+  /// Returns `null` if no matching ViewModel is found, unlike [readCached]
+  /// which throws an exception.
   ///
   /// This method is useful for safely accessing a cached ViewModel without
-  /// causing an error if it doesn't exist.
+  /// causing
+  /// an error if it doesn't exist.
   ///
   /// Parameters:
   /// - [key]: The unique key to search for.
@@ -169,7 +172,8 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   /// created instance of type [T].
   ///
   /// This method is for accessing already-created and cached ViewModels.
-  /// It does not create new instances.
+  /// It does
+  /// not create new instances.
   ///
   /// Parameters:
   /// - [key]: The unique key from [ViewModelFactory.key].
@@ -177,7 +181,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   ///
   /// Returns the matching ViewModel instance.
   ///
-  /// Throws a [StateError] if:
+  /// Throws a [ViewModelError] if:
   /// - No matching ViewModel is found.
   /// - The found ViewModel has been disposed.
   ///
@@ -215,7 +219,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     );
 
     if (vm.isDisposed) {
-      throw StateError("$T is disposed");
+      throw ViewModelError(message: "$T is disposed");
     }
     return vm;
   }
@@ -253,8 +257,8 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
 
   /// Gets the current ViewModel configuration.
   ///
-  /// The configuration controls global ViewModel behavior and can be set
-  /// during initialization via [initialize].
+  /// The configuration controls global ViewModel behavior and can be set during
+  /// initialization via [initialize].
   static ViewModelConfig get config => _config;
 
   final _autoDisposeController = AutoDisposeController();
@@ -262,14 +266,15 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
 
   /// Returns `true` if this ViewModel has been disposed.
   ///
-  /// Once disposed, the ViewModel should not be used and will throw errors
-  /// if methods are called on it.
+  /// Once disposed, the ViewModel should not be used and will throw errors if
+  /// methods are called on it.
   bool get isDisposed => _isDisposed;
 
   /// Returns `true` if this ViewModel has any active listeners.
   ///
   /// This can be useful for determining if the ViewModel is being observed
-  /// by any widgets or other components.
+  /// by any
+  /// widgets or other components.
   bool get hasListeners => _listeners.isNotEmpty;
 
   /// Handler for managing ViewModel dependencies.
@@ -288,14 +293,16 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   /// readViewModel/watchViewModel to register the dependency
   /// 4. If not associated, store the dependency config for later registration
   ///
-  /// This ensures that dependency relationships are properly
-  /// managed by the Widget State
-  /// that owns the host ViewModel, maintaining consistent lifecycle management.
+  /// This ensures that dependency relationships are properly managed by
+  /// the Widget
+  /// State that owns the host ViewModel, maintaining consistent lifecycle
+  /// management.
   ///
   /// Parameters:
   /// - [key]: Optional key to identify a specific ViewModel instance
   /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  /// - [factory]: Optional factory for creating the ViewModel if it
+  /// doesn't exist
   ///
   /// Returns the requested ViewModel instance.
   ///
@@ -314,7 +321,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   T readViewModel<T extends ViewModel>({
     required ViewModelFactory<T> factory,
   }) {
-    if (isDisposed) throw StateError("$T is disposed");
+    if (isDisposed) throw ViewModelError(message: "$T is disposed");
     return dependencyHandler.getViewModel<T>(
       factory: factory,
       listen: false,
@@ -327,7 +334,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     Object? key,
     Object? tag,
   }) {
-    if (isDisposed) throw StateError("$T is disposed");
+    if (isDisposed) throw ViewModelError(message: "$T is disposed");
     return dependencyHandler.getViewModel<T>(
       listen: false,
       key: key,
@@ -338,24 +345,24 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   @protected
   @override
   void recycleViewModel<T extends ViewModel>(T viewModel) {
-    if (isDisposed) throw StateError("$T is disposed");
+    if (isDisposed) throw ViewModelError(message: "$T is disposed");
     dependencyHandler.recycleViewModel(viewModel);
   }
 
   /// Watches a dependency ViewModel of type [T] and listens for changes.
   ///
-  /// Similar to [readViewModel] but automatically listens
-  /// for changes in the dependency
-  /// ViewModel and triggers rebuilds when the dependency changes.
+  /// Similar to [readViewModel] but automatically listens for changes in the
+  /// dependency ViewModel and triggers rebuilds when the dependency changes.
   ///
-  /// This method allows ViewModels to access other ViewModels as dependencies with
-  /// automatic change notification. When the dependency ViewModel changes, this
-  /// ViewModel will also notify its listeners.
+  /// This method allows ViewModels to access other ViewModels as dependencies
+  /// with automatic change notification. When the dependency ViewModel changes,
+  /// this ViewModel will also notify its listeners.
   ///
   /// Parameters:
   /// - [key]: Optional key to identify a specific ViewModel instance
   /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  /// - [factory]: Optional factory for creating the ViewModel if it
+  /// doesn't exist
   ///
   /// Returns the requested ViewModel instance with change listening enabled.
   ///
@@ -377,7 +384,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   T watchViewModel<T extends ViewModel>({
     required ViewModelFactory<T> factory,
   }) {
-    if (isDisposed) throw StateError("$T is disposed");
+    if (isDisposed) throw ViewModelError(message: "$T is disposed");
     final vm = dependencyHandler.getViewModel<T>(
       factory: factory,
       listen: true,
@@ -403,7 +410,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     Object? key,
     Object? tag,
   }) {
-    if (isDisposed) throw StateError("$T is disposed");
+    if (isDisposed) throw ViewModelError(message: "$T is disposed");
     final vm = dependencyHandler.getViewModel<T>(
       key: key,
       tag: tag,
@@ -427,8 +434,8 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   /// Called when a dependency ViewModel notifies changes.
   ///
   /// This method is called when a dependency ViewModel that this ViewModel is
-  /// listening to notifies changes. By default, it simply notifies listeners
-  /// of this ViewModel.
+  /// listening to notifies changes. By default, it simply notifies listeners of
+  /// this ViewModel.
   ///
   /// Parameters:
   /// - [vm]: The dependency ViewModel that notified changes
@@ -438,8 +445,8 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
 
   /// Attempts to read a dependency ViewModel of type [T].
   ///
-  /// Similar to [readViewModel] but returns `null` if the dependency is not
-  /// found
+  /// Similar to [readViewModel] but returns `null` if the dependency
+  /// is not found
   /// instead of throwing an exception.
   ///
   /// Parameters:
@@ -478,9 +485,8 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   /// listening.
   ///
   /// This is a safe version of [watchViewModel] that returns `null` if the
-  /// dependency
-  /// is not found or if any error occurs during the watch operation, instead of
-  /// throwing an exception.
+  /// dependency is not found or if any error occurs during the watch operation,
+  /// instead of throwing an exception.
   ///
   /// When successful, this method:
   /// 1. Retrieves the dependency ViewModel (creating it if necessary via
@@ -541,8 +547,8 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   /// disposed.
   ///
   /// This is useful for cleaning up resources like streams, timers, or other
-  /// subscriptions that need to be disposed when the ViewModel is no longer
-  /// needed.
+  /// subscriptions that need to be disposed when the ViewModel is no
+  /// longer needed.
   ///
   /// Parameters:
   /// - [block]: The cleanup function to execute on disposal
@@ -729,10 +735,12 @@ abstract class StateViewModel<T> with ViewModel {
   late final ViewModelStateStore<T> _store;
   final List<Function(T? previous, T state)?> _stateListeners = [];
 
-  /// Adds a state-specific listener that receives both previous and current state.
+  /// Adds a state-specific listener that receives both previous and
+  /// current state.
   ///
   /// Unlike the general [listen] method, this provides access to both the
-  /// previous state and the new state, allowing for more granular change detection.
+  /// previous state and the new state, allowing for more granular
+  /// change detection.
   ///
   /// Parameters:
   /// - [onChanged]: Callback that receives (previousState, currentState)
@@ -763,7 +771,8 @@ abstract class StateViewModel<T> with ViewModel {
   /// only when the selected property's value changes according to [equals].
   ///
   /// Parameters:
-  /// - [selector]: Selector function that maps the full state `T` to the watched
+  /// - [selector]: Selector function that maps the full state `T` to
+  /// the watched
   ///   property `S` (e.g., `(s) => s.count`).
   /// - [onChanged]: Callback receiving `(previousSelected, currentSelected)`.
   ///
@@ -862,7 +871,8 @@ abstract class StateViewModel<T> with ViewModel {
   ///
   /// This method internally uses the `isSameState` function from
   /// [ViewModelConfig] to determine if the new state is the same as the
-  /// current state. If they are considered the same, no update will be triggered.
+  /// current state. If they are considered the same, no update will
+  /// be triggered.
   /// By default, this comparison is done by checking the memory addresses
   /// of the state objects using `identical()`.
   ///
@@ -899,7 +909,8 @@ abstract class StateViewModel<T> with ViewModel {
 
   /// Gets the previous state before the last [setState] call.
   ///
-  /// Returns `null` if no previous state exists (i.e., this is the initial state).
+  /// Returns `null` if no previous state exists (i.e., this is the
+  /// initial state).
   T? get previousState {
     return _store.previousState;
   }

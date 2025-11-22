@@ -1,6 +1,7 @@
 /// Instance management system for ViewModel lifecycle control.
 ///
-/// This file provides the core instance management functionality for ViewModels,
+/// This file provides the core instance management functionality
+/// for ViewModels,
 /// including creation, caching, recreation, and watcher management. The system
 /// ensures efficient resource usage and proper lifecycle management.
 ///
@@ -18,7 +19,8 @@ final instanceManager = InstanceManager._get();
 
 /// Central manager for ViewModel instance lifecycle.
 ///
-/// This singleton class manages the creation, caching, and disposal of ViewModel
+/// This singleton class manages the creation, caching, and disposal
+/// of ViewModel
 /// instances across the application. It maintains separate stores for each
 /// ViewModel type and handles watcher relationships.
 ///

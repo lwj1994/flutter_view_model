@@ -55,8 +55,10 @@
 ///   _CounterWidgetState createState() => _CounterWidgetState();
 /// }
 ///
-/// class _CounterWidgetState extends State<CounterWidget> with ViewModelStateMixin {
-///   late final counterVM = watchViewModel<CounterViewModel>(factory: CounterFactory());
+/// class _CounterWidgetState extends State<CounterWidget>
+///                       with ViewModelStateMixin {
+///   late final counterVM = watchViewModel<CounterViewModel>(factory:
+///                                                          CounterFactory());
 ///
 ///   @override
 ///   Widget build(BuildContext context) {

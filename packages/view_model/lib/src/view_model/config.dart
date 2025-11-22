@@ -55,7 +55,8 @@ class ViewModelConfig {
   /// Creates a new ViewModel configuration.
   ///
   /// Parameters:
-  /// - [isLoggingEnabled]: Whether to enable debug logging (defaults to `false`)
+  /// - [isLoggingEnabled]: Whether to enable debug logging
+  ///   (defaults to `false`)
   /// - [equals]: Custom state equality function (optional)
   ViewModelConfig({
     this.isLoggingEnabled = false,
