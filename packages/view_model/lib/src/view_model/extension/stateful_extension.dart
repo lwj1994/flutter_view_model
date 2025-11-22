@@ -26,8 +26,8 @@ import 'package:view_model/src/view_model/view_model.dart';
 
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
 ///
-/// This mixin provides methods to watch and read ViewModels from within
-/// a StatefulWidget's State. It automatically handles:
+/// This mixin provides methods to watch and read ViewModels from within a
+/// StatefulWidget's State. It automatically handles:
 /// - ViewModel creation and caching
 /// - Widget rebuilding when ViewModels change
 /// - Proper cleanup when the widget is disposed
@@ -209,9 +209,9 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
 
   /// Generates a debug-friendly name for this ViewModel watcher.
   ///
-  /// This method creates a unique identifier that includes the file path,
-  /// line number, and class name where the ViewModel is being watched.
-  /// This information is useful for debugging and development tools.
+  /// This method creates a unique identifier that includes the file path, line
+  /// number, and class name where the ViewModel is being watched. This
+  /// information is useful for debugging and development tools.
   ///
   /// Returns an empty string in release mode for performance.
   ///

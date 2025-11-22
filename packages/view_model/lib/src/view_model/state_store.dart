@@ -2,7 +2,8 @@
 
 /// State management store for ViewModels.
 ///
-/// This file contains the core state management classes used by StateViewModels:
+/// This file contains the core state management classes used by
+/// StateViewModels:
 /// - [ViewModelStateStore]: Concrete implementation of state storage
 /// - [StateStore]: Abstract interface for state management
 /// - [DiffState]: Container for state changes with previous/current values
@@ -25,8 +26,9 @@ import 'package:view_model/src/view_model/view_model.dart';
 /// - Stream-based state updates
 /// - Previous state tracking
 ///
-/// The store uses a broadcast stream to notify multiple listeners of state changes
-/// and implements configurable state equality checking.
+/// The store uses a broadcast stream to notify multiple listeners
+/// of state changes and implements configurable state equality
+/// checking.
 ///
 /// Example:
 /// ```dart
@@ -63,7 +65,8 @@ class ViewModelStateStore<S> implements StateStore<S> {
 
   /// Gets the previous state before the last update.
   ///
-  /// Returns `null` if no previous state exists (i.e., no updates have been made).
+  /// Returns `null` if no previous state exists (i.e., no updates
+  /// have been made).
   @override
   S? get previousState => _previousState;
 
@@ -149,7 +152,8 @@ abstract class StateStore<S> {
   /// The current state.
   abstract final S state;
 
-  /// The previous state before the last update, or null if no updates have occurred.
+  /// The previous state before the last update, or null if no updates
+  /// have occurred.
   abstract final S? previousState;
 
   /// A stream of state changes containing both previous and current state.
@@ -182,7 +186,8 @@ abstract class StateStore<S> {
 /// );
 /// ```
 class Reducer<S> {
-  /// The transformation function that takes current state and returns new state.
+  /// The transformation function that takes current state and returns
+  /// new state.
   ///
   /// Can be either synchronous or asynchronous (returning a Future).
   final FutureOr<S> Function(S state) builder;
@@ -224,7 +229,7 @@ class Reducer<S> {
 ///   // Handle or propagate the error
 /// }
 /// ```
-class ViewModelError {
+class ViewModelError extends Error {
   /// A human-readable description of the error.
   final String message;
 
@@ -248,13 +253,15 @@ class ViewModelError {
 
   @override
   String toString() {
-    return 'ViewModelError{message: $message, error: $error, stackTrace: $stackTrace}';
+    return 'ViewModelError{message: $message, error: $error, '
+        'stackTrace: $stackTrace}';
   }
 }
 
 /// Represents a state change containing both previous and current state.
 ///
-/// This class is used to communicate state transitions through the state stream,
+/// This class is used to communicate state transitions through the
+/// state stream,
 /// allowing listeners to react to specific changes by comparing previous and
 /// current values.
 ///
@@ -298,6 +305,7 @@ class DiffState<S> {
 
   @override
   String toString() {
-    return 'DiffState{previousState: $previousState, currentState: $currentState}';
+    return 'DiffState{previousState: $previousState, '
+        'currentState: $currentState}';
   }
 }

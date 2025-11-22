@@ -50,7 +50,8 @@ R runWithResolver<R>(R Function() body, DependencyResolver resolver) {
 @internal
 class DependencyHandler {
   /// Callback function to resolve ViewModel dependencies.
-  /// This is typically set by ViewModelStateMixin to delegate dependency resolution
+  /// This is typically set by ViewModelStateMixin to delegate
+  /// dependency resolution
   /// to the State that manages the ViewModel.
   @internal
   final List<DependencyResolver> dependencyResolvers = [];
@@ -59,7 +60,8 @@ class DependencyHandler {
 
   /// Sets the dependency resolver callback.
   ///
-  /// This should only be called by ViewModelStateMixin or similar framework code.
+  /// This should only be called by ViewModelStateMixin or similar
+  /// framework code.
   /// The resolver is responsible for creating or retrieving
   /// ViewModel instances.
   ///
@@ -101,7 +103,8 @@ class DependencyHandler {
   /// Parameters:
   /// - [key]: Optional key to identify a specific ViewModel instance
   /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  /// - [factory]: Optional factory for creating the ViewModel
+  ///   if it doesn't exist
   ///
   /// Returns the requested ViewModel instance.
   T getViewModel<T extends ViewModel>({
@@ -115,7 +118,8 @@ class DependencyHandler {
 
     if (resolver == null) {
       throw StateError(
-          'No dependency resolver available. ViewModel must be used within a Widget context');
+          'No dependency resolver available. ViewModel must be used '
+          'within a Widget context');
     }
     // Create dependency configuration
     final dependencyConfig = model.ViewModelDependencyConfig<T>(
@@ -134,7 +138,8 @@ class DependencyHandler {
 
   /// Attempts to read a dependency ViewModel of type [T].
   ///
-  /// Similar to [getViewModel] but returns `null` if the dependency is not found
+  /// Similar to [getViewModel] but returns `null` if the dependency
+  /// is not found
   /// instead of throwing an exception. This is useful when you want to safely
   //
   /// check for optional dependencies without handling exceptions.
@@ -142,7 +147,8 @@ class DependencyHandler {
   /// Parameters:
   /// - [key]: Optional key to identify a specific ViewModel instance
   /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't exist
+  /// - [factory]: Optional factory for creating the ViewModel
+  ///   if it doesn't exist
   /// - [listen]: Whether to establish a listening relationship (default: false)
   ///
   /// Returns the requested ViewModel instance if found, otherwise `null`.
@@ -150,7 +156,8 @@ class DependencyHandler {
   /// Example:
   /// ```dart
   /// // Safe dependency access
-  /// final authViewModel = dependencyHandler.maybeGetViewModel<AuthViewModel>();
+  /// final authViewModel = dependencyHandler
+  ///     .maybeGetViewModel<AuthViewModel>();
   /// if (authViewModel != null) {
   ///   // Use the dependency
   ///   print('User is logged in: ${authViewModel.isLoggedIn}');

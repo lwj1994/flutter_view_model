@@ -5,14 +5,14 @@ import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
-/// A controller that manages pause/resume lifecycle for a ViewModel,
-/// based on a collection of [ViewModelPauseProvider]s.
+/// A controller that manages pause/resume lifecycle for a ViewModel, based on a
+/// collection of [ViewModelPauseProvider]s.
 ///
 /// This class is designed to be flexible and can work with any source of
-/// lifecycle events, such as route navigation or application state changes.
-/// For Flutter's default behavior, use the provided default providers.
-/// For custom or mixed-stack environments, implement your own
-/// [ViewModelPauseProvider] and pass them to the constructor.
+/// lifecycle events, such as route navigation or application state changes. For
+/// Flutter's default behavior, use the provided default providers. For custom
+/// or mixed-stack environments, implement your own [ViewModelPauseProvider] and
+/// pass them to the constructor.
 class PauseAwareController {
   // A callback triggered when the view model should pause.
   final Function() onWidgetPause;
@@ -27,8 +27,8 @@ class PauseAwareController {
   /// If no [providers] are provided, it defaults to using Flutter's standard
   /// [PageRoutePauseProvider] and [AppPauseProvider].
   ///
-  /// For custom lifecycle sources (e.g., mixed-stack environments), provide
-  /// a list of your custom [ViewModelPauseProvider] implementations.
+  /// For custom lifecycle sources (e.g., mixed-stack environments), provide a
+  /// list of your custom [ViewModelPauseProvider] implementations.
   PauseAwareController({
     required this.onWidgetPause,
     required this.onWidgetResume,
@@ -111,8 +111,8 @@ class PauseAwareController {
   }
 }
 
-/// A [ViewModelPauseProvider] that uses [RouteAware] to determine pause
-/// state based on route navigation events (push, pop).
+/// A [ViewModelPauseProvider] that uses [RouteAware] to determine pause state
+/// based on route navigation events (push, pop).
 class PageRoutePauseProvider implements ViewModelPauseProvider, RouteAware {
   // The stream controller that broadcasts pause state changes.
   final _controller = StreamController<bool>.broadcast();
@@ -124,8 +124,9 @@ class PageRoutePauseProvider implements ViewModelPauseProvider, RouteAware {
 
   /// Subscribes the provider to a specific route.
   ///
-  /// This method ensures that the provider is only subscribed once to each
-  /// route, preventing duplicate subscriptions.
+  /// This method ensures that the provider is only subscribed once
+  /// to each route,
+  /// preventing duplicate subscriptions.
   void subscribe(PageRoute route) {
     if (_subscribedRoutes.contains(route)) return;
     unsubscribe(_observer);

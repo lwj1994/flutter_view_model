@@ -20,15 +20,16 @@ abstract class ViewModelPauseProvider {
 
 /// ViewModelVisibleListener controls manual pause/resume for a page/state.
 ///
-/// - Call [onPause] to mark the page as paused (e.g., covered by another route).
+/// - Call [onPause] to mark the page as paused (e.g., covered by another
+///   route).
 ///   While paused, rebuilds triggered by bound ViewModels are ignored.
 /// - Call [onResume] to mark as resumed and invoke the provided callback to
 ///   trigger a single refresh.
 class ViewModelManualPauseProvider implements ViewModelPauseProvider {
   final _controller = StreamController<bool>.broadcast();
 
-  /// Creates a [ViewModelManualPauseProvider] with the callback used to trigger refresh
-  /// when resuming.
+  /// Creates a [ViewModelManualPauseProvider] with the callback used to trigger
+  /// refresh when resuming.
   ViewModelManualPauseProvider() {}
 
   void pause() => _controller.add(true);
@@ -74,7 +75,8 @@ class AppPauseProvider implements ViewModelPauseProvider {
 ///
 /// This provider is useful for pausing ViewModels when their widget is
 /// in a hidden state within a [TabBarView] or other [TickerMode] controlled
-/// environments. When [TickerMode] is disabled (false), the ViewModel is paused.
+/// environments. When [TickerMode] is disabled (false), the ViewModel is
+/// paused.
 class TickModePauseProvider extends ViewModelManualPauseProvider {
   ValueListenable<bool>? _notifier;
   void subscribe(ValueListenable<bool> notifier) {

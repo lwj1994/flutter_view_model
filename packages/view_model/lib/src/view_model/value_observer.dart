@@ -9,14 +9,16 @@ import 'package:view_model/view_model.dart';
 ///
 /// The data can be shared and identified by [shareKey].
 class ObservableValue<T> {
-  /// A key to identify and share this value across different [ObserverBuilder]s.
-  /// If not provided, a unique key is automatically created, making the value local.
+  /// A key to identify and share this value across different
+  /// [ObserverBuilder]s. If not provided, a unique key is
+  /// automatically created, making the value local.
   final Object shareKey;
 
   final T initialValue;
 
-  /// Returns the current value proxied from the underlying shared StateViewModel.
-  /// The value is sourced from the shared instance identified by `shareKey`.
+  /// Returns the current value proxied from the underlying
+  /// shared StateViewModel. The value is sourced from the
+  /// shared instance identified by `shareKey`.
   T get value {
     return _vm.state;
   }
@@ -39,8 +41,9 @@ class ObservableValue<T> {
         factory: InstanceFactory(
             builder: () {
               return _ObserveDataViewModelFactory<T>(
-                      data: initialValue, shareKey: this.shareKey)
-                  .build();
+                data: initialValue,
+                shareKey: this.shareKey,
+              ).build();
             },
             arg: InstanceArg(key: this.shareKey)));
   }
@@ -93,15 +96,18 @@ class ObserverBuilder<T> extends StatefulWidget {
 
 class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
     with ViewModelStateMixin<ObserverBuilder<T>> {
-  /// Subscribes to the shared StateViewModel identified by `observable.shareKey`
-  /// and passes its current state to `builder` as `data`.
+  /// Subscribes to the shared StateViewModel identified by
+  /// `observable.shareKey` and passes its current state to
+  /// `builder` as `data`.
   @override
   Widget build(BuildContext context) {
     // Rebuilds when the view model's state changes; latest value
     // is provided to `builder`.
-    return widget.builder(watchCachedViewModel<_ObserveDataViewModel<T>>(
-      key: widget.observable.shareKey,
-    ).state);
+    return widget.builder(
+      watchCachedViewModel<_ObserveDataViewModel<T>>(
+        key: widget.observable.shareKey,
+      ).state,
+    );
   }
 }
 
@@ -130,9 +136,10 @@ class ObserverBuilder2<T1, T2> extends StatefulWidget {
 
 class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
     with ViewModelStateMixin<ObserverBuilder2<T1, T2>> {
-  /// Subscribes to two shared StateViewModels identified by `observable1.shareKey`
-  /// and `observable2.shareKey`, passing their current states to `builder` as
-  /// `value1` and `value2`.
+  /// Subscribes to two shared StateViewModels identified by
+  /// `observable1.shareKey` and `observable2.shareKey`,
+  /// passing their current states to `builder` as `value1`
+  /// and `value2`.
   @override
   Widget build(BuildContext context) {
     // Rebuilds when any view model's state changes; latest values
@@ -176,9 +183,9 @@ class ObserverBuilder3<T1, T2, T3> extends StatefulWidget {
 class _ObserverBuilder3State<T1, T2, T3>
     extends State<ObserverBuilder3<T1, T2, T3>>
     with ViewModelStateMixin<ObserverBuilder3<T1, T2, T3>> {
-  /// Subscribes to three shared StateViewModels identified by each observable's
-  /// `shareKey`, passing their current states to `builder` as `value1`, `value2`,
-  /// and `value3`.
+  /// Subscribes to three shared StateViewModels identified by
+  /// each observable's `shareKey`, passing their current states
+  /// to `builder` as `value1`, `value2`, and `value3`.
   @override
   Widget build(BuildContext context) {
     // Rebuilds when any view model's state changes; latest values

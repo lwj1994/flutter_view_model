@@ -108,9 +108,11 @@ class DevToolTracker extends ViewModelLifecycle {
     return () => _listeners.remove(listener);
   }
 
-  /// Notifies all registered listeners that dependency relationships have changed.
+  /// Notifies all registered listeners that dependency
+  /// relationships have changed.
   ///
-  /// This method is called internally whenever the dependency graph is modified.
+  /// This method is called internally whenever the dependency
+  /// graph is modified.
   /// Listeners are called safely with error handling to prevent one failing
   /// listener from affecting others.
   void _notifyListeners() {
@@ -395,7 +397,8 @@ class ViewModelInfo {
 
   /// Creates a copy of this ViewModelInfo with optionally updated fields.
   ///
-  /// This method allows updating specific fields while keeping others unchanged.
+  /// This method allows updating specific fields while keeping
+  /// others unchanged.
   /// Commonly used when updating the watcher list or disposal status.
   ///
   /// Parameters:
@@ -433,7 +436,8 @@ class ViewModelInfo {
 
   @override
   String toString() {
-    return 'ViewModelInfo(id: $instanceId, type: $typeName, key: $key, tag: $tag, watchers: ${watchers.length}, isDisposed: $isDisposed)';
+    return 'ViewModelInfo(id: $instanceId, type: $typeName, key: $key, '
+        'tag: $tag, watchers: ${watchers.length}, isDisposed: $isDisposed)';
   }
 }
 
@@ -523,7 +527,8 @@ class DependencyGraph {
 /// - **Active Instances**: ViewModels currently in use
 /// - **Disposed Instances**: ViewModels that have been disposed
 /// - **Shared Instances**: ViewModels watched by multiple watchers
-/// - **Orphaned Instances**: Active ViewModels with no watchers (potential leaks)
+/// - **Orphaned Instances**: Active ViewModels with no watchers
+///   (potential leaks)
 /// - **Total Watchers**: Number of active watcher relationships
 /// - **ViewModel Types**: Number of different ViewModel types in use
 class DependencyStats {

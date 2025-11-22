@@ -120,7 +120,8 @@ class Store<T> {
   ///
   /// Returns an [InstanceHandle] for the requested instance.
   ///
-  /// Throws [StateError] if no cached instance exists and no builder is provided.
+  /// Throws [StateError] if no cached instance exists and no
+  /// builder is provided.
   InstanceHandle<T> getNotifier({required InstanceFactory<T> factory}) {
     final realKey = factory.arg.key ?? const UuidV4().generate();
     final watchId = factory.arg.binderId;
@@ -486,11 +487,7 @@ class InstanceArg {
 
   @override
   String toString() {
-    return 'InstanceArg{'
-        ' key: $key,'
-        ' tag: $tag,'
-        ' watchId: $binderId,'
-        '}';
+    return 'InstanceArg( key: $key,tag: $tag, binderId: $binderId)';
   }
 
   InstanceArg copyWith({

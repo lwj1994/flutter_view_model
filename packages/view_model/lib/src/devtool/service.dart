@@ -57,11 +57,14 @@ class DevToolsService {
   /// and Flutter DevTools. It registers service extensions that DevTools can
   /// call to retrieve ViewModel data and dependency information.
   ///
-  /// The method is idempotent - calling it multiple times has no additional effect.
+  /// The method is idempotent - calling it multiple times has no
+  /// additional effect.
   ///
   /// Service extensions registered:
-  /// - `ext.view_model.getViewModelData`: Returns ViewModel instances and statistics
-  /// - `ext.view_model.getDependencyGraph`: Returns dependency relationship data
+  /// - `ext.view_model.getViewModelData`: Returns ViewModel instances
+  ///   and statistics
+  /// - `ext.view_model.getDependencyGraph`: Returns dependency
+  ///   relationship data
   void initialize() {
     if (_isInitialized) return;
     _registerServiceExtensions();
@@ -71,7 +74,8 @@ class DevToolsService {
   /// Disposes the DevTools service and cleans up resources.
   ///
   /// This method cancels any active subscriptions and resets the initialization
-  /// state. After calling this method, the service can be re-initialized if needed.
+  /// state. After calling this method, the service can be
+  /// re-initialized if needed.
   void dispose() {
     _messageSubscription?.cancel();
     _messageSubscription = null;
@@ -100,7 +104,8 @@ class DevToolsService {
         viewModelLog("DevTool _getViewModelData error: $e");
         return developer.ServiceExtensionResponse.error(
           developer.ServiceExtensionResponse.extensionError,
-          'DevTools extension error: Unable to retrieve ViewModel data. Please ensure ViewModels are properly configured.',
+          'DevTools extension error: Unable to retrieve ViewModel data. '
+          'Please ensure ViewModels are properly configured.',
         );
       }
     });
@@ -113,7 +118,8 @@ class DevToolsService {
       } catch (e) {
         return developer.ServiceExtensionResponse.error(
           developer.ServiceExtensionResponse.extensionError,
-          'DevTools extension error: Unable to retrieve dependency graph. Please check ViewModel dependency tracking configuration.',
+          'DevTools extension error: Unable to retrieve dependency graph. '
+          'Please check ViewModel dependency tracking configuration.',
         );
       }
     });
@@ -174,7 +180,8 @@ class DevToolsService {
   /// - Unique ID, type name, and display label
   /// - Activity status for visual styling
   ///
-  /// Each edge represents a "watches" relationship from a watcher to a ViewModel.
+  /// Each edge represents a "watches" relationship from a
+  /// watcher to a ViewModel.
   Map<String, dynamic> _getDependencyGraph() {
     final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;

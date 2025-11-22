@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:meta/meta.dart' show internal;
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -68,7 +67,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   /// - [listen]: Whether to listen for ViewModel changes
   /// - [arg]: Instance arguments containing key/tag information
   ///
-  /// Throws [StateError] if no matching ViewModel is found.
+  /// Throws [ViewModelError] if no matching ViewModel is found.
   VM _requireExistingViewModel<VM extends ViewModel>({
     bool listen = true,
     InstanceArg arg = const InstanceArg(),
@@ -87,12 +86,13 @@ class ViewModelAttacher implements ViewModelCreateInterface {
 
   /// Watches a ViewModel and rebuilds the widget when it changes.
   ///
-  /// This is the primary method for accessing ViewModels in a widget. It ensures
-  /// that the widget rebuilds whenever the ViewModel notifies its listeners.
+  /// This is the primary method for accessing ViewModels in a widget.
+  /// It ensures that the widget rebuilds whenever the ViewModel
+  /// notifies its listeners.
   ///
-  /// If the ViewModel is not already in the cache, it will be created using
-  /// the provided [factory]. The lifecycle of the ViewModel is automatically
-  /// managed and tied to the widget's lifecycle.
+  /// If the ViewModel is not already in the cache, it will be created
+  /// using the provided [factory]. The lifecycle of the ViewModel is
+  /// automatically managed and tied to the widget's lifecycle.
   ///
   /// Parameters:
   /// - [factory]: A [ViewModelFactory] required for creating the ViewModel if
@@ -100,7 +100,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///
   /// Returns the ViewModel instance.
   ///
-  /// Throws a [StateError] if the widget has been disposed.
+  /// Throws a [ViewModelError] if the widget has been disposed.
   ///
   /// Example:
   /// ```dart
@@ -165,7 +165,8 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   /// Reads a ViewModel without listening for its changes.
   ///
   /// This method is used to access a ViewModel to call its methods or read its
-  /// properties without causing the widget to rebuild when the ViewModel changes.
+  /// properties without causing the widget to rebuild when the
+  /// ViewModel changes.
   ///
   /// If the ViewModel is not already in the cache, it will be created using
   /// the provided [factory].
