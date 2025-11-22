@@ -487,7 +487,7 @@ class InstanceArg {
 
   @override
   String toString() {
-    return 'InstanceArg( key: $key,tag: $tag, binderId: $binderId)';
+    return 'InstanceArg( key: $key, tag: $tag, binderId: $binderId)';
   }
 
   InstanceArg copyWith({
