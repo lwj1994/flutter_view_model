@@ -1,3 +1,6 @@
+## 0.8.1
+- Fix: Custom `ViewModelPauseProvider` was not working properly when added late, causing pause to fail.
+
 ## 0.8.0
 - **BREAKING CHANGE**: Reworked the `ViewModel` pause/resume lifecycle to a more robust and extensible provider-based architecture.
   - Default providers `PageRoutePauseProvider`, `TickModePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app app lifecycle events and tickMode.
