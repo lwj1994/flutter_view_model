@@ -65,6 +65,7 @@ class PauseAwareController {
 
   void _subscribeToProvider(ViewModelPauseProvider provider) {
     if (_subscriptions.containsKey(provider)) return;
+    // ignore: cancel_subscriptions
     final subscription = provider.onPauseStateChanged.listen((shouldPause) {
       _handleProviderStateChange(provider, shouldPause);
     });

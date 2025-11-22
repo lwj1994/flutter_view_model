@@ -36,8 +36,9 @@ class StackPathLocator {
 
       Frame? relevantFrame;
 
-      // Skip the frames for Trace.current() and this method itself, then find the
-      // first frame that isn't from the core libraries or testing frameworks.
+      // Skip the frames for Trace.current() and this method itself,
+      // then find the first frame that isn't from the core libraries or
+      // testing frameworks.
       final candidateFrames = frames.skip(1);
 
       for (final f in candidateFrames) {
