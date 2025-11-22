@@ -1,0 +1,89 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "name": "view_model_devtools_extension",
+            "cwd": "packages/view_model_devtools_extension",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "view_model_devtools_extension (profile mode)",
+            "cwd": "packages/view_model_devtools_extension",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "view_model_devtools_extension (release mode)",
+            "cwd": "packages/view_model_devtools_extension",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "view_model",
+            "cwd": "packages/view_model",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "view_model (profile mode)",
+            "cwd": "packages/view_model",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "view_model (release mode)",
+            "cwd": "packages/view_model",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "todo_list",
+            "cwd": "example/todo_list",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "todo_list (profile mode)",
+            "cwd": "example/todo_list",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "todo_list (release mode)",
+            "cwd": "example/todo_list",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "counter",
+            "cwd": "example/counter",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "counter (profile mode)",
+            "cwd": "example/counter",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "counter (release mode)",
+            "cwd": "example/counter",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

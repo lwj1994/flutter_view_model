@@ -29,21 +29,25 @@ class PauseAwareController {
   PauseAwareController({
     required this.onWidgetPause,
     required this.onWidgetResume,
-    required this.providers,
+    required List<ViewModelPauseProvider> providers,
     required this.binderName,
     List<ViewModelPauseProvider>? disposableProviders,
   }) : _disposableProviders = disposableProviders ?? [] {
+    _providers.addAll(providers);
     _setupSubscriptions();
   }
 
   // A list of providers that determine the pause state.
-  final List<ViewModelPauseProvider> providers;
+  final List<ViewModelPauseProvider> _providers = [];
+
+  List<ViewModelPauseProvider> get providers => List.unmodifiable(_providers);
 
   // Providers that should be disposed when this controller is disposed.
   final List<ViewModelPauseProvider> _disposableProviders;
 
   // Holds subscriptions to the pause state streams of the providers.
-  final List<StreamSubscription<bool>> _subscriptions = [];
+  final Map<ViewModelPauseProvider, StreamSubscription<bool>> _subscriptions =
+      {};
 
   // Combines all provider states to determine the final pause state.
   // Returns true if the view model is currently paused.
@@ -54,10 +58,31 @@ class PauseAwareController {
 
   // Subscribes to all providers to listen for pause state changes.
   void _setupSubscriptions() {
-    for (final provider in providers) {
-      _subscriptions.add(provider.onPauseStateChanged.listen((shouldPause) {
-        _handleProviderStateChange(provider, shouldPause);
-      }));
+    for (final provider in _providers) {
+      _subscribeToProvider(provider);
+    }
+  }
+
+  void _subscribeToProvider(ViewModelPauseProvider provider) {
+    if (_subscriptions.containsKey(provider)) return;
+    final subscription = provider.onPauseStateChanged.listen((shouldPause) {
+      _handleProviderStateChange(provider, shouldPause);
+    });
+    _subscriptions[provider] = subscription;
+  }
+
+  void addProvider(ViewModelPauseProvider provider) {
+    if (_providers.contains(provider)) return;
+    _providers.add(provider);
+    _subscribeToProvider(provider);
+  }
+
+  void removeProvider(ViewModelPauseProvider provider) {
+    if (_providers.remove(provider)) {
+      final subscription = _subscriptions.remove(provider);
+      subscription?.cancel();
+      _providerPauseStates.remove(provider);
+      _reevaluatePauseState();
     }
   }
 
@@ -93,7 +118,7 @@ class PauseAwareController {
 
   /// Disposes the controller and all its subscriptions.
   void dispose() {
-    for (final sub in _subscriptions) {
+    for (final sub in _subscriptions.values) {
       sub.cancel();
     }
     _subscriptions.clear();

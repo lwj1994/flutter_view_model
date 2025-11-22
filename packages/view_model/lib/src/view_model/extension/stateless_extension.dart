@@ -19,7 +19,6 @@ mixin ViewModelStatelessMixin on StatelessWidget
       _StatelessViewModelElement(
     this,
     getViewModelBinderName: getViewModelBinderName,
-    pauseProviders: _viewModelPauseProviders,
   );
   final _stackPathLocator = StackPathLocator();
 
@@ -29,14 +28,12 @@ mixin ViewModelStatelessMixin on StatelessWidget
   /// [ViewModelPauseProvider]s. When paused, ViewModel updates are suppressed.
   bool get isPaused => _viewModelElement._pauseAwareController.isPaused;
 
-  final List<ViewModelPauseProvider> _viewModelPauseProviders = [];
-
   void addViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _viewModelPauseProviders.add(provider);
+    _viewModelElement._pauseAwareController.addProvider(provider);
   }
 
   void removeViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _viewModelPauseProviders.remove(provider);
+    _viewModelElement._pauseAwareController.removeProvider(provider);
   }
 
   /// Creates the custom Element that carries the attacher.
@@ -130,8 +127,6 @@ class _StatelessViewModelElement extends StatelessElement {
     pauseAwareController: _pauseAwareController,
   );
 
-  final List<ViewModelPauseProvider> pauseProviders;
-
   late final _appPauseProvider = AppPauseProvider();
 
   late final _pauseAwareController = PauseAwareController(
@@ -139,7 +134,6 @@ class _StatelessViewModelElement extends StatelessElement {
       onWidgetResume: _onResume,
       providers: [
         _appPauseProvider,
-        ...pauseProviders,
       ],
       disposableProviders: [
         _appPauseProvider,
@@ -147,7 +141,7 @@ class _StatelessViewModelElement extends StatelessElement {
       binderName: getViewModelBinderName);
 
   _StatelessViewModelElement(super.widget,
-      {required this.getViewModelBinderName, required this.pauseProviders});
+      {required this.getViewModelBinderName});
 
   /// Attaches the element and starts ViewModel listening.
   @override
@@ -188,6 +182,5 @@ class _StatelessViewModelElement extends StatelessElement {
     super.unmount();
     _attacher.dispose();
     _pauseAwareController.dispose();
-    pauseProviders.clear();
   }
 }

@@ -26,48 +26,52 @@ class StackPathLocator {
   /// Example output: `lib/pages/counter_page.dart:25`
   String getCurrentObjectPath() {
     if (!kDebugMode) return "";
-
-    // Return cached result if available
-    if (_cachedObjectPath != null) {
-      return _cachedObjectPath!;
-    }
-
-    final frames = Trace.current().frames;
-
-    Frame? relevantFrame;
-
-    // Skip the frames for Trace.current() and this method itself, then find the
-    // first frame that isn't from the core libraries or testing frameworks.
-    final candidateFrames = frames.skip(1);
-
-    for (final f in candidateFrames) {
-      final packageName = f.package;
-      if (f.isCore ||
-          packageName == 'flutter' ||
-          packageName == 'flutter_test' ||
-          packageName == 'test_api' ||
-          packageName == 'stack_trace' ||
-          packageName == 'view_model') {
-        continue;
+    try {
+      // Return cached result if available
+      if (_cachedObjectPath != null) {
+        return _cachedObjectPath!;
       }
-      // The first frame that isn't a core/framework/test library is the one.
-      relevantFrame = f;
-      break;
-    }
 
-    if (relevantFrame != null) {
-      final path = relevantFrame.uri.path;
-      final line = relevantFrame.line;
-      final member = relevantFrame.member ?? '';
-      // The member might be 'ClassName.methodName' or just 'functionName'.
-      // We'll take the part before the first dot to get the class/widget name.
-      final className = member.split('.').first;
-      _cachedObjectPath = '$path:$line $className';
-    } else {
-      // Fallback if a suitable frame cannot be found
-      _cachedObjectPath = "";
-    }
+      final frames = Trace.current().frames;
 
-    return _cachedObjectPath!;
+      Frame? relevantFrame;
+
+      // Skip the frames for Trace.current() and this method itself, then find the
+      // first frame that isn't from the core libraries or testing frameworks.
+      final candidateFrames = frames.skip(1);
+
+      for (final f in candidateFrames) {
+        final packageName = f.package;
+        if (f.isCore ||
+            packageName == 'flutter' ||
+            packageName == 'flutter_test' ||
+            packageName == 'test_api' ||
+            packageName == 'stack_trace' ||
+            packageName == 'view_model') {
+          continue;
+        }
+        // The first frame that isn't a core/framework/test library is the one.
+        relevantFrame = f;
+        break;
+      }
+
+      if (relevantFrame != null) {
+        final path = relevantFrame.uri.path;
+        final line = relevantFrame.line;
+        final member = relevantFrame.member ?? '';
+        // The member might be 'ClassName.methodName' or just 'functionName'.
+        // We'll take the part before the first dot to get the class/widget name.
+        final className = member.split('.').first;
+        _cachedObjectPath = '$path:$line $className';
+      } else {
+        // Fallback if a suitable frame cannot be found
+        _cachedObjectPath = "";
+      }
+
+      return _cachedObjectPath!;
+    } catch (e) {
+      //
+      return "";
+    }
   }
 }
