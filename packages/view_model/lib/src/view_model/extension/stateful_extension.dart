@@ -72,14 +72,12 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   /// [ViewModelPauseProvider]s. When paused, ViewModel updates are suppressed.
   bool get isPaused => _pauseAwareController.isPaused;
 
-  final List<ViewModelPauseProvider> _viewModelPauseProviders = [];
-
   void addViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _viewModelPauseProviders.add(provider);
+    _pauseAwareController.addProvider(provider);
   }
 
   void removeViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _viewModelPauseProviders.remove(provider);
+    _pauseAwareController.removeProvider(provider);
   }
 
   late final _routePauseProvider = PageRoutePauseProvider();
@@ -95,7 +93,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
       _appPauseProvider,
       _routePauseProvider,
       _tickModePauseProvider,
-      ..._viewModelPauseProviders,
     ],
     disposableProviders: [
       _appPauseProvider,
@@ -189,7 +186,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     super.dispose();
     attacher.dispose();
     _pauseAwareController.dispose();
-    _viewModelPauseProviders.clear();
   }
 
   void _rebuildState() {

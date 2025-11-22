@@ -6,6 +6,7 @@ import 'package:view_model/view_model.dart';
 // Define a simple ViewModel for testing
 class TestViewModel extends ChangeNotifierViewModel {
   int _count = 0;
+
   int get count => _count;
 
   void increment() {
@@ -15,7 +16,9 @@ class TestViewModel extends ChangeNotifierViewModel {
 }
 
 class TestTickerWidget extends StatefulWidget {
-  const TestTickerWidget({super.key});
+  final WidgetBuilder child;
+
+  const TestTickerWidget({super.key, required this.child});
 
   @override
   State<TestTickerWidget> createState() => _TestTickerWidgetState();
@@ -23,22 +26,11 @@ class TestTickerWidget extends StatefulWidget {
 
 class _TestTickerWidgetState extends State<TestTickerWidget>
     with ViewModelStateMixin {
-  final provider = TickModePauseProvider();
   bool tickerEnabled = true;
+
   @override
   void initState() {
     super.initState();
-    addViewModelPauseProvider(provider);
-    // _animationController = AnimationController(
-    //   vsync: this,
-    //   duration: const Duration(seconds: 1),
-    // );
-  }
-
-  @override
-  void dispose() {
-    // _animationController.dispose();
-    super.dispose();
   }
 
   @override
@@ -49,26 +41,28 @@ class _TestTickerWidgetState extends State<TestTickerWidget>
           TextButton(
             key: const Key('Toggle Ticker'),
             onPressed: () {
-              print("_TestTickerWidgetState Toggle Ticker pressed");
+              print(
+                  "_TestTickerWidgetState onPressed tickerEnabled = ${!tickerEnabled}");
               setState(() => tickerEnabled = !tickerEnabled);
             },
             child: const Text('Toggle Ticker'),
           ),
-          TickerMode(enabled: tickerEnabled, child: const SubWidget()),
+          TickerMode(enabled: tickerEnabled, child: widget.child.call(context)),
         ],
       ),
     );
   }
 }
 
-class SubWidget extends StatefulWidget {
-  const SubWidget({super.key});
+class SubStatefulWidget extends StatefulWidget {
+  const SubStatefulWidget({super.key});
 
   @override
-  State<SubWidget> createState() => _SubWidgetState();
+  State<SubStatefulWidget> createState() => _SubStatefulWidgetState();
 }
 
-class _SubWidgetState extends State<SubWidget> with ViewModelStateMixin {
+class _SubStatefulWidgetState extends State<SubStatefulWidget>
+    with ViewModelStateMixin {
   late final TestViewModel viewModel;
 
   @override
@@ -76,7 +70,7 @@ class _SubWidgetState extends State<SubWidget> with ViewModelStateMixin {
     super.initState();
     final notifier = TickerMode.getNotifier(context);
     notifier.addListener(() {
-      print("_SubWidgetState TickerMode changed to ${notifier.value}");
+      print("_SubWidgetState TickerMode = ${notifier.value}");
     });
     viewModel = watchViewModel(
         factory: DefaultViewModelFactory(builder: () => TestViewModel()));
@@ -89,7 +83,6 @@ class _SubWidgetState extends State<SubWidget> with ViewModelStateMixin {
         Text('Count: ${viewModel.count}'),
         TextButton(
           onPressed: () {
-            print("_SubWidgetState Increment pressed");
             viewModel.increment();
           },
           child: const Text('Increment'),
@@ -99,21 +92,50 @@ class _SubWidgetState extends State<SubWidget> with ViewModelStateMixin {
   }
 }
 
+// Widget for StatelessWidget test
+class StatelessTestWidget extends StatelessWidget with ViewModelStatelessMixin {
+  StatelessTestWidget({super.key});
+
+  final _tickerModeProvider = TickModePauseProvider();
+
+  @override
+  Widget build(BuildContext context) {
+    print("StatelessTestWidget TickerMode = ${TickerMode.of(context)}");
+    _tickerModeProvider.subscribe(TickerMode.getNotifier(context));
+    addViewModelPauseProvider(_tickerModeProvider);
+    final viewModel = watchViewModel<TestViewModel>(
+        factory: DefaultViewModelFactory(builder: () => TestViewModel()));
+    return Column(
+      children: [
+        Text('Count: ${viewModel.count}'),
+        ElevatedButton(
+          onPressed: () => viewModel.increment(),
+          child: const Text('Increment'),
+        ),
+      ],
+    );
+  }
+}
+
 void main() {
-  group('TickMode Widget with ViewModel', () {
+  group('Pause Providers', () {
     setUp(() {
-      TestWidgetsFlutterBinding.ensureInitialized();
       ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
+
     testWidgets('ViewModel does not update when TickerMode is disabled',
         (tester) async {
-      await tester.pumpWidget(const TestTickerWidget());
+      await tester.pumpWidget(TestTickerWidget(
+        child: (c) {
+          return const SubStatefulWidget();
+        },
+      ));
 
       // Initial state
       expect(find.text('Count: 0'), findsOneWidget);
       // Check that the viewmodel is not paused initially
       final subWidgetState =
-          tester.state<_SubWidgetState>(find.byType(SubWidget));
+          tester.state<_SubStatefulWidgetState>(find.byType(SubStatefulWidget));
       expect(subWidgetState.isPaused, false);
 
       // Disable ticker
@@ -144,6 +166,38 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('Count: ${subWidgetState.viewModel._count}'),
           findsOneWidget);
+    });
+
+    testWidgets('SubStatelessWidget pause', (tester) async {
+      final StatelessTestWidget w = StatelessTestWidget(
+        key: const ValueKey("test"),
+      );
+      await tester.pumpWidget(TestTickerWidget(child: (c) {
+        return w;
+      }), duration: const Duration(seconds: 1));
+      // Initial state
+      expect(find.text('Count: 0'), findsOneWidget);
+      // Check that the viewmodel is not paused initially
+      expect(w.isPaused, false);
+
+      // Disable ticker
+      await tester.tap(find.byKey(const Key('Toggle Ticker')));
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      expect(w.isPaused, true);
+      await tester.tap(find.text('Increment'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(ViewModel.readCached<TestViewModel>()._count, 1);
+      expect(find.text('Count: 0'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('Toggle Ticker')));
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      expect(find.text('Count: 1'), findsOneWidget);
+
+      await tester.tap(find.text('Increment'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Count: 2'), findsOneWidget);
+
+      // print("widget.isPaused = ${widget.isPaused}");
     });
   });
 }
