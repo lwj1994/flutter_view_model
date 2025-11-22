@@ -230,31 +230,16 @@ class Reducer<S> {
 /// }
 /// ```
 class ViewModelError extends Error {
-  /// A human-readable description of the error.
-  final String message;
+  final Object? message;
 
-  /// The original error object that caused this ViewModel error.
-  final Object? error;
+  /// Creates a ViewModel error with the provided [message].
+  ViewModelError([this.message]);
 
-  /// The stack trace at the point where the error occurred.
-  final StackTrace? stackTrace;
-
-  /// Creates a new ViewModel error.
-  ///
-  /// Parameters:
-  /// - [message]: A descriptive error message
-  /// - [error]: The original error object (optional)
-  /// - [stackTrace]: The stack trace where the error occurred (optional)
-  ViewModelError({
-    required this.message,
-    this.error,
-    this.stackTrace,
-  });
-
-  @override
   String toString() {
-    return 'ViewModelError{message: $message, error: $error, '
-        'stackTrace: $stackTrace}';
+    if (message != null) {
+      return "ViewModel error: ${Error.safeToString(message)}";
+    }
+    return "ViewModel error";
   }
 }
 

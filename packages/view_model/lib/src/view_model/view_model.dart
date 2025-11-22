@@ -219,7 +219,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     );
 
     if (vm.isDisposed) {
-      throw ViewModelError(message: "$T is disposed");
+      throw ViewModelError("$T is disposed");
     }
     return vm;
   }
@@ -321,7 +321,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   T readViewModel<T extends ViewModel>({
     required ViewModelFactory<T> factory,
   }) {
-    if (isDisposed) throw ViewModelError(message: "$T is disposed");
+    if (isDisposed) throw ViewModelError("$T is disposed");
     return dependencyHandler.getViewModel<T>(
       factory: factory,
       listen: false,
@@ -334,7 +334,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     Object? key,
     Object? tag,
   }) {
-    if (isDisposed) throw ViewModelError(message: "$T is disposed");
+    if (isDisposed) throw ViewModelError("$T is disposed");
     return dependencyHandler.getViewModel<T>(
       listen: false,
       key: key,
@@ -345,7 +345,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   @protected
   @override
   void recycleViewModel<T extends ViewModel>(T viewModel) {
-    if (isDisposed) throw ViewModelError(message: "$T is disposed");
+    if (isDisposed) throw ViewModelError("$T is disposed");
     dependencyHandler.recycleViewModel(viewModel);
   }
 
@@ -384,7 +384,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   T watchViewModel<T extends ViewModel>({
     required ViewModelFactory<T> factory,
   }) {
-    if (isDisposed) throw ViewModelError(message: "$T is disposed");
+    if (isDisposed) throw ViewModelError("$T is disposed");
     final vm = dependencyHandler.getViewModel<T>(
       factory: factory,
       listen: true,
@@ -410,7 +410,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     Object? key,
     Object? tag,
   }) {
-    if (isDisposed) throw ViewModelError(message: "$T is disposed");
+    if (isDisposed) throw ViewModelError("$T is disposed");
     final vm = dependencyHandler.getViewModel<T>(
       key: key,
       tag: tag,

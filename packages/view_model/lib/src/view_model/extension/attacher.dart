@@ -10,7 +10,10 @@ import 'package:view_model/src/view_model/model.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
-///
+/// A class that attaches a ViewModel to a widget's lifecycle, handling its
+/// creation, disposal, and dependency management. It allows widgets to interact
+/// with ViewModels, listen for state changes, and manage their lifecycle
+/// automatically.
 class ViewModelAttacher implements ViewModelCreateInterface {
   bool _dispose = false;
   final Function() rebuildState;
