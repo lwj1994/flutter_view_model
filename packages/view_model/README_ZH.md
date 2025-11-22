@@ -190,7 +190,7 @@ void dispose() {
 ### 暂停/恢复 生命周期
 
 暂停/恢复生命周期由 `ViewModelPauseProvider` 管理。默认情况下，
-`PageRoutePauseProvider`、`TickModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理暂停/恢复。
+`PageRoutePauseProvider`、`TickerModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理暂停/恢复。
 
 ## 详细参数说明
 

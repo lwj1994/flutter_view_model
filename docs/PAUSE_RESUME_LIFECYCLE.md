@@ -23,7 +23,7 @@ The core components are:
 By default, `ViewModelStateMixin` (for `StatefulWidget`) automatically sets up a `PauseAwareController` with three standard providers:
 -   **`PageRoutePauseProvider`**: Uses `RouteAware` to pause the `ViewModel` when a new route is pushed on top of its widget or when the widget's route is popped.
 -   **`AppPauseLifecycleProvider`**: Uses `WidgetsBindingObserver` to pause the `ViewModel` when the entire application is sent to the background.
--   **`TickModePauseProvider`**: Automatically pauses the `ViewModel` when the widget is in a hidden state within a `TabBarView` or `PageView` (controlled by `TickerMode`).
+-   **`TickerModePauseProvider`**: Automatically pauses the `ViewModel` when the widget is in a hidden state within a `TabBarView` or `PageView` (controlled by `TickerMode`).
 
 `ViewModelStatelessMixin` (for `StatelessWidget`) only includes the **`AppPauseLifecycleProvider`** by default.
 
@@ -41,7 +41,7 @@ MaterialApp(
 With this setup, any `ViewModel` associated with a route (e.g., a full-screen page) will automatically pause when it's no longer visible and resume when it comes back into view. This covers:
 1.  **Navigation changes**: Pushing/popping routes.
 2.  **App lifecycle changes**: App going into the background.
-3.  **Tab switching**: Switching tabs in a `TabBarView` or pages in a `PageView` (handled automatically by `TickModePauseProvider`).
+3.  **Tab switching**: Switching tabs in a `TabBarView` or pages in a `PageView` (handled automatically by `TickerModePauseProvider`).
 
 ## Customizing the Lifecycle (Advanced)
 
