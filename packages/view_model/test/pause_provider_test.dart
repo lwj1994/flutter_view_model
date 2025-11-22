@@ -1,99 +1,149 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/view_model.dart';
+
+// Define a simple ViewModel for testing
+class TestViewModel extends ChangeNotifierViewModel {
+  int _count = 0;
+  int get count => _count;
+
+  void increment() {
+    _count++;
+    notifyListeners();
+  }
+}
+
+class TestTickerWidget extends StatefulWidget {
+  const TestTickerWidget({super.key});
+
+  @override
+  State<TestTickerWidget> createState() => _TestTickerWidgetState();
+}
+
+class _TestTickerWidgetState extends State<TestTickerWidget>
+    with ViewModelStateMixin {
+  final provider = TickModePauseProvider();
+  bool tickerEnabled = true;
+  @override
+  void initState() {
+    super.initState();
+    addViewModelPauseProvider(provider);
+    // _animationController = AnimationController(
+    //   vsync: this,
+    //   duration: const Duration(seconds: 1),
+    // );
+  }
+
+  @override
+  void dispose() {
+    // _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Column(
+        children: [
+          TextButton(
+            key: const Key('Toggle Ticker'),
+            onPressed: () {
+              print("_TestTickerWidgetState Toggle Ticker pressed");
+              setState(() => tickerEnabled = !tickerEnabled);
+            },
+            child: const Text('Toggle Ticker'),
+          ),
+          TickerMode(enabled: tickerEnabled, child: const SubWidget()),
+        ],
+      ),
+    );
+  }
+}
+
+class SubWidget extends StatefulWidget {
+  const SubWidget({super.key});
+
+  @override
+  State<SubWidget> createState() => _SubWidgetState();
+}
+
+class _SubWidgetState extends State<SubWidget> with ViewModelStateMixin {
+  late final TestViewModel viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    final notifier = TickerMode.getNotifier(context);
+    notifier.addListener(() {
+      print("_SubWidgetState TickerMode changed to ${notifier.value}");
+    });
+    viewModel = watchViewModel(
+        factory: DefaultViewModelFactory(builder: () => TestViewModel()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('Count: ${viewModel.count}'),
+        TextButton(
+          onPressed: () {
+            print("_SubWidgetState Increment pressed");
+            viewModel.increment();
+          },
+          child: const Text('Increment'),
+        ),
+      ],
+    );
+  }
+}
 
 void main() {
-  group('TickModePauseProvider', () {
-    late TickModePauseProvider provider;
-    late ValueNotifier<bool> notifier;
-
+  group('TickMode Widget with ViewModel', () {
     setUp(() {
-      provider = TickModePauseProvider();
-      notifier = ValueNotifier<bool>(true);
+      TestWidgetsFlutterBinding.ensureInitialized();
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
+    testWidgets('ViewModel does not update when TickerMode is disabled',
+        (tester) async {
+      await tester.pumpWidget(const TestTickerWidget());
 
-    tearDown(() {
-      provider.dispose();
-      notifier.dispose();
-    });
+      // Initial state
+      expect(find.text('Count: 0'), findsOneWidget);
+      // Check that the viewmodel is not paused initially
+      final subWidgetState =
+          tester.state<_SubWidgetState>(find.byType(SubWidget));
+      expect(subWidgetState.isPaused, false);
 
-    test('should emit false (resume) when subscribed with true', () async {
-      bool? isPaused;
-      final subscription = provider.onPauseStateChanged.listen((event) {
-        isPaused = event;
-      });
+      // Disable ticker
+      await tester.tap(find.byKey(const Key('Toggle Ticker')));
+      await tester.pump(const Duration(seconds: 1));
 
-      provider.subscribe(notifier);
+      // Check that the viewmodel is paused
+      expect(subWidgetState.isPaused, true);
 
-      // Wait for stream to emit
-      await Future.delayed(Duration.zero);
+      // Try to increment, should not update
+      await tester.tap(find.text('Increment'));
+      await tester.pump();
+      expect(find.text('Count: 0'), findsOneWidget);
+      // Check that the viewmodel is not paused anymore
+      print("subWidgetState.isPaused = ${subWidgetState.isPaused}");
+      expect(subWidgetState.isPaused, true);
 
-      expect(isPaused, isFalse);
-      await subscription.cancel();
-    });
+      // Enable ticker
+      await tester.tap(find.byKey(const Key('Toggle Ticker')));
+      await tester.pump();
 
-    test('should emit true (pause) when subscribed with false', () async {
-      notifier.value = false;
-      bool? isPaused;
-      final subscription = provider.onPauseStateChanged.listen((event) {
-        isPaused = event;
-      });
+      // Check that the viewmodel is not paused anymore
+      print("subWidgetState.isPaused = ${subWidgetState.isPaused}");
+      expect(subWidgetState.isPaused, false);
 
-      provider.subscribe(notifier);
-
-      // Wait for stream to emit
-      await Future.delayed(Duration.zero);
-
-      expect(isPaused, isTrue);
-      await subscription.cancel();
-    });
-
-    test('should emit events when notifier value changes', () async {
-      bool? isPaused;
-      final subscription = provider.onPauseStateChanged.listen((event) {
-        isPaused = event;
-      });
-
-      provider.subscribe(notifier);
-      await Future.delayed(Duration.zero);
-      expect(isPaused, isFalse);
-
-      notifier.value = false;
-      await Future.delayed(Duration.zero);
-      expect(isPaused, isTrue);
-
-      notifier.value = true;
-      await Future.delayed(Duration.zero);
-      expect(isPaused, isFalse);
-
-      await subscription.cancel();
-    });
-
-    test('should handle resubscription', () async {
-      final notifier2 = ValueNotifier<bool>(false);
-      bool? isPaused;
-      final subscription = provider.onPauseStateChanged.listen((event) {
-        isPaused = event;
-      });
-
-      provider.subscribe(notifier);
-      await Future.delayed(Duration.zero);
-      expect(isPaused, isFalse);
-
-      provider.subscribe(notifier2);
-      await Future.delayed(Duration.zero);
-      expect(isPaused, isTrue);
-
-      notifier.value = false; // Should be ignored
-      await Future.delayed(Duration.zero);
-      expect(isPaused, isTrue);
-
-      notifier2.value = true;
-      await Future.delayed(Duration.zero);
-      expect(isPaused, isFalse);
-
-      await subscription.cancel();
-      notifier2.dispose();
+      // Try to increment, should update now
+      await tester.tap(find.text('Increment'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Count: ${subWidgetState.viewModel._count}'),
+          findsOneWidget);
     });
   });
 }

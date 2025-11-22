@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/v4.dart';
+// ignore: unnecessary_import
+import 'package:meta/meta.dart' show internal;
 import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
