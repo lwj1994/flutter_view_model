@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 
 /// A controller that manages pause/resume lifecycle for a ViewModel, based on a
@@ -86,12 +85,8 @@ class PauseAwareController {
   // Updates the view model's pause/resume state and triggers callbacks.
   void _updatePauseState() {
     if (_isPausedByProviders) {
-      viewModelLog(
-          '${binderName()} [PageRouteAwareController] -> Calling onPause()');
       onWidgetPause();
     } else {
-      viewModelLog(
-          '${binderName()} [PageRouteAwareController] -> Calling onResume()');
       onWidgetResume();
     }
   }
