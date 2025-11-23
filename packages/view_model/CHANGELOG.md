@@ -1,3 +1,7 @@
+## 0.8.2
+- Update docs
+
+
 ## 0.8.1
 - Fix: Custom `ViewModelPauseProvider` was not working properly when added late, causing pause to fail.
 
