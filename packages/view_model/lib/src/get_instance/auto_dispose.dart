@@ -200,7 +200,7 @@ class AutoDisposeInstanceController {
             .dependencyHandler
             .removeDependencyResolver(dependencyResolver);
       }
-      e.removeWatcher(_binderId);
+      e.removeBinder(_binderId);
     }
     _instanceNotifiers.clear();
   }

@@ -47,7 +47,7 @@ void main() {
       vm.recycle();
 
       await Future.delayed(const Duration(seconds: 1));
-      assert(vm.watchIds.isEmpty);
+      assert(vm.binderIds.isEmpty);
       assert(vmIns.isDisposed);
     });
 

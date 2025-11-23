@@ -132,7 +132,7 @@ class Store<T> {
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
       final newWatcher =
-          watchId != null && !notifier.watchIds.contains(watchId);
+          watchId != null && !notifier.binderIds.contains(watchId);
       if (newWatcher) {
         notifier.addNewWatcher(watchId);
       }
@@ -203,7 +203,7 @@ class InstanceHandle<T> with ChangeNotifier {
   final InstanceArg arg;
 
   /// List of watcher IDs currently watching this instance.
-  final List<String> watchIds = List.empty(growable: true);
+  final List<String> binderIds = List.empty(growable: true);
 
   /// Factory function for creating new instances of this type.
   final T Function() factory;
@@ -242,11 +242,11 @@ class InstanceHandle<T> with ChangeNotifier {
   ///
   /// Parameters:
   /// - [id]: The watcher ID to add (ignored if null or already exists)
-  void _addWatcher(String? id) {
-    if (watchIds.contains(id) || id == null) return;
-    watchIds.add(id);
+  void _addBinder(String? id) {
+    if (binderIds.contains(id) || id == null) return;
+    binderIds.add(id);
     if (_instance is InstanceLifeCycle) {
-      (_instance as InstanceLifeCycle).onAddWatcher(arg, id);
+      (_instance as InstanceLifeCycle).onAddBinder(arg, id);
     }
   }
 
@@ -258,13 +258,13 @@ class InstanceHandle<T> with ChangeNotifier {
   ///
   /// Parameters:
   /// - [id]: The watcher ID to remove
-  void removeWatcher(String id) {
-    if (watchIds.remove(id)) {
+  void removeBinder(String id) {
+    if (binderIds.remove(id)) {
       if (_instance is InstanceLifeCycle) {
-        (_instance as InstanceLifeCycle).onRemoveWatcher(arg, id);
+        (_instance as InstanceLifeCycle).onRemoveBinder(arg, id);
       }
     }
-    if (watchIds.isEmpty) {
+    if (binderIds.isEmpty) {
       recycle();
     }
   }
@@ -311,7 +311,7 @@ class InstanceHandle<T> with ChangeNotifier {
 
   @override
   String toString() {
-    return "InstanceHandle<$T>(index=$index, $arg, watchIds=$watchIds)";
+    return "InstanceHandle<$T>(index=$index, $arg, watchIds=$binderIds)";
   }
 
   /// Handles instance creation lifecycle.
@@ -326,7 +326,7 @@ class InstanceHandle<T> with ChangeNotifier {
     if (_instance is InstanceLifeCycle) {
       (_instance as InstanceLifeCycle).onCreate(arg);
     }
-    _addWatcher(arg.binderId);
+    _addBinder(arg.binderId);
   }
 
   /// Adds a new watcher to this instance.
@@ -336,7 +336,7 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Parameters:
   /// - [id]: The watcher ID to add
   void addNewWatcher(String id) {
-    _addWatcher(id);
+    _addBinder(id);
   }
 
   /// Safely calls the instance's disposal method.
@@ -361,7 +361,7 @@ class InstanceHandle<T> with ChangeNotifier {
   void onDispose() {
     _tryCallInstanceDispose();
     _instance = null;
-    watchIds.clear();
+    binderIds.clear();
   }
 }
 
@@ -399,15 +399,15 @@ abstract interface class InstanceLifeCycle {
   ///
   /// Parameters:
   /// - [arg]: Instance arguments
-  /// - [newWatchId]: ID of the new watcher
-  void onAddWatcher(InstanceArg arg, String newWatchId);
+  /// - [newBinderId]: ID of the new watcher
+  void onAddBinder(InstanceArg arg, String newBinderId);
 
   /// Called when a watcher stops watching this ViewModel.
   ///
   /// Parameters:
   /// - [arg]: Instance arguments
-  /// - [removedWatchId]: ID of the removed watcher
-  void onRemoveWatcher(InstanceArg arg, String removedWatchId);
+  /// - [removedBinderId]: ID of the removed watcher
+  void onRemoveBinder(InstanceArg arg, String removedBinderId);
 
   /// Called when the ViewModel instance is being disposed.
   ///
