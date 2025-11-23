@@ -1,6 +1,8 @@
 <p align="center">
-  <img src="https://youke1.picui.cn/s1/2025/10/17/68f20115693e6.png" alt="ViewModel Logo" height="96" />
+  <img src="https://lwjlol-images.oss-cn-beijing.aliyuncs.com/logo.png" alt="ViewModel Logo" height="96" />
 </p>
+
+
 
 # view_model
 
@@ -8,25 +10,55 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[ChangeLog](CHANGELOG.md)
+[ChangeLog](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md)
 
-[English Doc](README.md) | [中文文档](README_ZH.md)
+[English Doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README_ZH.md)
 
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
 > the [view_model](https://pub.dev/packages/view_model) package to me.
 
 ---
+
+- [Design Philosophy](#design-philosophy)
+- [Quick Start](#quick-start)
+- [Reuse One Instance](#reuse-one-instance)
+- [Basic Usage](#basic-usage)
+  - [Adding Dependencies](#adding-dependencies)
+  - [Creating a ViewModel](#creating-a-viewmodel)
+  - [Creating a ViewModelFactory](#creating-a-viewmodelfactory)
+    - [Custom ViewModelFactory](#custom-ViewModelFactory)
+    - [DefaultViewModelFactory Quick Factory](#defaultviewmodelfactory-quick-factory)
+  - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
+    - [Alternative: ViewModelBuilder (no mixin required)](#alternative-viewmodelbuilder-no-mixin-required)
+    - [Listening to a cached instance: CachedViewModelBuilder](#listening-to-a-cached-instance-cachedviewmodelbuilder)
+  - [Side-effects with listeners](#side-effects-with-listeners)
+- [ViewModel Lifecycle](#viewmodel-lifecycle)
+- [Initialization](#initialization)  
+- [Stateful ViewModel (`StateViewModel<S>`)](#stateful-viewmodel-stateviewmodels)
+  - [Defining the State Class](#defining-the-state-class)
+  - [Creating a Stateful ViewModel](#creating-a-stateful-viewmodel)
+  - [Creating a ViewModelFactory](#creating-a-viewmodelfactory-1)
+  - [Using Stateful ViewModel in Widgets](#using-stateful-viewmodel-in-widgets)
+  - [Side-effect Listeners](#side-effect-listeners)
+  - [Fine-Grained Rebuilds with `StateViewModelValueWatcher`](#fine-grained-rebuilds-with-stateviewmodelvaluewatcher)
+- [ViewModel → ViewModel dependencies](#viewmodel--viewmodel-dependencies)  
+- [Pause/Resume Lifecycle](#pauseresume-lifecycle)  
+- [ValueLevel Rebuilds](#valuelevel-rebuilds)  
+  -[ValueListenableBuilder](#valueListenableBuilder)
+  -[ObserverBuilder](#observerBuilder)
+  -[StateViewModelValueWatcher](#stateViewModelValueWatcher)
+- [DevTools Extension](#devtools-extension)  
+
+---
+
 ## Design Philosophy
 
-**ViewModel is designed specifically for UI logic and interaction, not just data flow.**
+The goal of `view_model` is **simplicity**. It is designed exclusively to serve the `Widget` (the View) and avoids other complex features.
 
-Unlike general-purpose state management solutions (like Riverpod, which treats everything as a Provider), `view_model` focuses on the **Presentation Layer**.
+In a Clean Architecture, the ViewModel acts as the **Presentation Layer**, bridging the Data Layer and the UI Layer. Its role is to hold UI state and handle UI logic, not to perform complex data manipulation.
 
-- **For UI**: It manages the lifecycle of the UI (Pause/Resume), handles user interactions, and converts data into UI state.
-- **Not for Data**: Complex data caching, combination, and transformation should be handled by the **Repository/Data Layer** (where Riverpod/Signals shines).
-- **Collaboration**: ViewModels depend on each other to "coordinate actions" (e.g., "User logged out -> Clear Cart UI"), rather than just "deriving data".
-
-Use `view_model` to build a smart, lifecycle-aware UI layer, and leave the heavy data lifting to the data layer.
+- **For the UI Layer**: It manages the `Widget`'s lifecycle (including automatic Pause/Resume), handles user interactions, holds state ready for the UI to consume, and provides a convenient reuse mechanism.
+- **Not for the Data Layer**: Complex data caching, combination, and transformation should be handled by the **Repository/Data Layer**. This is where tools like **Riverpod** or **Signals** can be powerful. For example, you can use Signals in your data layer for efficient data processing, and the ViewModel will consume the final, UI-ready data.
 
 ---
 
@@ -37,7 +69,6 @@ Use `view_model` to build a smart, lifecycle-aware UI layer, and leave the heavy
 - Global: `ViewModel.readCached<T>() / maybeReadCached<T>()`
 - Recycle: `recycleViewModel(vm)`
 - Effects: `listen(onChanged)` / `listenState` / `listenStateSelect`
-- Dependencies: `watchCachedViewModel<T>()` / `readCachedViewModel<T>()` in ViewModel
 
 ## Reuse One Instance
 
@@ -72,13 +103,12 @@ First, add `view_model` to your project's `pubspec.yaml` file:
 dependencies:
   flutter:
     sdk: flutter
-  view_model: ^0.7.0 # Please use the latest version
+  view_model: ^0.8.1 # Please use the latest version
 ```
 
 ### Creating a ViewModel
 
-Inherit `ViewModel` to define business logic. Treat fields as state and call
-`notifyListeners()` to trigger UI updates.
+Inherit or mixin `ViewModel` to define business logic. Treat fields as state and call `notifyListeners()` or `update(block)` to trigger UI updates. The `update(block)` is recommended to avoid forgetting to call `notifyListeners()`.
 
 ```dart
 import 'package:view_model/view_model.dart';
@@ -131,10 +161,78 @@ class MySimpleViewModelFactory with ViewModelFactory<MySimpleViewModel> {
 }
 ```
 
+#### Custom ViewModelFactory
+Factory creates and identifies instances. Use `key()` to share one instance,
+use `tag()` to group/discover.
+
+| Method/Property | Type      | Optional          | Description                                                                                                                                            |
+| --------------- | --------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `build()`       | `T`       | ❌ Must implement | The factory method to create a ViewModel instance. Typically, constructor parameters are passed here.                                                  |
+| `key()`         | `Object?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing). |
+| `tag()`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's used by find ViewModel by `watchViewModel(tag:tag)`.                            |
+
+> **Note**: If you use a custom key object, implement `==` and `hashCode` to
+> ensure correct cache lookup.
+
+```dart
+class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+  // Your custom parameters, usually passed to MyViewModel
+  final String initialName;
+
+  MyViewModelFactory({required this.initialName});
+
+  @override
+  MyViewModel build() {
+    return MyViewModel(name: initialName);
+  }
+
+  /// The key for sharing the ViewModel. The key is unique, and only one ViewModel instance will be created for the same key.
+  /// If the key is null, no sharing will occur.
+  @override
+  Object? key() => "user-profile";
+}
+```
+
+#### DefaultViewModelFactory Quick Factory
+
+
+For simple cases, use `DefaultViewModelFactory<T>` to avoid writing a custom
+factory.
+
+
+```dart
+
+final factory = DefaultViewModelFactory<MyViewModel>(
+  builder: () => MyViewModel(),
+  isSingleton: true, // optional
+);
+```
+
+- `builder`: Function to create the ViewModel instance.
+- `key`: Custom key for singleton instance sharing.
+- `tag`: Custom tag for identifying the ViewModel.
+- `isSingleton`: Whether to use singleton mode. This is just a convenient way to set a unique key for you. Note that the priority is lower than the key parameter.
+
+```dart
+
+final factory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+final sharedFactory = DefaultViewModelFactory<CounterViewModel>(
+  builder: () => CounterViewModel(),
+  key: 'global-counter',
+);
+```
+
+---
+
 ### Using ViewModel in Widgets
 
 Mix `ViewModelStateMixin` into your `State` and call `watchViewModel` to bind
 and rebuild when `notifyListeners()` is invoked. Lifecycle is handled for you.
+
+> **Note**: While `ViewModelStatelessMixin` is also supported for `StatelessWidget`, it is not recommended. It's best to avoid placing non-UI-related logic, inside the `build` method to keep it clean and focused on rendering.
+
 
 ```dart
 import 'package:flutter/material.dart';
@@ -261,99 +359,156 @@ void dispose() {
 }
 ```
 
-### Visibility pause/resume
+## ViewModel Lifecycle
 
-[doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
+> [!IMPORTANT]
+> Both `watch` (e.g., `watchViewModel`) and `read` (e.g., `readViewModel`) APIs will create a binding and increment the reference count. The `ViewModel` is disposed only when all bindings are removed.
 
-### Pause/Resume Lifecycle
+The lifecycle of a `ViewModel` is managed automatically based on a **reference counting** mechanism. This ensures that a `ViewModel` instance is kept alive as long as it is being used by at least one widget and is automatically disposed of when it's no longer needed, preventing memory leaks.
 
-The pause/resume lifecycle is managed by `ViewModelPauseProvider`s. By default,
-`PageRoutePauseProvider`, `TickModePauseProvider` and `AppPauseProvider` handle pausing/resuming based
-on route visibility and app lifecycle events, respectively.
+#### How It Works: Binder Counting
 
-## Detailed Parameter Explanation
+The system keeps track of how many widgets are "binding" a `ViewModel` instance.
 
-### ViewModelFactory
+1.  **Creation & First Binder**: When `WidgetA` creates or binds a `ViewModel` (`VMA`) for the first time (e.g., using `watchViewModel`), the binder count for `VMA` becomes 1.
+2.  **Reuse & More Binder**: If `WidgetB` reuses the same `VMA` instance (e.g., by using `watchCachedViewModel` with the same key), the binder count for `VMA` increments to 2.
+3.  **Disposing a Binder**: When `WidgetA` is disposed, it stops watching `VMA`, and the binder count decrements to 1. At this point, `VMA` is **not** disposed because `WidgetB` is still using it.
+4.  **Final Disposal**: Only when `WidgetB` is also disposed does the binder count for `VMA` drop to 0. At this moment, the `ViewModel` is considered unused, and its `dispose()` method is called automatically.
 
-Factory creates and identifies instances. Use `key()` to share one instance,
-use `tag()` to group/discover.
+This mechanism is fundamental for sharing `ViewModel`s across different parts of your widget tree, ensuring state persistence as long as it's relevant to the UI.
 
-| Method/Property | Type      | Optional          | Description                                                                                                                                            |
-| --------------- | --------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `build()`       | `T`       | ❌ Must implement | The factory method to create a ViewModel instance. Typically, constructor parameters are passed here.                                                  |
-| `key()`         | `Object?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing). |
-| `tag()`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's used by find ViewModel by `watchViewModel(tag:tag)`.                            |
+```mermaid
+graph TD
+    subgraph "Time 1: WidgetA creates VMA"
+        A[WidgetA] -- binds --> VMA1(VMA<br/>Binders: 1)
+    end
 
-> **Note**: If you use a custom key object, implement `==` and `hashCode` to
-> ensure correct cache lookup.
+    subgraph "Time 2: WidgetB reuses VMA"
+        A -- binds --> VMA2(VMA<br/>Binders: 2)
+        B[WidgetB] -- binds --> VMA2
+    end
+
+    subgraph "Time 3: WidgetA is disposed"
+        A_gone((WidgetA disposed))
+        B -- binds --> VMA3(VMA<br/>Binders: 1)
+    end
+
+    subgraph "Time 4: WidgetB is disposed"
+        B_gone((WidgetB disposed))
+        VMA_gone((VMA disposed))
+    end
+
+    VMA1 --> VMA2 --> VMA3 --> VMA_gone
+```
+
+
+## Initialization
+
+Before using the `view_model` package, it's recommended to perform a one-time initialization in your `main` function. This allows you to configure global settings for the entire application.
 
 ```dart
-class MyViewModelFactory with ViewModelFactory<MyViewModel> {
-  // Your custom parameters, usually passed to MyViewModel
-  final String initialName;
-
-  MyViewModelFactory({required this.initialName});
-
-  @override
-  MyViewModel build() {
-    return MyViewModel(name: initialName);
-  }
-
-  /// The key for sharing the ViewModel. The key is unique, and only one ViewModel instance will be created for the same key.
-  /// If the key is null, no sharing will occur.
-  @override
-  Object? key() => "user-profile";
+void main() {
+  // Configure ViewModel global settings
+  ViewModel.initialize(
+    config: ViewModelConfig(
+      // Enable or disable logging for all ViewModels.
+      // It's useful for debugging state changes and lifecycle events.
+      // Defaults to false.
+      isLoggingEnabled: true,
+      
+      // Provide a custom global function to determine if two states are equal.
+      // This is used by `StateViewModel` and `listenStateSelect` with selectors to decide
+      // whether to trigger a rebuild.
+      // If not set, `StateViewModel` uses `identical()` and `listenStateSelect` uses `==`.
+      equals: (previous, current) {
+        // Example: Use a custom `isEqual` method for deep comparison
+        return identical(previous, current);
+      },
+    ),
+    // You can also register global lifecycle observers here
+    lifecycles: [
+      GlobalLifecycleObserver(),
+    ],
+  );
+  
+  runApp(const MyApp());
 }
 ```
 
-### ViewModel Lifecycle
 
-- `watch*` / `read*` bind ViewModel to a State
-- When no widget watchers remain, the instance auto‑disposes
 
-### ViewModel → ViewModel dependencies
+**Configuration Options:**
 
-Inside a ViewModel, use `readCachedViewModel` (non‑reactive) or
-`watchCachedViewModel` (reactive) to access other ViewModels.
+- `isLoggingEnabled`: A `bool` that toggles logging for all ViewModel instances. When enabled, you'll see outputs for state changes, creations, and disposals, which is helpful during development.
+- `equals`: A function `bool Function(dynamic previous, dynamic current)` that provides a global strategy for state comparison. It affects:
+    - `StateViewModel`: Determines if the new state is the same as the old one.
+    - `ViewModel.listen`: Decides if the selected value has changed.
+- `lifecycles`: A list of `ViewModelLifecycle` observers that listen to lifecycle events (e.g., `onCreate`, `onDispose`) for all ViewModels. This is useful for global logging, analytics, or other cross-cutting concerns.
 
-**Key Concept**: Although it looks like ViewModels depend on each other, they actually all attach to the **same Widget's State**. The dependency structure is **flat** (only 1 level deep) - all ViewModels are managed by the same `State` object. ViewModels only have **listening relationships** with each other, not nested dependencies.
-
-- **Lifecycle**: When `HostVM` accesses `SubVM` via `watchCachedViewModel`, both attach to the same Widget `State`.
-- **Cleanup**: When the `State` is disposed, all attached ViewModels are disposed together (if no other widgets watch them).
-- **Coordination**: ViewModels listen to each other to coordinate actions, staying in the same UI layer.
-
+### Goloabl ViewModel Lifecycle
 ```dart
-class UserProfileViewModel extends ViewModel {
-  void loadData() {
-    // One-time access, no listening
-    final authVM = readCachedViewModel<AuthViewModel>();
-    if (authVM?.isLoggedIn == true) {
-      _fetchProfile(authVM!.userId);
-    }
-  }
+/// Abstract interface for observing ViewModel lifecycle events.
+///
+/// Implement this interface to receive callbacks when ViewModels are created,
+/// watched, unwatched, or disposed. This is useful for logging, analytics,
+/// debugging, or other cross-cutting concerns.
+///
+/// Example:
+/// ```dart
+/// class LoggingLifecycle extends ViewModelLifecycle {
+///   @override
+///   void onCreate(ViewModel viewModel, InstanceArg arg) {
+///     print('ViewModel created: ${viewModel.runtimeType}');
+///   }
+///
+///   @override
+///   void onDispose(ViewModel viewModel, InstanceArg arg) {
+///     print('ViewModel disposed: ${viewModel.runtimeType}');
+///   }
+/// }
+/// ```
+abstract class ViewModelLifecycle {
+  /// Called when a ViewModel instance is created.
+  ///
+  /// Parameters:
+  /// - [viewModel]: The newly created ViewModel
+  /// - [arg]: Creation arguments including key, tag, and other metadata
+  void onCreate(ViewModel viewModel, InstanceArg arg) {}
 
-  void setupReactiveAuth() {
-    // Reactive access - automatically updates when auth changes
-    final authVM = watchCachedViewModel<AuthViewModel>();
-    // This ViewModel will be notified when authVM changes
-  }
+  /// Called when a new binder is added to a ViewModel.
+  ///
+  /// Parameters:
+  /// - [viewModel]: The ViewModel being watched
+  /// - [arg]: Instance arguments
+  /// - [newBinderId]: Unique identifier for the new binder
+  void onAddBinder(ViewModel viewModel, InstanceArg arg, String newBinderId) {}
 
-  void manualListening() {
-    final authVM = readCachedViewModel<AuthViewModel>();
-    // You can also manually listen to any ViewModel
-    authVM?.listen(() {
-      // Custom listening logic
-      _handleAuthChange(authVM);
-    });
-  }
+  /// Called when a binder is removed from a ViewModel.
+  ///
+  /// Parameters:
+  /// - [viewModel]: The ViewModel being unwatched
+  /// - [arg]: Instance arguments
+  /// - [removedBinderId]: Unique identifier for the removed binder
+  void onRemoveBinder(
+      ViewModel viewModel, InstanceArg arg, String removedBinderId) {}
+
+  /// Called when a ViewModel is disposed.
+  ///
+  /// Parameters:
+  /// - [viewModel]: The ViewModel being disposed
+  /// - [arg]: Instance arguments
+  void onDispose(ViewModel viewModel, InstanceArg arg) {}
 }
 ```
+
+
 
 ## Stateful ViewModel (`StateViewModel<S>`)
 
 Use `StateViewModel<S>` when you prefer an immutable `state` object and
-updates via `setState(newState)`. Supports `listenState(prev, next)` for
-state‑specific reactions.
+updates via `setState(newState)`. 
+
+
 
 > [!NOTE]
 > By default, `StateViewModel` uses `identical()` to compare state instances 
@@ -555,149 +710,171 @@ class _MyCounterPageState extends State<MyCounterPage>
 }
 ```
 
----
 
-## DefaultViewModelFactory Quick Factory
+### Side-effect Listeners
 
-### When to Use
+In addition to the standard `listen()` method inherited from `ViewModel`, `StateViewModel` provides two specialized listeners for reacting to state changes without rebuilding the widget:
 
-For simple cases, use `DefaultViewModelFactory<T>` to avoid writing a custom
-factory.
+- **`listenState((previous, current) { ... })`**: Triggers a callback whenever the `state` object changes. It provides both the previous and the current state, which is useful for comparison or logic that depends on the transition.
 
-### Usage
+- **`listenStateSelect<T>((state) => state.someValue, (previous, current) { ... })`**: A more optimized listener that triggers a callback only when a specific selected value within the state changes. This avoids unnecessary reactions when other parts of the state are updated.
 
 ```dart
+// In initState
+final myVm = watchViewModel<MyCounterViewModel>(/* ... */);
 
-final factory = DefaultViewModelFactory<MyViewModel>(
-  builder: () => MyViewModel(),
-  isSingleton: true, // optional
+// Listen to the entire state object
+final dispose1 = myVm.listenState((previous, current) {
+  if (previous.count != current.count) {
+    print('Counter changed from ${previous.count} to ${current.count}');
+  }
+});
+
+// Listen only to changes in the statusMessage
+final dispose2 = myVm.listenStateSelect(
+  (state) => state.statusMessage,
+  (previous, current) {
+    print('Status message changed: $current');
+    // e.g., ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(current)));
+  },
 );
+
+// Remember to call dispose1() and dispose2() in the widget's dispose method.
 ```
 
-### Parameters
 
-- `builder`: Function to create the ViewModel instance.
-- `key`: Custom key for singleton instance sharing.
-- `tag`: Custom tag for identifying the ViewModel.
-- `isSingleton`: Whether to use singleton mode. This is just a convenient way to set a unique key for you. Note that the priority is lower than the key parameter.
+### Fine-Grained Rebuilds with `StateViewModelValueWatcher`
 
-### Example
+For highly optimized performance, `StateViewModelValueWatcher` allows you to rebuild a widget based on changes to one or more specific values within your state. This is particularly useful when your widget only depends on a small subset of a larger state object.
+
+It takes a `viewModel`, a list of `selectors`, and a `builder`. The widget rebuilds only when the result of any selector function changes.
+
+**How it works:**
+
+1.  **`viewModel`**: The `StateViewModel` instance to listen to.
+2.  **`selectors`**: A list of functions, where each function extracts a specific value from the state (e.g., `(state) => state.userName`).
+3.  **`builder`**: A function that builds the widget, which is called only when any of the selected values change.
+
+**Example:**
+
+Imagine a `UserProfileViewModel` with a state containing `userName`, `age`, and `lastLogin`. If a widget only needs to display the user's name and age, you can use `StateViewModelValueWatcher` to ensure it only rebuilds when `userName` or `age` changes, ignoring updates to `lastLogin`.
 
 ```dart
+// Assume you have a MyCounterViewModel and its state MyCounterState { count, statusMessage }
 
-final factory = DefaultViewModelFactory<CounterViewModel>(
-  builder: () => CounterViewModel(),
-);
-final sharedFactory = DefaultViewModelFactory<CounterViewModel>(
-  builder: () => CounterViewModel(),
-  key: 'global-counter',
-);
+// Obtain the ViewModel instance (usually with readCachedViewModel if you don't need the whole widget to rebuild)
+final myVm = readCachedViewModel<MyCounterViewModel>();
+
+// This widget will only rebuild if `state.count` or `state.statusMessage` changes.
+StateViewModelValueWatcher<MyCounterState>(
+  viewModel: myVm,
+  selectors: [
+    (state) => state.count, 
+    (state) => state.statusMessage
+  ],
+  builder: (state) {
+    // This Text widget is only rebuilt when count or statusMessage changes.
+    return Text('Count: ${state.count}, Status: ${state.statusMessage}');
+  },
+)
 ```
 
----
+This approach provides a powerful way to achieve fine-grained control over your UI updates, leading to better performance.
 
-## Initialization
+## ViewModel → ViewModel dependencies
 
-Before using the `view_model` package, it's recommended to perform a one-time initialization in your `main` function. This allows you to configure global settings for the entire application.
+The `view_model` package provides a smart dependency mechanism that allows ViewModels to depend on each other. use `readViewModel/readCachedViewModel` in `ViewModel`. The APIs are the same as in `ViewModelStateMixin`.
+
+#### Dependency Mechanism
+
+A `ViewModel` can depend on other `ViewModel`s. For example, `ViewModelA` might need to access data or logic from `ViewModelB`.
+
+Even when one `ViewModel` depends on another, all `ViewModel` instances are managed directly by the `Widget`'s `State`. The dependency structure is **flat**, not nested.
+
+When `ViewModelA` (which is managed by a `Widget`) requests `ViewModelB` as a dependency, `ViewModelB` is not created "inside" `ViewModelA`. Instead, `ViewModelB` is also attached directly to the same `Widget`.
+
+This means:
+- **Lifecycle**: Both `ViewModelA` and `ViewModelB`'s lifecycles are tied to the `Widget`.
+- **Management**: The `Widget` is responsible for creating and disposing of all its associated `ViewModel`s.
+- **Relationship**: `ViewModelA` simply holds a reference to `ViewModelB`.
+
+Essentially, calling `readViewModel` or `watchViewModel` from within a `ViewModel` is the same as calling it from the `Widget`. Both access the same central management system.
+
+This flattened approach simplifies lifecycle management and avoids complex, nested dependency chains.
+
+Here's a visual representation of the relationship:
+
+```mermaid
+graph TD
+    Widget
+    subgraph "Widget's State"
+        ViewModelA
+        ViewModelB
+    end
+
+    Widget -- Manages --> ViewModelA
+    Widget -- Manages --> ViewModelB
+    ViewModelA -- "Depends on (holds a reference to)" --> ViewModelB
+```
+
+#### Example
+
+Let's say you have a `ViewModelA` that depends on `ViewModelB`.
 
 ```dart
-void main() {
-  // Configure ViewModel global settings
-  ViewModel.initialize(
-    config: ViewModelConfig(
-      // Enable or disable logging for all ViewModels.
-      // It's useful for debugging state changes and lifecycle events.
-      // Defaults to false.
-      isLoggingEnabled: true,
-      
-      // Provide a custom global function to determine if two states are equal.
-      // This is used by `StateViewModel` and `listenStateSelect` with selectors to decide
-      // whether to trigger a rebuild.
-      // If not set, `StateViewModel` uses `identical()` and `listenStateSelect` uses `==`.
-      equals: (previous, current) {
-        // Example: Use a custom `isEqual` method for deep comparison
-        return identical(previous, current);
-      },
-    ),
-    // You can also register global lifecycle observers here
-    lifecycles: [
-      GlobalLifecycleObserver(),
-    ],
-  );
-  
-  runApp(const MyApp());
+// ViewModelB
+class ViewModelB extends ViewModel {
+  // ...
+}
+
+// ViewModelA
+class ViewModelA extends ViewModel {
+  late final ViewModelB viewModelB;
+
+  ViewModelA() {
+    viewModelB = readCachedViewModel<ViewModelB>();
+  }
 }
 ```
 
+When you create `ViewModelA` in your widget, the dependency mechanism will automatically create and provide `ViewModelB`.
 
-
-**Configuration Options:**
-
-- `isLoggingEnabled`: A `bool` that toggles logging for all ViewModel instances. When enabled, you'll see outputs for state changes, creations, and disposals, which is helpful during development.
-- `equals`: A function `bool Function(dynamic previous, dynamic current)` that provides a global strategy for state comparison. It affects:
-    - `StateViewModel`: Determines if the new state is the same as the old one.
-    - `ViewModel.listen`: Decides if the selected value has changed.
-- `lifecycles`: A list of `ViewModelLifecycle` observers that listen to lifecycle events (e.g., `onCreate`, `onDispose`) for all ViewModels. This is useful for global logging, analytics, or other cross-cutting concerns.
-
-### Goloabl ViewModel Lifecycle
 ```dart
-/// Abstract interface for observing ViewModel lifecycle events.
-///
-/// Implement this interface to receive callbacks when ViewModels are created,
-/// watched, unwatched, or disposed. This is useful for logging, analytics,
-/// debugging, or other cross-cutting concerns.
-///
-/// Example:
-/// ```dart
-/// class LoggingLifecycle extends ViewModelLifecycle {
-///   @override
-///   void onCreate(ViewModel viewModel, InstanceArg arg) {
-///     print('ViewModel created: ${viewModel.runtimeType}');
-///   }
-///
-///   @override
-///   void onDispose(ViewModel viewModel, InstanceArg arg) {
-///     print('ViewModel disposed: ${viewModel.runtimeType}');
-///   }
-/// }
-/// ```
-abstract class ViewModelLifecycle {
-  /// Called when a ViewModel instance is created.
-  ///
-  /// Parameters:
-  /// - [viewModel]: The newly created ViewModel
-  /// - [arg]: Creation arguments including key, tag, and other metadata
-  void onCreate(ViewModel viewModel, InstanceArg arg) {}
+// In your widget
+class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
+  late final ViewModelA viewModelA;
 
-  /// Called when a new watcher is added to a ViewModel.
-  ///
-  /// Parameters:
-  /// - [viewModel]: The ViewModel being watched
-  /// - [arg]: Instance arguments
-  /// - [newWatchId]: Unique identifier for the new watcher
-  void onAddWatcher(ViewModel viewModel, InstanceArg arg, String newWatchId) {}
+  @override
+  void initState() {
+    super.initState();
+    viewModelA = watchViewModel<ViewModelA>(factory: ...);
+  }
 
-  /// Called when a watcher is removed from a ViewModel.
-  ///
-  /// Parameters:
-  /// - [viewModel]: The ViewModel being unwatched
-  /// - [arg]: Instance arguments
-  /// - [removedWatchId]: Unique identifier for the removed watcher
-  void onRemoveWatcher(
-      ViewModel viewModel, InstanceArg arg, String removedWatchId) {}
-
-  /// Called when a ViewModel is disposed.
-  ///
-  /// Parameters:
-  /// - [viewModel]: The ViewModel being disposed
-  /// - [arg]: Instance arguments
-  void onDispose(ViewModel viewModel, InstanceArg arg) {}
+  // ...
 }
 ```
 
+This system allows for a clean and decoupled architecture, where ViewModels can be developed and tested independently.
 
-## Value‑level Rebuilds
+## Pause/Resume Lifecycle
 
+[doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
+
+
+The pause/resume lifecycle is managed by `ViewModelPauseProvider`s. By default,
+`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming based
+on route visibility and app lifecycle events, respectively.
+
+
+
+
+
+
+
+## ValueLevel Rebuilds
+Since the ViewModel updates the entire widget (coarse-grained), if you need more fine-grained updates, here are three methods for your reference.
+
+### ValueListenableBuilder
 - For fine-grained UI updates, use `ValueNotifier` with `ValueListenableBuilder`.
 ```dart
 final title = ValueNotifier('Hello');
@@ -706,6 +883,11 @@ ValueListenableBuilder(
   builder: (_, v, __) => Text(v),
 );
 ```
+
+### ObserverBuilder
+
+[doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/value_observer_doc.md)
+
 - For more dynamic scenarios, `ObservableValue` and `ObserverBuilder` offer more flexibility.
 
 ```dart
@@ -720,7 +902,9 @@ ObserverBuilder<int>(observable: observable,
       )
 ```
 
-- To rebuild only when a specific value within a `StateViewModel` changes, use `StateViewModelValueWatcher`.
+### StateViewModelValueWatcher
+
+- To rebuild only when a specific value within a `StateViewModel` changes, use [`StateViewModelValueWatcher`](#fine-grained-rebuilds-with-stateviewmodelvaluewatcher).  
 
 
 ```dart
@@ -750,6 +934,7 @@ class MyWidget extends State with ViewModelStateMixin {
   }
 }
 ```
+
 
 
 ## DevTools Extension

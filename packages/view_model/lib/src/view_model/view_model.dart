@@ -16,8 +16,11 @@
 library;
 
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+// ignore: unnecessary_import
+import 'package:meta/meta.dart' show internal;
 import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/devtool/tracker.dart';
@@ -25,8 +28,6 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
-// ignore: unnecessary_import
-import 'package:meta/meta.dart' show internal;
 import 'package:view_model/src/view_model/interface.dart';
 
 import 'dependency_handler.dart';
@@ -673,7 +674,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   @protected
   @mustCallSuper
   @override
-  void onAddWatcher(InstanceArg arg, String newWatchId) {
+  void onAddBinder(InstanceArg arg, String newWatchId) {
     for (final element in _viewModelLifecycles) {
       element.onAddWatcher(this, arg, newWatchId);
     }
@@ -682,7 +683,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   @protected
   @mustCallSuper
   @override
-  void onRemoveWatcher(InstanceArg arg, String removedWatchId) {
+  void onRemoveBinder(InstanceArg arg, String removedWatchId) {
     for (final element in _viewModelLifecycles) {
       element.onRemoveWatcher(this, arg, removedWatchId);
     }

@@ -1,6 +1,3 @@
-# 🔥 深入理解 Dart Zone 机制
-
-> 从 Zone 的基础概念到 view_model 的优雅依赖注入实现
 
 ## 📚 第一部分：什么是 Zone？
 
@@ -195,21 +192,20 @@ void validatePermission() {
 
 ---
 
-## 🚀 第三部分：view_model 如何借助 Zone 实现依赖机制
+## 🚀 第三部分：ViewModel 如何借助 Zone 实现依赖注入
 
-### 问题背景
+### 核心挑战：构造函数中的依赖注入
 
-在 view_model 架构中，我们遇到了一个经典难题：
+在 `ViewModel` 的设计中，我们希望能在构造函数中直接获取其他 `ViewModel` 依赖，以确保 `ViewModel` 在创建时就处于一致和完整的状态。
 
-**场景**：ViewModel 想在构造函数中获取其他 ViewModel 依赖
+然而，传统的依赖注入（如 `Provider`）通常依赖于 `BuildContext`，但在 `ViewModel` 的构造函数中，`BuildContext` 是不可用的。
 
 ```dart
 class UserProfileViewModel extends ViewModel {
   UserProfileViewModel() {
-    // 🤯 问题：我想在构造函数里获取 AuthViewModel
-    // 但是依赖解析能力在 State 中，这里根本访问不到！
-    final authVM = ???  // 从哪里获取？
-    
+    // 构造函数中没有 BuildContext
+    // 如何在这里获取 AuthViewModel 的实例？
+    final authVM = readViewModel<AuthViewModel>(); // ❓
     if (authVM.isLoggedIn) {
       loadUserProfile();
     }
@@ -217,295 +213,77 @@ class UserProfileViewModel extends ViewModel {
 }
 ```
 
-**核心矛盾**：
-- ✅ **Widget/State** 有 BuildContext，可以访问依赖容器
-- ❌ **ViewModel 构造函数** 没有 BuildContext，无法直接获取依赖
-- ❌ 传递 BuildContext 到 ViewModel？违背了架构分层原则
+### 解决方案：用 Zone 搭建依赖传递的“桥梁”
 
-**我们需要一种机制**：
-1. 不破坏架构分层（ViewModel 不依赖 Widget）
-2. 不显式传参（保持构造函数简洁）
-3. 让 ViewModel 能神奇地获取到依赖解析能力
+`view_model` 的解决方案是利用 `Zone` 作为“隐式”的参数传递通道，将一个具备依赖解析能力的 `DependencyResolver` 对象，从 `ViewModel` 的调用方（如 Widget）传递到 `ViewModel` 的构造函数内部。
 
-**答案就是：Zone！**
+整个过程可以分解为以下三个步骤：
 
-### 解决方案：用 Zone 传递依赖解析器
+#### 步骤 1：在 Widget/State 中发起调用
 
-核心思路：在创建 ViewModel 时，用 Zone 包裹构造过程，将依赖解析器存入 Zone。
-
-#### 第一步：定义依赖解析器类型
+当你在 Widget 中调用 `watchViewModel()` 或 `readViewModel()` 时，系统会提供一个 `DependencyResolver`。
 
 ```dart
-// dependency_handler.dart
-
-// 依赖解析器的函数签名
-typedef DependencyResolver = T Function<T extends ViewModel>({
-  required ViewModelDependencyConfig<T> dependency,
-  bool listen,
-});
-
-const _resolverKey = #_viewModelDependencyResolver;  // Zone 中的键
-```
-
-#### 第二步：创建辅助函数，用 Zone 包裹执行
-
-```dart
-// dependency_handler.dart
-
-/// 用 Zone 包裹 body 的执行，并将 resolver 存入 Zone
-R runWithResolver<R>(R Function() body, DependencyResolver resolver) {
-  return runZoned(body, zoneValues: {
-    _resolverKey: resolver,  // 👈 将解析器存入 Zone
-  });
-}
-```
-
-#### 第三步：在 ViewModelAttacher 创建 ViewModel 时使用 Zone
-
-```dart
-// attacher.dart
-
-VM _createViewModel<VM extends ViewModel>({
-  required ViewModelFactory<VM> factory,
-  bool listen = true,
-}) {
-  // ...
-  
-  // 👇 关键！用 runWithResolver 包裹 ViewModel 的创建
-  final res = runWithResolver(
-    () {
-      return _instanceController.getInstance<VM>(
-        factory: InstanceFactory<VM>(
-          builder: factory.build,  // 👈 这里会调用 ViewModel 的构造函数
-          // ...
-        ),
-      )..dependencyHandler.addDependencyResolver(onChildDependencyResolver);
-    },
-    onChildDependencyResolver,  // 👈 将依赖解析器传入 Zone
-  );
-  
-  // ...
-  return res;
-}
-```
-
-**这一步发生了什么？**
-
-```
-┌────────────────────────────────────────────────────┐
-│ 1. 调用 _createViewModel<UserProfileViewModel>()  │
-│    ↓                                                │
-│ 2. runWithResolver(..., onChildDependencyResolver) │
-│    创建 Zone { _resolverKey: resolver }            │
-│    ↓                                                │
-│    【进入 Zone，携带依赖解析器】                    │
-│    ↓                                                │
-│ 3. factory.build() → UserProfileViewModel()        │
-│    构造函数在 Zone 中执行                          │
-└────────────────────────────────────────────────────┘
-```
-
-#### 第四步：DependencyHandler 从 Zone 中读取解析器
-
-```dart
-// dependency_handler.dart
-
-class DependencyHandler {
-  final List<DependencyResolver> dependencyResolvers = [];
-
-  T getViewModel<T extends ViewModel>({
-    Object? key,
-    Object? tag,
-    ViewModelFactory<T>? factory,
-    bool listen = false,
-  }) {
-    // 👇 双重保障：先查列表，再查 Zone
-    final resolver = dependencyResolvers.firstOrNull ??
-        (Zone.current[_resolverKey] as DependencyResolver?);
-
-    if (resolver == null) {
-      throw StateError('No dependency resolver available');
-    }
-
-    // 使用解析器获取依赖
-    return resolver(
-      dependency: ViewModelDependencyConfig<T>(...),
-      listen: listen,
-    );
-  }
-}
-```
-
-**关键点**：
-- `Zone.current[_resolverKey]` 读取当前 Zone 中的解析器
-- 双重保障：
-  1. 优先使用 `dependencyResolvers` 列表（已添加的 resolver）
-  2. 如果列表为空，从 Zone 中读取
-
-#### 第五步：ViewModel 在构造函数中愉快地获取依赖！
-
-```dart
-class UserProfileViewModel extends ViewModel {
-  late final AuthViewModel _authVM;
-
-  UserProfileViewModel() {
-    // ✅ 现在可以直接调用了！
-    _authVM = readViewModel<AuthViewModel>();
-    
-    if (_authVM.isLoggedIn) {
-      loadUserProfile();
-    }
-  }
-  
-  // readViewModel 的实现
-  T readViewModel<T extends ViewModel>() {
-    // 内部调用 dependencyHandler.getViewModel()
-    // 它会从 Zone 中读取解析器 ✅
-    return dependencyHandler.getViewModel<T>();
-  }
-}
-```
-
-### 完整的调用链
-
-```
-┌──────────────────────────────────────────────────────────┐
-│ 1. State.watchViewModel<UserProfileViewModel>()         │
-│    ↓                                                      │
-│ 2. attacher._createViewModel()                           │
-│    ↓                                                      │
-│ 3. runWithResolver(                                      │
-│      () => factory.build(),                              │
-│      onChildDependencyResolver  👈 存入 Zone             │
-│    )                                                      │
-│    ↓                                                      │
-│    【进入 Zone，携带 onChildDependencyResolver】          │
-│    ↓                                                      │
-│ 4. UserProfileViewModel() 构造函数被调用                │
-│    ↓                                                      │
-│ 5. readViewModel<AuthViewModel>()                       │
-│    ↓                                                      │
-│ 6. dependencyHandler.getViewModel<AuthViewModel>()      │
-│    ↓                                                      │
-│ 7. 从 Zone.current[_resolverKey] 读取 resolver ✅       │
-│    ↓                                                      │
-│ 8. resolver<AuthViewModel>()                            │
-│    → 调用 State 的 onChildDependencyResolver           │
-│    → 回到 State 的上下文                               │
-│    → 创建/获取 AuthViewModel ✅                         │
-│    ↓                                                      │
-│ 9. 返回 AuthViewModel 实例给 UserProfileViewModel      │
-└──────────────────────────────────────────────────────────┘
-```
-
-### 为什么添加到 dependencyResolvers 列表？
-
-在创建完 ViewModel 后，会将 resolver 添加到列表中：
-
-```dart
-final res = runWithResolver(
-  () {
-    return _instanceController.getInstance<VM>(...)
-      ..dependencyHandler.addDependencyResolver(onChildDependencyResolver);  // 👈
-  },
-  onChildDependencyResolver,
+// 在你的 Widget State 中
+final userProfileVM = watchViewModel<UserProfileViewModel>(
+  factory: () => UserProfileViewModel(),
 );
 ```
 
-**原因**：
-1. ViewModel **创建时**：在 Zone 中，可以从 `Zone.current[_resolverKey]` 获取
-2. ViewModel **创建后**：Zone 已退出，但 resolver 已添加到列表中
-3. 后续调用 `readViewModel` 时，从 `dependencyResolvers` 列表中获取
+#### 步骤 2：创建 Zone 并执行构造函数
 
-**双重保障**确保 ViewModel 在任何时候都能访问依赖解析器！
+`watchViewModel` 内部会调用一个名为 `runWithResolver` 的函数。这个函数是整个魔法的核心：
 
----
-
-## 🌟 第四部分：Zone 方案的优势
-
-### 1. 架构纯净
+1.  它创建一个新的 `Zone`。
+2.  它将 `DependencyResolver` 存储到这个 `Zone` 的 `zoneValues` 中，使用一个私有的 `_resolverKey` 作为键。
+3.  然后，它在这个 `Zone` 内部执行 `ViewModel` 的构造函数（即 `factory.build()`）。
 
 ```dart
-// ❌ 不好的方案：ViewModel 依赖 BuildContext
-class UserProfileViewModel extends ViewModel {
-  UserProfileViewModel(BuildContext context) {
-    final authVM = context.read<AuthViewModel>();  // 违背分层原则
-  }
-}
+// ViewModelAttacher.dart (简化后)
+final vm = runWithResolver(
+  () => factory.build(),      // 👈 在 Zone 内部执行构造函数
+  onChildDependencyResolver,  // 👈 要存入 Zone 的解析器
+);
+```
 
-// ✅ 优雅的方案：ViewModel 完全独立
-class UserProfileViewModel extends ViewModel {
-  UserProfileViewModel() {
-    final authVM = readViewModel<AuthViewModel>();  // 不依赖任何 Widget 概念
-  }
+#### 步骤 3：在 ViewModel 构造函数中读取依赖
+
+现在，当 `UserProfileViewModel` 的构造函数执行时，它正处于那个包含了 `DependencyResolver` 的 `Zone` 内部。
+
+此时，构造函数内部调用的 `readViewModel<AuthViewModel>()` 方法就可以：
+
+1.  通过 `Zone.current[#_resolverKey]` 从当前 `Zone` 中获取到 `DependencyResolver`。
+2.  使用这个 `resolver` 来查找并返回 `AuthViewModel` 的实例。
+
+```dart
+// dependency_handler.dart (简化后)
+T getViewModel<T>() {
+  // 从当前 Zone 中取出“桥梁”——解析器
+  final resolver = Zone.current[#_resolverKey] as DependencyResolver?;
+  
+  // 使用解析器获取依赖实例
+  return resolver!.get<T>(); 
 }
 ```
 
-**优势**：
-- ViewModel 不知道 Widget、BuildContext 的存在
-- 可以在任何环境中测试（不需要 Widget 树）
-- 保持了清晰的架构分层
+### 完整调用流程图
 
-### 2. 开发体验极佳
-
-```dart
-class OrderViewModel extends ViewModel {
-  OrderViewModel() {
-    // 👇 像写同步代码一样简洁
-    final userVM = readViewModel<UserViewModel>();
-    final cartVM = readViewModel<CartViewModel>();
-    final paymentVM = readViewModel<PaymentViewModel>();
-    
-    // 直接使用，无需任何样板代码
-    if (userVM.isLoggedIn && cartVM.hasItems) {
-      paymentVM.calculateTotal(cartVM.items);
-    }
-  }
-}
+```mermaid
+graph TD
+    A[Widget 调用 watchViewModel] --> B{runWithResolver};
+    B --> C{创建 Zone 并存入 Resolver};
+    C --> D[在 Zone 内执行 ViewModel 构造函数];
+    D --> E{ViewModel 内部调用 readViewModel};
+    E --> F{从当前 Zone 获取 Resolver};
+    F --> G[使用 Resolver 获取依赖];
+    G --> H[返回依赖实例];
+    H --> A;
 ```
 
-**优势**：
-- 代码简洁，可读性强
-- 无需层层传递参数
-- 构造函数逻辑清晰
 
-### 3. Zone 的自动传播
-
-```dart
-class ViewModel1 extends ViewModel {
-  ViewModel1() {
-    // 创建 ViewModel2 时，Zone 仍然有效
-    final vm2 = readViewModel<ViewModel2>();
-  }
-}
-
-class ViewModel2 extends ViewModel {
-  ViewModel2() {
-    // ViewModel2 的构造函数仍在同一个 Zone 中
-    // 可以继续获取其他依赖
-    final vm3 = readViewModel<ViewModel3>();
-  }
-}
-```
-
-**优势**：
-- Zone 会自动传播到整个调用链
-- 多级依赖的 ViewModel 可以无缝工作
-- 不需要额外的传递逻辑
-
-### 4. 类型安全
-
-```dart
-// ✅ 编译时类型检查
-final authVM = readViewModel<AuthViewModel>();  // AuthViewModel 类型
-authVM.login();  // IDE 提供完整的代码补全
-
-// ❌ 如果用 Map 传递参数，失去类型安全
-final authVM = dependencies['auth'] as AuthViewModel?;  // 运行时可能出错
-```
-
----
 
 ## 📦 总结
 
-通过 Zone 机制，view_model 实现了优雅的依赖注入，让开发者可以在 ViewModel 构造函数中自然地获取依赖，同时保持架构的清晰和纯净！🚀  来试试：https://pub.dev/packages/view_model
+Zone 让 view_model 在不破坏架构的前提下，实现了 ViewModel 构造函数中的依赖注入。简洁、优雅、类型安全！🚀
+
+**来试试**：[pub.dev/packages/view_model](https://pub.dev/packages/view_model)

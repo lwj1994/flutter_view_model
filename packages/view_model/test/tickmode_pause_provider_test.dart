@@ -96,7 +96,7 @@ class _SubStatefulWidgetState extends State<SubStatefulWidget>
 class StatelessTestWidget extends StatelessWidget with ViewModelStatelessMixin {
   StatelessTestWidget({super.key});
 
-  final _tickerModeProvider = TickModePauseProvider();
+  final _tickerModeProvider = TickerModePauseProvider();
 
   @override
   Widget build(BuildContext context) {

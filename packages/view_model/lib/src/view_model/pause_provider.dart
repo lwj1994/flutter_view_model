@@ -78,7 +78,7 @@ class AppPauseProvider implements ViewModelPauseProvider {
 /// in a hidden state within a [TabBarView] or other [TickerMode] controlled
 /// environments. When [TickerMode] is disabled (false), the ViewModel is
 /// paused.
-class TickModePauseProvider extends ViewModelManualPauseProvider {
+class TickerModePauseProvider extends ViewModelManualPauseProvider {
   ValueListenable<bool>? _notifier;
   void subscribe(ValueListenable<bool> notifier) {
     if (_notifier == notifier) return;

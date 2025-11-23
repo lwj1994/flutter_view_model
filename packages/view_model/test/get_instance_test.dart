@@ -139,7 +139,7 @@ void main() {
       assert(c == b);
       b.recycle();
       await Future.delayed(const Duration(seconds: 1));
-      assert(c.watchIds.isEmpty);
+      assert(c.binderIds.isEmpty);
     });
 
     test('find exiting', () async {

@@ -16,11 +16,11 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
-import 'package:view_model/src/log.dart';
-import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
+import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
@@ -81,8 +81,8 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   }
 
   late final _routePauseProvider = PageRoutePauseProvider();
-  late final TickModePauseProvider _tickModePauseProvider =
-      TickModePauseProvider();
+  late final TickerModePauseProvider _tickerModePauseProvider =
+      TickerModePauseProvider();
   late final _appPauseProvider = AppPauseProvider();
 
   /// A fallback for pageRouteAware is implemented here.
@@ -92,12 +92,12 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     providers: [
       _appPauseProvider,
       _routePauseProvider,
-      _tickModePauseProvider,
+      _tickerModePauseProvider,
     ],
     disposableProviders: [
       _appPauseProvider,
       _routePauseProvider,
-      _tickModePauseProvider,
+      _tickerModePauseProvider,
     ],
     binderName: getViewModelBinderName,
   );
@@ -107,7 +107,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _tickModePauseProvider.subscribe(TickerMode.getNotifier(context));
+    _tickerModePauseProvider.subscribe(TickerMode.getNotifier(context));
     final route = ModalRoute.of(context);
     if (route is PageRoute) {
       _routePauseProvider.subscribe(route);
