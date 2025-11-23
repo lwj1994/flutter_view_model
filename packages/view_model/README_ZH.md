@@ -8,9 +8,9 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[更新日志](CHANGELOG.md)
+[更新日志](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md)
 
-[English Doc](README.md) | [中文文档](README_ZH.md)
+[English Doc](https://github.com/lwj1994/flutter_view_model/blob/develop/packages/view_model/README.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README_ZH.md)
 
 > 感谢 [Miolin](https://github.com/Miolin) 将
 > [view_model](https://pub.dev/packages/view_model) 包的权限转移给我。

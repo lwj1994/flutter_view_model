@@ -12,7 +12,7 @@
 
 [ChangeLog](CHANGELOG.md)
 
-[English Doc](README.md) | [中文文档](README_ZH.md)
+[English Doc](README.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/develop/packages/view_model/README_ZH.md)
 
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
 > the [view_model](https://pub.dev/packages/view_model) package to me.
