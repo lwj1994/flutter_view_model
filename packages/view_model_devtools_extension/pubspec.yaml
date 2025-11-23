@@ -3,23 +3,24 @@ description: DevTools extension for Flutter ViewModel library
 version: 0.4.6
 homepage: https://github.com/lwj1994/flutter_view_model
 repository: https://github.com/lwj1994/flutter_view_model
+publish_to: none
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
-  flutter: '>=3.10.0'
+  flutter: '>=3.19.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  devtools_extensions: ^0.4.0
-  devtools_app_shared: ^0.4.0
+  devtools_extensions: any
+  devtools_app_shared: any
   view_model:
     path: ../view_model
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 flutter:
   uses-material-design: true

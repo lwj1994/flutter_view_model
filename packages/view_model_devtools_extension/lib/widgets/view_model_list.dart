@@ -156,7 +156,7 @@ class ViewModelTile extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 16,
-                    backgroundColor: statusColor.withOpacity(0.2),
+                    backgroundColor: statusColor.withAlpha(51),
                     child: Icon(
                       isActive
                           ? Icons.play_circle_filled
@@ -220,7 +220,7 @@ class ViewModelTile extends StatelessWidget {
                     color: Theme.of(context)
                         .colorScheme
                         .surfaceContainerHighest
-                        .withOpacity(0.3),
+                        .withAlpha(76),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Column(
@@ -334,7 +334,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: statusColor.withOpacity(0.2),
+                  backgroundColor: statusColor.withAlpha(51),
                   child: Icon(
                     isActive ? Icons.play_circle_filled : Icons.delete_outline,
                     color: statusColor,
@@ -373,9 +373,9 @@ class ViewModelDetailsDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withAlpha(25),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: statusColor.withOpacity(0.3)),
+                border: Border.all(color: statusColor.withAlpha(76)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,7 +477,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
                     color: Theme.of(context)
                         .colorScheme
                         .surfaceContainerHighest
-                        .withOpacity(0.3),
+                        .withAlpha(76),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: SelectableText(
@@ -518,7 +518,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
           child: ListTile(
             leading: CircleAvatar(
               radius: 16,
-              backgroundColor: Colors.blue.withOpacity(0.2),
+              backgroundColor: Colors.blue.withAlpha(51),
               child: Text(
                 '${index + 1}',
                 style: const TextStyle(

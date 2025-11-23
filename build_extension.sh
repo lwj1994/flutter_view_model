@@ -16,7 +16,7 @@ rm -rf build/web
 
 # 构建web版本
 echo "📦 Building web assets..."
-flutter build web --release
+puro flutter build web --release
 
 # 检查构建是否成功
 if [ ! -d "build/web" ]; then
