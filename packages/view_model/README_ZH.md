@@ -778,6 +778,7 @@ StateViewModelValueWatcher<MyCounterState>(
 
 ```mermaid
 graph TD
+    Widget
     subgraph "Widget 的 State"
         ViewModelA
         ViewModelB

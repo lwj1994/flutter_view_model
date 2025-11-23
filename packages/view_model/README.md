@@ -806,6 +806,7 @@ Here's a visual representation of the relationship:
 
 ```mermaid
 graph TD
+    Widget
     subgraph "Widget's State"
         ViewModelA
         ViewModelB
