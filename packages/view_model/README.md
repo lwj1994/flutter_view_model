@@ -10,9 +10,9 @@
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[ChangeLog](CHANGELOG.md)
+[ChangeLog](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md)
 
-[English Doc](README.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/develop/packages/view_model/README_ZH.md)
+[English Doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README_ZH.md)
 
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
 > the [view_model](https://pub.dev/packages/view_model) package to me.
