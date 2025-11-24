@@ -73,6 +73,28 @@
 - 回收 (Recycle): `recycleViewModel(vm)`
 - 副作用 (Effects): `listen(onChanged)` / `listenState` / `listenStateSelect`
 
+```dart
+// 1. 定义 ViewModel
+class CounterViewModel extends ViewModel {
+  int count = 0;
+  void increment() => update(() => count++);
+}
+
+// 2. 在 Widget 中使用
+class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
+  @override
+  Widget build(BuildContext context) {
+    final vm = watchViewModel<CounterViewModel>(
+      factory: DefaultViewModelFactory(builder: () => CounterViewModel()),
+    );
+    return ElevatedButton(
+      onPressed: vm.increment,
+      child: Text('${vm.count}'),
+    );
+  }
+}
+```
+
 ## 复用实例
 
 - Key: 在 factory 中设置 `key()` → 所有 widget 共享同一个实例
@@ -872,6 +894,8 @@ class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
 
 暂停/恢复生命周期由 `ViewModelPauseProvider` 管理。默认情况下，`PageRoutePauseProvider`、`TickerModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理暂停/恢复。
 
+它会自动处理页面不可见时（例如：推入新路由、切换 Tab 或应用在后台）的资源释放或数据暂停。
+
 ## 值级别重建
 由于 ViewModel 更新整个 widget (粗粒度)，如果你需要更细粒度的更新，这里有三种方法可供参考。
 
@@ -924,11 +948,12 @@ class MyWidget extends State with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
     // 监听 `stateViewModel` 上的值变化，并且仅在 `name` 或 `age` 变化时重建。
-    return StateViewModelValueWatcher<MyViewModel>(
-      stateViewModel: stateViewModel,
+    // 假设 MyViewModel 继承自 StateViewModel<MyState>
+    return StateViewModelValueWatcher<MyState>(
+      viewModel: stateViewModel,
       selectors: [(state) => state.name, (state) => state.age],
       builder: (state) {
-        return Text('姓名: \${state.name}, 年龄: \${state.age}');
+        return Text('姓名: ${state.name}, 年龄: ${state.age}');
       },
     );
   }

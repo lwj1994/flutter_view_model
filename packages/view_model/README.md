@@ -37,7 +37,7 @@
   - [ViewModel Lifecycle](#viewmodel-lifecycle)
       - [How It Works: Binder Counting](#how-it-works-binder-counting)
   - [Initialization](#initialization)
-    - [Goloabl ViewModel Lifecycle](#goloabl-viewmodel-lifecycle)
+    - [Global ViewModel Lifecycle](#global-viewmodel-lifecycle)
   - [Stateful ViewModel (`StateViewModel<S>`)](#stateful-viewmodel-stateviewmodels)
     - [Defining the State Class](#defining-the-state-class)
     - [Creating a Stateful ViewModel](#creating-a-stateful-viewmodel)
@@ -75,6 +75,28 @@ In a Clean Architecture, the ViewModel acts as the **Presentation Layer**, bridg
 - Global: `ViewModel.readCached<T>() / maybeReadCached<T>()`
 - Recycle: `recycleViewModel(vm)`
 - Effects: `listen(onChanged)` / `listenState` / `listenStateSelect`
+
+```dart
+// 1. Define a ViewModel
+class CounterViewModel extends ViewModel {
+  int count = 0;
+  void increment() => update(() => count++);
+}
+
+// 2. Use it in a Widget
+class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
+  @override
+  Widget build(BuildContext context) {
+    final vm = watchViewModel<CounterViewModel>(
+      factory: DefaultViewModelFactory(builder: () => CounterViewModel()),
+    );
+    return ElevatedButton(
+      onPressed: vm.increment,
+      child: Text('${vm.count}'),
+    );
+  }
+}
+```
 
 ## Reuse One Instance
 
@@ -493,7 +515,7 @@ void main() {
     - `ViewModel.listen`: Decides if the selected value has changed.
 - `lifecycles`: A list of `ViewModelLifecycle` observers that listen to lifecycle events (e.g., `onCreate`, `onDispose`) for all ViewModels. This is useful for global logging, analytics, or other cross-cutting concerns.
 
-### Goloabl ViewModel Lifecycle
+### Global ViewModel Lifecycle
 ```dart
 /// Abstract interface for observing ViewModel lifecycle events.
 ///
@@ -972,11 +994,12 @@ class MyWidget extends State with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
     // Watch value changes on `stateViewModel` and rebuild only when `name` or `age` changes.
-    return StateViewModelValueWatcher<MyViewModel>(
-      stateViewModel: stateViewModel,
+    // Assuming MyViewModel extends StateViewModel<MyState>
+    return StateViewModelValueWatcher<MyState>(
+      viewModel: stateViewModel,
       selectors: [(state) => state.name, (state) => state.age],
       builder: (state) {
-        return Text('Name: \${state.name}, Age: \${state.age}');
+        return Text('Name: ${state.name}, Age: ${state.age}');
       },
     );
   }
