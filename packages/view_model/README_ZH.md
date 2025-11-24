@@ -16,35 +16,41 @@
 > [view_model](https://pub.dev/packages/view_model) 包的权限转移给我。
 
 ---
-- [设计理念](#设计理念)
-- [快速开始](#快速开始)
-- [复用实例](#复用实例)
-- [基本用法](#基本用法)
-  - [添加依赖](#添加依赖)
-  - [创建 ViewModel](#创建-viewmodel)
-  - [创建 ViewModelFactory](#创建-viewmodelfactory)
-    - [自定义 ViewModelFactory](#自定义-viewmodelfactory)
-    - [DefaultViewModelFactory 快速工厂](#defaultviewmodelfactory-快速工厂)
-  - [在 Widget 中使用 ViewModel](#在-widget-中使用-viewmodel)
-    - [替代方案: ViewModelBuilder (无需 mixin)](#替代方案-viewmodelbuilder-无需-mixin)
-    - [监听缓存实例: CachedViewModelBuilder](#监听缓存实例-cachedviewmodelbuilder)
-  - [使用监听器处理副作用](#使用监听器处理副作用)
-- [ViewModel 生命周期](#viewmodel-生命周期)
-- [初始化](#初始化)
-- [有状态的 ViewModel (`StateViewModel<S>`)](#有状态的-viewmodel-stateviewmodels)
-  - [定义 State 类](#定义-state-类)
-  - [创建有状态的 ViewModel](#创建有状态的-viewmodel)
-  - [创建 ViewModelFactory](#创建-viewmodelfactory-1)
-  - [在 Widget 中使用有状态的 ViewModel](#在-widget-中使用有状态的-viewmodel)
-  - [副作用监听器](#副作用监听器)
-  - [使用 `StateViewModelValueWatcher` 实现细粒度重建](#使用-stateviewmodelvaluewatcher-实现细粒度重建)
-- [ViewModel → ViewModel 依赖](#viewmodel--viewmodel-依赖)
-- [暂停/恢复生命周期](#暂停恢复生命周期)
-- [值级别重建](#值级别重建)
-  - [ValueListenableBuilder](#valueListenableBuilder)
-  - [ObserverBuilder](#observerBuilder)
-  - [StateViewModelValueWatcher](#stateViewModelValueWatcher)
-- [DevTools 扩展](#devtools-扩展)
+- [view\_model](#view_model)
+  - [设计理念](#设计理念)
+  - [快速开始](#快速开始)
+  - [复用实例](#复用实例)
+  - [基本用法](#基本用法)
+    - [添加依赖](#添加依赖)
+    - [创建 ViewModel](#创建-viewmodel)
+    - [创建 ViewModelFactory](#创建-viewmodelfactory)
+      - [自定义 ViewModelFactory](#自定义-viewmodelfactory)
+      - [DefaultViewModelFactory 快速工厂](#defaultviewmodelfactory-快速工厂)
+    - [在 Widget 中使用 ViewModel](#在-widget-中使用-viewmodel)
+      - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
+      - [ViewModelStateMixin](#viewmodelstatemixin)
+      - [替代方案: ViewModelBuilder (无需 mixin)](#替代方案-viewmodelbuilder-无需-mixin)
+    - [使用监听器处理副作用](#使用监听器处理副作用)
+  - [ViewModel 生命周期](#viewmodel-生命周期)
+      - [工作原理: 绑定者计数](#工作原理-绑定者计数)
+  - [初始化](#初始化)
+    - [全局 ViewModel 生命周期](#全局-viewmodel-生命周期)
+  - [有状态的 ViewModel (`StateViewModel<S>`)](#有状态的-viewmodel-stateviewmodels)
+    - [定义 State 类](#定义-state-类)
+    - [创建有状态的 ViewModel](#创建有状态的-viewmodel)
+    - [为有状态的 ViewModel 创建 ViewModelFactory](#为有状态的-viewmodel-创建-viewmodelfactory)
+    - [在 Widget 中使用有状态的 ViewModel](#在-widget-中使用有状态的-viewmodel)
+    - [副作用监听器](#副作用监听器)
+    - [使用 `StateViewModelValueWatcher` 实现细粒度重建](#使用-stateviewmodelvaluewatcher-实现细粒度重建)
+  - [ViewModel → ViewModel 依赖](#viewmodel--viewmodel-依赖)
+      - [依赖机制](#依赖机制)
+      - [示例](#示例)
+  - [暂停/恢复生命周期](#暂停恢复生命周期)
+  - [值级别重建](#值级别重建)
+    - [ValueListenableBuilder](#valuelistenablebuilder)
+    - [ObserverBuilder](#observerbuilder)
+    - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
+  - [DevTools 扩展](#devtools-扩展)
 
 ---
 
@@ -214,11 +220,47 @@ final sharedFactory = DefaultViewModelFactory<CounterViewModel>(
 ---
 
 ### 在 Widget 中使用 ViewModel
+将 `ViewModelStatelessMixin` 或 `ViewModelStateMixin` 混入你的 Widget 并调用 `watchViewModel` 来绑定并在 `notifyListeners()` 被调用时重建。生命周期会自动为你处理。
+#### ViewModelStatelessMixin
 
-将 `ViewModelStateMixin` 混入你的 `State` 并调用 `watchViewModel` 来绑定并在 `notifyListeners()` 被调用时重建。生命周期会自动为你处理。
 
-> **注意**: 虽然 `StatelessWidget` 也支持 `ViewModelStatelessMixin`，但我们并不推荐这样做。最好避免在 `build` 方法中放置与 UI 无关的逻辑，以保持其整洁并专注于渲染。
+```dart
+import 'package:flutter/material.dart';
+import 'package:view_model/view_model.dart';
 
+/// Stateless widget using ViewModelStatelessMixin.
+/// Displays counter state and a button to increment.
+// ignore: must_be_immutable
+class CounterStatelessWidget extends StatelessWidget
+    with ViewModelStatelessMixin {
+  CounterStatelessWidget({super.key});
+
+  /// Create and watch the ViewModel instance for UI binding.
+  late final vm = watchViewModel<CounterViewModel>(
+    factory: DefaultViewModelFactory<CounterViewModel>(
+      builder: () => CounterViewModel(),
+    ),
+  );
+
+  /// Builds UI bound to CounterViewModel state.
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          Text('Count: ${vm.state}'),
+          ElevatedButton(
+            onPressed: vm.increment,
+            child: const Text('Increment'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+#### ViewModelStateMixin
 
 ```dart
 import 'package:flutter/material.dart';
@@ -299,8 +341,7 @@ ViewModelBuilder<MySimpleViewModel>(
 )
 ```
 
-#### 监听缓存实例: CachedViewModelBuilder
-
+或者使用 `CachedViewModelBuilder` 复用已有的 vm.
 ```dart
 // 示例: 使用 CachedViewModelBuilder 绑定到已存在的实例
 CachedViewModelBuilder<MySimpleViewModel>(
@@ -909,4 +950,3 @@ extensions:
 
 ![](https://i.imgur.com/5itXPYD.png)
 ![](https://imgur.com/83iOQhy.png)
-

@@ -33,7 +33,6 @@
       - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [ViewModelStateMixin](#viewmodelstatemixin)
       - [Alternative: ViewModelBuilder (no mixin required)](#alternative-viewmodelbuilder-no-mixin-required)
-      - [Listening to a cached instance: CachedViewModelBuilder](#listening-to-a-cached-instance-cachedviewmodelbuilder)
     - [Side‑effects with listeners](#sideeffects-with-listeners)
   - [ViewModel Lifecycle](#viewmodel-lifecycle)
       - [How It Works: Binder Counting](#how-it-works-binder-counting)
@@ -362,8 +361,8 @@ ViewModelBuilder<MySimpleViewModel>(
 )
 ```
 
-#### Listening to a cached instance: CachedViewModelBuilder
 
+or Using `CachedViewModelBuilder` to bind to an existing instance: 
 ```dart
 // Example: Using CachedViewModelBuilder to bind to an existing instance
 CachedViewModelBuilder<MySimpleViewModel>(
