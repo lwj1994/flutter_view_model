@@ -19,35 +19,42 @@
 
 ---
 
-- [Design Philosophy](#design-philosophy)
-- [Quick Start](#quick-start)
-- [Reuse One Instance](#reuse-one-instance)
-- [Basic Usage](#basic-usage)
-  - [Adding Dependencies](#adding-dependencies)
-  - [Creating a ViewModel](#creating-a-viewmodel)
-  - [Creating a ViewModelFactory](#creating-a-viewmodelfactory)
-    - [Custom ViewModelFactory](#custom-ViewModelFactory)
-    - [DefaultViewModelFactory Quick Factory](#defaultviewmodelfactory-quick-factory)
-  - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
-    - [Alternative: ViewModelBuilder (no mixin required)](#alternative-viewmodelbuilder-no-mixin-required)
-    - [Listening to a cached instance: CachedViewModelBuilder](#listening-to-a-cached-instance-cachedviewmodelbuilder)
-  - [Side-effects with listeners](#side-effects-with-listeners)
-- [ViewModel Lifecycle](#viewmodel-lifecycle)
-- [Initialization](#initialization)  
-- [Stateful ViewModel (`StateViewModel<S>`)](#stateful-viewmodel-stateviewmodels)
-  - [Defining the State Class](#defining-the-state-class)
-  - [Creating a Stateful ViewModel](#creating-a-stateful-viewmodel)
-  - [Creating a ViewModelFactory](#creating-a-viewmodelfactory-1)
-  - [Using Stateful ViewModel in Widgets](#using-stateful-viewmodel-in-widgets)
-  - [Side-effect Listeners](#side-effect-listeners)
-  - [Fine-Grained Rebuilds with `StateViewModelValueWatcher`](#fine-grained-rebuilds-with-stateviewmodelvaluewatcher)
-- [ViewModel → ViewModel dependencies](#viewmodel--viewmodel-dependencies)  
-- [Pause/Resume Lifecycle](#pauseresume-lifecycle)  
-- [ValueLevel Rebuilds](#valuelevel-rebuilds)  
-  -[ValueListenableBuilder](#valueListenableBuilder)
-  -[ObserverBuilder](#observerBuilder)
-  -[StateViewModelValueWatcher](#stateViewModelValueWatcher)
-- [DevTools Extension](#devtools-extension)  
+- [view\_model](#view_model)
+  - [Design Philosophy](#design-philosophy)
+  - [Quick Start](#quick-start)
+  - [Reuse One Instance](#reuse-one-instance)
+  - [Basic Usage](#basic-usage)
+    - [Adding Dependencies](#adding-dependencies)
+    - [Creating a ViewModel](#creating-a-viewmodel)
+    - [Creating a ViewModelFactory](#creating-a-viewmodelfactory)
+      - [Custom ViewModelFactory](#custom-viewmodelfactory)
+      - [DefaultViewModelFactory Quick Factory](#defaultviewmodelfactory-quick-factory)
+    - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
+      - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
+      - [ViewModelStateMixin](#viewmodelstatemixin)
+      - [Alternative: ViewModelBuilder (no mixin required)](#alternative-viewmodelbuilder-no-mixin-required)
+      - [Listening to a cached instance: CachedViewModelBuilder](#listening-to-a-cached-instance-cachedviewmodelbuilder)
+    - [Side‑effects with listeners](#sideeffects-with-listeners)
+  - [ViewModel Lifecycle](#viewmodel-lifecycle)
+      - [How It Works: Binder Counting](#how-it-works-binder-counting)
+  - [Initialization](#initialization)
+    - [Goloabl ViewModel Lifecycle](#goloabl-viewmodel-lifecycle)
+  - [Stateful ViewModel (`StateViewModel<S>`)](#stateful-viewmodel-stateviewmodels)
+    - [Defining the State Class](#defining-the-state-class)
+    - [Creating a Stateful ViewModel](#creating-a-stateful-viewmodel)
+    - [Creating a ViewModelFactory](#creating-a-viewmodelfactory-1)
+    - [Using Stateful ViewModel in Widgets](#using-stateful-viewmodel-in-widgets)
+    - [Side-effect Listeners](#side-effect-listeners)
+    - [Fine-Grained Rebuilds with `StateViewModelValueWatcher`](#fine-grained-rebuilds-with-stateviewmodelvaluewatcher)
+  - [ViewModel → ViewModel dependencies](#viewmodel--viewmodel-dependencies)
+      - [Dependency Mechanism](#dependency-mechanism)
+      - [Example](#example)
+  - [Pause/Resume Lifecycle](#pauseresume-lifecycle)
+  - [ValueLevel Rebuilds](#valuelevel-rebuilds)
+    - [ValueListenableBuilder](#valuelistenablebuilder)
+    - [ObserverBuilder](#observerbuilder)
+    - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
+  - [DevTools Extension](#devtools-extension)
 
 ---
 
@@ -228,10 +235,52 @@ final sharedFactory = DefaultViewModelFactory<CounterViewModel>(
 
 ### Using ViewModel in Widgets
 
-Mix `ViewModelStateMixin` into your `State` and call `watchViewModel` to bind
-and rebuild when `notifyListeners()` is invoked. Lifecycle is handled for you.
+Mix `ViewModelStatelessMixin` or `ViewModelStateMixin` into Widget to bind a `ViewModel`.
+Use `watchViewModel` for reactive updates, or `readViewModel` to
+avoid rebuilds. Lifecycle (create, share, dispose) is managed for
+you automatically.
 
-> **Note**: While `ViewModelStatelessMixin` is also supported for `StatelessWidget`, it is not recommended. It's best to avoid placing non-UI-related logic, inside the `build` method to keep it clean and focused on rendering.
+#### ViewModelStatelessMixin
+`ViewModelStatelessMixin` enables `StatelessWidget` to bind a
+`ViewModel`. 
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:view_model/view_model.dart';
+
+/// Stateless widget using ViewModelStatelessMixin.
+/// Displays counter state and a button to increment.
+// ignore: must_be_immutable
+class CounterStatelessWidget extends StatelessWidget
+    with ViewModelStatelessMixin {
+  CounterStatelessWidget({super.key});
+
+  /// Create and watch the ViewModel instance for UI binding.
+  late final vm = watchViewModel<CounterViewModel>(
+    factory: DefaultViewModelFactory<CounterViewModel>(
+      builder: CounterViewModel.new,
+    ),
+  );
+
+  /// Builds UI bound to CounterViewModel state.
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          Text('Count: ${vm.state}'),
+          ElevatedButton(
+            onPressed: vm.increment,
+            child: const Text('Increment'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+#### ViewModelStateMixin
 
 
 ```dart

@@ -19,15 +19,15 @@ class CounterViewModel extends StateViewModel<int> {
 class CounterStatelessWidget extends StatelessWidget
     with ViewModelStatelessMixin {
   CounterStatelessWidget({super.key});
+  late final vm = watchViewModel<CounterViewModel>(
+    factory: DefaultViewModelFactory<CounterViewModel>(
+      builder: () => CounterViewModel(),
+    ),
+  );
 
   /// Builds UI bound to CounterViewModel state.
   @override
   Widget build(BuildContext context) {
-    final vm = watchViewModel<CounterViewModel>(
-      factory: DefaultViewModelFactory<CounterViewModel>(
-        builder: () => CounterViewModel(),
-      ),
-    );
     return Scaffold(
       body: Column(
         children: [
@@ -48,21 +48,20 @@ class CounterStatelessWidget extends StatelessWidget
 class SharedCountersStateless extends StatelessWidget
     with ViewModelStatelessMixin {
   SharedCountersStateless({super.key});
+  static const sharedKey = 'shared_counter_key';
+  late final vm1 = watchViewModel<CounterViewModel>(
+    factory: DefaultViewModelFactory<CounterViewModel>(
+      builder: () => CounterViewModel(initialValue: 5),
+      key: sharedKey,
+    ),
+  );
+  late final vm2 = watchCachedViewModel<CounterViewModel>(
+    key: sharedKey,
+  );
 
   /// Builds two views bound to the same keyed ViewModel.
   @override
   Widget build(BuildContext context) {
-    const sharedKey = 'shared_counter_key';
-    final vm1 = watchViewModel<CounterViewModel>(
-      factory: DefaultViewModelFactory<CounterViewModel>(
-        builder: () => CounterViewModel(initialValue: 5),
-        key: sharedKey,
-      ),
-    );
-    final vm2 = watchCachedViewModel<CounterViewModel>(
-      key: sharedKey,
-    );
-
     return Scaffold(
       body: Column(
         children: [
