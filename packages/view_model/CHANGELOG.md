@@ -1,3 +1,6 @@
+## 0.8.3
+- Fix docs
+
 ## 0.8.2
 - Update docs
 
