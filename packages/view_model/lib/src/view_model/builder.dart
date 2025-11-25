@@ -1,7 +1,7 @@
 // @author luwenjie on 2025/10/27 14:17:50
 
 import 'package:flutter/widgets.dart';
-import 'package:view_model/src/view_model/extension/stateful_extension.dart';
+import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 /// A convenient widget that does not require mixing

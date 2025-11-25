@@ -48,17 +48,17 @@ class _AwareWidgetState extends State<AwareWidget> with ViewModelStateMixin {
 
 void main() {
   group('PageRouteAwareController Unit Tests', () {
-    late ViewModelManualPauseProvider provider1;
-    late ViewModelManualPauseProvider provider2;
-    late ViewModelManualPauseProvider provider3;
+    late ManualBinderPauseProvider provider1;
+    late ManualBinderPauseProvider provider2;
+    late ManualBinderPauseProvider provider3;
     late PauseAwareController controller;
     int pauseCount = 0;
     int resumeCount = 0;
 
     setUp(() {
-      provider1 = ViewModelManualPauseProvider();
-      provider2 = ViewModelManualPauseProvider();
-      provider3 = ViewModelManualPauseProvider();
+      provider1 = ManualBinderPauseProvider();
+      provider2 = ManualBinderPauseProvider();
+      provider3 = ManualBinderPauseProvider();
       pauseCount = 0;
       resumeCount = 0;
       controller = PauseAwareController(

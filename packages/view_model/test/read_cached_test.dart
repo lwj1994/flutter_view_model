@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/view_model.dart';
 
 import 'test_widget.dart';
@@ -201,7 +202,7 @@ void main() {
       // After widget disposal, the ViewModel should be disposed
       // and readCached should throw an error
       expect(() => ViewModel.readCached<TestViewModel>(key: testKey),
-          throwsA(isA<StateError>()));
+          throwsA(isA<ViewModelError>()));
     });
 
     testWidgets('should throw error when ViewModel with key not found',
@@ -209,7 +210,7 @@ void main() {
       // Test readCached with non-existent key
       expect(
         () => ViewModel.readCached<TestViewModel>(key: 'non_existent_key'),
-        throwsA(isA<StateError>()),
+        throwsA(isA<ViewModelError>()),
       );
     });
 
@@ -218,7 +219,7 @@ void main() {
       // Test readCached with non-existent tag
       expect(
         () => ViewModel.readCached<TestViewModel>(tag: 'non_existent_tag'),
-        throwsA(isA<StateError>()),
+        throwsA(isA<ViewModelError>()),
       );
     });
 
@@ -227,7 +228,7 @@ void main() {
       // Test readCached when no ViewModel of the specified type exists
       expect(
         () => ViewModel.readCached<TestViewModel>(),
-        throwsA(isA<StateError>()),
+        throwsA(isA<ViewModelError>()),
       );
     });
 

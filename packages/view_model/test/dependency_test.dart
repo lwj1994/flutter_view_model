@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 /// Test ViewModel for authentication functionality
@@ -145,7 +146,7 @@ void main() {
 
       expect(
         () => orphanViewModel.readCachedViewModel<AuthViewModel>(),
-        throwsA(isA<StateError>()),
+        throwsA(isA<ViewModelError>()),
       );
     });
 
@@ -154,7 +155,7 @@ void main() {
 
       expect(
         () => orphanViewModel.readCachedViewModel<AuthViewModel>(),
-        throwsA(isA<StateError>()),
+        throwsA(isA<ViewModelError>()),
       );
     });
   });

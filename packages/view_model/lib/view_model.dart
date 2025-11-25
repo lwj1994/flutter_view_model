@@ -77,12 +77,12 @@
 library;
 
 export "package:view_model/src/get_instance/store.dart" show InstanceArg;
+export "package:view_model/src/view_model/binder.dart";
 export "package:view_model/src/view_model/builder.dart";
 export "package:view_model/src/view_model/config.dart";
-export "package:view_model/src/view_model/extension/stateful_extension.dart";
-export "package:view_model/src/view_model/extension/stateless_extension.dart";
+export "package:view_model/src/view_model/pause_provider.dart";
 export "package:view_model/src/view_model/value_observer.dart";
 export "package:view_model/src/view_model/value_watcher.dart";
 export "package:view_model/src/view_model/view_model.dart";
-export "package:view_model/src/view_model/pause_provider.dart"
-    show ViewModelManualPauseProvider, ViewModelPauseProvider;
+export "package:view_model/src/view_model/widget_mixin/stateful_extension.dart";
+export "package:view_model/src/view_model/widget_mixin/stateless_extension.dart";

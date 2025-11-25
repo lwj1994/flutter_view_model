@@ -21,7 +21,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 // ignore: unnecessary_import
 import 'package:meta/meta.dart' show internal;
-import 'package:uuid/v4.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/devtool/tracker.dart';
 import 'package:view_model/src/get_instance/manager.dart';
@@ -991,7 +990,7 @@ class AutoDisposeController {
 /// }
 /// ```
 abstract mixin class ViewModelFactory<T> {
-  static final _defaultShareId = const UuidV4().generate();
+  static const _defaultShareId = Object();
 
   /// Returns a unique key for sharing ViewModel instances.
   ///

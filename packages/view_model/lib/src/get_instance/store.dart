@@ -10,8 +10,8 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:uuid/v4.dart';
 import 'package:view_model/src/log.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 
 import 'manager.dart';
 
@@ -120,10 +120,10 @@ class Store<T> {
   ///
   /// Returns an [InstanceHandle] for the requested instance.
   ///
-  /// Throws [StateError] if no cached instance exists and no
+  /// Throws [ViewModelError] if no cached instance exists and no
   /// builder is provided.
   InstanceHandle<T> getNotifier({required InstanceFactory<T> factory}) {
-    final realKey = factory.arg.key ?? const UuidV4().generate();
+    final realKey = factory.arg.key ?? Object();
     final watchId = factory.arg.binderId;
     final arg = factory.arg.copyWith(
       key: realKey,
@@ -134,13 +134,13 @@ class Store<T> {
       final newWatcher =
           watchId != null && !notifier.binderIds.contains(watchId);
       if (newWatcher) {
-        notifier.addNewWatcher(watchId);
+        notifier.addNewBinder(watchId);
       }
       return notifier;
     }
 
     if (factory.builder == null) {
-      throw StateError("factory == null and cache is null");
+      throw ViewModelError("${T} factory == null and cache is null");
     }
 
     // create new instance
@@ -335,7 +335,7 @@ class InstanceHandle<T> with ChangeNotifier {
   ///
   /// Parameters:
   /// - [id]: The watcher ID to add
-  void addNewWatcher(String id) {
+  void addNewBinder(String id) {
     _addBinder(id);
   }
 

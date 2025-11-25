@@ -127,7 +127,7 @@ final newPauseState = _providerPauseStates.values.any((isPaused) => isPaused);
 
 ### 自定义 PauseProvider
 
-`PauseAwareController` 的设计是完全开放的。你可以实现自己的 `ViewModelPauseProvider` 来应对任何特殊的暂停逻辑。
+`PauseAwareController` 的设计是完全开放的。你可以实现自己的 `BinderPauseProvider` 来应对任何特殊的暂停逻辑。
 
 例如，你可以创建一个 `ConnectionPauseProvider`，在网络断开时暂停所有依赖网络的 `ViewModel`。
 
@@ -135,7 +135,7 @@ final newPauseState = _providerPauseStates.values.any((isPaused) => isPaused);
 
 1.  **创建自定义 Provider**：
     ```dart
-    class ConnectionPauseProvider extends ViewModelPauseProvider {
+    class ConnectionPauseProvider extends BinderPauseProvider {
       final _controller = StreamController<bool>.broadcast();
       
       ConnectionPauseProvider() {

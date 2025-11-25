@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:view_model/src/view_model/pause_provider.dart';
 
 /// A controller that manages pause/resume lifecycle for a ViewModel, based on a
-/// collection of [ViewModelPauseProvider]s.
+/// collection of [BinderPauseProvider]s.
 ///
 /// This class is designed to be flexible and can work with any source of
 /// lifecycle events, such as route navigation or application state changes. For
 /// Flutter's default behavior, use the provided default providers. For custom
-/// or mixed-stack environments, implement your own [ViewModelPauseProvider] and
+/// or mixed-stack environments, implement your own [BinderPauseProvider] and
 /// pass them to the constructor.
 class PauseAwareController {
   // A callback triggered when the view model should pause.
@@ -25,29 +25,28 @@ class PauseAwareController {
   /// [PageRoutePauseProvider] and [AppPauseProvider].
   ///
   /// For custom lifecycle sources (e.g., mixed-stack environments), provide a
-  /// list of your custom [ViewModelPauseProvider] implementations.
+  /// list of your custom [BinderPauseProvider] implementations.
   PauseAwareController({
     required this.onWidgetPause,
     required this.onWidgetResume,
-    required List<ViewModelPauseProvider> providers,
+    required List<BinderPauseProvider> providers,
     required this.binderName,
-    List<ViewModelPauseProvider>? disposableProviders,
+    List<BinderPauseProvider>? disposableProviders,
   }) : _disposableProviders = disposableProviders ?? [] {
     _providers.addAll(providers);
     _setupSubscriptions();
   }
 
   // A list of providers that determine the pause state.
-  final List<ViewModelPauseProvider> _providers = [];
+  final List<BinderPauseProvider> _providers = [];
 
-  List<ViewModelPauseProvider> get providers => List.unmodifiable(_providers);
+  List<BinderPauseProvider> get providers => List.unmodifiable(_providers);
 
   // Providers that should be disposed when this controller is disposed.
-  final List<ViewModelPauseProvider> _disposableProviders;
+  final List<BinderPauseProvider> _disposableProviders;
 
   // Holds subscriptions to the pause state streams of the providers.
-  final Map<ViewModelPauseProvider, StreamSubscription<bool>> _subscriptions =
-      {};
+  final Map<BinderPauseProvider, StreamSubscription<bool>> _subscriptions = {};
 
   // Combines all provider states to determine the final pause state.
   // Returns true if the view model is currently paused.
@@ -63,7 +62,7 @@ class PauseAwareController {
     }
   }
 
-  void _subscribeToProvider(ViewModelPauseProvider provider) {
+  void _subscribeToProvider(BinderPauseProvider provider) {
     if (_subscriptions.containsKey(provider)) return;
     // ignore: cancel_subscriptions
     final subscription = provider.onPauseStateChanged.listen((shouldPause) {
@@ -72,13 +71,13 @@ class PauseAwareController {
     _subscriptions[provider] = subscription;
   }
 
-  void addProvider(ViewModelPauseProvider provider) {
+  void addProvider(BinderPauseProvider provider) {
     if (_providers.contains(provider)) return;
     _providers.add(provider);
     _subscribeToProvider(provider);
   }
 
-  void removeProvider(ViewModelPauseProvider provider) {
+  void removeProvider(BinderPauseProvider provider) {
     if (_providers.remove(provider)) {
       final subscription = _subscriptions.remove(provider);
       subscription?.cancel();
@@ -89,14 +88,14 @@ class PauseAwareController {
 
   // Handles a pause state change signaled by a single provider.
   void _handleProviderStateChange(
-      ViewModelPauseProvider provider, bool shouldPause) {
+      BinderPauseProvider provider, bool shouldPause) {
     _providerPauseStates[provider] = shouldPause;
     _reevaluatePauseState();
   }
 
   // A simple map to track the pause state signaled by each provider
   // Tracks the individual pause state of each provider.
-  final Map<ViewModelPauseProvider, bool> _providerPauseStates = {};
+  final Map<BinderPauseProvider, bool> _providerPauseStates = {};
 
   // Re-evaluates the combined pause state from all providers.
   void _reevaluatePauseState() {

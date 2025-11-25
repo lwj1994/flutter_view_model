@@ -50,28 +50,37 @@
     - [ValueListenableBuilder](#valuelistenablebuilder)
     - [ObserverBuilder](#observerbuilder)
     - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
+  - [自定义 Binder](#自定义-binder) 
   - [DevTools 扩展](#devtools-扩展)
 
 ---
 
 ## 万物皆是 ViewModel
 
-我们重新定义了 "ViewModel"：它不再局限于 MVVM 模式，而是一个具备生命周期感知能力的**特殊 Manager 容器**。
+我们重新定义了 "ViewModel":它不再局限于 MVVM 模式,而是一个具备生命周期感知能力的**特殊 Manager 容器**。
 
 **1. 以 Widget 为核心的架构**
-Flutter App 的运作是以页面和组件为核心的。无论逻辑多复杂，数据的最终消费者永远是 Widget。因此，将 Manager 的生命周期直接与 Widget 树绑定，是逻辑最自洽、最自然的架构方式。
+Flutter App 的运作是以页面和组件为核心的。无论逻辑多复杂,数据的最终消费者永远是 Widget。因此,将 Manager 的生命周期直接与 Widget 树绑定,是逻辑最自洽、最自然的架构方式。
 
-**2. 统一概念，灵活作用域**
-你不需要区分什么是 Service、Controller 或 Store。它们都是 ViewModel。区别仅仅在于**挂载位置**：
-*   **全局**：挂载在顶层 **`AppMain`**，实现全局单例。
-*   **局部**：挂载在 **Page**，自动跟随页面销毁。
-*   **共享**：通过唯一的 **`key`**（如商品ID），在不同页面间共享同一个实例。
+**2. 统一概念,灵活作用域**
+你不需要区分什么是 Service、Controller 或 Store。它们都是 ViewModel。区别仅仅在于**挂载位置**:
+*   **全局**:挂载在顶层 **`AppMain`**,实现全局单例。
+*   **局部**:挂载在 **Page**,自动跟随页面销毁。
+*   **共享**:通过唯一的 **`key`**(如商品ID),在不同页面间共享同一个实例。
 
 **3. 无缝组合与逻辑解耦**
-ViewModel 可以在内部直接依赖或读取其他 ViewModel（例如 `UserVM` 读取 `NetworkVM`）。但 ViewModel 本身是 **Widget 无感知的**——它只负责逻辑和状态，完全不知道 Widget 的存在，也不持有 `BuildContext`。
+ViewModel 可以在内部直接依赖或读取其他 ViewModel(例如 `UserVM` 读取 `NetworkVM`)。但 ViewModel 本身是 **Widget 无感知的**——它只负责逻辑和状态,完全不知道 Widget 的存在,也不持有 `BuildContext`。
 
 **4. 极致的开箱即用**
-相比于 **GetIt**（需要手写绑定胶水代码）或 **Riverpod**（涉及复杂的图谱概念），这套方案是绝对实用主义的。它提供了自动化的生命周期管理和依赖注入，零样板代码，真正的**开箱即用**。
+相比于 **GetIt**(需要手写绑定胶水代码)或 **Riverpod**(涉及复杂的图谱概念),这套方案是绝对实用主义的。它提供了自动化的生命周期管理和依赖注入,零样板代码,真正的**开箱即用**。
+
+**5. 超越 Widget:自定义 Binder**
+通过自定义 `Binder`,ViewModel 可以**脱离 Widget 独立存在**。任何 Dart 类都可以 `with Binder` 成为 ViewModel 的宿主,实现以下场景:
+*   **后台服务**:在后台任务中运行 ViewModel 逻辑(如下载、同步)。
+*   **纯 Dart 测试**:无需 `testWidgets` 即可测试 ViewModel 交互。
+*   **启动任务**:在任何 Widget 渲染前执行初始化逻辑。
+
+这让 ViewModel 真正做到了万能——**万物皆可 ViewModel**,不仅仅是 UI 组件。详见[自定义 Binder](#自定义-binder)。
 ---
 
 ## 快速开始
@@ -457,6 +466,87 @@ graph TD
     end
 
     VMA1 --> VMA2 --> VMA3 --> VMA_gone
+```
+
+## 自定义 Binder
+`Binder` 主要是为了某些不需要 UI 的场景设计的。例如，在 App 启动时可能需要执行一些初始化任务（如预加载数据、检查登录状态），但此时还没有任何 Widget 显示。在这种情况下，你可以创建一个 `StartTaskBinder` 作为 ViewModel 的宿主来运行这些逻辑。
+
+`Binder` 是 `view_model` 库的核心，它负责管理 ViewModel 的生命周期和依赖注入。`WidgetMixin` 本质上只是 `WidgetBinder` 的一个封装。
+
+这意味着你可以**脱离 Widget**，在任何 Dart 类中使用 ViewModel。
+
+### 核心概念
+
+*   **Binder**: 通用的 ViewModel 管理器。它模拟了宿主环境，提供 `watchViewModel` 等方法。
+*   **WidgetBinder**: `Binder` 的子类，专门适配 Flutter Widget，实现了 `onUpdate` -> `setState` 的桥接。
+
+### 使用场景
+
+1.  **后台服务 (Service)**: 在后台任务中复用 ViewModel 逻辑（如下载、数据同步）。
+2.  **单元测试**: 无需 `testWidgets` 即可测试 ViewModel 的交互和依赖。
+3.  **全局单例**: 在 App 启动前预加载并持有全局 ViewModel。
+
+### 示例：自定义 Service Binder
+
+你可以让你的 Service with `Binder`，从而获得管理 ViewModel 的宿主能力。
+
+```dart
+class DownloadService with Binder {
+  late final DownloadViewModel _downloadVM = watchViewModel(factory: DownloadViewModelFactory());
+
+  DownloadService() {
+   
+  }
+
+  void start(){
+    // 2. 启动业务逻辑
+    _downloadVM.startQueue(); 
+  }
+
+  // 重写 onUpdate：当 DownloadViewModel 状态变化时，自动被调用
+  @override
+  void onUpdate() {
+    // 3. 处理副作用，例如更新系统通知栏
+    print("下载进度更新: ${_downloadVM.progress}");
+    NotificationApi.updateProgress(_downloadVM.progress);
+  }
+  
+  void dispose() {
+    // 4. 销毁 Binder，自动 unbind 所有 ViewModel
+    super.dispose();
+  }
+}
+
+
+final downloadService = DownloadService();
+
+await downloadService.start();
+
+downloadService.dispose();
+```
+
+### 示例：在纯 Dart 测试中使用
+
+```dart
+test('测试 AuthViewModel 登录流程', () {
+  // 创建一个临时的 Binder
+  final binder = Binder(); 
+  
+  // 获取 VM (Binder 会自动解决其依赖)
+  final authVM = binder.watchViewModel(factory: AuthViewModelFactory());
+  
+  // 验证初始状态
+  expect(authVM.isLoggedIn, false);
+  
+  // 执行操作
+  authVM.login("user", "pass");
+  
+  // 验证状态变化
+  expect(authVM.isLoggedIn, true);
+  
+  // 测试结束，清理资源
+  binder.dispose();
+});
 ```
 
 ## 初始化
@@ -901,9 +991,9 @@ class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
 
 [文档](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
 
-暂停/恢复生命周期由 `ViewModelPauseProvider` 管理。默认情况下，`PageRoutePauseProvider`、`TickerModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理暂停/恢复。
+暂停/恢复生命周期由 `BinderPauseProvider` 管理。默认情况下,`PageRoutePauseProvider`、`TickerModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理 `Binder` 的暂停/恢复。
 
-它会自动处理页面不可见时（例如：推入新路由、切换 Tab 或应用在后台）的资源释放或数据暂停。
+当 `Binder` 被暂停时(例如:Widget 导航离开),它会停止响应 ViewModel 的状态变化,从而避免不必要的重建。ViewModel 会继续发出通知,但暂停的 Binder 会忽略这些通知。当恢复时,Binder 会检查是否有错过的更新,如有则触发重建。
 
 ## 值级别重建
 由于 ViewModel 更新整个 widget (粗粒度)，如果你需要更细粒度的更新，这里有三种方法可供参考。
@@ -984,3 +1074,5 @@ extensions:
 
 ![](https://i.imgur.com/5itXPYD.png)
 ![](https://imgur.com/83iOQhy.png)
+
+

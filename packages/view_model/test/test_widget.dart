@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/view_model.dart';
 
 class TestPage extends StatefulWidget {
@@ -131,7 +132,7 @@ class DisposeErrorViewModel extends ViewModel {
   @override
   void dispose() {
     super.dispose();
-    throw StateError("dispose test error");
+    throw ViewModelError("dispose test error");
   }
 }
 

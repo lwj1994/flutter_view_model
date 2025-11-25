@@ -8,6 +8,8 @@
 /// @author luwenjie on 2025/3/25 12:23:33
 library;
 
+import 'package:view_model/src/view_model/state_store.dart';
+
 import 'store.dart';
 
 /// Global instance manager singleton.
@@ -93,7 +95,7 @@ class InstanceManager {
   ///
   /// Returns the ViewModel instance of type [T].
   ///
-  /// Throws [StateError] if no instance is found and cannot be created.
+  /// Throws [ViewModelError] if no instance is found and cannot be created.
   T get<T>({
     InstanceFactory<T>? factory,
   }) {
@@ -128,14 +130,14 @@ class InstanceManager {
   ///
   /// Returns an [InstanceHandle] for the ViewModel instance.
   ///
-  /// Throws [StateError] if:
+  /// Throws [ViewModelError] if:
   /// - [T] is dynamic (type must be specified)
   /// - No instance is found and cannot be created
   InstanceHandle<T> getNotifier<T>({
     InstanceFactory<T>? factory,
   }) {
     if (T == dynamic) {
-      throw StateError("T is dynamic");
+      throw ViewModelError("T is dynamic");
     }
     if (factory == null || factory.isEmpty()) {
       final watchId = factory?.arg.binderId;
@@ -145,7 +147,7 @@ class InstanceManager {
         tag: tag,
       );
       if (find == null) {
-        throw StateError("no $T instance found");
+        throw ViewModelError("no $T instance found");
       }
 
       // if watchId is not null, add watcher

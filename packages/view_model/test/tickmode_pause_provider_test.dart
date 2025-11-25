@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/view_model.dart';
 
 // Define a simple ViewModel for testing
@@ -102,7 +101,7 @@ class StatelessTestWidget extends StatelessWidget with ViewModelStatelessMixin {
   Widget build(BuildContext context) {
     print("StatelessTestWidget TickerMode = ${TickerMode.of(context)}");
     _tickerModeProvider.subscribe(TickerMode.getNotifier(context));
-    addViewModelPauseProvider(_tickerModeProvider);
+    addBinderPauseProvider(_tickerModeProvider);
     final viewModel = watchViewModel<TestViewModel>(
         factory: DefaultViewModelFactory(builder: () => TestViewModel()));
     return Column(

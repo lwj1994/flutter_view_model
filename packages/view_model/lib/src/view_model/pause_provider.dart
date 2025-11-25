@@ -10,7 +10,7 @@ import 'package:view_model/src/view_model/view_model.dart';
 /// Implementers of this class can represent different sources of lifecycle
 /// events, such as route changes, application state changes, or custom
 /// events from a mixed-stack environment.
-abstract class ViewModelPauseProvider {
+abstract class BinderPauseProvider {
   /// A stream that emits `true` when the component should be paused,
   /// and `false` when it can be resumed.
   Stream<bool> get onPauseStateChanged;
@@ -19,19 +19,19 @@ abstract class ViewModelPauseProvider {
   void dispose();
 }
 
-/// ViewModelVisibleListener controls manual pause/resume for a page/state.
+/// BinderVisibleListener controls manual pause/resume for a page/state.
 ///
 /// - Call [onPause] to mark the page as paused (e.g., covered by another
 ///   route).
 ///   While paused, rebuilds triggered by bound ViewModels are ignored.
 /// - Call [onResume] to mark as resumed and invoke the provided callback to
 ///   trigger a single refresh.
-class ViewModelManualPauseProvider implements ViewModelPauseProvider {
+class ManualBinderPauseProvider implements BinderPauseProvider {
   final _controller = StreamController<bool>.broadcast();
 
-  /// Creates a [ViewModelManualPauseProvider] with the callback used to trigger
+  /// Creates a [ManualBinderPauseProvider] with the callback used to trigger
   /// refresh when resuming.
-  ViewModelManualPauseProvider() {}
+  ManualBinderPauseProvider() {}
 
   void pause() => _controller.add(true);
   void resume() => _controller.add(false);
@@ -45,9 +45,9 @@ class ViewModelManualPauseProvider implements ViewModelPauseProvider {
   Stream<bool> get onPauseStateChanged => _controller.stream;
 }
 
-/// A [ViewModelPauseProvider] that signals pause/resume based on the
+/// A [BinderPauseProvider] that signals pause/resume based on the
 /// application's lifecycle state ([AppLifecycleState]).
-class AppPauseProvider implements ViewModelPauseProvider {
+class AppPauseProvider implements BinderPauseProvider {
   final _controller = StreamController<bool>.broadcast();
   StreamSubscription<AppLifecycleState>? _subscription;
 
@@ -72,13 +72,13 @@ class AppPauseProvider implements ViewModelPauseProvider {
   }
 }
 
-/// A [ViewModelPauseProvider] that pauses/resumes based on [TickerMode].
+/// A [BinderPauseProvider] that pauses/resumes based on [TickerMode].
 ///
 /// This provider is useful for pausing ViewModels when their widget is
 /// in a hidden state within a [TabBarView] or other [TickerMode] controlled
 /// environments. When [TickerMode] is disabled (false), the ViewModel is
 /// paused.
-class TickerModePauseProvider extends ViewModelManualPauseProvider {
+class TickerModePauseProvider extends ManualBinderPauseProvider {
   ValueListenable<bool>? _notifier;
   void subscribe(ValueListenable<bool> notifier) {
     if (_notifier == notifier) return;
@@ -106,9 +106,9 @@ class TickerModePauseProvider extends ViewModelManualPauseProvider {
   }
 }
 
-/// A [ViewModelPauseProvider] that uses [RouteAware] to determine pause state
+/// A [BinderPauseProvider] that uses [RouteAware] to determine pause state
 /// based on route navigation events (push, pop).
-class PageRoutePauseProvider implements ViewModelPauseProvider, RouteAware {
+class PageRoutePauseProvider implements BinderPauseProvider, RouteAware {
   // The stream controller that broadcasts pause state changes.
   final _controller = StreamController<bool>.broadcast();
   final List<PageRoute> _subscribedRoutes = [];
