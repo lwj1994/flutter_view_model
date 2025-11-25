@@ -13,16 +13,12 @@
 /// reactive ViewModel integration.
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
-import 'package:view_model/src/log.dart';
-import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
-import 'package:view_model/src/view_model/pause_aware.dart';
-import 'package:view_model/src/view_model/pause_provider.dart';
-import 'package:view_model/src/view_model/util.dart';
-import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/view_model.dart';
+
+import 'binder.dart';
 
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
 ///
@@ -60,49 +56,14 @@ import 'package:view_model/src/view_model/view_model.dart';
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     implements ViewModelCreateInterface {
   @visibleForTesting
-  late final ViewModelAttacher attacher = ViewModelAttacher(
-    rebuildState: _rebuildState,
-    getBinderName: getViewModelBinderName,
-    pauseAwareController: _pauseAwareController,
+  late final WidgetBinder binder = WidgetBinder(
+    refreshWidget: _rebuildState,
   );
-
-  /// Returns true if the widget is currently considered paused.
-  ///
-  /// This state is determined by the [PauseAwareController] and its registered
-  /// [ViewModelPauseProvider]s. When paused, ViewModel updates are suppressed.
-  bool get isPaused => _pauseAwareController.isPaused;
-
-  void addViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _pauseAwareController.addProvider(provider);
-  }
-
-  void removeViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _pauseAwareController.removeProvider(provider);
-  }
 
   late final _routePauseProvider = PageRoutePauseProvider();
   late final TickerModePauseProvider _tickerModePauseProvider =
       TickerModePauseProvider();
   late final _appPauseProvider = AppPauseProvider();
-
-  /// A fallback for pageRouteAware is implemented here.
-  late final _pauseAwareController = PauseAwareController(
-    onWidgetPause: _onPause,
-    onWidgetResume: _onResume,
-    providers: [
-      _appPauseProvider,
-      _routePauseProvider,
-      _tickerModePauseProvider,
-    ],
-    disposableProviders: [
-      _appPauseProvider,
-      _routePauseProvider,
-      _tickerModePauseProvider,
-    ],
-    binderName: getViewModelBinderName,
-  );
-
-  final _stackPathLocator = StackPathLocator();
 
   @override
   void didChangeDependencies() {
@@ -114,23 +75,28 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     }
   }
 
+  bool get isPaused => binder.isPaused;
+
   @override
   VM watchViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
   }) {
-    return attacher.watchViewModel(
+    // ignore: invalid_use_of_protected_member
+    return binder.watchViewModel(
       factory: factory,
     );
   }
 
   @override
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
-    attacher.recycleViewModel(viewModel);
+    // ignore: invalid_use_of_protected_member
+    binder.recycleViewModel(viewModel);
   }
 
   @override
   VM watchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    return attacher.watchCachedViewModel(
+    // ignore: invalid_use_of_protected_member
+    return binder.watchCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -141,7 +107,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     Object? key,
     Object? tag,
   }) {
-    return attacher.maybeWatchCachedViewModel(
+    return binder.maybeWatchCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -151,14 +117,16 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   VM readViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
   }) {
-    return attacher.readViewModel(
+    // ignore: invalid_use_of_protected_member
+    return binder.readViewModel(
       factory: factory,
     );
   }
 
   @override
   VM readCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    return attacher.readCachedViewModel(
+    // ignore: invalid_use_of_protected_member
+    return binder.readCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -169,7 +137,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     Object? key,
     Object? tag,
   }) {
-    return attacher.maybeReadCachedViewModel(
+    return binder.maybeReadCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -178,55 +146,37 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   @override
   void initState() {
     super.initState();
-    attacher.attach();
+    binder.init();
+    binder.addPauseProvider(_appPauseProvider);
+    binder.addPauseProvider(_routePauseProvider);
+    binder.addPauseProvider(_tickerModePauseProvider);
   }
 
   @override
   void dispose() {
     super.dispose();
-    attacher.dispose();
-    _pauseAwareController.dispose();
+    binder.dispose();
+    _appPauseProvider.dispose();
+    _routePauseProvider.dispose();
+    _tickerModePauseProvider.dispose();
   }
 
   void _rebuildState() {
-    if (attacher.isDisposed) return;
+    if (binder.isDisposed) return;
     if (context.mounted &&
         SchedulerBinding.instance.schedulerPhase !=
             SchedulerPhase.persistentCallbacks) {
       setState(() {});
     } else {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (!attacher.isDisposed && context.mounted) {
+        if (!binder.isDisposed && context.mounted) {
           setState(() {});
         }
       });
     }
   }
 
-  /// Generates a debug-friendly name for this ViewModel watcher.
-  ///
-  /// This method creates a unique identifier that includes the file path, line
-  /// number, and class name where the ViewModel is being watched. This
-  /// information is useful for debugging and development tools.
-  ///
-  /// Returns an empty string in release mode for performance.
-  ///
-  /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
-  String getViewModelBinderName() {
-    if (!kDebugMode) return "$runtimeType";
-
-    final pathInfo = _stackPathLocator.getCurrentObjectPath();
-    return pathInfo.isNotEmpty ? "$pathInfo#$runtimeType" : "$runtimeType";
+  String getWidgetBinderName() {
+    return binder.getBinderName();
   }
-
-  void _onResume() {
-    if (attacher.hasMissedUpdates) {
-      viewModelLog(
-          "${getViewModelBinderName()} Resume with missed updates, rebuilding");
-      attacher.consumeMissedUpdates();
-      _rebuildState();
-    }
-  }
-
-  void _onPause() {}
 }

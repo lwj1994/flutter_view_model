@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:meta/meta.dart' show internal;
 
 import 'model.dart' as model;
+import 'state_store.dart';
 import 'view_model.dart';
 
 typedef DependencyResolver = T Function<T extends ViewModel>({
@@ -117,7 +118,7 @@ class DependencyHandler {
         (Zone.current[_resolverKey] as DependencyResolver?);
 
     if (resolver == null) {
-      throw StateError(
+      throw ViewModelError(
           'No dependency resolver available. ViewModel must be used '
           'within a Widget context');
     }

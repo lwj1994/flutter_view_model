@@ -1,13 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
-import 'package:view_model/src/log.dart';
-import 'package:view_model/src/view_model/extension/attacher.dart';
 import 'package:view_model/src/view_model/interface.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/src/view_model/widget_mixin/binder.dart';
 
 /// Stateless integration for ViewModel access from widgets.
 /// Provides a mixin and a custom Element that bridge ViewModel
@@ -18,22 +17,21 @@ mixin ViewModelStatelessMixin on StatelessWidget
   late final _StatelessViewModelElement _viewModelElement =
       _StatelessViewModelElement(
     this,
-    getViewModelBinderName: getViewModelBinderName,
   );
   final _stackPathLocator = StackPathLocator();
 
   /// Returns true if the widget is currently considered paused.
   ///
   /// This state is determined by the [PauseAwareController] and its registered
-  /// [ViewModelPauseProvider]s. When paused, ViewModel updates are suppressed.
-  bool get isPaused => _viewModelElement._pauseAwareController.isPaused;
+  /// [BinderPauseProvider]s. When paused, ViewModel updates are suppressed.
+  bool get isPaused => _viewModelElement._binder.isPaused;
 
-  void addViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _viewModelElement._pauseAwareController.addProvider(provider);
+  void addBinderPauseProvider(BinderPauseProvider provider) {
+    _viewModelElement._binder.addPauseProvider(provider);
   }
 
-  void removeViewModelPauseProvider(ViewModelPauseProvider provider) {
-    _viewModelElement._pauseAwareController.removeProvider(provider);
+  void removeBinderPauseProvider(BinderPauseProvider provider) {
+    _viewModelElement._binder.removePauseProvider(provider);
   }
 
   /// Creates the custom Element that carries the attacher.
@@ -49,7 +47,8 @@ mixin ViewModelStatelessMixin on StatelessWidget
   /// Finds by `key` or `tag`. Does not create new instances.
   @override
   VM watchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    return _viewModelElement._attacher.watchCachedViewModel(
+    // ignore: invalid_use_of_protected_member
+    return _viewModelElement._binder.watchCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -59,21 +58,23 @@ mixin ViewModelStatelessMixin on StatelessWidget
   @override
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
-    return _viewModelElement._attacher.watchViewModel(
+    // ignore: invalid_use_of_protected_member
+    return _viewModelElement._binder.watchViewModel(
       factory: factory,
     );
   }
 
   @override
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
-    _viewModelElement._attacher.recycleViewModel(viewModel);
+    // ignore: invalid_use_of_protected_member
+    _viewModelElement._binder.recycleViewModel(viewModel);
   }
 
   /// Safe watch for cached ViewModel, returns `null` when not found.
   @override
   VM? maybeWatchCachedViewModel<VM extends ViewModel>(
       {Object? key, Object? tag}) {
-    return _viewModelElement._attacher.maybeWatchCachedViewModel(
+    return _viewModelElement._binder.maybeWatchCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -83,7 +84,7 @@ mixin ViewModelStatelessMixin on StatelessWidget
   @override
   VM? maybeReadCachedViewModel<VM extends ViewModel>(
       {Object? key, Object? tag}) {
-    return _viewModelElement._attacher.maybeReadCachedViewModel(
+    return _viewModelElement._binder.maybeReadCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -92,7 +93,8 @@ mixin ViewModelStatelessMixin on StatelessWidget
   /// Reads a cached ViewModel without listening for changes.
   @override
   VM readCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    return _viewModelElement._attacher.readCachedViewModel(
+    // ignore: invalid_use_of_protected_member
+    return _viewModelElement._binder.readCachedViewModel(
       key: key,
       tag: tag,
     );
@@ -102,7 +104,8 @@ mixin ViewModelStatelessMixin on StatelessWidget
   @override
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
-    return _viewModelElement._attacher.readViewModel(
+    // ignore: invalid_use_of_protected_member
+    return _viewModelElement._binder.readViewModel(
       factory: factory,
     );
   }
@@ -120,46 +123,21 @@ mixin ViewModelStatelessMixin on StatelessWidget
 /// to `markNeedsBuild`. Manages attach and dispose with element
 /// lifecycle.
 class _StatelessViewModelElement extends StatelessElement {
-  final String Function() getViewModelBinderName;
-  late final ViewModelAttacher _attacher = ViewModelAttacher(
-    rebuildState: _rebuildState,
-    getBinderName: getViewModelBinderName,
-    pauseAwareController: _pauseAwareController,
+  late final WidgetBinder _binder = WidgetBinder(
+    refreshWidget: _rebuildState,
   );
 
   late final _appPauseProvider = AppPauseProvider();
 
-  late final _pauseAwareController = PauseAwareController(
-      onWidgetPause: _onPause,
-      onWidgetResume: _onResume,
-      providers: [
-        _appPauseProvider,
-      ],
-      disposableProviders: [
-        _appPauseProvider,
-      ],
-      binderName: getViewModelBinderName);
-
-  _StatelessViewModelElement(super.widget,
-      {required this.getViewModelBinderName});
+  _StatelessViewModelElement(super.widget);
 
   /// Attaches the element and starts ViewModel listening.
   @override
   void mount(Element? parent, dynamic newSlot) {
-    _attacher.attach();
     super.mount(parent, newSlot);
+    _binder.init();
+    _binder.addPauseProvider(_appPauseProvider);
   }
-
-  void _onResume() {
-    if (_attacher.hasMissedUpdates) {
-      viewModelLog(
-          "${getViewModelBinderName()} Resume with missed updates, rebuilding");
-      _attacher.consumeMissedUpdates();
-      _rebuildState();
-    }
-  }
-
-  void _onPause() {}
 
   void _rebuildState() {
     if (!mounted) return;
@@ -180,7 +158,7 @@ class _StatelessViewModelElement extends StatelessElement {
   @override
   void unmount() {
     super.unmount();
-    _attacher.dispose();
-    _pauseAwareController.dispose();
+    _binder.dispose();
+    _appPauseProvider.dispose();
   }
 }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/view_model/view_model.dart';
-import 'package:view_model/src/view_model/extension/stateful_extension.dart';
-import 'package:view_model/src/view_model/extension/stateless_extension.dart';
+import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
+import 'package:view_model/src/view_model/widget_mixin/stateless_extension.dart';
 
 // 1. Define a simple ViewModel, as shown in the README.
 class TestViewModel extends ViewModel {}
@@ -26,15 +26,11 @@ class _TestPageState extends State<TestPage>
     with ViewModelStateMixin<TestPage> {
   late final TestViewModel viewModel;
 
-  // Expose the binder name for testing purposes.
-  String get binderName => getViewModelBinderName();
-
   @override
   void initState() {
     super.initState();
     // watchViewModel will internally trigger the binder name generation.
     viewModel = watchViewModel<TestViewModel>(factory: TestViewModelFactory());
-    print('Located binder name inside initState: $binderName');
   }
 
   @override
@@ -67,9 +63,6 @@ class _TestPageState3 extends _TestPageState2 {}
 class _TestPageState2 extends _BasePageState<TestPage2> {
   late final TestViewModel viewModel;
 
-  // Expose the binder name for testing purposes.
-  String get binderName => getViewModelBinderName();
-
   @override
   void initState() {
     super.initState();
@@ -101,7 +94,7 @@ void main() {
 
     // Act: Find the state to access the result.
     final state = tester.state(find.byType(TestPage)) as _TestPageState;
-    final name = state.binderName;
+    final name = state.getWidgetBinderName();
     print(name);
 
     // Assert: Check if the binder name correctly identifies the state class and file.
@@ -118,7 +111,7 @@ void main() {
 
     // Act: Find the state to access the result.
     final state = tester.state(find.byType(TestPage2)) as _TestPageState2;
-    final name = state.binderName;
+    final name = state.getWidgetBinderName();
     print(name);
     // Assert: Check if the binder name correctly identifies the SUBCLASS.
     expect(name, isNotNull);

@@ -7,8 +7,8 @@
 /// @author luwenjie on 2025/3/25 16:24:32
 library;
 
-import 'package:uuid/v4.dart';
 import 'package:view_model/src/view_model/dependency_handler.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 import 'manager.dart';
@@ -73,14 +73,14 @@ class AutoDisposeInstanceController {
     required this.dependencyResolver,
   });
 
-  /// Unique identifier for this controller instance.
-  final _uuid = const UuidV4().generate();
-
   /// Gets the unique watcher ID combining the watcher name and UUID.
   ///
   /// This ID is used to identify this specific watcher in the ViewModel
   /// dependency tracking system.
-  String get _binderId => "$binderName(id=$_uuid)";
+  String get _binderId => "$binderName(id=${this.hashCode})";
+
+  /// Public getter for the binder id string.
+  String get binderId => _binderId;
 
   /// Gets a ViewModel instance with automatic lifecycle management.
   ///
@@ -96,7 +96,7 @@ class AutoDisposeInstanceController {
   ///
   /// Returns the ViewModel instance of type [T].
   ///
-  /// Throws [StateError] if [T] is dynamic.
+  /// Throws [ViewModelError] if [T] is dynamic.
   ///
   /// Example:
   /// ```dart
@@ -111,7 +111,7 @@ class AutoDisposeInstanceController {
     InstanceFactory<T>? factory,
   }) {
     if (T == dynamic) {
-      throw StateError("T must extends ViewModel");
+      throw ViewModelError("T must extends ViewModel");
     }
     factory = (factory ?? InstanceFactory<T>());
     factory = factory.copyWith(
@@ -175,6 +175,19 @@ class AutoDisposeInstanceController {
         return false;
       }
     });
+  }
+
+  /// Unbinds this controller from a specific instance.
+  ///
+  /// The instance will drop this binder id from its handle. If no
+  /// binders remain, the instance can be recycled automatically.
+  void unbindInstance(Object instance) {
+    for (final e in _instanceNotifiers) {
+      if (e.instance == instance) {
+        e.removeBinder(_binderId);
+        break;
+      }
+    }
   }
 
   /// Disposes the controller and cleans up all tracked instances.

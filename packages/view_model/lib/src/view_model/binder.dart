@@ -1,5 +1,6 @@
+library;
+
 import 'package:flutter/foundation.dart';
-import 'package:uuid/v4.dart';
 // ignore: unnecessary_import
 import 'package:meta/meta.dart' show internal;
 import 'package:view_model/src/get_instance/auto_dispose.dart';
@@ -10,38 +11,188 @@ import 'package:view_model/src/view_model/dependency_handler.dart';
 import 'package:view_model/src/view_model/interface.dart';
 import 'package:view_model/src/view_model/model.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
+import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
-/// A class that attaches a ViewModel to a widget's lifecycle, handling its
-/// creation, disposal, and dependency management. It allows widgets to interact
-/// with ViewModels, listen for state changes, and manage their lifecycle
-/// automatically.
-class ViewModelAttacher implements ViewModelCreateInterface {
-  bool _dispose = false;
-  final Function() rebuildState;
-  final String Function() getBinderName;
-  final PauseAwareController pauseAwareController;
+import 'state_store.dart';
 
-  /// Creates a [ViewModelAttacher] with the callback used to trigger rebuild
-  /// when resuming.
-  ViewModelAttacher({
-    required this.rebuildState,
-    required this.getBinderName,
-    required this.pauseAwareController,
-  });
+/// Core abstraction for managing ViewModel lifecycle and dependency injection.
+///
+/// [Binder] is the foundation of the `view_model` library, providing a generic
+/// mechanism for hosting and managing ViewModels independent of Flutter widgets.
+/// It can be mixed into any Dart class to gain ViewModel management capabilities.
+///
+/// ## Core Responsibilities
+///
+/// - **Lifecycle Management**: Automatically creates, caches, and disposes
+///   ViewModels based on reference counting
+/// - **Dependency Injection**: Resolves ViewModel dependencies using Zone-based
+///   dependency resolution
+/// - **Pause/Resume**: Manages pause/resume lifecycle through
+///   [BinderPauseProvider]s
+/// - **Update Notifications**: Provides [onUpdate] hook for responding to
+///   ViewModel changes
+///
+/// ## Key Concepts
+///
+/// - **Binder**: Generic ViewModel manager that can be used in any Dart class
+/// - **WidgetBinder**: Specialized subclass for Flutter widgets that bridges
+///   [onUpdate] to `setState`
+/// - **Reference Counting**: ViewModels are kept alive as long as at least one
+///   binder is watching them
+///
+/// ## Use Cases
+///
+/// 1. **Background Services**: Run ViewModel logic in background tasks
+///    (e.g., downloads, data sync)
+/// 2. **Pure Dart Tests**: Test ViewModel interactions without `testWidgets`
+/// 3. **Global Singletons**: Manage global ViewModels before app starts
+/// 4. **Widget Integration**: Used internally by [ViewModelStateMixin] and
+///    [ViewModelStatelessMixin]
+///
+/// ## Lifecycle Hooks
+///
+/// Override these methods to customize behavior:
+/// - [onUpdate]: Called when any watched ViewModel notifies changes
+/// - [onPause]: Called when the binder is paused (e.g., widget not visible)
+/// - [onResume]: Called when the binder resumes (e.g., widget becomes visible)
+///
+/// ## Example: Custom Service Binder
+///
+/// ```dart
+/// class DownloadService with Binder {
+///   late final DownloadViewModel _downloadVM;
+///
+///   DownloadService() {
+///     _downloadVM = watchViewModel(factory: DownloadViewModelFactory());
+///   }
+///
+///   @override
+///   void onUpdate() {
+///     // Handle ViewModel updates (e.g., update notification)
+///     print("Download progress: ${_downloadVM.progress}");
+///   }
+///
+///   void start() {
+///     _downloadVM.startQueue();
+///   }
+///
+///   @override
+///   void dispose() {
+///     super.dispose(); // Automatically disposes all watched ViewModels
+///   }
+/// }
+/// ```
+///
+/// ## Example: Pure Dart Testing
+///
+/// ```dart
+/// test('Test ViewModel interactions', () {
+///   final binder = Binder();
+///   final vm = binder.watchViewModel(factory: MyViewModelFactory());
+///
+///   expect(vm.count, 0);
+///   vm.increment();
+///   expect(vm.count, 1);
+///
+///   binder.dispose(); // Clean up
+/// });
+/// ```
+///
+/// See also:
+/// - [WidgetBinder]: Specialized implementation for Flutter widgets
+/// - [ViewModelStateMixin]: Mixin that uses Binder for StatefulWidget
+/// - [BinderPauseProvider]: Interface for pause/resume providers
+mixin class Binder implements ViewModelCreateInterface {
+  bool _dispose = false;
+  final _stackPathLocator = StackPathLocator();
+
+  late final PauseAwareController _pauseAwareController =
+      createPauseController();
 
   bool get isDisposed => _dispose;
 
   late final _instanceController = AutoDisposeInstanceController(
-    onRecreate: () {
-      rebuildState();
-    },
+    onRecreate: onUpdate,
     binderName: getBinderName(),
     dependencyResolver: onChildDependencyResolver,
   );
   final Map<ViewModel, bool> _stateListeners = {};
-  final _defaultViewModelKey = const UuidV4().generate();
+  final _defaultViewModelKey = Object();
   final List<Function()> _disposes = [];
+
+  /// Called when any watched ViewModel notifies changes.
+  ///
+  /// Override this method to respond to ViewModel state changes. For example,
+  /// [WidgetBinder] overrides this to call `setState()` and trigger widget
+  /// rebuilds.
+  ///
+  /// This method is called automatically when:
+  /// - A watched ViewModel calls `notifyListeners()`
+  /// - The binder resumes from pause with missed updates
+  ///
+  /// Example:
+  /// ```dart
+  /// @override
+  /// void onUpdate() {
+  ///   super.onUpdate();
+  ///   // Custom logic, e.g., update UI, send notifications
+  ///   print("ViewModel updated");
+  /// }
+  /// ```
+  @mustCallSuper
+  @protected
+  void onUpdate() {}
+
+  /// Called when the binder is paused.
+  /// Override this to handle pause events.
+  @protected
+  @mustCallSuper
+  void onPause() {}
+
+  /// Called when the binder is resumed.
+  /// Override this to handle resume events.
+  @protected
+  @mustCallSuper
+  void onResume() {
+    if (_hasMissedUpdates) {
+      _hasMissedUpdates = false;
+      onUpdate();
+      viewModelLog("${getBinderName()} Resume with missed updates, updated");
+    }
+  }
+
+  /// Creates the PauseAwareController for this binder.
+  /// Override this to provide custom pause providers.
+  PauseAwareController createPauseController() {
+    return PauseAwareController(
+      onWidgetPause: onPause,
+      onWidgetResume: onResume,
+      providers: [],
+      disposableProviders: [],
+      binderName: getBinderName,
+    );
+  }
+
+  /// Returns true if the binder is currently paused.
+  bool get isPaused => _pauseAwareController.isPaused;
+
+  /// Generates a debug-friendly name for this ViewModel watcher.
+  ///
+  /// This method creates a unique identifier that includes the file path, line
+  /// number, and class name where the ViewModel is being watched. This
+  /// information is useful for debugging and development tools.
+  ///
+  /// Returns an empty string in release mode for performance.
+  ///
+  /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
+  String getBinderName() {
+    if (!kDebugMode) return "$runtimeType";
+
+    final pathInfo = _stackPathLocator.getCurrentObjectPath();
+    return pathInfo.isNotEmpty ? "$pathInfo#$runtimeType" : "$runtimeType";
+  }
 
   /// Forces disposal of a ViewModel and removes it from cache.
   ///
@@ -54,13 +205,17 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///
   /// Example:
   /// ```dart
-  /// final userVM = watchViewModel<UserViewModel>(factory:);
+  /// var userVM = watchViewModel<UserViewModel>(factory: fac);
   /// // Later, force recreation
   /// recycleViewModel(userVM);
+  ///
+  /// recreate new instance
+  /// userVM = watchViewModel<UserViewModel>(factory: fac);
   /// ```
+  @protected
   void recycleViewModel<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
-    rebuildState();
+    onUpdate();
   }
 
   /// Gets an existing ViewModel by key or throws an error if not found.
@@ -126,6 +281,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///   }
   /// }
   /// ```
+  @protected
   @override
   VM watchViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
@@ -151,7 +307,8 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///
   /// Returns the cached ViewModel instance.
   ///
-  /// Throws a [StateError] if no matching ViewModel is found in the cache.
+  /// Throws a [ViewModelError] if no matching ViewModel is found in the cache.
+  @protected
   VM watchCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -182,7 +339,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///
   /// Returns the ViewModel instance.
   ///
-  /// Throws a [StateError] if the widget has been disposed.
+  /// Throws a [ViewModelError] if the widget has been disposed.
   ///
   /// Example:
   /// ```dart
@@ -191,6 +348,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///   vm.performAction(); // This will not trigger a rebuild.
   /// }
   /// ```
+  @protected
   VM readViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
   }) {
@@ -214,7 +372,8 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///
   /// Returns the cached ViewModel instance.
   ///
-  /// Throws a [StateError] if no matching ViewModel is found in the cache.
+  /// Throws a [ViewModelError] if no matching ViewModel is found in the cache.
+  @protected
   VM readCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -236,7 +395,7 @@ class ViewModelAttacher implements ViewModelCreateInterface {
     bool listen = true,
   }) {
     if (VM == ViewModel || VM == dynamic) {
-      throw StateError("VM must extends ViewModel");
+      throw ViewModelError("VM must extends ViewModel");
     }
     // find key first to reuse
     if (arg.key != null) {
@@ -283,13 +442,13 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   ///
   /// Returns the created ViewModel instance.
   ///
-  /// Throws [StateError] if the widget has been disposed.
+  /// Throws [ViewModelError] if the widget has been disposed.
   VM _createViewModel<VM extends ViewModel>({
     required ViewModelFactory<VM> factory,
     bool listen = true,
   }) {
     if (_dispose) {
-      throw StateError("state is disposed");
+      throw ViewModelError("state is disposed");
     }
     final Object key = factory.key() ?? _defaultViewModelKey;
     final tag = factory.tag();
@@ -334,11 +493,6 @@ class ViewModelAttacher implements ViewModelCreateInterface {
   }
 
   bool _hasMissedUpdates = false;
-  bool get hasMissedUpdates => _hasMissedUpdates;
-
-  void consumeMissedUpdates() {
-    _hasMissedUpdates = false;
-  }
 
   /// Adds a listener to a ViewModel for automatic widget rebuilding.
   ///
@@ -357,14 +511,14 @@ class ViewModelAttacher implements ViewModelCreateInterface {
       _disposes.add(res.listen(onChanged: () async {
         if (_dispose) return;
         // When paused, ignore updates; we'll blindly refresh on resume.
-        if (pauseAwareController.isPaused) {
+        if (_pauseAwareController.isPaused) {
           _hasMissedUpdates = true;
           viewModelLog(
             "${getBinderName()} is paused, delay rebuild",
           );
           return;
         }
-        rebuildState();
+        onUpdate();
       }));
     }
   }
@@ -426,12 +580,25 @@ class ViewModelAttacher implements ViewModelCreateInterface {
 
   /// Called when the host widget or element attaches to the tree.
   /// Reserved for future setup steps. No-op currently.
-  void attach() {}
+  void init() {}
+
+  void unbind(Object viewModel) {
+    _instanceController.unbindInstance(viewModel);
+  }
+
+  void addPauseProvider(BinderPauseProvider provider) {
+    _pauseAwareController.addProvider(provider);
+  }
+
+  void removePauseProvider(BinderPauseProvider provider) {
+    _pauseAwareController.removeProvider(provider);
+  }
 
   @mustCallSuper
   void dispose() {
     _dispose = true;
     _stateListeners.clear();
+    _pauseAwareController.dispose();
     _instanceController.dispose();
     for (final e in _disposes) {
       e.call();

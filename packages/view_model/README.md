@@ -53,6 +53,7 @@
     - [ValueListenableBuilder](#valuelistenablebuilder)
     - [ObserverBuilder](#observerbuilder)
     - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
+  - [Custom Binder](#custom-binder)
   - [DevTools Extension](#devtools-extension)
 
 ---
@@ -75,6 +76,14 @@ ViewModels can directly depend on and read other ViewModels internally (e.g., a 
 
 **4. Out-of-the-Box Simplicity**
 Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** (which involves complex graph concepts), this approach is strictly pragmatic. It provides automated lifecycle management and dependency injection immediately, with zero boilerplate.
+
+**5. Beyond Widgets: Custom Binder**
+Through custom `Binder`, ViewModels can exist **independently of Widgets**. Any Dart class can `with Binder` to become a ViewModel host, enabling use cases like:
+*   **Background Services:** Run ViewModel logic in background tasks (e.g., downloads, sync).
+*   **Pure Dart Tests:** Test ViewModel interactions without `testWidgets`.
+*   **Startup Tasks:** Execute initialization logic before any Widget is rendered.
+
+This makes ViewModel truly universal—**Everything can be a ViewModel**, not just UI components. See [Custom Binder](#custom-binder) for details.
 
 
 
@@ -482,6 +491,8 @@ graph TD
 
     VMA1 --> VMA2 --> VMA3 --> VMA_gone
 ```
+
+
 
 
 ## Initialization
@@ -943,9 +954,11 @@ This system allows for a clean and decoupled architecture, where ViewModels can 
 [doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
 
 
-The pause/resume lifecycle is managed by `ViewModelPauseProvider`s. By default,
-`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming based
+The pause/resume lifecycle is managed by `BinderPauseProvider`s. By default,
+`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming the `Binder` based
 on route visibility and app lifecycle events, respectively.
+
+When a `Binder` is paused (e.g., widget navigated away), it stops responding to ViewModel state changes, preventing unnecessary rebuilds. The ViewModel continues to emit notifications, but the paused Binder ignores them. When resumed, the Binder checks for missed updates and rebuilds if necessary.
 
 
 
@@ -1017,7 +1030,87 @@ class MyWidget extends State with ViewModelStateMixin {
   }
 }
 ```
+## Custom Binder
 
+`Binder` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskBinder` as a host for the ViewModel to run logic.
+
+`Binder` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetBinder`.
+
+This means you can use ViewModel in any Dart class, **independent of Widgets**.
+
+### Core Concepts
+
+*   **Binder**: A generic ViewModel manager. It simulates a host environment, providing methods like `watchViewModel`.
+*   **WidgetBinder**: A subclass of `Binder` specifically adapted for Flutter Widgets, implementing the bridge from `onUpdate` to `setState`.
+
+### Use Cases
+
+1.  **Background Service**: Reuse ViewModel logic (e.g., download, data synchronization) in background tasks.
+2.  **Unit Testing**: Test ViewModel interactions and dependencies without `testWidgets`.
+3.  **Global Singleton**: Preload and hold global ViewModels before the App starts.
+
+### Example: Custom Service Binder
+
+You can let your Service `with Binder` to gain the ability to manage ViewModels.
+
+```dart
+class DownloadService with Binder {
+  late final DownloadViewModel _downloadVM = watchViewModel(factory: DownloadViewModelFactory());
+
+  DownloadService() {
+   
+  }
+
+  void start(){
+    // 2. Start business logic
+    _downloadVM.startQueue(); 
+  }
+
+  // Override onUpdate: Called automatically when DownloadViewModel state changes
+  @override
+  void onUpdate() {
+    // 3. Handle side effects, e.g., updating system notification
+    print("Download progress: ${_downloadVM.progress}");
+    NotificationApi.updateProgress(_downloadVM.progress);
+  }
+  
+  void dispose() {
+    // 4. Dispose Binder, automatically unbind all ViewModels
+    super.dispose();
+  }
+}
+
+
+final downloadService = DownloadService();
+
+await downloadService.start();
+
+downloadService.dispose();
+```
+
+### Example: Using in Pure Dart Tests
+
+```dart
+test('Test AuthViewModel login flow', () {
+  // Create a temporary Binder
+  final binder = Binder(); 
+  
+  // Get VM (Binder automatically resolves its dependencies)
+  final authVM = binder.watchViewModel(factory: AuthViewModelFactory());
+  
+  // Verify initial state
+  expect(authVM.isLoggedIn, false);
+  
+  // Perform action
+  authVM.login("user", "pass");
+  
+  // Verify state change
+  expect(authVM.isLoggedIn, true);
+  
+  // End test, clean up resources
+  binder.dispose();
+});
+```
 
 
 ## DevTools Extension
@@ -1035,3 +1128,4 @@ extensions:
 
 ![](https://i.imgur.com/5itXPYD.png)
 ![](https://imgur.com/83iOQhy.png)
+

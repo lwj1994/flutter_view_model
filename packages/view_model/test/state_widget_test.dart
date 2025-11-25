@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/view_model.dart';
 
 import 'test_widget.dart';
@@ -128,7 +129,7 @@ void main() {
 
       expect(
         () => state.readCachedViewModel<TestViewModel>(key: "non_existent"),
-        throwsA(isA<StateError>()),
+        throwsA(isA<ViewModelError>()),
       );
     });
 
