@@ -1,3 +1,27 @@
+## 0.8.4
+- Update docs about design philosophy
+
+## Everything is ViewModel
+
+We redefine the "ViewModel" not as a specific MVVM component, but as a **Specialized Manager Container** equipped with lifecycle awareness.
+
+**1. Widget-Centric Architecture**
+In a Flutter App, every action revolves around Pages and Widgets. No matter how complex the logic is, the ultimate consumer is always a Widget. Therefore, binding the Manager's lifecycle directly to the Widget tree is the most logical and natural approach.
+
+**2. One Concept, Flexible Scopes**
+You don't need to distinguish between "Services", "Controllers", or "Stores". It's all just a ViewModel. The difference is only **where** you attach it:
+*   **Global:** Attach to the top-level **`AppMain`**. It lives as long as the App (Singleton).
+*   **Local:** Attach to a **Page**. It follows the page's lifecycle automatically.
+*   **Shared:** Use a unique **`key`** (e.g., ProductID) to share the exact same instance across different Widgets.
+
+**3. Seamless Composition & Decoupling**
+ViewModels can directly depend on and read other ViewModels internally (e.g., a `UserVM` reading a `NetworkVM`). However, the ViewModel itself remains **Widget-Agnostic**—it holds state and logic but does not know about the Widget's existence or hold a `BuildContext`.
+
+**4. Out-of-the-Box Simplicity**
+Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** (which involves complex graph concepts), this approach is strictly pragmatic. It provides automated lifecycle management and dependency injection immediately, with zero boilerplate.
+
+
+
 ## 0.8.3
 - Fix docs
 

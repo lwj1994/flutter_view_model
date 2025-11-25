@@ -6,7 +6,7 @@
 
 # view_model
 
-> The missing ViewModel in Flutter
+> The missing ViewModel in Flutter and Everything is ViewModel.
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
@@ -20,7 +20,7 @@
 ---
 
 - [view\_model](#view_model)
-  - [Design Philosophy](#design-philosophy)
+  - [Everything is ViewModel](#everything-is-viewmodel)
   - [Quick Start](#quick-start)
   - [Reuse One Instance](#reuse-one-instance)
   - [Basic Usage](#basic-usage)
@@ -57,14 +57,26 @@
 
 ---
 
-## Design Philosophy
+## Everything is ViewModel
 
-The goal of `view_model` is **simplicity**. It is designed exclusively to serve the `Widget` (the View) and avoids other complex features.
+We redefine the "ViewModel" not as a specific MVVM component, but as a **Specialized Manager Container** equipped with lifecycle awareness.
 
-In a Clean Architecture, the ViewModel acts as the **Presentation Layer**, bridging the Data Layer and the UI Layer. Its role is to hold UI state and handle UI logic, not to perform complex data manipulation.
+**1. Widget-Centric Architecture**
+In a Flutter App, every action revolves around Pages and Widgets. No matter how complex the logic is, the ultimate consumer is always a Widget. Therefore, binding the Manager's lifecycle directly to the Widget tree is the most logical and natural approach.
 
-- **For the UI Layer**: It manages the `Widget`'s lifecycle (including automatic Pause/Resume), handles user interactions, holds state ready for the UI to consume, and provides a convenient reuse mechanism.
-- **Not for the Data Layer**: Complex data caching, combination, and transformation should be handled by the **Repository/Data Layer**. This is where tools like **Riverpod** or **Signals** can be powerful. For example, you can use Signals in your data layer for efficient data processing, and the ViewModel will consume the final, UI-ready data.
+**2. One Concept, Flexible Scopes**
+You don't need to distinguish between "Services", "Controllers", or "Stores". It's all just a ViewModel. The difference is only **where** you attach it:
+*   **Global:** Attach to the top-level **`AppMain`**. It lives as long as the App (Singleton).
+*   **Local:** Attach to a **Page**. It follows the page's lifecycle automatically.
+*   **Shared:** Use a unique **`key`** (e.g., ProductID) to share the exact same instance across different Widgets.
+
+**3. Seamless Composition & Decoupling**
+ViewModels can directly depend on and read other ViewModels internally (e.g., a `UserVM` reading a `NetworkVM`). However, the ViewModel itself remains **Widget-Agnostic**—it holds state and logic but does not know about the Widget's existence or hold a `BuildContext`.
+
+**4. Out-of-the-Box Simplicity**
+Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** (which involves complex graph concepts), this approach is strictly pragmatic. It provides automated lifecycle management and dependency injection immediately, with zero boilerplate.
+
+
 
 ---
 

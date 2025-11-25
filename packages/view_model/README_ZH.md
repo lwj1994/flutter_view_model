@@ -4,7 +4,7 @@
 
 # view_model
 
-> Flutter 中缺失的 ViewModel
+> Flutter 中缺失的 ViewModel，万物皆是 ViewModel。
 
 [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov (with branch)](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
@@ -17,7 +17,7 @@
 
 ---
 - [view\_model](#view_model)
-  - [设计理念](#设计理念)
+  - [万物皆是 ViewModel](#万物皆是-viewmodel)
   - [快速开始](#快速开始)
   - [复用实例](#复用实例)
   - [基本用法](#基本用法)
@@ -54,15 +54,24 @@
 
 ---
 
-## 设计理念
+## 万物皆是 ViewModel
 
-`view_model` 的目标是 **简单**。它专为服务 `Widget` (视图) 而设计，并避免了其他复杂功能。
+我们重新定义了 "ViewModel"：它不再局限于 MVVM 模式，而是一个具备生命周期感知能力的**特殊 Manager 容器**。
 
-在清晰架构 (Clean Architecture) 中，ViewModel 作为 **表现层 (Presentation Layer)**，连接数据层和 UI 层。它的作用是持有 UI 状态和处理 UI 逻辑，而不是执行复杂的数据操作。
+**1. 以 Widget 为核心的架构**
+Flutter App 的运作是以页面和组件为核心的。无论逻辑多复杂，数据的最终消费者永远是 Widget。因此，将 Manager 的生命周期直接与 Widget 树绑定，是逻辑最自洽、最自然的架构方式。
 
-- **为 UI 层服务**: 它管理 `Widget` 的生命周期 (包括自动的暂停/恢复)，处理用户交互，持有 UI 可直接消费的状态，并提供便捷的复用机制。
-- **不为数据层服务**: 复杂的数据缓存、组合和转换应由 **仓库/数据层 (Repository/Data Layer)** 处理。这正是像 **Riverpod** 或 **Signals** 这类工具发挥作用的地方。例如，您可以在数据层中使用 Signals 进行高效的数据处理，而 ViewModel 将消费最终的、为 UI 准备好的数据。
+**2. 统一概念，灵活作用域**
+你不需要区分什么是 Service、Controller 或 Store。它们都是 ViewModel。区别仅仅在于**挂载位置**：
+*   **全局**：挂载在顶层 **`AppMain`**，实现全局单例。
+*   **局部**：挂载在 **Page**，自动跟随页面销毁。
+*   **共享**：通过唯一的 **`key`**（如商品ID），在不同页面间共享同一个实例。
 
+**3. 无缝组合与逻辑解耦**
+ViewModel 可以在内部直接依赖或读取其他 ViewModel（例如 `UserVM` 读取 `NetworkVM`）。但 ViewModel 本身是 **Widget 无感知的**——它只负责逻辑和状态，完全不知道 Widget 的存在，也不持有 `BuildContext`。
+
+**4. 极致的开箱即用**
+相比于 **GetIt**（需要手写绑定胶水代码）或 **Riverpod**（涉及复杂的图谱概念），这套方案是绝对实用主义的。它提供了自动化的生命周期管理和依赖注入，零样板代码，真正的**开箱即用**。
 ---
 
 ## 快速开始
