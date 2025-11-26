@@ -14,7 +14,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: ViewModelBuilder<TestViewModel>(
-          factory: const TestViewModelFactory(initState: "initState"),
+          const TestViewModelFactory(initState: "initState"),
           builder: (vm) => Text(vm.state),
         ),
       ));

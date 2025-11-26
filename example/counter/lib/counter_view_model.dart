@@ -1,5 +1,12 @@
 import 'package:view_model/view_model.dart';
+
 import 'counter_state.dart';
+
+final counterSpec = ViewModelProvider<CounterViewModel>(
+    key: "shared-counter-viewmodel",
+    builder: () => CounterViewModel(
+          state: const CounterState(),
+        ));
 
 class CounterViewModel extends StateViewModel<CounterState> {
   CounterViewModel({required super.state});
@@ -23,12 +30,4 @@ class CounterViewModel extends StateViewModel<CounterState> {
   void reset() {
     setState(const CounterState());
   }
-}
-
-class CounterViewModelFactory with ViewModelFactory<CounterViewModel> {
-  @override
-  CounterViewModel build() => CounterViewModel(state: const CounterState());
-
-  @override
-  Object? key() => 'shared-counter-viewmodel';
 }

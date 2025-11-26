@@ -1,8 +1,8 @@
 // @author luwenjie on 2025/10/27 14:17:50
 
 import 'package:flutter/widgets.dart';
-import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 
 /// A convenient widget that does not require mixing
 /// `ViewModelStateMixin` into `State`.
@@ -10,11 +10,10 @@ import 'package:view_model/src/view_model/view_model.dart';
 /// Behavior: internally uses `watchViewModel`. When the `ViewModel` calls
 /// `notifyListeners()`, this widget rebuilds so the UI reflects the changes.
 class ViewModelBuilder<T extends ViewModel> extends StatefulWidget {
-  final ViewModelFactory<T> factory;
+  final ViewModelFactory<T> provider;
   final Widget Function(T viewModel) builder;
 
-  const ViewModelBuilder(
-      {super.key, required this.factory, required this.builder});
+  const ViewModelBuilder(this.provider, {super.key, required this.builder});
 
   @override
   State<StatefulWidget> createState() {
@@ -30,9 +29,7 @@ class _ViewModelState<T extends ViewModel> extends State<ViewModelBuilder<T>>
   /// provided as an argument, matching the builder's signature.
   @override
   Widget build(BuildContext context) {
-    return widget.builder.call(watchViewModel<T>(
-      factory: widget.factory,
-    ));
+    return widget.builder.call(refer.watch(widget.provider));
   }
 }
 
@@ -63,7 +60,7 @@ class _CachedViewModelState<T extends ViewModel>
     extends State<CachedViewModelBuilder<T>> with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
-    final vm = maybeWatchCachedViewModel<T>(
+    final vm = refer.maybeWatchCached<T>(
       key: widget.shareKey,
       tag: widget.tag,
     );

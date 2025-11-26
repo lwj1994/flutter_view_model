@@ -104,9 +104,11 @@ class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
     // Rebuilds when the view model's state changes; latest value
     // is provided to `builder`.
     return widget.builder(
-      watchCachedViewModel<_ObserveDataViewModel<T>>(
-        key: widget.observable.shareKey,
-      ).state,
+      refer
+          .watchCached<_ObserveDataViewModel<T>>(
+            key: widget.observable.shareKey,
+          )
+          .state,
     );
   }
 }
@@ -145,12 +147,16 @@ class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
     // Rebuilds when any view model's state changes; latest values
     // are passed to `builder`.
     return widget.builder(
-      watchCachedViewModel<_ObserveDataViewModel<T1>>(
-        key: widget.observable1.shareKey,
-      ).state,
-      watchCachedViewModel<_ObserveDataViewModel<T2>>(
-        key: widget.observable2.shareKey,
-      ).state,
+      refer
+          .watchCached<_ObserveDataViewModel<T1>>(
+            key: widget.observable1.shareKey,
+          )
+          .state,
+      refer
+          .watchCached<_ObserveDataViewModel<T2>>(
+            key: widget.observable2.shareKey,
+          )
+          .state,
     );
   }
 }
@@ -191,15 +197,21 @@ class _ObserverBuilder3State<T1, T2, T3>
     // Rebuilds when any view model's state changes; latest values
     // are passed to `builder`.
     return widget.builder(
-      watchCachedViewModel<_ObserveDataViewModel<T1>>(
-        key: widget.observable1.shareKey,
-      ).state,
-      watchCachedViewModel<_ObserveDataViewModel<T2>>(
-        key: widget.observable2.shareKey,
-      ).state,
-      watchCachedViewModel<_ObserveDataViewModel<T3>>(
-        key: widget.observable3.shareKey,
-      ).state,
+      refer
+          .watchCached<_ObserveDataViewModel<T1>>(
+            key: widget.observable1.shareKey,
+          )
+          .state,
+      refer
+          .watchCached<_ObserveDataViewModel<T2>>(
+            key: widget.observable2.shareKey,
+          )
+          .state,
+      refer
+          .watchCached<_ObserveDataViewModel<T3>>(
+            key: widget.observable3.shareKey,
+          )
+          .state,
     );
   }
 }

@@ -31,7 +31,7 @@ class UserViewModel extends ViewModel {
 
 // Test Widgets using ViewModelStateMixin
 class CounterWidget extends StatefulWidget {
-  final DefaultViewModelFactory<CounterViewModel>? factory;
+  final ViewModelProvider<CounterViewModel>? factory;
   final String? viewModelKey;
   final Object? tag;
 
@@ -53,9 +53,9 @@ class _CounterWidgetState extends State<CounterWidget>
   @override
   void initState() {
     super.initState();
-    viewModel = watchViewModel<CounterViewModel>(
-      factory: widget.factory ??
-          DefaultViewModelFactory<CounterViewModel>(
+    viewModel = refer.watch<CounterViewModel>(
+      widget.factory ??
+          ViewModelProvider<CounterViewModel>(
             builder: () => CounterViewModel(),
           ),
     );
@@ -86,7 +86,7 @@ class _CounterWidgetState extends State<CounterWidget>
 }
 
 class UserWidget extends StatefulWidget {
-  final DefaultViewModelFactory<UserViewModel>? factory;
+  final ViewModelProvider<UserViewModel>? factory;
   final String? viewModelKey;
   final Object? tag;
 
@@ -110,10 +110,10 @@ class _UserWidgetState extends State<UserWidget>
     super.initState();
     if (widget.factory != null) {
       viewModel = widget.factory != null
-          ? watchViewModel<UserViewModel>(
-              factory: widget.factory!,
+          ? refer.watch<UserViewModel>(
+              widget.factory!,
             )
-          : watchCachedViewModel(
+          : refer.watchCached(
               key: widget.viewModelKey,
               tag: widget.tag,
             );
@@ -147,23 +147,23 @@ class _MultiViewModelWidgetState extends State<MultiViewModelWidget>
     super.initState();
 
     // Different counters with different keys
-    counter1 = watchViewModel<CounterViewModel>(
-      factory: DefaultViewModelFactory<CounterViewModel>(
+    counter1 = refer.watch<CounterViewModel>(
+      ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 10),
         key: 'counter1',
       ),
     );
 
-    counter2 = watchViewModel<CounterViewModel>(
-      factory: DefaultViewModelFactory<CounterViewModel>(
+    counter2 = refer.watch<CounterViewModel>(
+      ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 20),
         key: 'counter2',
       ),
     );
 
     // User with tag
-    user = watchViewModel<UserViewModel>(
-      factory: DefaultViewModelFactory<UserViewModel>(
+    user = refer.watch<UserViewModel>(
+      ViewModelProvider<UserViewModel>(
         builder: () => UserViewModel(name: 'Alice', age: 25),
         tag: 'primary_user',
       ),
@@ -193,7 +193,7 @@ class _MultiViewModelWidgetState extends State<MultiViewModelWidget>
 }
 
 void main() {
-  group('ViewModelStateMixin with DefaultViewModelFactory', () {
+  group('ViewModelStateMixin with ViewModelProvider', () {
     testWidgets('should create and watch ViewModel correctly', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -214,7 +214,7 @@ void main() {
     });
 
     testWidgets('should handle custom factory correctly', (tester) async {
-      final customFactory = DefaultViewModelFactory<CounterViewModel>(
+      final customFactory = ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 100),
       );
 
@@ -236,7 +236,7 @@ void main() {
     testWidgets('should share ViewModel with same key', (tester) async {
       const sharedKey = 'shared_counter';
 
-      final factory = DefaultViewModelFactory<CounterViewModel>(
+      final factory = ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 50),
         key: sharedKey,
       );
@@ -276,7 +276,7 @@ void main() {
     });
 
     testWidgets('should handle singleton factory correctly', (tester) async {
-      final singletonFactory = DefaultViewModelFactory<CounterViewModel>(
+      final singletonFactory = ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 999),
         isSingleton: true,
       );
@@ -316,7 +316,7 @@ void main() {
 
     testWidgets('should handle tag-based ViewModel lookup', (tester) async {
       const userTag = 'test_user';
-      final userFactory = DefaultViewModelFactory<UserViewModel>(
+      final userFactory = ViewModelProvider<UserViewModel>(
         builder: () => UserViewModel(name: 'Bob', age: 30),
         tag: userTag,
       );
@@ -409,7 +409,7 @@ void main() {
     });
 
     testWidgets('should properly dispose ViewModels', (tester) async {
-      final factory = DefaultViewModelFactory<CounterViewModel>(
+      final factory = ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(),
       );
 
@@ -454,8 +454,8 @@ class _CounterReadWidgetState extends State<CounterReadWidget>
   void initState() {
     super.initState();
     // Create ViewModel that won't trigger rebuilds
-    viewModel = readViewModel<CounterViewModel>(
-      factory: DefaultViewModelFactory<CounterViewModel>(
+    viewModel = refer.read<CounterViewModel>(
+      ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'read_counter',
       ),
@@ -501,15 +501,15 @@ class _MaybeViewModelWidgetState extends State<MaybeViewModelWidget>
   void initState() {
     super.initState();
     // Try to get ViewModel that doesn't exist
-    viewModel = maybeWatchCachedViewModel<CounterViewModel>(
+    viewModel = refer.maybeWatchCached<CounterViewModel>(
       key: 'non_existent_key',
     );
   }
 
   void createViewModel() {
     setState(() {
-      viewModel = watchViewModel<CounterViewModel>(
-        factory: DefaultViewModelFactory<CounterViewModel>(
+      viewModel = refer.watch<CounterViewModel>(
+        ViewModelProvider<CounterViewModel>(
           builder: () => CounterViewModel(),
         ),
       );

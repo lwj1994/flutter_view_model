@@ -5,20 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/app_lifecycle_observer.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
-/// An abstract class that provides lifecycle pause/resume signals.
-///
-/// Implementers of this class can represent different sources of lifecycle
-/// events, such as route changes, application state changes, or custom
-/// events from a mixed-stack environment.
-abstract class BinderPauseProvider {
-  /// A stream that emits `true` when the component should be paused,
-  /// and `false` when it can be resumed.
-  Stream<bool> get onPauseStateChanged;
-
-  /// Disposes the provider and releases any resources.
-  void dispose();
-}
-
 /// BinderVisibleListener controls manual pause/resume for a page/state.
 ///
 /// - Call [onPause] to mark the page as paused (e.g., covered by another
@@ -26,29 +12,22 @@ abstract class BinderPauseProvider {
 ///   While paused, rebuilds triggered by bound ViewModels are ignored.
 /// - Call [onResume] to mark as resumed and invoke the provided callback to
 ///   trigger a single refresh.
-class ManualBinderPauseProvider implements BinderPauseProvider {
+mixin class ReferPauseProvider {
   final _controller = StreamController<bool>.broadcast();
-
-  /// Creates a [ManualBinderPauseProvider] with the callback used to trigger
-  /// refresh when resuming.
-  ManualBinderPauseProvider() {}
-
   void pause() => _controller.add(true);
   void resume() => _controller.add(false);
 
-  @override
+  @mustCallSuper
   void dispose() {
     _controller.close();
   }
 
-  @override
   Stream<bool> get onPauseStateChanged => _controller.stream;
 }
 
-/// A [BinderPauseProvider] that signals pause/resume based on the
+/// A [ReferPauseProvider] that signals pause/resume based on the
 /// application's lifecycle state ([AppLifecycleState]).
-class AppPauseProvider implements BinderPauseProvider {
-  final _controller = StreamController<bool>.broadcast();
+class AppPauseProvider with ReferPauseProvider {
   StreamSubscription<AppLifecycleState>? _subscription;
 
   AppPauseProvider() {
@@ -66,19 +45,20 @@ class AppPauseProvider implements BinderPauseProvider {
 
   @override
   void dispose() {
+    super.dispose();
     _subscription?.cancel();
     _subscription = null;
     _controller.close();
   }
 }
 
-/// A [BinderPauseProvider] that pauses/resumes based on [TickerMode].
+/// A [ReferPauseProvider] that pauses/resumes based on [TickerMode].
 ///
 /// This provider is useful for pausing ViewModels when their widget is
 /// in a hidden state within a [TabBarView] or other [TickerMode] controlled
 /// environments. When [TickerMode] is disabled (false), the ViewModel is
 /// paused.
-class TickerModePauseProvider extends ManualBinderPauseProvider {
+class TickerModePauseProvider with ReferPauseProvider {
   ValueListenable<bool>? _notifier;
   void subscribe(ValueListenable<bool> notifier) {
     if (_notifier == notifier) return;
@@ -106,11 +86,9 @@ class TickerModePauseProvider extends ManualBinderPauseProvider {
   }
 }
 
-/// A [BinderPauseProvider] that uses [RouteAware] to determine pause state
+/// A [ReferPauseProvider] that uses [RouteAware] to determine pause state
 /// based on route navigation events (push, pop).
-class PageRoutePauseProvider implements BinderPauseProvider, RouteAware {
-  // The stream controller that broadcasts pause state changes.
-  final _controller = StreamController<bool>.broadcast();
+class PageRoutePauseProvider with ReferPauseProvider, RouteAware {
   final List<PageRoute> _subscribedRoutes = [];
   final RouteObserver<PageRoute> _observer = ViewModel.routeObserver;
 
@@ -141,8 +119,8 @@ class PageRoutePauseProvider implements BinderPauseProvider, RouteAware {
 
   @override
   void dispose() {
+    super.dispose();
     unsubscribe(_observer);
-    _controller.close();
   }
 
   @override
@@ -154,20 +132,20 @@ class PageRoutePauseProvider implements BinderPauseProvider, RouteAware {
   void didPop() {
     // The current route has been popped off the navigator.
     // It is no longer visible, so it should be considered paused.
-    _controller.add(true);
+    pause();
   }
 
   @override
   void didPushNext() {
     // A new route has been pushed on top of the current one.
     // The current route is now obscured and should be paused.
-    _controller.add(true);
+    pause();
   }
 
   @override
   void didPopNext() {
     // The route that was on top has been popped.
     // The current route is now visible again and should be resumed.
-    _controller.add(false);
+    resume();
   }
 }

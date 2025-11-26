@@ -25,7 +25,8 @@ void main() {
       expect(find.text('initState'), findsOneWidget);
 
       (testKey.currentState as TestPageState)
-          .readCachedViewModel<TestViewModel>()
+          .refer
+          .readCached<TestViewModel>()
           .setState("hi");
       await tester.pumpAndSettle();
       expect(find.text('hi'), findsOneWidget);
@@ -44,14 +45,12 @@ void main() {
       )));
 
       final state = testKey.currentState as TestPageState;
-      final vm1 = state.watchViewModel(
-          factory: const TestViewModelFactory(
+      final vm1 = state.refer.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState",
         isSingleton: false,
       ));
 
-      final vm2 = state.watchViewModel(
-          factory: const TestViewModelFactory(
+      final vm2 = state.refer.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState2",
         isSingleton: false,
       ));
@@ -95,14 +94,12 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.watchViewModel(
-          factory: const TestViewModelFactory(
+      final vm1 = state.refer.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState",
         isSingleton: false,
       ));
 
-      final vm2 = state2.watchViewModel(
-          factory: const TestViewModelFactory(
+      final vm2 = state2.refer.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState2",
         isSingleton: false,
       ));
@@ -128,7 +125,7 @@ void main() {
       final state = testKey.currentState as TestPageState;
 
       expect(
-        () => state.readCachedViewModel<TestViewModel>(key: "non_existent"),
+        () => state.refer.readCached<TestViewModel>(key: "non_existent"),
         throwsA(isA<ViewModelError>()),
       );
     });
@@ -157,8 +154,8 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.readCachedViewModel<TestViewModel>(tag: "1");
-      final vm2 = state2.readCachedViewModel<TestViewModel>();
+      final vm1 = state.refer.readCached<TestViewModel>(tag: "1");
+      final vm2 = state2.refer.readCached<TestViewModel>();
       final vm3 = ViewModel.readCached<TestViewModel>();
 
       print(vm1.state);
@@ -195,8 +192,8 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.readCachedViewModel<TestViewModel>();
-      final vm2 = state2.readCachedViewModel<TestViewModel>();
+      final vm1 = state.refer.readCached<TestViewModel>();
+      final vm2 = state2.refer.readCached<TestViewModel>();
       final vm3 = ViewModel.readCached<TestViewModel>();
 
       print(vm1.state);
@@ -230,10 +227,10 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.readViewModel(factory: fc);
+      final vm1 = state.refer.read(fc);
 
-      final vm2 = state2.readViewModel(factory: fc);
-      final vm3 = state2.readCachedViewModel<TestViewModel>();
+      final vm2 = state2.refer.read(fc);
+      final vm3 = state2.refer.readCached<TestViewModel>();
       print(vm1.state);
       print(vm2.state);
       print(vm3.state);
@@ -254,11 +251,11 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.readViewModel(
-        factory: fc,
+      final vm = state.refer.read(
+        fc,
       );
 
-      final vm2 = state.readCachedViewModel<TestViewModel>(key: "key");
+      final vm2 = state.refer.readCached<TestViewModel>(key: "key");
 
       assert(vm == vm2);
       vm2.setState("2");
@@ -279,11 +276,9 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.readViewModel(
-        factory: fc,
-      );
+      final vm = state.refer.read(fc);
 
-      final vm2 = state.readCachedViewModel<TestViewModel>();
+      final vm2 = state.refer.readCached<TestViewModel>();
 
       assert(vm == vm2);
       vm2.setState("2");
@@ -303,9 +298,7 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.readViewModel(
-        factory: fc,
-      );
+      final vm = state.refer.read(fc);
 
       var c = 0;
       vm.listenState(onChanged: (p, n) {
@@ -334,7 +327,7 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.readViewModel(factory: fc);
+      final vm = state.refer.read(fc);
 
       var c = 0;
       vm.listenState(onChanged: (p, n) {
@@ -363,10 +356,10 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.readViewModel(factory: fc);
+      final vm = state.refer.read(fc);
 
-      state.recycleViewModel(vm);
-      final vm2 = state.readViewModel(factory: fc);
+      state.refer.recycle(vm);
+      final vm2 = state.refer.read(fc);
       assert(vm != vm2);
     });
 
@@ -383,13 +376,13 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.readViewModel(
-        factory: fc,
+      final vm = state.refer.read(
+        fc,
       );
 
-      final vm2 = state.readCachedViewModel<TestViewModel>();
+      final vm2 = state.refer.readCached<TestViewModel>();
       assert(vm == vm2);
-      final TestViewModel vm3 = state.readViewModel<TestViewModel>(factory: fc);
+      final TestViewModel vm3 = state.refer.read<TestViewModel>(fc);
       assert(vm == vm3);
     });
   });

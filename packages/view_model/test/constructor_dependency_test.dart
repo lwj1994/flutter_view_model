@@ -7,9 +7,9 @@ class ViewModelA extends ViewModel {
   late final ViewModelB viewModelB;
 
   ViewModelA() {
-    // The readViewModel<ViewModelB>() call happens here, in the constructor body.
+    // The refer.read<ViewModelB>() call happens here, in the constructor body.
     // This is the core scenario we are testing.
-    viewModelB = readCachedViewModel<ViewModelB>();
+    viewModelB = refer.readCached<ViewModelB>();
   }
 }
 
@@ -33,8 +33,8 @@ class ParentProviderWidgetState extends State<ParentProviderWidget>
   @override
   void initState() {
     super.initState();
-    providedViewModelB = watchViewModel<ViewModelB>(
-      factory: DefaultViewModelFactory<ViewModelB>(
+    providedViewModelB = refer.watch<ViewModelB>(
+      ViewModelProvider<ViewModelB>(
         builder: () => ViewModelB(),
       ),
     );
@@ -62,8 +62,8 @@ class ChildConsumerWidgetState extends State<ChildConsumerWidget>
   @override
   void initState() {
     super.initState();
-    consumingViewModelA = watchViewModel<ViewModelA>(
-      factory: DefaultViewModelFactory<ViewModelA>(
+    consumingViewModelA = refer.watch<ViewModelA>(
+      ViewModelProvider<ViewModelA>(
         builder: () => ViewModelA(),
       ),
     );
@@ -78,7 +78,7 @@ class ChildConsumerWidgetState extends State<ChildConsumerWidget>
 void main() {
   group('ViewModel Constructor Dependency', () {
     testWidgets(
-        'should correctly resolve dependency from parent when readViewModel is called in constructor',
+        'should correctly resolve dependency from parent when refer.read is called in constructor',
         (WidgetTester tester) async {
       final parentKey = GlobalKey<ParentProviderWidgetState>();
       final childKey = GlobalKey<ChildConsumerWidgetState>();

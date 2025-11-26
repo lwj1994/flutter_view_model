@@ -7740,7 +7740,7 @@
 7739:SkSL::Inliner::InlinedCall::~InlinedCall\28\29
 7740:SkSL::IndexExpression::~IndexExpression\28\29
 7741:SkSL::IfStatement::~IfStatement\28\29
-7742:SkSL::IRHelpers::Ref\28SkSL::Variable\20const*\29\20const
+7742:SkSL::IRHelpers::Refer\28SkSL::Variable\20const*\29\20const
 7743:SkSL::IRHelpers::Mul\28std::__2::unique_ptr<SkSL::Expression\2c\20std::__2::default_delete<SkSL::Expression>>\2c\20std::__2::unique_ptr<SkSL::Expression\2c\20std::__2::default_delete<SkSL::Expression>>\29\20const
 7744:SkSL::IRHelpers::Assign\28std::__2::unique_ptr<SkSL::Expression\2c\20std::__2::default_delete<SkSL::Expression>>\2c\20std::__2::unique_ptr<SkSL::Expression\2c\20std::__2::default_delete<SkSL::Expression>>\29\20const
 7745:SkSL::GLSLCodeGenerator::writeVarDeclaration\28SkSL::VarDeclaration\20const&\2c\20bool\29

@@ -37,7 +37,7 @@ void main() {
       final state = widgetKey.currentState as TestPageState;
 
       // Create the ViewModel first
-      final originalVM = state.readViewModel(factory: testFactory);
+      final originalVM = state.refer.read(testFactory);
       originalVM.setState('updated_state');
 
       // Now test readCached with key
@@ -66,7 +66,7 @@ void main() {
       final state = widgetKey.currentState as TestPageState;
 
       // Create the ViewModel first
-      final originalVM = state.readViewModel(factory: testFactory);
+      final originalVM = state.refer.read(testFactory);
       originalVM.setState('tagged_updated_state');
 
       // Now test readCached with tag
@@ -114,8 +114,8 @@ void main() {
       final state2 = widgetKey2.currentState as TestPageState;
 
       // Create both ViewModels
-      final keyVM = state1.readViewModel(factory: keyFactory);
-      final tagVM = state2.readViewModel(factory: tagFactory);
+      final keyVM = state1.refer.read(keyFactory);
+      final tagVM = state2.refer.read(tagFactory);
 
       keyVM.setState('key_updated');
       tagVM.setState('tag_updated');
@@ -157,10 +157,10 @@ void main() {
       final state2 = widgetKey2.currentState as TestPageState;
 
       // Create ViewModels in order
-      final vm1 = state1.readViewModel(factory: factory1);
+      final vm1 = state1.refer.read(factory1);
       await tester.pump(); // Allow time for creation
 
-      final vm2 = state2.readViewModel(factory: factory2);
+      final vm2 = state2.refer.read(factory2);
       vm2.setState('latest_vm_state');
 
       // Test readCached without key or tag - should return the latest created ViewModel
@@ -186,7 +186,7 @@ void main() {
       ));
 
       final state = widgetKey.currentState as TestPageState;
-      final vm = state.readViewModel(factory: testFactory);
+      final vm = state.refer.read(testFactory);
 
       // Verify we can read cached before dispose
       final cachedBeforeDispose =
@@ -248,7 +248,7 @@ void main() {
       ));
 
       final state = widgetKey.currentState as TestPageState;
-      final originalVM = state.readViewModel(factory: customFactory);
+      final originalVM = state.refer.read(customFactory);
       originalVM.setState('custom_updated');
 
       // Test readCached with specific type
