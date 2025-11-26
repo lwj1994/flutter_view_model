@@ -7,40 +7,121 @@ import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
-import 'package:view_model/src/view_model/dependency_handler.dart';
-import 'package:view_model/src/view_model/interface.dart';
-import 'package:view_model/src/view_model/model.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/src/view_model/refer_zone.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
+import 'package:view_model/src/view_model/widget_mixin/stateless_extension.dart';
 
 import 'state_store.dart';
 
-/// Core abstraction for managing ViewModel lifecycle and dependency injection.
+/// Interface that exposes helpers to access ViewModels from widgets.
 ///
-/// [Binder] is the foundation of the `view_model` library, providing a generic
-/// mechanism for hosting and managing ViewModels independent of Flutter widgets.
-/// It can be mixed into any Dart class to gain ViewModel management capabilities.
+/// Provides methods to create or fetch ViewModels, optionally listening
+/// to their changes to rebuild the widget. All methods are generic on
+/// `VM extends ViewModel`.
+abstract interface class RefInterface {
+  /// Creates or fetches a `VM` and listens for its changes.
+  ///
+  /// Requires a `factory` to build the instance when absent. The widget
+  /// will rebuild whenever the ViewModel notifies its listeners.
+  VM watch<VM extends ViewModel>(ViewModelFactory<VM> factory);
+
+  /// Fetches an existing `VM` by `key` or `tag` and listens for changes.
+  ///
+  /// Does not create new instances. The widget will rebuild when the
+  /// ViewModel notifies listeners.
+  VM watchCached<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  });
+
+  /// Creates or fetches a `VM` without listening for changes.
+  ///
+  /// Use this to call methods or read properties without triggering a
+  /// widget rebuild.
+  VM read<VM extends ViewModel>(ViewModelFactory<VM> factory);
+
+  /// Reads an existing `VM` by `key` or `tag` without listening.
+  ///
+  /// Does not create new instances and does not cause the widget to
+  /// rebuild when the ViewModel changes.
+  VM readCached<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  });
+
+  /// Safe version of `watchCached` that returns `null` when not
+  /// found.
+  ///
+  /// Useful when a ViewModel might be optional and absence should not
+  /// throw.
+  VM? maybeWatchCached<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  });
+
+  /// Safe version of `readCached` that returns `null` when not
+  /// found.
+  ///
+  /// Reads the cached ViewModel without listening and avoids throwing
+  /// when the instance does not exist.
+  VM? maybeReadCached<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  });
+
+  /// Listens to a `VM` built by the given factory.
+  ///
+  /// Returns a disposer to stop listening.
+  void listen<VM extends ViewModel>(
+    ViewModelFactory<VM> factory, {
+    required VoidCallback onChanged,
+  });
+
+  void listenState<VM extends StateViewModel<S>, S>(
+    ViewModelFactory<VM> factory, {
+    required Function(S? previous, S state) onChanged,
+  });
+
+  void listenStateSelect<VM extends StateViewModel<S>, S, R>(
+    ViewModelFactory<VM> factory, {
+    required R Function(S state) selector,
+    required Function(R? previous, R current) onChanged,
+  });
+
+  void recycle<VM extends ViewModel>(VM viewModel);
+}
+
+/// Core abstraction for managing ViewModel lifecycle and dependency
+/// injection.
+///
+/// [ViewModelRef] is the foundation of the `view_model` library. It provides a
+/// generic mechanism for hosting and managing ViewModels independent of
+/// Flutter widgets. It can be mixed into any Dart class to gain ViewModel
+/// management capabilities.
 ///
 /// ## Core Responsibilities
 ///
 /// - **Lifecycle Management**: Automatically creates, caches, and disposes
 ///   ViewModels based on reference counting
-/// - **Dependency Injection**: Resolves ViewModel dependencies using Zone-based
-///   dependency resolution
+/// - **Dependency Injection**: Resolves ViewModel dependencies using
+///   Zone-based dependency resolution
 /// - **Pause/Resume**: Manages pause/resume lifecycle through
-///   [BinderPauseProvider]s
+/// - **Pause/Resume**: Manages pause/resume lifecycle through
+///   [ReferPauseProvider]s
 /// - **Update Notifications**: Provides [onUpdate] hook for responding to
 ///   ViewModel changes
 ///
 /// ## Key Concepts
 ///
-/// - **Binder**: Generic ViewModel manager that can be used in any Dart class
-/// - **WidgetBinder**: Specialized subclass for Flutter widgets that bridges
+/// - **ViewModelRef**: Generic ViewModel manager usable in any Dart class
+/// - **WidgetRef**: Specialized subclass for Flutter widgets that bridges
 ///   [onUpdate] to `setState`
-/// - **Reference Counting**: ViewModels are kept alive as long as at least one
-///   binder is watching them
+/// - **Reference Counting**: ViewModels stay alive while at least one binder
+///   watches them
 ///
 /// ## Use Cases
 ///
@@ -58,14 +139,14 @@ import 'state_store.dart';
 /// - [onPause]: Called when the binder is paused (e.g., widget not visible)
 /// - [onResume]: Called when the binder resumes (e.g., widget becomes visible)
 ///
-/// ## Example: Custom Service Binder
+/// ## Example: Custom Service Refer
 ///
 /// ```dart
-/// class DownloadService with Binder {
+/// class DownloadService with ViewModelRef {
 ///   late final DownloadViewModel _downloadVM;
 ///
 ///   DownloadService() {
-///     _downloadVM = watchViewModel(factory: DownloadViewModelFactory());
+///     _downloadVM = refer.watch(DownloadViewModelFactory());
 ///   }
 ///
 ///   @override
@@ -89,22 +170,25 @@ import 'state_store.dart';
 ///
 /// ```dart
 /// test('Test ViewModel interactions', () {
-///   final binder = Binder();
-///   final vm = binder.watchViewModel(factory: MyViewModelFactory());
+///   final ref = ViewModelRef();
+///   final vm = refer.watch(MyViewModelFactory());
 ///
 ///   expect(vm.count, 0);
 ///   vm.increment();
 ///   expect(vm.count, 1);
 ///
-///   binder.dispose(); // Clean up
+///   ref.dispose(); // Clean up
 /// });
 /// ```
 ///
 /// See also:
-/// - [WidgetBinder]: Specialized implementation for Flutter widgets
-/// - [ViewModelStateMixin]: Mixin that uses Binder for StatefulWidget
-/// - [BinderPauseProvider]: Interface for pause/resume providers
-mixin class Binder implements ViewModelCreateInterface {
+/// - [WidgetRef]: Specialized implementation for Flutter widgets
+/// - [ViewModelStateMixin]: Mixin that uses ViewModelRef for StatefulWidget
+/// - [ReferPauseProvider]: Interface for pause/resume providers
+mixin class Refer implements RefInterface {
+  @protected
+  // ignore: avoid_returning_this
+  Refer get refer => this;
   bool _dispose = false;
   final _stackPathLocator = StackPathLocator();
 
@@ -116,7 +200,7 @@ mixin class Binder implements ViewModelCreateInterface {
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: onUpdate,
     binderName: getBinderName(),
-    dependencyResolver: onChildDependencyResolver,
+    ref: this,
   );
   final Map<ViewModel, bool> _stateListeners = {};
   final _defaultViewModelKey = Object();
@@ -205,15 +289,14 @@ mixin class Binder implements ViewModelCreateInterface {
   ///
   /// Example:
   /// ```dart
-  /// var userVM = watchViewModel<UserViewModel>(factory: fac);
+  /// var userVM = refer.watch(fac);
   /// // Later, force recreation
-  /// recycleViewModel(userVM);
+  /// refer.recycle(userVM);
   ///
   /// recreate new instance
-  /// userVM = watchViewModel<UserViewModel>(factory: fac);
+  /// userVM = refer.watch(fac);
   /// ```
-  @protected
-  void recycleViewModel<VM extends ViewModel>(VM vm) {
+  void recycle<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
     onUpdate();
   }
@@ -270,9 +353,7 @@ mixin class Binder implements ViewModelCreateInterface {
   ///   @override
   ///   void initState() {
   ///     super.initState();
-  ///     _viewModel = watchViewModel<MyViewModel>(
-  ///       factory: MyViewModelFactory(),
-  ///     );
+  ///     _viewModel = refer.watch(MyViewModelFactory());
   ///   }
   ///
   ///   @override
@@ -281,11 +362,9 @@ mixin class Binder implements ViewModelCreateInterface {
   ///   }
   /// }
   /// ```
-  @protected
-  @override
-  VM watchViewModel<VM extends ViewModel>({
-    required ViewModelFactory<VM> factory,
-  }) {
+  VM watch<VM extends ViewModel>(
+    ViewModelFactory<VM> factory,
+  ) {
     final viewModel = _getViewModel<VM>(
       factory: factory,
       listen: true,
@@ -308,8 +387,7 @@ mixin class Binder implements ViewModelCreateInterface {
   /// Returns the cached ViewModel instance.
   ///
   /// Throws a [ViewModelError] if no matching ViewModel is found in the cache.
-  @protected
-  VM watchCachedViewModel<VM extends ViewModel>({
+  VM watchCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
@@ -344,14 +422,13 @@ mixin class Binder implements ViewModelCreateInterface {
   /// Example:
   /// ```dart
   /// void _onButtonPressed() {
-  ///   final vm = readViewModel<MyViewModel>(factory: MyViewModelFactory());
+  ///   final vm = refer.read(MyViewModelFactory());
   ///   vm.performAction(); // This will not trigger a rebuild.
   /// }
   /// ```
-  @protected
-  VM readViewModel<VM extends ViewModel>({
-    required ViewModelFactory<VM> factory,
-  }) {
+  VM read<VM extends ViewModel>(
+    ViewModelFactory<VM> factory,
+  ) {
     final viewModel = _getViewModel<VM>(
       factory: factory,
       listen: false,
@@ -373,8 +450,7 @@ mixin class Binder implements ViewModelCreateInterface {
   /// Returns the cached ViewModel instance.
   ///
   /// Throws a [ViewModelError] if no matching ViewModel is found in the cache.
-  @protected
-  VM readCachedViewModel<VM extends ViewModel>({
+  VM readCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
@@ -452,7 +528,7 @@ mixin class Binder implements ViewModelCreateInterface {
     }
     final Object key = factory.key() ?? _defaultViewModelKey;
     final tag = factory.tag();
-    final res = runWithResolver(
+    final res = runWithRefer(
       () {
         return _instanceController.getInstance<VM>(
           factory: InstanceFactory<VM>(
@@ -462,34 +538,15 @@ mixin class Binder implements ViewModelCreateInterface {
             ),
             builder: factory.build,
           ),
-        )..dependencyHandler.addDependencyResolver(onChildDependencyResolver);
+        )..refHandler.addRef(refer);
       },
-      onChildDependencyResolver,
+      refer,
     );
 
     if (listen) {
       _addListener(res);
     }
     return res;
-  }
-
-  // ignore: avoid_shadowing_type_parameters
-  @internal
-  T onChildDependencyResolver<T extends ViewModel>({
-    required ViewModelDependencyConfig<T> dependency,
-    bool listen = true,
-  }) {
-    final childViewModel = _getViewModel<T>(
-      factory: dependency.config.factory,
-      arg: InstanceArg(
-        key: dependency.config.key,
-        tag: dependency.config.tag,
-      ),
-      listen: listen,
-    );
-    childViewModel.dependencyHandler
-        .addDependencyResolver(onChildDependencyResolver);
-    return childViewModel;
   }
 
   bool _hasMissedUpdates = false;
@@ -525,7 +582,7 @@ mixin class Binder implements ViewModelCreateInterface {
 
   /// Attempts to watch a ViewModel, returning null if not found.
   ///
-  /// This is a safe version of [watchCachedViewModel] that returns null instead
+  /// This is a safe version of [watchCached] that returns null instead
   /// of throwing an exception when no matching ViewModel is found.
   ///
   /// Parameters:
@@ -536,34 +593,17 @@ mixin class Binder implements ViewModelCreateInterface {
   ///
   /// Example:
   /// ```dart
-  /// final vm = maybeWatchViewModel<MyViewModel>(key: 'optional-key');
+  /// final vm = ref.maybeWatchCached<MyViewModel>(key: 'optional-key');
   /// if (vm != null) {
   ///   // Use the ViewModel
   /// }
   /// ```
-  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
+  VM? maybeWatchCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
   }) {
     try {
-      return watchCachedViewModel(
-        key: key,
-        tag: tag,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Safe read for a cached ViewModel without listening.
-  /// Returns `null` instead of throwing when no matching instance
-  /// is found by `key` or `tag`.
-  VM? maybeReadCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    try {
-      return readCachedViewModel(
+      return watchCached(
         key: key,
         tag: tag,
       );
@@ -586,11 +626,11 @@ mixin class Binder implements ViewModelCreateInterface {
     _instanceController.unbindInstance(viewModel);
   }
 
-  void addPauseProvider(BinderPauseProvider provider) {
+  void addPauseProvider(ReferPauseProvider provider) {
     _pauseAwareController.addProvider(provider);
   }
 
-  void removePauseProvider(BinderPauseProvider provider) {
+  void removePauseProvider(ReferPauseProvider provider) {
     _pauseAwareController.removeProvider(provider);
   }
 
@@ -603,5 +643,217 @@ mixin class Binder implements ViewModelCreateInterface {
     for (final e in _disposes) {
       e.call();
     }
+  }
+
+  @override
+  void listen<VM extends ViewModel>(
+    ViewModelFactory<VM> factory, {
+    required VoidCallback onChanged,
+  }) {
+    _disposes.add(refer.read(factory).listen(onChanged: onChanged));
+  }
+
+  @override
+  void listenState<VM extends StateViewModel<S>, S>(
+    ViewModelFactory<VM> factory, {
+    required Function(S? previous, S state) onChanged,
+  }) {
+    final VM vm = refer.read<VM>(factory);
+    _disposes.add(vm.listenState(onChanged: onChanged));
+  }
+
+  @override
+  void listenStateSelect<VM extends StateViewModel<S>, S, R>(
+    ViewModelFactory<VM> factory, {
+    required R Function(S state) selector,
+    required Function(R? previous, R current) onChanged,
+  }) {
+    final VM vm = refer.read<VM>(factory);
+    _disposes
+        .add(vm.listenStateSelect(onChanged: onChanged, selector: selector));
+  }
+
+  @override
+  VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) {
+    try {
+      return readCached(key: key, tag: tag);
+    } catch (e) {
+      //
+      return null;
+    }
+  }
+}
+
+extension StateRefExtension on ViewModelStateMixin {
+  VM watchViewModel<VM extends ViewModel>(
+      {required ViewModelFactory<VM> factory}) {
+    // ignore: invalid_use_of_protected_member
+    return refer.watch<VM>(factory);
+  }
+
+  VM readViewModel<VM extends ViewModel>(
+      {required ViewModelFactory<VM> factory}) {
+    // ignore: invalid_use_of_protected_member
+    return refer.read<VM>(factory);
+  }
+
+  VM readCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.readCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM watchCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.watchCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.maybeWatchCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM? maybeReadCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.maybeReadCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+}
+
+extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
+  VM watchViewModel<VM extends ViewModel>(
+      {required ViewModelFactory<VM> factory}) {
+    // ignore: invalid_use_of_protected_member
+    return refer.watch<VM>(factory);
+  }
+
+  VM readViewModel<VM extends ViewModel>(
+      {required ViewModelFactory<VM> factory}) {
+    // ignore: invalid_use_of_protected_member
+    return refer.read<VM>(factory);
+  }
+
+  VM readCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.readCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM watchCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.watchCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.maybeWatchCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM? maybeReadCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.maybeReadCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+}
+
+extension ViewModelRefExtension on ViewModel {
+  VM watchViewModel<VM extends ViewModel>(
+      {required ViewModelFactory<VM> factory}) {
+    // ignore: invalid_use_of_protected_member
+    return refer.watch<VM>(factory);
+  }
+
+  VM readViewModel<VM extends ViewModel>(
+      {required ViewModelFactory<VM> factory}) {
+    // ignore: invalid_use_of_protected_member
+    return refer.read<VM>(factory);
+  }
+
+  VM readCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.readCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM watchCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.watchCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.maybeWatchCached<VM>(
+      key: key,
+      tag: tag,
+    );
+  }
+
+  VM? maybeReadCachedViewModel<VM extends ViewModel>({
+    Object? key,
+    Object? tag,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    return refer.maybeReadCached<VM>(
+      key: key,
+      tag: tag,
+    );
   }
 }

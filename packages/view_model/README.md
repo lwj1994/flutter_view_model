@@ -26,22 +26,19 @@
   - [Basic Usage](#basic-usage)
     - [Adding Dependencies](#adding-dependencies)
     - [Creating a ViewModel](#creating-a-viewmodel)
-    - [Creating a ViewModelFactory](#creating-a-viewmodelfactory)
-      - [Custom ViewModelFactory](#custom-viewmodelfactory)
-      - [DefaultViewModelFactory Quick Factory](#defaultviewmodelfactory-quick-factory)
+      - [ViewModelProvider](#viewmodelprovider)
     - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
       - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [ViewModelStateMixin](#viewmodelstatemixin)
       - [Alternative: ViewModelBuilder (no mixin required)](#alternative-viewmodelbuilder-no-mixin-required)
     - [Side‑effects with listeners](#sideeffects-with-listeners)
   - [ViewModel Lifecycle](#viewmodel-lifecycle)
-      - [How It Works: Binder Counting](#how-it-works-binder-counting)
+      - [How It Works: Refer Counting](#how-it-works-refer-counting)
   - [Initialization](#initialization)
     - [Global ViewModel Lifecycle](#global-viewmodel-lifecycle)
   - [Stateful ViewModel (`StateViewModel<S>`)](#stateful-viewmodel-stateviewmodels)
     - [Defining the State Class](#defining-the-state-class)
     - [Creating a Stateful ViewModel](#creating-a-stateful-viewmodel)
-    - [Creating a ViewModelFactory](#creating-a-viewmodelfactory-1)
     - [Using Stateful ViewModel in Widgets](#using-stateful-viewmodel-in-widgets)
     - [Side-effect Listeners](#side-effect-listeners)
     - [Fine-Grained Rebuilds with `StateViewModelValueWatcher`](#fine-grained-rebuilds-with-stateviewmodelvaluewatcher)
@@ -53,14 +50,16 @@
     - [ValueListenableBuilder](#valuelistenablebuilder)
     - [ObserverBuilder](#observerbuilder)
     - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
-  - [Custom Binder](#custom-binder)
+  - [Custom Refer](#custom-ref)
+    - [Core Concepts](#core-concepts)
+    - [Example: StartTaskRefer](#example-starttaskbinder)
   - [DevTools Extension](#devtools-extension)
 
 ---
 
 ## Everything is ViewModel
 
-We redefine the "ViewModel" not as a specific MVVM component, but as a **Specialized Manager Container** equipped with lifecycle awareness.
+We redefine the "ViewModel" not as a Providerific MVVM component, but as a **Providerialized Manager Container** equipped with lifecycle awareness.
 
 **1. Widget-Centric Architecture**
 In a Flutter App, every action revolves around Pages and Widgets. No matter how complex the logic is, the ultimate consumer is always a Widget. Therefore, binding the Manager's lifecycle directly to the Widget tree is the most logical and natural approach.
@@ -77,13 +76,13 @@ ViewModels can directly depend on and read other ViewModels internally (e.g., a 
 **4. Out-of-the-Box Simplicity**
 Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** (which involves complex graph concepts), this approach is strictly pragmatic. It provides automated lifecycle management and dependency injection immediately, with zero boilerplate.
 
-**5. Beyond Widgets: Custom Binder**
-Through custom `Binder`, ViewModels can exist **independently of Widgets**. Any Dart class can `with Binder` to become a ViewModel host, enabling use cases like:
+**5. Beyond Widgets: Custom Refer**
+Through custom `Refer`, ViewModels can exist **independently of Widgets**. Any Dart class can `with Refer` to become a ViewModel host, enabling use cases like:
 *   **Background Services:** Run ViewModel logic in background tasks (e.g., downloads, sync).
 *   **Pure Dart Tests:** Test ViewModel interactions without `testWidgets`.
 *   **Startup Tasks:** Execute initialization logic before any Widget is rendered.
 
-This makes ViewModel truly universal—**Everything can be a ViewModel**, not just UI components. See [Custom Binder](#custom-binder) for details.
+This makes ViewModel truly universal—**Everything can be a ViewModel**, not just UI components. See [Custom Refer](#custom-refer) for details.
 
 
 
@@ -91,10 +90,9 @@ This makes ViewModel truly universal—**Everything can be a ViewModel**, not ju
 
 ## Quick Start
 
-- Watch: `watchViewModel<T>()` / `watchCachedViewModel<T>()`
-- Read: `readViewModel<T>()` / `readCachedViewModel<T>()`
-- Global: `ViewModel.readCached<T>() / maybeReadCached<T>()`
-- Recycle: `recycleViewModel(vm)`
+- Watch: `refer.watch<T>()` / `refer.watchCached<T>()`
+- Read: `refer.read<T>()` / `refer.readCached<T>()`
+- Recycle: `recycle(vm)`
 - Effects: `listen(onChanged)` / `listenState` / `listenStateSelect`
 
 ```dart
@@ -104,13 +102,16 @@ class CounterViewModel extends ViewModel {
   void increment() => update(() => count++);
 }
 
-// 2. Use it in a Widget
+// 2. Define a Provider
+final counterProvider = ViewModelProvider(
+  builder: () => CounterViewModel(),
+);
+
+// 3. Use it in a Widget
 class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
   @override
   Widget build(BuildContext context) {
-    final vm = watchViewModel<CounterViewModel>(
-      factory: DefaultViewModelFactory(builder: () => CounterViewModel()),
-    );
+    final vm = refer.watch(counterProvider);
     return ElevatedButton(
       onPressed: vm.increment,
       child: Text('${vm.count}'),
@@ -122,7 +123,7 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 ## Reuse One Instance
 
 - Key: set `key()` in factory → all widgets share the same instance
-- Tag: set `tag()` → bind newest instance via `watchCachedViewModel(tag)`
+- Tag: set `tag()` → bind newest instance via `refer.watchCached(tag)`
 - Any param: pass any `Object` as key/tag (e.g. `'user:$id'`)
 
 > [!IMPORTANT]
@@ -132,12 +133,12 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 > or [freezed](https://pub.dev/packages/freezed) to simplify this implementation.
 
 ```dart
-final f = DefaultViewModelFactory<UserViewModel>(
+final Provider = ViewModelProvider<UserViewModel>(
   builder: () => UserViewModel(userId: id),
   key: 'user:$id',
 );
-final vm1 = watchViewModel(factory: f);
-final vm2 = watchCachedViewModel<UserViewModel>(key: 'user:$id'); // same
+final vm1 = refer.watch(Provider);
+final vm2 = refer.watchCached<UserViewModel>(key: 'user:$id'); // same
 ```
 
 
@@ -146,7 +147,7 @@ final vm2 = watchCachedViewModel<UserViewModel>(key: 'user:$id'); // same
 
 ### Adding Dependencies
 
-First, add `view_model` to your project's `pubspec.yaml` file:
+First, add `view_model` to your project's `pubProvider.yaml` file:
 
 ```yaml
 dependencies:
@@ -192,93 +193,69 @@ class MySimpleViewModel extends ViewModel {
 }
 ```
 
-### Creating a ViewModelFactory
+#### ViewModelProvider
+`ViewModelProvider` provides a declarative way to define how a `ViewModel` is
+created and identified in the cache. It reduces boilerplate by encapsulating
+the builder and sharing rules (key, tag, singleton). Earlier versions relied
+on explicit Factory implementations, which were verbose; Provider offers a simpler
+and safer alternative.
 
-`ViewModelFactory` is responsible for instantiating `ViewModel`. Each `ViewModel` type typically
-requires a corresponding `Factory`.
+[Migration Guide](
+  https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_Provider_MIGRATION.md)
+
+**Without Arguments**
 
 ```dart
-import 'package:view_model/view_model.dart';
-// Assume MySimpleViewModel is defined as above
+// Define a Provider
+final counterProvider = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
+  key: 'counter',
+);
 
-class MySimpleViewModelFactory with ViewModelFactory<MySimpleViewModel> {
-  @override
-  MySimpleViewModel build() {
-    // Return a new MySimpleViewModel instance
-    return MySimpleViewModel();
-  }
-}
+// Use it in a widget
+final vm = refer.watch(counterProvider);
 ```
 
-#### Custom ViewModelFactory
-Factory creates and identifies instances. Use `key()` to share one instance,
-use `tag()` to group/discover.
+**With Arguments**
 
-| Method/Property | Type      | Optional          | Description                                                                                                                                            |
-| --------------- | --------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `build()`       | `T`       | ❌ Must implement | The factory method to create a ViewModel instance. Typically, constructor parameters are passed here.                                                  |
-| `key()`         | `Object?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing). |
-| `tag()`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's used by find ViewModel by `watchViewModel(tag:tag)`.                            |
+Use `ViewModelProvider.arg` to declare builder and sharing rules derived
+from an argument.
+
+```dart
+// Define a provider that takes a user ID string
+final userProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (id) => UserViewModel(userId: id),
+  key: (id) => 'user-$id',
+  tag: (id) => 'user-$id',
+);
+
+// Use it in a widget, passing the argument to the provider
+final vm = refer.watch(userProvider('user-123'));
+```
+
+This approach keeps the `ViewModel` creation logic clean and reusable.
+
+`ViewModelProvider` creates and identifies instances. Use `key` to share one instance,
+use `tag` to group/discover. You can then use `watchCached` to get the cached instance.
+
+| Parameter | Type      | Optional          | Description                                                                                                                                            |
+| --------- | --------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `key`         | `Object?` | ✅ Optional       | Provides a unique identifier for the ViewModel. ViewModels with the same key will be automatically shared (recommended for cross-widget/page sharing).  and it's used by find ViewModel by `watchCached(key:key)` |
+| `tag`      | `Object?` | ✅                | Add a tag for ViewModel instance. get tag by `viewModel.tag`. and it's used by find ViewModel by `watchCached(tag:tag)`.                            |
 
 > **Note**: If you use a custom key object, implement `==` and `hashCode` to
 > ensure correct cache lookup.
 
-```dart
-class MyViewModelFactory with ViewModelFactory<MyViewModel> {
-  // Your custom parameters, usually passed to MyViewModel
-  final String initialName;
-
-  MyViewModelFactory({required this.initialName});
-
-  @override
-  MyViewModel build() {
-    return MyViewModel(name: initialName);
-  }
-
-  /// The key for sharing the ViewModel. The key is unique, and only one ViewModel instance will be created for the same key.
-  /// If the key is null, no sharing will occur.
-  @override
-  Object? key() => "user-profile";
-}
-```
-
-#### DefaultViewModelFactory Quick Factory
 
 
-For simple cases, use `DefaultViewModelFactory<T>` to avoid writing a custom
-factory.
 
-
-```dart
-
-final factory = DefaultViewModelFactory<MyViewModel>(
-  builder: () => MyViewModel(),
-  isSingleton: true, // optional
-);
-```
-
-- `builder`: Function to create the ViewModel instance.
-- `key`: Custom key for singleton instance sharing.
-- `tag`: Custom tag for identifying the ViewModel.
-- `isSingleton`: Whether to use singleton mode. This is just a convenient way to set a unique key for you. Note that the priority is lower than the key parameter.
-
-```dart
-
-final factory = DefaultViewModelFactory<CounterViewModel>(
-  builder: () => CounterViewModel(),
-);
-final sharedFactory = DefaultViewModelFactory<CounterViewModel>(
-  builder: () => CounterViewModel(),
-  key: 'global-counter',
-);
-```
 
 ---
 
 ### Using ViewModel in Widgets
 
 Mix `ViewModelStatelessMixin` or `ViewModelStateMixin` into Widget to bind a `ViewModel`.
-Use `watchViewModel` for reactive updates, or `readViewModel` to
+Use `refer.watch` for reactive updates, or `refer.read` to
 avoid rebuilds. Lifecycle (create, share, dispose) is managed for
 you automatically.
 
@@ -293,16 +270,16 @@ import 'package:view_model/view_model.dart';
 /// Stateless widget using ViewModelStatelessMixin.
 /// Displays counter state and a button to increment.
 // ignore: must_be_immutable
+final counterProviderForStateless = ViewModelProvider(
+  builder: CounterViewModel.new,
+);
+
 class CounterStatelessWidget extends StatelessWidget
     with ViewModelStatelessMixin {
   CounterStatelessWidget({super.key});
 
   /// Create and watch the ViewModel instance for UI binding.
-  late final vm = watchViewModel<CounterViewModel>(
-    factory: DefaultViewModelFactory<CounterViewModel>(
-      builder: CounterViewModel.new,
-    ),
-  );
+  late final vm = refer.watch(counterProviderForStateless);
 
   /// Builds UI bound to CounterViewModel state.
   @override
@@ -329,7 +306,8 @@ class CounterStatelessWidget extends StatelessWidget
 import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
 
-// Assume MySimpleViewModel and MySimpleViewModelFactory are defined
+// Assume MySimpleViewModel is defined
+final simpleVMProvider = ViewModelProvider(builder: () => MySimpleViewModel());
 
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
@@ -346,11 +324,10 @@ class _MyPageState extends State<MyPage>
   @override
   void initState() {
     super.initState();
-    // 2. Use watchViewModel to create and get the ViewModel
+    // 2. Use refer.watch to create and get the ViewModel
     // When MyPage is built for the first time, the build() method of MySimpleViewModelFactory will be called to create an instance.
     // When MyPage is disposed, if this viewModel has no other listeners, it will also be disposed.
-    simpleVM =
-        watchViewModel<MySimpleViewModel>(factory: MySimpleViewModelFactory());
+    simpleVM = refer.watch(simpleVMProvider);
   }
 
   @override
@@ -386,8 +363,9 @@ class _MyPageState extends State<MyPage>
 
 ```dart
 // Example: Using ViewModelBuilder without mixing ViewModelStateMixin
+final simpleVMProviderForBuilder = ViewModelProvider(builder: () => MySimpleViewModel());
 ViewModelBuilder<MySimpleViewModel>(
-  factory: MySimpleViewModelFactory(),
+  Provider: simpleVMProviderForBuilder,
   builder: (vm) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -435,7 +413,7 @@ void initState() {
   super.initState();
 
   // Get the ViewModel instance (usually obtained once in initState or via a getter)
-  final myVm = watchViewModel<MySimpleViewModel>(factory: MySimpleViewModelFactory());
+  final myVm = refer.watch(simpleVMProvider);
 
   _disposeViewModelListener = myVm.listen(onChanged: () {
     print('MySimpleViewModel called notifyListeners! Current counter: ${myVm.counter}');
@@ -453,17 +431,19 @@ void dispose() {
 ## ViewModel Lifecycle
 
 > [!IMPORTANT]
-> Both `watch` (e.g., `watchViewModel`) and `read` (e.g., `readViewModel`) APIs will create a binding and increment the reference count. The `ViewModel` is disposed only when all bindings are removed.
+> Both `refer.watch` and `refer.read` APIs will create a binding and increment the
+> reference count. The `ViewModel` is disposed only when all bindings are
+> removed.
 
 The lifecycle of a `ViewModel` is managed automatically based on a **reference counting** mechanism. This ensures that a `ViewModel` instance is kept alive as long as it is being used by at least one widget and is automatically disposed of when it's no longer needed, preventing memory leaks.
 
-#### How It Works: Binder Counting
+#### How It Works: Refer Counting
 
 The system keeps track of how many widgets are "binding" a `ViewModel` instance.
 
-1.  **Creation & First Binder**: When `WidgetA` creates or binds a `ViewModel` (`VMA`) for the first time (e.g., using `watchViewModel`), the binder count for `VMA` becomes 1.
-2.  **Reuse & More Binder**: If `WidgetB` reuses the same `VMA` instance (e.g., by using `watchCachedViewModel` with the same key), the binder count for `VMA` increments to 2.
-3.  **Disposing a Binder**: When `WidgetA` is disposed, it stops watching `VMA`, and the binder count decrements to 1. At this point, `VMA` is **not** disposed because `WidgetB` is still using it.
+1.  **Creation & First Refer**: When `WidgetA` creates or binds a `ViewModel` (`VMA`) for the first time (e.g., using `refer.watch`), the binder count for `VMA` becomes 1.
+2.  **Reuse & More Refer**: If `WidgetB` reuses the same `VMA` instance (e.g., by using `refer.watchCached` with the same key), the binder count for `VMA` increments to 2.
+3.  **Disposing a Refer**: When `WidgetA` is disposed, it stops watching `VMA`, and the binder count decrements to 1. At this point, `VMA` is **not** disposed because `WidgetB` is still using it.
 4.  **Final Disposal**: Only when `WidgetB` is also disposed does the binder count for `VMA` drop to 0. At this moment, the `ViewModel` is considered unused, and its `dispose()` method is called automatically.
 
 This mechanism is fundamental for sharing `ViewModel`s across different parts of your widget tree, ensuring state persistence as long as it's relevant to the UI.
@@ -471,17 +451,17 @@ This mechanism is fundamental for sharing `ViewModel`s across different parts of
 ```mermaid
 graph TD
     subgraph "Time 1: WidgetA creates VMA"
-        A[WidgetA] -- binds --> VMA1(VMA<br/>Binders: 1)
+        A[WidgetA] -- binds --> VMA1(VMA<br/>Binded Refs: 1)
     end
 
     subgraph "Time 2: WidgetB reuses VMA"
-        A -- binds --> VMA2(VMA<br/>Binders: 2)
+        A -- binds --> VMA2(VMA<br/>Binded Refs: 2)
         B[WidgetB] -- binds --> VMA2
     end
 
     subgraph "Time 3: WidgetA is disposed"
         A_gone((WidgetA disposed))
-        B -- binds --> VMA3(VMA<br/>Binders: 1)
+        B -- binds --> VMA3(VMA<br/>Binded Refs: 1)
     end
 
     subgraph "Time 4: WidgetB is disposed"
@@ -692,28 +672,8 @@ class MyCounterViewModel extends StateViewModel<MyCounterState> {
 In `StateViewModel`, you update the state by calling `setState(newState)`. This method replaces the
 old state with the new one and automatically notifies all listeners.
 
-### Creating a ViewModelFactory
+```
 
-Create a corresponding `Factory` for your `StateViewModel`.
-
-```dart
-// example: lib/my_counter_view_model_factory.dart
-import 'package:view_model/view_model.dart';
-import 'my_counter_state.dart';
-import 'my_counter_view_model.dart';
-
-class MyCounterViewModelFactory with ViewModelFactory<MyCounterViewModel> {
-  final int initialCount;
-
-  MyCounterViewModelFactory({this.initialCount = 0});
-
-  @override
-  MyCounterViewModel build() {
-    // Create and return the ViewModel instance in the build method, passing the initial state
-    return MyCounterViewModel(
-        initialState: MyCounterState(count: initialCount, statusMessage: "Initialized"));
-  }
-}
 ```
 
 ### Using Stateful ViewModel in Widgets
@@ -741,12 +701,16 @@ class _MyCounterPageState extends State<MyCounterPage>
     with ViewModelStateMixin<MyCounterPage> {
   late final MyCounterViewModel counterVM;
 
-  @override
-  void initState() {
-    super.initState();
-    counterVM = watchViewModel<MyCounterViewModel>(
-        factory: MyCounterViewModelFactory(initialCount: 10)); // You can pass an initial value
-  }
+  final counterProviderForStateful = ViewModelProvider(
+  builder: () => MyCounterViewModel(initialState: MyCounterState(count: 10, statusMessage: "Initialized")
+);
+
+// ... (inside _MyCounterPageState)
+@override
+void initState() {
+  super.initState();
+  counterVM = refer.watch(counterProviderForStateful);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -806,15 +770,15 @@ class _MyCounterPageState extends State<MyCounterPage>
 
 ### Side-effect Listeners
 
-In addition to the standard `listen()` method inherited from `ViewModel`, `StateViewModel` provides two specialized listeners for reacting to state changes without rebuilding the widget:
+In addition to the standard `listen()` method inherited from `ViewModel`, `StateViewModel` provides two Providerialized listeners for reacting to state changes without rebuilding the widget:
 
 - **`listenState((previous, current) { ... })`**: Triggers a callback whenever the `state` object changes. It provides both the previous and the current state, which is useful for comparison or logic that depends on the transition.
 
-- **`listenStateSelect<T>((state) => state.someValue, (previous, current) { ... })`**: A more optimized listener that triggers a callback only when a specific selected value within the state changes. This avoids unnecessary reactions when other parts of the state are updated.
+- **`listenStateSelect<T>((state) => state.someValue, (previous, current) { ... })`**: A more optimized listener that triggers a callback only when a Providerific selected value within the state changes. This avoids unnecessary reactions when other parts of the state are updated.
 
 ```dart
 // In initState
-final myVm = watchViewModel<MyCounterViewModel>(/* ... */);
+final myVm = refer.watch<MyCounterViewModel>(/* ... */);
 
 // Listen to the entire state object
 final dispose1 = myVm.listenState((previous, current) {
@@ -838,14 +802,14 @@ final dispose2 = myVm.listenStateSelect(
 
 ### Fine-Grained Rebuilds with `StateViewModelValueWatcher`
 
-For highly optimized performance, `StateViewModelValueWatcher` allows you to rebuild a widget based on changes to one or more specific values within your state. This is particularly useful when your widget only depends on a small subset of a larger state object.
+For highly optimized performance, `StateViewModelValueWatcher` allows you to rebuild a widget based on changes to one or more Providerific values within your state. This is particularly useful when your widget only depends on a small subset of a larger state object.
 
 It takes a `viewModel`, a list of `selectors`, and a `builder`. The widget rebuilds only when the result of any selector function changes.
 
 **How it works:**
 
 1.  **`viewModel`**: The `StateViewModel` instance to listen to.
-2.  **`selectors`**: A list of functions, where each function extracts a specific value from the state (e.g., `(state) => state.userName`).
+2.  **`selectors`**: A list of functions, where each function extracts a Providerific value from the state (e.g., `(state) => state.userName`).
 3.  **`builder`**: A function that builds the widget, which is called only when any of the selected values change.
 
 **Example:**
@@ -855,8 +819,8 @@ Imagine a `UserProfileViewModel` with a state containing `userName`, `age`, and 
 ```dart
 // Assume you have a MyCounterViewModel and its state MyCounterState { count, statusMessage }
 
-// Obtain the ViewModel instance (usually with readCachedViewModel if you don't need the whole widget to rebuild)
-final myVm = readCachedViewModel<MyCounterViewModel>();
+// Obtain the ViewModel instance (usually with refer.readCached if you don't need the whole widget to rebuild)
+final myVm = refer.readCached<MyCounterViewModel>();
 
 // This widget will only rebuild if `state.count` or `state.statusMessage` changes.
 StateViewModelValueWatcher<MyCounterState>(
@@ -876,7 +840,7 @@ This approach provides a powerful way to achieve fine-grained control over your 
 
 ## ViewModel → ViewModel dependencies
 
-The `view_model` package provides a smart dependency mechanism that allows ViewModels to depend on each other. use `readViewModel/readCachedViewModel` in `ViewModel`. The APIs are the same as in `ViewModelStateMixin`.
+The `view_model` package provides a smart dependency mechanism that allows ViewModels to depend on each other. use `read/readCached` in `ViewModel`. The APIs are the same as in `ViewModelStateMixin`.
 
 #### Dependency Mechanism
 
@@ -891,7 +855,7 @@ This means:
 - **Management**: The `Widget` is responsible for creating and disposing of all its associated `ViewModel`s.
 - **Relationship**: `ViewModelA` simply holds a reference to `ViewModelB`.
 
-Essentially, calling `readViewModel` or `watchViewModel` from within a `ViewModel` is the same as calling it from the `Widget`. Both access the same central management system.
+Essentially, calling `refer.read` or `refer.watch` from within a `ViewModel` is the same as calling it from the `Widget`. Both access the same central management system.
 
 This flattened approach simplifies lifecycle management and avoids complex, nested dependency chains.
 
@@ -925,23 +889,28 @@ class ViewModelA extends ViewModel {
   late final ViewModelB viewModelB;
 
   ViewModelA() {
-    viewModelB = readCachedViewModel<ViewModelB>();
+    viewModelB = refer.readCached<ViewModelB>();
   }
 }
 ```
 
 When you create `ViewModelA` in your widget, the dependency mechanism will automatically create and provide `ViewModelB`.
 
+
 ```dart
+
+final viewModelAProvider = ViewModelProvider(builder: () => ViewModelA());
+
 // In your widget
 class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
   late final ViewModelA viewModelA;
 
-  @override
-  void initState() {
-    super.initState();
-    viewModelA = watchViewModel<ViewModelA>(factory: ...);
-  }
+// ... (inside _MyWidgetState)
+@override
+void initState() {
+  super.initState();
+  viewModelA = refer.watch(viewModelAProvider);
+}
 
   // ...
 }
@@ -954,11 +923,11 @@ This system allows for a clean and decoupled architecture, where ViewModels can 
 [doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
 
 
-The pause/resume lifecycle is managed by `BinderPauseProvider`s. By default,
-`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming the `Binder` based
-on route visibility and app lifecycle events, respectively.
+The pause/resume lifecycle is managed by `ReferPauseProvider`s. By default,
+`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming the `Refer` based
+on route visibility and app lifecycle events, reProvidertively.
 
-When a `Binder` is paused (e.g., widget navigated away), it stops responding to ViewModel state changes, preventing unnecessary rebuilds. The ViewModel continues to emit notifications, but the paused Binder ignores them. When resumed, the Binder checks for missed updates and rebuilds if necessary.
+When a `Refer` is paused (e.g., widget navigated away), it stops responding to ViewModel state changes, preventing unnecessary rebuilds. The ViewModel continues to emit notifications, but the paused Refer ignores them. When resumed, the Refer checks for missed updates and rebuilds if necessary.
 
 
 
@@ -999,7 +968,7 @@ ObserverBuilder<int>(observable: observable,
 
 ### StateViewModelValueWatcher
 
-- To rebuild only when a specific value within a `StateViewModel` changes, use [`StateViewModelValueWatcher`](#fine-grained-rebuilds-with-stateviewmodelvaluewatcher).  
+- To rebuild only when a Providerific value within a `StateViewModel` changes, use [`StateViewModelValueWatcher`](#fine-grained-rebuilds-with-stateviewmodelvaluewatcher).  
 
 
 ```dart
@@ -1011,8 +980,8 @@ class MyWidget extends State with ViewModelStateMixin {
   @override
   void initState() {
     super.initState();
-    stateViewModel = readViewModel<MyViewModel>(
-      factory: MyViewModelFactory(),
+    stateViewModel = refer.read(
+      ViewModelProvider(builder: () => MyViewModel()),
     );
   }
 
@@ -1030,86 +999,53 @@ class MyWidget extends State with ViewModelStateMixin {
   }
 }
 ```
-## Custom Binder
+## Custom Refer
 
-`Binder` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskBinder` as a host for the ViewModel to run logic.
+`Refer` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskRefer` as a host for the ViewModel to run logic.
 
-`Binder` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetBinder`.
+`Refer` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetRefer`.
 
 This means you can use ViewModel in any Dart class, **independent of Widgets**.
 
 ### Core Concepts
 
-*   **Binder**: A generic ViewModel manager. It simulates a host environment, providing methods like `watchViewModel`.
-*   **WidgetBinder**: A subclass of `Binder` specifically adapted for Flutter Widgets, implementing the bridge from `onUpdate` to `setState`.
+*   **Refer**: A generic ViewModel manager. It simulates a host environment, providing methods like `refer.watch`.
+*   **WidgetRefer**: A subclass of `Refer` Providerifically adapted for Flutter Widgets, implementing the bridge from `onUpdate` to `setState`.
 
-### Use Cases
-
-1.  **Background Service**: Reuse ViewModel logic (e.g., download, data synchronization) in background tasks.
-2.  **Unit Testing**: Test ViewModel interactions and dependencies without `testWidgets`.
-3.  **Global Singleton**: Preload and hold global ViewModels before the App starts.
-
-### Example: Custom Service Binder
-
-You can let your Service `with Binder` to gain the ability to manage ViewModels.
+### Example: StartTaskRefer
 
 ```dart
-class DownloadService with Binder {
-  late final DownloadViewModel _downloadVM = watchViewModel(factory: DownloadViewModelFactory());
+import 'package:view_model/view_model.dart';
 
-  DownloadService() {
-   
+final Provider = ViewModelProvider(builder: () => AppInitViewModel());
+
+/// Refer that runs startup tasks before UI is shown.
+/// Typical use: preload data, check auth, warm caches.
+class StartTaskRefer with Refer {
+  late final AppInitViewModel _initVM = refer.watch(Provider);
+
+  /// Triggers startup logic. Call this from main() before runApp.
+  Future<void> run() async {
+    await _initVM.runStartupTasks();
   }
 
-  void start(){
-    // 2. Start business logic
-    _downloadVM.startQueue(); 
-  }
-
-  // Override onUpdate: Called automatically when DownloadViewModel state changes
+  /// Handles ViewModel updates (logs, metrics, etc.).
   @override
   void onUpdate() {
-    // 3. Handle side effects, e.g., updating system notification
-    print("Download progress: ${_downloadVM.progress}");
-    NotificationApi.updateProgress(_downloadVM.progress);
+    // e.g., print status or send analytics event
+    debugPrint('Init status: ${_initVM.status}');
   }
-  
-  void dispose() {
-    // 4. Dispose Binder, automatically unbind all ViewModels
+
+  /// Disposes binder and all bound ViewModels.
+  void close() {
     super.dispose();
   }
 }
 
-
-final downloadService = DownloadService();
-
-await downloadService.start();
-
-downloadService.dispose();
-```
-
-### Example: Using in Pure Dart Tests
-
-```dart
-test('Test AuthViewModel login flow', () {
-  // Create a temporary Binder
-  final binder = Binder(); 
-  
-  // Get VM (Binder automatically resolves its dependencies)
-  final authVM = binder.watchViewModel(factory: AuthViewModelFactory());
-  
-  // Verify initial state
-  expect(authVM.isLoggedIn, false);
-  
-  // Perform action
-  authVM.login("user", "pass");
-  
-  // Verify state change
-  expect(authVM.isLoggedIn, true);
-  
-  // End test, clean up resources
-  binder.dispose();
-});
+// Usage in main():
+// final starter = StartTaskRefer();
+// await starter.run();
+// starter.close();
 ```
 
 
@@ -1128,4 +1064,3 @@ extensions:
 
 ![](https://i.imgur.com/5itXPYD.png)
 ![](https://imgur.com/83iOQhy.png)
-

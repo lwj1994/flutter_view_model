@@ -7,7 +7,7 @@
 /// @author luwenjie on 2025/3/25 16:24:32
 library;
 
-import 'package:view_model/src/view_model/dependency_handler.dart';
+import 'package:view_model/src/view_model/refer.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
@@ -60,7 +60,7 @@ class AutoDisposeInstanceController {
   /// Human-readable name for this watcher, typically the widget class name.
   final String binderName;
 
-  final DependencyResolver dependencyResolver;
+  final Refer ref;
 
   /// Creates a new auto-dispose instance controller.
   ///
@@ -70,7 +70,7 @@ class AutoDisposeInstanceController {
   AutoDisposeInstanceController({
     required this.onRecreate,
     required this.binderName,
-    required this.dependencyResolver,
+    required this.ref,
   });
 
   /// Gets the unique watcher ID combining the watcher name and UUID.
@@ -209,9 +209,7 @@ class AutoDisposeInstanceController {
   Future<void> dispose() async {
     for (final e in _instanceNotifiers) {
       if (e.instance is ViewModel) {
-        (e.instance as ViewModel)
-            .dependencyHandler
-            .removeDependencyResolver(dependencyResolver);
+        (e.instance as ViewModel).refHandler.removeRef(ref);
       }
       e.removeBinder(_binderId);
     }

@@ -1,25 +1,58 @@
 ## 0.9.0
-### Custom Binder
-`Binder` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskBinder` as a host for the ViewModel to run logic.
+__BreakingChange__
 
-`Binder` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetBinder`.
+### Refer
+`Refer` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskRefer` as a host for the ViewModel to run logic.
+
+`Refer` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetRefer`.
 
 This means you can use ViewModel in any Dart class, **independent of Widgets**.
 
-### Core Concepts
 
-*   **Binder**: A generic ViewModel manager. It simulates a host environment, providing methods like `watchViewModel`.
-*   **WidgetBinder**: A subclass of `Binder` specifically adapted for Flutter Widgets, implementing the bridge from `onUpdate` to `setState`.
+### ViewModelProvider
+`ViewModelProvider` provides a declarative way to define how a `ViewModel` is
+created and identified in the cache. It reduces boilerplate by encapsulating
+the builder and sharing rules (key, tag, singleton). Earlier versions relied
+on explicit Factory implementations, which were verbose; Provider offers a simpler
+and safer alternative.
 
-### Use Cases
+[Migration Guide](
+  https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_SPEC_MIGRATION.md)
+  
+**Without Arguments**
 
-1.  **Background Service**: Reuse ViewModel logic (e.g., download, data synchronization) in background tasks.
-2.  **Unit Testing**: Test ViewModel interactions and dependencies without `testWidgets`.
-3.  **Global Singleton**: Preload and hold global ViewModels before the App starts.
+```dart
+// Define a spec
+final counterSpec = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
+  key: 'counter',
+);
+
+// Use it in a widget
+final vm = refer.watch(counterSpec);
+```
+
+**With Arguments**
+
+`ViewModelProvider.arg` is particularly useful when the `ViewModel`'s creation or its cache key depends on an argument.
+
+```dart
+// Define a spec that takes a user ID string
+final userProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (id) => UserViewModel(userId: id),
+  key: (id) => 'user-$id',
+  tag: (id) => 'user-$id',
+);
+
+// Use it in a widget, passing the argument to the spec
+final vm = refer.watch(userProvider('user-123'));
+```
+
 
   
 ---
-- rename `ViewModelPauseProvider` to `BinderPauseProvider`
+
+- rename `ViewModelPauseProvider` to `ReferPauseProvider`
 
 ## 0.8.4
 - Update docs about design philosophy
@@ -53,12 +86,12 @@ Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** 
 
 
 ## 0.8.1
-- Fix: Custom `BinderPauseProvider` was not working properly when added late, causing pause to fail.
+- Fix: Custom `ReferPauseProvider` was not working properly when added late, causing pause to fail.
 
 ## 0.8.0
-- **BREAKING CHANGE**: Reworked the `Binder` pause/resume lifecycle to a more robust and extensible provider-based architecture.
+- **BREAKING CHANGE**: Reworked the `Refer` pause/resume lifecycle to a more robust and extensible provider-based architecture.
   - Default providers `PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app app lifecycle events and tickMode.
-  - Added `ManualBinderPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
+  - Added `ManualReferPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
   - For details on the new API and migration, see the [Pause/Resume Lifecycle Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md).
 
 ```dart
@@ -82,16 +115,14 @@ class App {
 
 ```dart
 class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
+  late final viewModel = watchViewModel<MyViewModel>(
+      factory: MyViewModelFactory(),
+    );
   const MyWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Not recommended to get the ViewModel inside build.
-    // Prefer using ViewModelStateMixin on a State. 
-    final viewModel = watchViewModel<MyViewModel>(
-      factory: MyViewModelFactory(),
-    );
-    return Text('Hello World');
+    return Text('Hello World ${viewModel}');
   }
 }
 ```
@@ -343,7 +374,7 @@ extensions:
 
 ## 0.4.5
 
-- Add `DefaultViewModelFactory` for convenient and generic ViewModel factory
+- Add `ViewModelProvider` for convenient and generic ViewModel factory
   creation.
 
 ## 0.4.4

@@ -77,9 +77,10 @@
 library;
 
 export "package:view_model/src/get_instance/store.dart" show InstanceArg;
-export "package:view_model/src/view_model/binder.dart";
+export "package:view_model/src/view_model/refer.dart";
 export "package:view_model/src/view_model/builder.dart";
 export "package:view_model/src/view_model/config.dart";
+export "package:view_model/src/view_model/provider.dart";
 export "package:view_model/src/view_model/pause_provider.dart";
 export "package:view_model/src/view_model/value_observer.dart";
 export "package:view_model/src/view_model/value_watcher.dart";

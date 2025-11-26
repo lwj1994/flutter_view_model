@@ -15,10 +15,9 @@ library;
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
-import 'package:view_model/src/view_model/interface.dart';
 import 'package:view_model/view_model.dart';
 
-import 'binder.dart';
+import 'refer.dart';
 
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
 ///
@@ -53,10 +52,9 @@ import 'binder.dart';
 ///   }
 /// }
 /// ```
-mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
-    implements ViewModelCreateInterface {
-  @visibleForTesting
-  late final WidgetBinder binder = WidgetBinder(
+mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
+  @protected
+  late final WidgetRefer refer = WidgetRefer(
     refreshWidget: _rebuildState,
   );
 
@@ -75,101 +73,35 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
     }
   }
 
-  bool get isPaused => binder.isPaused;
-
-  @override
-  VM watchViewModel<VM extends ViewModel>({
-    required ViewModelFactory<VM> factory,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return binder.watchViewModel(
-      factory: factory,
-    );
-  }
-
-  @override
-  void recycleViewModel<VM extends ViewModel>(VM viewModel) {
-    // ignore: invalid_use_of_protected_member
-    binder.recycleViewModel(viewModel);
-  }
-
-  @override
-  VM watchCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    // ignore: invalid_use_of_protected_member
-    return binder.watchCachedViewModel(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  @override
-  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    return binder.maybeWatchCachedViewModel(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  @override
-  VM readViewModel<VM extends ViewModel>({
-    required ViewModelFactory<VM> factory,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return binder.readViewModel(
-      factory: factory,
-    );
-  }
-
-  @override
-  VM readCachedViewModel<VM extends ViewModel>({Object? key, Object? tag}) {
-    // ignore: invalid_use_of_protected_member
-    return binder.readCachedViewModel(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  @override
-  VM? maybeReadCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    return binder.maybeReadCachedViewModel(
-      key: key,
-      tag: tag,
-    );
-  }
+  bool get isPaused => refer.isPaused;
 
   @override
   void initState() {
     super.initState();
-    binder.init();
-    binder.addPauseProvider(_appPauseProvider);
-    binder.addPauseProvider(_routePauseProvider);
-    binder.addPauseProvider(_tickerModePauseProvider);
+    refer.init();
+    refer.addPauseProvider(_appPauseProvider);
+    refer.addPauseProvider(_routePauseProvider);
+    refer.addPauseProvider(_tickerModePauseProvider);
   }
 
   @override
   void dispose() {
     super.dispose();
-    binder.dispose();
+    refer.dispose();
     _appPauseProvider.dispose();
     _routePauseProvider.dispose();
     _tickerModePauseProvider.dispose();
   }
 
   void _rebuildState() {
-    if (binder.isDisposed) return;
+    if (refer.isDisposed) return;
     if (context.mounted &&
         SchedulerBinding.instance.schedulerPhase !=
             SchedulerPhase.persistentCallbacks) {
       setState(() {});
     } else {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (!binder.isDisposed && context.mounted) {
+        if (!refer.isDisposed && context.mounted) {
           setState(() {});
         }
       });
@@ -177,6 +109,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
   }
 
   String getWidgetBinderName() {
-    return binder.getBinderName();
+    return refer.getBinderName();
   }
 }

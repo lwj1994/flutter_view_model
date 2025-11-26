@@ -29,8 +29,8 @@ class _TestPageState extends State<TestPage>
   @override
   void initState() {
     super.initState();
-    // watchViewModel will internally trigger the binder name generation.
-    viewModel = watchViewModel<TestViewModel>(factory: TestViewModelFactory());
+    // refer.watch will internally trigger the binder name generation.
+    viewModel = refer.watch<TestViewModel>(TestViewModelFactory());
   }
 
   @override
@@ -48,8 +48,8 @@ class StatelessTestPage extends StatelessWidget with ViewModelStatelessMixin {
   @override
   Widget build(BuildContext context) {
     // Watch a ViewModel to exercise attacher in stateless mixin.
-    final vm = watchViewModel<TestViewModel>(
-      factory: TestViewModelFactory(),
+    final vm = refer.watch<TestViewModel>(
+      TestViewModelFactory(),
     );
     return const Placeholder();
   }
@@ -66,8 +66,8 @@ class _TestPageState2 extends _BasePageState<TestPage2> {
   @override
   void initState() {
     super.initState();
-    // watchViewModel will internally trigger the binder name generation.
-    viewModel = watchViewModel<TestViewModel>(factory: TestViewModelFactory());
+    // refer.watch will internally trigger the binder name generation.
+    viewModel = refer.watch<TestViewModel>(TestViewModelFactory());
   }
 
   @override

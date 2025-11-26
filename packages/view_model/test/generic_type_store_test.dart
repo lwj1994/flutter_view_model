@@ -18,11 +18,11 @@ void main() {
         'Cached reads for GenericVM<String> and GenericVM<dynamic> are isolated',
         (tester) async {
       // Define two factories to create ViewModels with different generic types
-      final stringFactory = DefaultViewModelFactory<GenericVM<String>>(
+      final stringFactory = ViewModelProvider<GenericVM<String>>(
         builder: () => GenericVM<String>(state: 'string_state'),
       );
 
-      final dynamicFactory = DefaultViewModelFactory<GenericVM<dynamic>>(
+      final dynamicFactory = ViewModelProvider<GenericVM<dynamic>>(
         builder: () => GenericVM<dynamic>(state: 123),
       );
 
@@ -62,7 +62,7 @@ class GenericVM<T> extends StateViewModel<T> {
 
 /// Test page that creates and caches a ViewModel of the specified type
 class GenericPage<T> extends StatefulWidget {
-  final DefaultViewModelFactory<GenericVM<T>> factory;
+  final ViewModelProvider<GenericVM<T>> factory;
 
   const GenericPage({super.key, required this.factory});
 
@@ -77,7 +77,7 @@ class _GenericPageState<T> extends State<GenericPage<T>>
   @override
   void initState() {
     super.initState();
-    _vm = watchViewModel<GenericVM<T>>(factory: widget.factory);
+    _vm = refer.watch<GenericVM<T>>(widget.factory);
   }
 
   @override

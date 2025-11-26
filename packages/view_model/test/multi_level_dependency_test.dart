@@ -15,8 +15,8 @@ class ViewModelC with ViewModel {
   ViewModelD? _viewModelD;
 
   String get data {
-    _viewModelD ??= readViewModel<ViewModelD>(
-      factory: DefaultViewModelFactory<ViewModelD>(builder: () => ViewModelD()),
+    _viewModelD ??= refer.read<ViewModelD>(
+      ViewModelProvider<ViewModelD>(builder: () => ViewModelD()),
     );
     return 'C -> ${_viewModelD!.data}';
   }
@@ -27,8 +27,8 @@ class ViewModelB with ViewModel {
   ViewModelC? _viewModelC;
 
   String get data {
-    _viewModelC ??= readViewModel<ViewModelC>(
-      factory: DefaultViewModelFactory<ViewModelC>(builder: () => ViewModelC()),
+    _viewModelC ??= refer.read<ViewModelC>(
+      ViewModelProvider<ViewModelC>(builder: () => ViewModelC()),
     );
     return 'B -> ${_viewModelC!.data}';
   }
@@ -39,8 +39,8 @@ class ViewModelA with ViewModel {
   ViewModelB? _viewModelB;
 
   String get data {
-    _viewModelB ??= readViewModel<ViewModelB>(
-      factory: DefaultViewModelFactory<ViewModelB>(builder: () => ViewModelB()),
+    _viewModelB ??= refer.read<ViewModelB>(
+      ViewModelProvider<ViewModelB>(builder: () => ViewModelB()),
     );
     return 'A -> ${_viewModelB!.data}';
   }
@@ -57,8 +57,8 @@ class TestWidget extends StatefulWidget {
 class _TestWidgetState extends State<TestWidget> with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
-    final viewModelA = watchViewModel<ViewModelA>(
-      factory: DefaultViewModelFactory<ViewModelA>(builder: () => ViewModelA()),
+    final viewModelA = refer.watch<ViewModelA>(
+      ViewModelProvider<ViewModelA>(builder: () => ViewModelA()),
     );
 
     return Text(viewModelA.data);

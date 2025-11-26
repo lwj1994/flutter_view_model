@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/src/view_model/refer_zone.dart';
 import 'package:view_model/view_model.dart';
-import 'package:view_model/src/view_model/dependency_handler.dart';
 
 // A simple ViewModel for testing.
 class MyViewModel with ViewModel {
   final String name;
   MyViewModel(this.name) {
-    childViewModel1 = readViewModel<ChildViewModel1>(
-        factory: DefaultViewModelFactory(builder: () => ChildViewModel1()));
+    childViewModel1 = refer.read<ChildViewModel1>(
+        ViewModelProvider(builder: () => ChildViewModel1()));
   }
   late ChildViewModel2 childViewModel2;
   late ChildViewModel1 childViewModel1;
 
   void doSome() {
-    childViewModel2 = readViewModel<ChildViewModel2>(
-        factory: DefaultViewModelFactory(builder: () => ChildViewModel2()));
+    childViewModel2 = refer.read<ChildViewModel2>(
+        ViewModelProvider(builder: () => ChildViewModel2()));
   }
 }
 
@@ -39,9 +39,8 @@ class MyWidgetState extends State<MyWidget> with ViewModelStateMixin<MyWidget> {
   void initState() {
     super.initState();
     // Use a key to ensure the same ViewModel instance is shared.
-    vm = watchViewModel<MyViewModel>(
-      factory: DefaultViewModelFactory(
-          key: "share", builder: () => MyViewModel(widget.name)),
+    vm = refer.watch<MyViewModel>(
+      ViewModelProvider(key: "share", builder: () => MyViewModel(widget.name)),
     );
   }
 
@@ -82,12 +81,12 @@ void main() {
     expect(identical(stateA.vm, stateB.vm), isTrue);
 
     // Access the internal dependency handler for testing.
-    final dependencyHandler = vm.dependencyHandler;
+    final dependencyHandler = vm.refHandler;
 
     // Initially, the ViewModel's dependency handler should have resolvers from both states.
     expect(dependencyHandler.ownerResolvers.length, 2);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.resolver), isTrue);
-    expect(dependencyHandler.ownerResolvers.contains(stateB.resolver), isTrue);
+    expect(dependencyHandler.ownerResolvers.contains(stateA.refer), isTrue);
+    expect(dependencyHandler.ownerResolvers.contains(stateB.refer), isTrue);
 
     // Dispose StateA by removing its widget.
     await tester.pumpWidget(
@@ -105,21 +104,18 @@ void main() {
     // After StateA is disposed, its resolver should be removed.
     expect(dependencyHandler.ownerResolvers.length, 1);
     // The remaining resolver should be from StateB.
-    expect(dependencyHandler.ownerResolvers.first, stateB.resolver);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.resolver), isFalse);
+    expect(dependencyHandler.ownerResolvers.first, stateB.refer);
+    expect(dependencyHandler.ownerResolvers.contains(stateA.refer), isFalse);
 
     expect(() => stateB.vm.childViewModel2, throwsA(isA<Error>()));
 
     stateB.vm.doSome();
 
     expect(
-        stateB.vm.childViewModel2.dependencyHandler.dependencyResolvers
-                .length ==
-            1,
-        true);
+        stateB.vm.childViewModel2.refHandler.dependencyRefs.length == 1, true);
     expect(
-        stateB.vm.childViewModel2.dependencyHandler.dependencyResolvers
-            .contains(stateB.resolver),
+        stateB.vm.childViewModel2.refHandler.dependencyRefs
+            .contains(stateB.refer),
         isTrue);
 
     expect(stateB.vm.isDisposed, false);
@@ -139,11 +135,7 @@ void main() {
   });
 }
 
-extension on ViewModelStateMixin {
-  DependencyResolver get resolver => binder.onChildDependencyResolver;
-}
-
 // Extension to access private list of resolvers
-extension on DependencyHandler {
-  List<DependencyResolver> get ownerResolvers => dependencyResolvers;
+extension on RefHandler {
+  List<Refer> get ownerResolvers => dependencyRefs;
 }

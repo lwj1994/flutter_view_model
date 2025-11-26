@@ -14,8 +14,7 @@ class CounterPage extends StatefulWidget {
 
 class _CounterPageState extends State<CounterPage>
     with ViewModelStateMixin<CounterPage> {
-  CounterViewModel get counterVM =>
-      watchViewModel<CounterViewModel>(factory: CounterViewModelFactory());
+  CounterViewModel get counterVM => refer.watch(counterSpec);
 
   @override
   Widget build(BuildContext context) {

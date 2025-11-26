@@ -7,7 +7,7 @@
 /// - [ViewModel]: Base mixin for stateless ViewModels
 /// - [StateViewModel]: Abstract class for stateful ViewModels
 /// - [ViewModelFactory]: Factory interface for creating ViewModels
-/// - [DefaultViewModelFactory]: Default implementation of ViewModelFactory
+/// - [ViewModelProvider]: Default implementation of ViewModelFactory
 /// - [ViewModelLifecycle]: Interface for ViewModel lifecycle callbacks
 ///
 /// The ViewModel system provides automatic lifecycle management,
@@ -27,9 +27,9 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
-import 'package:view_model/src/view_model/interface.dart';
+import 'package:view_model/src/view_model/refer.dart';
 
-import 'dependency_handler.dart';
+import 'refer_zone.dart';
 import 'state_store.dart';
 
 /// A ViewModel implementation that extends Flutter's [ChangeNotifier].
@@ -81,7 +81,14 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 ///   }
 /// }
 /// ```
-mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
+mixin class ViewModel implements InstanceLifeCycle {
+  /// Returns the [Refer] interface for accessing other ViewModels.
+  ///
+  /// This property allows you to use `refer.watch` and `refer.read` syntax,
+  /// consistent with the "Universal Refer" pattern.
+  @protected
+  RefInterface get refer => refHandler.refer;
+
   late InstanceArg _instanceArg;
   static final RouteObserver<PageRoute> routeObserver =
       RouteObserver<PageRoute>();
@@ -281,155 +288,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   /// This encapsulates all dependency-related logic and
   /// provides a clean separation of concerns.
   @internal
-  final DependencyHandler dependencyHandler = DependencyHandler();
-
-  /// Reads a dependency ViewModel from the current context.
-  ///
-  /// This method allows ViewModels to access other ViewModels as dependencies.
-  /// The core logic is:
-  /// 1. Host ViewModel first collects the dependency ViewModel configuration
-  /// 2. Check if host ViewModel is already associated with a State
-  /// 3. If associated, delegate to State's
-  /// readViewModel/watchViewModel to register the dependency
-  /// 4. If not associated, store the dependency config for later registration
-  ///
-  /// This ensures that dependency relationships are properly managed by
-  /// the Widget
-  /// State that owns the host ViewModel, maintaining consistent lifecycle
-  /// management.
-  ///
-  /// Parameters:
-  /// - [key]: Optional key to identify a specific ViewModel instance
-  /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it
-  /// doesn't exist
-  ///
-  /// Returns the requested ViewModel instance.
-  ///
-  /// Example:
-  /// ```dart
-  /// class MyViewModel extends ViewModel {
-  ///   late final UserService userService;
-  ///
-  ///   MyViewModel() {
-  ///     // Host ViewModel collects dependency config and delegates to State
-  ///     userService = readViewModel<UserService>();
-  ///   }
-  /// }
-  /// ```
-  @protected
-  T readViewModel<T extends ViewModel>({
-    required ViewModelFactory<T> factory,
-  }) {
-    if (isDisposed) throw ViewModelError("$T is disposed");
-    return dependencyHandler.getViewModel<T>(
-      factory: factory,
-      listen: false,
-    );
-  }
-
-  @protected
-  @override
-  T readCachedViewModel<T extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    if (isDisposed) throw ViewModelError("$T is disposed");
-    return dependencyHandler.getViewModel<T>(
-      listen: false,
-      key: key,
-      tag: tag,
-    );
-  }
-
-  @protected
-  @override
-  void recycleViewModel<T extends ViewModel>(T viewModel) {
-    if (isDisposed) throw ViewModelError("$T is disposed");
-    dependencyHandler.recycleViewModel(viewModel);
-  }
-
-  /// Watches a dependency ViewModel of type [T] and listens for changes.
-  ///
-  /// Similar to [readViewModel] but automatically listens for changes in the
-  /// dependency ViewModel and triggers rebuilds when the dependency changes.
-  ///
-  /// This method allows ViewModels to access other ViewModels as dependencies
-  /// with automatic change notification. When the dependency ViewModel changes,
-  /// this ViewModel will also notify its listeners.
-  ///
-  /// Parameters:
-  /// - [key]: Optional key to identify a specific ViewModel instance
-  /// - [tag]: Optional tag for ViewModel lookup
-  /// - [factory]: Optional factory for creating the ViewModel if it
-  /// doesn't exist
-  ///
-  /// Returns the requested ViewModel instance with change listening enabled.
-  ///
-  /// Example:
-  /// ```dart
-  /// class UserProfileViewModel extends ViewModel {
-  ///   late final AuthViewModel authViewModel;
-  ///
-  ///   UserProfileViewModel() {
-  ///     // Watch auth changes and automatically update when auth state changes
-  ///     authViewModel = watchViewModel<AuthViewModel>();
-  ///   }
-  ///
-  ///   String get displayName => authViewModel.user?.name ?? 'Guest';
-  /// }
-  /// ```
-  @protected
-  @override
-  T watchViewModel<T extends ViewModel>({
-    required ViewModelFactory<T> factory,
-  }) {
-    if (isDisposed) throw ViewModelError("$T is disposed");
-    final vm = dependencyHandler.getViewModel<T>(
-      factory: factory,
-      listen: true,
-    );
-
-    // Check if we're already listening to this dependency ViewModel
-    // to prevent duplicate listener registration
-    if (_dependencyListeners[vm] != true) {
-      // Register a listener to automatically notify this ViewModel
-      // when the dependency ViewModel changes
-      addDispose(vm.listen(onChanged: () {
-        onDependencyNotify(vm);
-      }));
-      // Mark this dependency as being listened to
-      _dependencyListeners[vm] = true;
-    }
-    return vm;
-  }
-
-  @protected
-  @override
-  T watchCachedViewModel<T extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    if (isDisposed) throw ViewModelError("$T is disposed");
-    final vm = dependencyHandler.getViewModel<T>(
-      key: key,
-      tag: tag,
-      listen: true,
-    );
-
-    // Check if we're already listening to this dependency ViewModel
-    // to prevent duplicate listener registration
-    if (_dependencyListeners[vm] != true) {
-      // Register a listener to automatically notify this ViewModel
-      // when the dependency ViewModel changes
-      addDispose(vm.listen(onChanged: () {
-        onDependencyNotify(vm);
-      }));
-      // Mark this dependency as being listenedto
-      _dependencyListeners[vm] = true;
-    }
-    return vm;
-  }
+  final RefHandler refHandler = RefHandler();
 
   /// Called when a dependency ViewModel notifies changes.
   ///
@@ -442,98 +301,6 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
   @mustCallSuper
   @protected
   void onDependencyNotify(ViewModel vm) {}
-
-  /// Attempts to read a dependency ViewModel of type [T].
-  ///
-  /// Similar to [readViewModel] but returns `null` if the dependency
-  /// is not found
-  /// instead of throwing an exception.
-  ///
-  /// Parameters:
-  /// - [key]: Optional key to identify the specific dependency instance
-  /// - [tag]: Optional tag to identify the specific dependency instance
-  ///
-  /// Returns the dependency ViewModel instance if found, otherwise `null`.
-  ///
-  /// Example:
-  /// ```dart
-  /// class OptionalFeatureViewModel with ViewModel {
-  ///   String get status {
-  ///     final authViewModel = maybeReadViewModel<AuthViewModel>();
-  ///     return authViewModel?.isAuthenticated == true ? 'Authenticated' :
-  ///     'Guest';
-  ///   }
-  /// }
-  /// ```
-  @protected
-  @override
-  T? maybeReadCachedViewModel<T extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    try {
-      return readCachedViewModel<T>(
-        key: key,
-        tag: tag,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Attempts to watch a dependency ViewModel of type [T] with automatic change
-  /// listening.
-  ///
-  /// This is a safe version of [watchViewModel] that returns `null` if the
-  /// dependency is not found or if any error occurs during the watch operation,
-  /// instead of throwing an exception.
-  ///
-  /// When successful, this method:
-  /// 1. Retrieves the dependency ViewModel (creating it if necessary via
-  ///    factory)
-  /// 2. Sets up automatic listening for changes from the dependency
-  /// 3. Ensures this ViewModel will be notified when the dependency changes
-  /// 4. Prevents duplicate listener registration for the same dependency
-  ///
-  /// Parameters:
-  /// - [key]: Optional key to identify the specific dependency instance
-  /// - [tag]: Optional tag to identify the specific dependency instance
-  /// - [factory]: Optional factory for creating the ViewModel if it doesn't
-  /// exist
-  ///
-  /// Returns the dependency ViewModel instance if found and successfully
-  /// watched,
-  /// otherwise `null`.
-  ///
-  /// Example:
-  /// ```dart
-  /// class UserProfileViewModel extends ViewModel {
-  ///   AuthViewModel? authViewModel;
-  ///
-  ///   UserProfileViewModel() {
-  ///     // Safely watch auth changes; won't throw if AuthViewModel doesn't
-  ///     exist.
-  ///     _auth = maybeWatchExistingViewModel<AuthViewModel>();
-  ///   }
-  ///
-  ///   String get displayName => _auth?.user?.name ?? 'Guest';
-  /// }
-  /// ```
-  @protected
-  @override
-  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    try {
-      return watchCachedViewModel<VM>(
-        key: key,
-        tag: tag,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
 
   /// Removes a listener from this ViewModel.
   ///
@@ -695,7 +462,7 @@ mixin class ViewModel implements InstanceLifeCycle, ViewModelCreateInterface {
     _isDisposed = true;
     _autoDisposeController.dispose();
     _dependencyListeners.clear();
-    dependencyHandler.dispose();
+    refHandler.dispose();
     dispose();
     for (final element in _viewModelLifecycles) {
       element.onDispose(this, arg);
@@ -1099,44 +866,4 @@ abstract class ViewModelLifecycle {
   /// - [viewModel]: The ViewModel being disposed
   /// - [arg]: Instance arguments
   void onDispose(ViewModel viewModel, InstanceArg arg) {}
-}
-
-/// A default generic ViewModelFactory for quickly creating ViewModel factories.
-class DefaultViewModelFactory<T extends ViewModel> extends ViewModelFactory<T> {
-  final T Function() builder;
-  late final Object? _key;
-  late final Object? _tag;
-  final bool isSingleton;
-
-  DefaultViewModelFactory({
-    required this.builder,
-    Object? key,
-    Object? tag,
-
-    /// Whether to use singleton mode. This is just a convenient way to
-    /// set a unique key for you.
-    /// Note that the priority is lower than the key parameter.
-    this.isSingleton = false,
-  }) {
-    _key = key;
-    _tag = tag;
-  }
-
-  @override
-  Object? key() {
-    if (_key == null) {
-      return super.key();
-    } else {
-      return _key;
-    }
-  }
-
-  @override
-  Object? tag() => _tag;
-
-  @override
-  T build() => builder();
-
-  @override
-  bool singleton() => isSingleton;
 }

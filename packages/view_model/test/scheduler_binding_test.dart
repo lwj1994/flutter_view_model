@@ -55,8 +55,8 @@ class _ControlledMountWidgetState extends State<ControlledMountWidget>
   }
 
   void _initializeViewModel() {
-    viewModel = watchViewModel<DelayedStateViewModel>(
-      factory: DefaultViewModelFactory<DelayedStateViewModel>(
+    viewModel = refer.watch<DelayedStateViewModel>(
+      ViewModelProvider<DelayedStateViewModel>(
         builder: () => DelayedStateViewModel(),
       ),
     );
@@ -126,8 +126,8 @@ class _UnmountingWidgetState extends State<UnmountingWidget>
   @override
   void initState() {
     super.initState();
-    viewModel = watchViewModel<DelayedStateViewModel>(
-      factory: DefaultViewModelFactory<DelayedStateViewModel>(
+    viewModel = refer.watch<DelayedStateViewModel>(
+      ViewModelProvider<DelayedStateViewModel>(
         builder: () => DelayedStateViewModel(),
       ),
     );
