@@ -27,6 +27,7 @@
     - [Adding Dependencies](#adding-dependencies)
     - [Creating a ViewModel](#creating-a-viewmodel)
       - [ViewModelProvider](#viewmodelprovider)
+      - [ViewModelProvider Generator](#provider-generator)
     - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
       - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [ViewModelStateMixin](#viewmodelstatemixin)
@@ -154,6 +155,10 @@ dependencies:
   flutter:
     sdk: flutter
   view_model: ^0.8.1 # Please use the latest version
+
+dev_dependencies:
+  build_runner: ^latest_version
+  view_model_generator: ^latest_version
 ```
 
 ### Creating a ViewModel
@@ -247,7 +252,74 @@ use `tag` to group/discover. You can then use `watchCached` to get the cached in
 > ensure correct cache lookup.
 
 
+#### Provider Generator
 
+To reduce boilerplate when defining `ViewModelProvider`s, you can use the `view_model_generator` package to automatically generate provider code.  see: https://pub.dev/packages/view_model_generator
+ 
+**Installation**
+
+Add to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  view_model: ^latest_version
+  
+
+dev_dependencies:
+  build_runner: ^latest_version
+  view_model_generator: ^latest_version
+```
+
+**Usage**
+
+1. Annotate your ViewModel with `@genProvider`:
+
+```dart
+import 'package:view_model/view_model.dart';
+import 'package:view_model_generator/view_model_generator.dart';
+
+part 'counter_view_model.vm.dart';
+
+@genProvider
+class CounterViewModel extends ViewModel {
+  int count = 0;
+  void increment() => update(() => count++);
+}
+```
+
+2. Run the code generator:
+
+```bash
+dart run build_runner build
+```
+
+3. The generator will create a `counter_view_model.vm.dart` file with:
+
+```dart
+final counterViewModelProvider = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+```
+
+**With Constructor Arguments**
+
+The generator supports ViewModels with up to 4 constructor parameters:
+
+```dart
+@genProvider
+class UserViewModel extends ViewModel {
+  final String userId;
+  UserViewModel(this.userId);
+}
+```
+
+Generates:
+
+```dart
+final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (String userId) => UserViewModel(userId),
+);
+```
 
 
 ---

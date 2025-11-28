@@ -87,3 +87,4 @@ export "package:view_model/src/view_model/value_watcher.dart";
 export "package:view_model/src/view_model/view_model.dart";
 export "package:view_model/src/view_model/widget_mixin/stateful_extension.dart";
 export "package:view_model/src/view_model/widget_mixin/stateless_extension.dart";
+export "package:view_model_annotation/view_model_annotation.dart";
