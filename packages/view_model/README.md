@@ -27,7 +27,7 @@
     - [Adding Dependencies](#adding-dependencies)
     - [Creating a ViewModel](#creating-a-viewmodel)
       - [ViewModelProvider](#viewmodelprovider)
-      - [ViewModelProvider Generator](#provider-generator)
+      - [Provider Generator (Recommended)](#provider-generator-recommended)
     - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
       - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [ViewModelStateMixin](#viewmodelstatemixin)
@@ -199,16 +199,143 @@ class MySimpleViewModel extends ViewModel {
 ```
 
 #### ViewModelProvider
-`ViewModelProvider` provides a declarative way to define how a `ViewModel` is
-created and identified in the cache. It reduces boilerplate by encapsulating
-the builder and sharing rules (key, tag, singleton). Earlier versions relied
-on explicit Factory implementations, which were verbose; Provider offers a simpler
-and safer alternative.
+
+`ViewModelProvider` defines how a `ViewModel` is created and identified in the
+cache. You can write it by hand, or — recommended — generate it automatically
+with `view_model_generator` to reduce boilerplate and stay consistent.
 
 [Migration Guide](
   https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_Provider_MIGRATION.md)
 
-**Without Arguments**
+**Recommended: Generate providers**
+
+see [document](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README.md) for more details.
+
+1) Annotate your `ViewModel` with `@genProvider` (or `@GenProvider(...)`).
+
+```dart
+import 'package:view_model/view_model.dart';
+import 'package:view_model_annotation/view_model_annotation.dart';
+
+part 'counter_view_model.vm.dart';
+
+@genProvider
+class CounterViewModel extends ViewModel {
+  int count = 0;
+  void increment() => update(() => count++);
+}
+```
+
+2) Run codegen (Flutter):
+
+```bash
+dart run build_runner build
+```
+
+3) Use the generated provider (no-args case):
+
+```dart
+final counterProvider = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+```
+
+For constructor arguments, the generator emits `arg`, `arg2`, `arg3`, `arg4`
+variants based on required parameters (up to 4), excluding `super`-forwarded
+params.
+
+Notes on argument sources:
+
+- Provider arguments are derived from the class's main (unnamed) constructor
+  required parameters. Super forwarded parameters (e.g. `required super.xxx`)
+  are excluded from the generated provider signature.
+- If a `factory ClassName.provider(...)` exists, the generator prefers this
+  factory; in that case the builder signature follows the factory's required
+  parameters instead of the main constructor.
+
+```dart
+@genProvider
+class UserViewModel extends ViewModel {
+  final String userId;
+  UserViewModel(this.userId);
+}
+
+// Generated
+final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (String userId) => UserViewModel(userId),
+);
+```
+
+You can declare cache `key`/`tag` directly in `@GenProvider(...)`:
+
+- Strings: `'fixed'`, "ok", `r'${id}'`, `r'kp-$p'`
+- Objects/expressions: `Object()`, numbers, booleans, `null`
+- Expressions (non-strings) via `Expr('...')`: e.g. `Expr('repo')`,
+  `Expr('repo.id')`, `Expr('repo.compute(page)')`
+
+Generated code will attach `key`/`tag` closures for arg providers (matching the
+builder signature), or constants for no-arg providers. Examples:
+
+```dart
+// Single arg + string templates
+@GenProvider(key: r'kp-$p', tag: r'tg-$p')
+class B { B({required this.p}); final String p; }
+
+// Generated
+final bProvider = ViewModelProvider.arg<B, String>(
+  builder: (String p) => B(p: p),
+  key: (String p) => 'kp-$p',
+  tag: (String p) => 'tg-$p',
+);
+
+// Single arg + expressions via Expr
+@GenProvider(key: Expr('repo'), tag: Expr('repo.id'))
+class RepoVM { RepoVM({required this.repo}); final Repository repo; }
+
+// Generated
+final repoProvider = ViewModelProvider.arg<RepoVM, Repository>(
+  builder: (Repository repo) => RepoVM(repo: repo),
+  key: (Repository repo) => repo,
+  tag: (Repository repo) => repo.id,
+);
+
+// No-arg + constants
+@GenProvider(key: 'fixed', tag: Object())
+class E extends ViewModel { E(); }
+
+// Generated
+final eProvider = ViewModelProvider<E>(
+  builder: () => E(),
+  key: 'fixed',
+  tag: Object(),
+);
+```
+
+Factory preference: if your class defines `factory ClassName.provider(...)`,
+the generator prefers it when building providers (matching the required
+constructor argument count).
+
+This is especially useful for `StateViewModel<S>` because its constructor
+usually requires a `state` parameter. You can initialize `state` from input
+arguments in a dedicated factory:
+
+```dart
+@genProvider
+class MyStateViewModel extends StateViewModel<MyState> {
+  final Arg arg;
+
+  MyStateViewModel({required MyState state, required this.arg})
+      : super(state);
+
+  factory MyStateViewModel.provider(Arg arg) => MyStateViewModel(
+        state: MyState(name: arg.name),
+        arg: arg,
+      );
+}
+```
+
+With this pattern, the generator will prefer `provider(...)` and your
+generated builder will not need to manually pass a `state` argument.
 
 ```dart
 // Define a Provider
@@ -221,10 +348,7 @@ final counterProvider = ViewModelProvider<CounterViewModel>(
 final vm = refer.watch(counterProvider);
 ```
 
-**With Arguments**
-
-Use `ViewModelProvider.arg` to declare builder and sharing rules derived
-from an argument.
+**Without Arguments (manual)**
 
 ```dart
 // Define a provider that takes a user ID string
@@ -252,7 +376,7 @@ use `tag` to group/discover. You can then use `watchCached` to get the cached in
 > ensure correct cache lookup.
 
 
-#### Provider Generator
+#### Provider Generator (Recommended)
 
 To reduce boilerplate when defining `ViewModelProvider`s, you can use the `view_model_generator` package to automatically generate provider code.  see: https://pub.dev/packages/view_model_generator
  
@@ -296,7 +420,7 @@ dart run build_runner build
 3. The generator will create a `counter_view_model.vm.dart` file with:
 
 ```dart
-final counterViewModelProvider = ViewModelProvider<CounterViewModel>(
+final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```

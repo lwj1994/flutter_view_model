@@ -1,6 +1,6 @@
 name: view_model_annotation
 description: Annotation package for view_model code generation.
-version: 0.1.0
+version: 0.2.0-dev.0
 homepage: https://github.com/lwj1994/flutter_view_model
 repository: https://github.com/lwj1994/flutter_view_model
 issue_tracker: https://github.com/lwj1994/flutter_view_model/issues

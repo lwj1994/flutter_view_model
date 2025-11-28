@@ -1,13 +1,7 @@
 ## 0.9.0
-
 🎉 **Major Update: Introducing ViewModelProvider & Code Generator**
 
-This release brings significant improvements to reduce boilerplate and enhance developer experience. We're introducing a new declarative `ViewModelProvider` API and an official code generator, while maintaining backward compatibility with the existing `watchViewModel` API.
-
----
-
-### 🚀 ViewModelProvider: Simpler, Cleaner, Better
-
+🚀 ViewModelProvider: Simpler, Cleaner, Better
 **Replaces the verbose Factory pattern** with a declarative, type-safe provider system.
 
 **Before (Factory pattern):**
@@ -22,6 +16,7 @@ final vm = watchViewModel(factory: CounterViewModelFactory());
 
 **After (Provider pattern):**
 ```dart
+/// auto generated provider for CounterViewModel
 final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
@@ -29,14 +24,9 @@ final counterProvider = ViewModelProvider<CounterViewModel>(
 final vm = refer.watch(counterProvider);
 ```
 
-**Key Benefits:**
-- ✅ **Less boilerplate**: No need to create separate Factory classes
-- ✅ **Type-safe**: Compile-time type checking for builder and arguments
-- ✅ **Declarative**: Define creation logic, key, and tag in one place
-- ✅ **Composable**: Supports up to 4 constructor arguments with `ViewModelProvider.arg`, `arg2`, `arg3`, `arg4`
-
 **With Arguments:**
 ```dart
+/// auto generated provider for UserViewModel
 final userProvider = ViewModelProvider.arg<UserViewModel, String>(
   builder: (userId) => UserViewModel(userId),
   key: (userId) => 'user-$userId',
@@ -56,9 +46,10 @@ Introducing **`view_model_generator`** - automatically generate `ViewModelProvid
 **Installation:**
 ```yaml
 dependencies:
-  view_model_generator: ^0.1.0
+  view_model: ^latest
 dev_dependencies:
   build_runner: ^latest
+  view_model_generator: ^latest
 ```
 
 **Usage:**
@@ -82,7 +73,7 @@ dart run build_runner build
 **Generated code:**
 ```dart
 // counter_view_model.vm.dart
-final counterViewModelProvider = ViewModelProvider<CounterViewModel>(
+final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```

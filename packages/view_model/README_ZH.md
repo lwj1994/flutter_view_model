@@ -24,8 +24,8 @@
     - [基本用法](#基本用法)
         - [添加依赖](#添加依赖)
         - [创建 ViewModel](#创建-viewmodel)
-            - [ViewModelProvider](#viewmodelprovider)
-            - [自定义 ViewModelFactory](#自定义-viewmodelfactory)
+            - [ViewModelProvider（建议搭配生成器使用）](#viewmodelprovider建议搭配生成器使用)
+            - [Provider 生成器（推荐）](#provider-生成器推荐)
         - [在 Widget 中使用 ViewModel](#在-widget-中使用-viewmodel)
             - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
             - [ViewModelStateMixin](#viewmodelstatemixin)
@@ -157,7 +157,7 @@ final vm2 = refer.watchCached<UserViewModel>(key: 'user:$id'); // 相同
 dependencies:
   flutter:
     sdk: flutter
-  view_model: ^0.8.1 # 请使用最新版本
+  view_model: ^latest_version # 请使用最新版本
 
 dev_dependencies:
   build_runner: ^latest_version
@@ -202,25 +202,25 @@ class MySimpleViewModel extends ViewModel {
 }
 ```
 
-#### ViewModelProvider
+#### ViewModelProvider（建议搭配生成器使用）
 
 Provider 用于声明 `ViewModel` 的构造与缓存识别规则。
-分为无参 Provider 与带参 Spec。
-通过封装构造器与共享策略（key/tag/singleton），以声明式方式减少样板代码并提升复用性。
+你可以手写 Provider，也可以——更推荐——使用 `view_model_generator`
+自动生成 Provider，从而减少样板代码、统一风格。
 [迁移指南](
-https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_SPEC_MIGRATION.md)
+https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_PROVIDER_MIGRATION.md)
 
 **无参数**
 
 ```dart
-// 定义一个规约
-final counterSpec = ViewModelProvider<CounterViewModel>(
+// 定义一个 Provider
+final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
   key: 'counter',
 );
 
-// 在小部件中使用它
-final vm = watch(counterSpec);
+// 在部件中使用它
+final vm = refer.watch(counterProvider);
 ```
 
 **有参数**
@@ -236,75 +236,38 @@ final userProvider = ViewModelProvider.arg<UserViewModel, String>(
   tag: (id) => 'user-$id',
 );
 
-// 在小部件中使用它，直接传参给 Provider
-final vm = watch(userProvider('user-123'));
+// 在部件中使用它，直接传参给 Provider
+final vm = refer.watch(userProvider('user-123'));
 ```
 
 这种方法使 `ViewModel` 的创建逻辑保持清晰和可重用。
 `ViewModelProvider` 用于创建并标识实例。使用 `key` 共享一个实例，
 使用 `tag` 进行分组/发现。之后可以通过 `watchCached` 获取缓存实例。
 
-#### 自定义 ViewModelFactory
+#### Provider 生成器（推荐）
 
-`ViewModelFactory` 负责实例化 `ViewModel`。每个 `ViewModel` 类型通常需要一个对应的 `Factory`。
+使用 `view_model_generator` 自动生成 Provider。
+文档
+https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README_ZH.md
 
-```dart
-import 'package:view_model/view_model.dart';
-
-| `
-isSingleton` |
-`
-bool` | ✅ | 为 true 时全局共享一
-个
-实
-例
-|
-
-class MySimpleViewModelFactory with ViewModelFactory<MySimpleViewModel> {
-  @override
-  MySimpleViewModel build() {
-    // 返回一个新的 MySimpleViewModel 实例
-    return MySimpleViewModel();
-  }
-}
-```
-
-Factory 用于创建和识别实例。使用 `key()` 共享一个实例，使用 `tag()` 进行分组/发现。
-
-| 方法/属性     | 类型        | 可选     | 描述                                                                                      |
-|-----------|-----------|--------|-----------------------------------------------------------------------------------------|
-| `build()` | `T`       | ❌ 必须实现 | 创建 ViewModel 实例的工厂方法。通常在这里传递构造函数参数。                                                     |
-| `key()`   | `Object?` | ✅ 可选   | 为 ViewModel 提供唯一的标识符。具有相同 key 的 ViewModel 将自动共享（推荐用于跨小部件/页面共享）。                         |
-| `tag()`   | `Object?` | ✅      | 为 ViewModel 实例添加一个标签。通过 `viewModel.tag` 获取标签。它用于通过 `watchCached(tag:tag)` 查找 ViewModel。 |
-
-> **注意**：如果使用自定义 key 对象，请实现 `==` 和 `hashCode` 以确保正确的缓存查找。
-
-
-#### Provider 生成器
-
-为了减少定义 `ViewModelProvider` 时的样板代码,你可以使用 `view_model_generator` 包来自动生成 provider 代码。详见: https://pub.dev/packages/view_model_generator
- 
 **安装**
-
-在 `pubspec.yaml` 中添加:
 
 ```yaml
 dependencies:
   view_model: ^latest_version
-  
 
 dev_dependencies:
   build_runner: ^latest_version
   view_model_generator: ^latest_version
 ```
 
-**使用方法**
+**使用**
 
-1. 使用 `@genProvider` 注解你的 ViewModel:
+1）给 ViewModel 添加注解：
 
 ```dart
 import 'package:view_model/view_model.dart';
-import 'package:view_model_generator/view_model_generator.dart';
+import 'package:view_model_annotation/view_model_annotation.dart';
 
 part 'counter_view_model.vm.dart';
 
@@ -315,23 +278,28 @@ class CounterViewModel extends ViewModel {
 }
 ```
 
-2. 运行代码生成器:
+2）运行构建（Flutter）：
+
+```bash
+flutter pub run build_runner build --delete-conflicting-outputs
+```
+
+纯 Dart：
 
 ```bash
 dart run build_runner build
 ```
 
-3. 生成器会创建一个 `counter_view_model.vm.dart` 文件,内容如下:
+3）生成的 Provider（无参示例）：
 
 ```dart
-final counterViewModelProvider = ViewModelProvider<CounterViewModel>(
+final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```
 
-**带构造函数参数**
-
-生成器支持最多 4 个构造函数参数的 ViewModel:
+**带构造函数参数（最多 4 个）**：生成 `arg/arg2/arg3/arg4` 变体，
+会排除 `required super.xxx` 的转发参数。
 
 ```dart
 @genProvider
@@ -339,15 +307,84 @@ class UserViewModel extends ViewModel {
   final String userId;
   UserViewModel(this.userId);
 }
-```
 
-生成的代码:
-
-```dart
+// 生成
 final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
   builder: (String userId) => UserViewModel(userId),
 );
 ```
+
+**Key/Tag 声明**：在 `@GenProvider(...)` 中声明，支持：
+
+- 字符串：`'fixed'`、`"ok"`、`r'${id}'`、`r'kp-$p'`
+- 对象/表达式：`Object()`、数字、布尔、`null`
+- 表达式标记 `Expr('...')`：作为非字符串表达式在闭包中展开，如
+  `repo`、`repo.id`、`repo.compute(page)`
+
+有参 Provider 下，`key/tag` 生成与 `builder` 相同签名的闭包；
+无参 Provider 下，`key/tag` 直接作为常量插入。
+
+示例：
+
+```dart
+// 单参 + 字符串模板
+@GenProvider(key: r'kp-$p', tag: r'tg-$p')
+class B { B({required this.p}); final String p; }
+
+final bProvider = ViewModelProvider.arg<B, String>(
+  builder: (String p) => B(p: p),
+  key: (String p) => 'kp-$p',
+  tag: (String p) => 'tg-$p',
+);
+
+// 单参 + 表达式
+@GenProvider(key: Expr('repo'), tag: Expr('repo.id'))
+class RepoVM { RepoVM({required this.repo}); final Repository repo; }
+
+final repoProvider = ViewModelProvider.arg<RepoVM, Repository>(
+  builder: (Repository repo) => RepoVM(repo: repo),
+  key: (Repository repo) => repo,
+  tag: (Repository repo) => repo.id,
+);
+
+// 无参 + 常量
+@GenProvider(key: 'fixed', tag: Object())
+class E extends ViewModel { E(); }
+
+final eProvider = ViewModelProvider<E>(
+  builder: () => E(),
+  key: 'fixed',
+  tag: Object(),
+);
+```
+
+**Factory 优先（适配 StateViewModel）**：
+
+如果类中定义了 `factory ClassName.provider(...)`，生成器会优先选择
+这个 factory（当参数数量匹配时）。对于 `StateViewModel<S>`，通常可以
+在 factory 中基于入参初始化 `state`：
+
+```dart
+@genProvider
+class MyStateViewModel extends StateViewModel<MyState> {
+  final String name;
+
+  MyStateViewModel({required MyState state, required this.name})
+      : super(state);
+
+  factory MyStateViewModel.provider(Arg arg) => MyStateViewModel(
+        state: MyState(name: arg.name),
+        name: arg.name,
+      );
+}
+```
+
+**参数来源说明**：
+
+- Provider 的参数来自主构造（匿名构造）的必填参数，
+  会排除 `required super.xxx` 的转发参数；
+- 当存在 `factory ClassName.provider(...)` 时，生成器优先使用该
+  factory，此时 `builder` 的签名以 factory 的必填参数为准。
 
 
 
