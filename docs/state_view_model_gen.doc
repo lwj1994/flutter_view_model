@@ -1,0 +1,114 @@
+概述
+为 StateViewModel 生成 Provider 需要额外约定，因为它包含一个
+`state` 字段。我们采用“开发者自实现未命名 factory”的方式，让
+生成器只负责根据未命名构造的必填参数个数输出 `arg/arg2/...`。
+
+目标
+- 统一 State 的工厂规范：`fromArg` / `fromArgs`。
+- 有参 StateViewModel：开发者在类内实现未命名 factory，内部计算
+  `state` 并调用私有真实构造。
+- 无参 StateViewModel：与普通 VM 一致，生成普通 Provider。
+
+前置准备
+- 在源文件顶部添加 `part 'xxx.vm.dart';`。
+- 在类上添加 `@genProvider` 或 `@GenProvider()` 注解。
+- 运行 `dart run build_runner build` 或 `watch`。
+
+State 规范
+- 单入参：`static S fromArg(T1 a)`。
+- 多入参：`static S fromArgs(T1 a, T2 b[, T3 c, T4 d])`。
+- 纯函数、无副作用；返回具体 State 类型。
+
+有参 StateViewModel（推荐未命名 factory 模板）
+示例（行宽 ≤ 80，注释英文）：
+```dart
+part 'feed.vm.dart';
+
+@genProvider
+class FeedViewModel extends ViewModel {
+  final FeedState state;
+
+  // private real constructor
+  FeedViewModel._(this.state);
+
+  // unnamed factory: compute state from args
+  factory FeedViewModel({required Repository repo, required int page}) {
+    return FeedViewModel._(FeedState.fromArgs(repo, page));
+  }
+}
+```
+
+生成结果（根据必填参数个数自动选择 argN）：
+```dart
+final feedViewModelProvider =
+    ViewModelProvider.arg2<FeedViewModel, Repository, int>(
+  builder: (Repository repo, int page) =>
+      FeedViewModel(repo: repo, page: page),
+);
+```
+
+无参 StateViewModel（与普通 VM 一致）
+示例：
+```dart
+part 'user.vm.dart';
+
+@genProvider
+class UserViewModel extends ViewModel {
+  final UserState state;
+
+  UserViewModel._(this.state);
+
+  factory UserViewModel() {
+    // compute default state inside factory
+    return UserViewModel._(UserState.fromArg());
+  }
+}
+```
+
+生成结果：
+```dart
+final userViewModelProvider =
+    ViewModelProvider<UserViewModel>(
+  builder: () => UserViewModel(),
+);
+```
+
+外部传入 state 的替代范式
+当 `state` 必须由外部构造（如路由/缓存/跨层传递），可以让未命名
+构造接收 `state` 本身：
+```dart
+@GenProvider()
+class OrderViewModel extends ViewModel {
+  final OrderState state;
+  OrderViewModel(this.state);
+}
+
+final orderViewModelProvider =
+    ViewModelProvider.arg<OrderViewModel, OrderState>(
+  builder: (OrderState state) => OrderViewModel(state),
+);
+```
+调用方示例：
+```dart
+final s = OrderState.fromArgs(repo, orderId);
+final vm = orderViewModelProvider.of(context, state: s);
+```
+
+常见坑与限制
+- 必须包含 `part 'xxx.vm.dart';`，否则不会生成。
+- 仅处理“未命名构造”，命名工厂不会参与生成。
+- 统计的是必填参数（≤ 4），超过会跳过生成。
+- Provider 变量命名：类名小驼 + `Provider`。
+
+实现细节（源码路径）
+- 行为与命名：`packages/view_model_generator/lib/src/provider_generator.dart`
+  :24, 48-85。
+- Builder 入口：`packages/view_model_generator/lib/src/view_model_generator.dart`
+  :5-10。
+- 注解定义：`packages/view_model_annotation/lib/src/annotation.dart`:6-12。
+
+扩展说明：获取 StateViewModel 的泛型信息
+若类为 `class A extends StateViewModel<XState>`，在生成器可通过
+`ClassElement.supertype?.typeArguments.first` 获取 `XState`，用于
+后续增强（如生成辅助构造函数）。当前方案不改生成器，仅文档约定
+由开发者在类内自实现未命名 factory。

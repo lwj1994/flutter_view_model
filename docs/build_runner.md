@@ -106,7 +106,7 @@ part of 'counter_view_model.dart';
 // ViewModelProviderGenerator
 // **************************************************************************
 
-final counterViewModelProvider = ViewModelProvider(
+final counterProvider = ViewModelProvider(
   builder: () => CounterViewModel(),
 );
 ```
@@ -131,7 +131,7 @@ final userViewModelProvider = ViewModelProvider.arg<UserViewModel, UserArgument>
 
 ```dart
 // For CounterViewModel
-final vm = refer.watch(counterViewModelProvider);
+final vm = refer.watch(counterProvider);
 
 // For UserViewModel
 final userVM = refer.watch(userViewModelProvider, arg: UserArgument('123'));

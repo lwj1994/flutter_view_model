@@ -4,12 +4,15 @@ publish_to: none
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
 
 dependency_overrides:
   view_model_annotation:
     path: ../../view_model_annotation
 
 dependencies:
+  flutter:
+    sdk: flutter
   view_model:
     path: ../../view_model
 

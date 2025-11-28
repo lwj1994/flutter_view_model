@@ -26,6 +26,13 @@ class UserViewModel extends ViewModel {
   UserViewModel(this.repo);
 }
 
+@GenProvider(key: Expr('repo'), tag: "user_key")
+class UserKeyViewModel extends ViewModel {
+  final Repository repo;
+
+  UserKeyViewModel(this.repo);
+}
+
 void main() {
   // Access the generated providers
   // final counterProvider = counterProvider;
