@@ -158,6 +158,10 @@ dependencies:
   flutter:
     sdk: flutter
   view_model: ^0.8.1 # 请使用最新版本
+
+dev_dependencies:
+  build_runner: ^latest_version
+  view_model_generator: ^latest_version
 ```
 
 ### 创建 ViewModel
@@ -276,7 +280,77 @@ Factory 用于创建和识别实例。使用 `key()` 共享一个实例，使用
 > **注意**：如果使用自定义 key 对象，请实现 `==` 和 `hashCode` 以确保正确的缓存查找。
 
 
----
+#### Provider 生成器
+
+为了减少定义 `ViewModelProvider` 时的样板代码,你可以使用 `view_model_generator` 包来自动生成 provider 代码。详见: https://pub.dev/packages/view_model_generator
+ 
+**安装**
+
+在 `pubspec.yaml` 中添加:
+
+```yaml
+dependencies:
+  view_model: ^latest_version
+  
+
+dev_dependencies:
+  build_runner: ^latest_version
+  view_model_generator: ^latest_version
+```
+
+**使用方法**
+
+1. 使用 `@genProvider` 注解你的 ViewModel:
+
+```dart
+import 'package:view_model/view_model.dart';
+import 'package:view_model_generator/view_model_generator.dart';
+
+part 'counter_view_model.vm.dart';
+
+@genProvider
+class CounterViewModel extends ViewModel {
+  int count = 0;
+  void increment() => update(() => count++);
+}
+```
+
+2. 运行代码生成器:
+
+```bash
+dart run build_runner build
+```
+
+3. 生成器会创建一个 `counter_view_model.vm.dart` 文件,内容如下:
+
+```dart
+final counterViewModelProvider = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+```
+
+**带构造函数参数**
+
+生成器支持最多 4 个构造函数参数的 ViewModel:
+
+```dart
+@genProvider
+class UserViewModel extends ViewModel {
+  final String userId;
+  UserViewModel(this.userId);
+}
+```
+
+生成的代码:
+
+```dart
+final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (String userId) => UserViewModel(userId),
+);
+```
+
+
+
 
 ### 在 Widget 中使用 ViewModel
 

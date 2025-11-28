@@ -1,58 +1,164 @@
 ## 0.9.0
-__BreakingChange__
 
-### Refer
-`Refer` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskRefer` as a host for the ViewModel to run logic.
+🎉 **Major Update: Introducing ViewModelProvider & Code Generator**
 
-`Refer` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetRefer`.
+This release brings significant improvements to reduce boilerplate and enhance developer experience. We're introducing a new declarative `ViewModelProvider` API and an official code generator, while maintaining backward compatibility with the existing `watchViewModel` API.
 
-This means you can use ViewModel in any Dart class, **independent of Widgets**.
+---
 
+### 🚀 ViewModelProvider: Simpler, Cleaner, Better
 
-### ViewModelProvider
-`ViewModelProvider` provides a declarative way to define how a `ViewModel` is
-created and identified in the cache. It reduces boilerplate by encapsulating
-the builder and sharing rules (key, tag, singleton). Earlier versions relied
-on explicit Factory implementations, which were verbose; Provider offers a simpler
-and safer alternative.
+**Replaces the verbose Factory pattern** with a declarative, type-safe provider system.
 
-[Migration Guide](
-  https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_SPEC_MIGRATION.md)
-  
-**Without Arguments**
-
+**Before (Factory pattern):**
 ```dart
-// Define a spec
-final counterSpec = ViewModelProvider<CounterViewModel>(
-  builder: () => CounterViewModel(),
-  key: 'counter',
-);
+class CounterViewModelFactory extends ViewModelFactory<CounterViewModel> {
+  @override
+  CounterViewModel build() => CounterViewModel();
+}
 
-// Use it in a widget
-final vm = refer.watch(counterSpec);
+final vm = watchViewModel(factory: CounterViewModelFactory());
 ```
 
-**With Arguments**
-
-`ViewModelProvider.arg` is particularly useful when the `ViewModel`'s creation or its cache key depends on an argument.
-
+**After (Provider pattern):**
 ```dart
-// Define a spec that takes a user ID string
-final userProvider = ViewModelProvider.arg<UserViewModel, String>(
-  builder: (id) => UserViewModel(userId: id),
-  key: (id) => 'user-$id',
-  tag: (id) => 'user-$id',
+final counterProvider = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
 );
 
-// Use it in a widget, passing the argument to the spec
+final vm = refer.watch(counterProvider);
+```
+
+**Key Benefits:**
+- ✅ **Less boilerplate**: No need to create separate Factory classes
+- ✅ **Type-safe**: Compile-time type checking for builder and arguments
+- ✅ **Declarative**: Define creation logic, key, and tag in one place
+- ✅ **Composable**: Supports up to 4 constructor arguments with `ViewModelProvider.arg`, `arg2`, `arg3`, `arg4`
+
+**With Arguments:**
+```dart
+final userProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (userId) => UserViewModel(userId),
+  key: (userId) => 'user-$userId',
+);
+
 final vm = refer.watch(userProvider('user-123'));
 ```
 
+[Migration Guide](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_PROVIDER_MIGRATION.md)
 
-  
 ---
 
-- rename `ViewModelPauseProvider` to `ReferPauseProvider`
+### 🤖 Code Generator: Zero Boilerplate
+
+Introducing **`view_model_generator`** - automatically generate `ViewModelProvider` definitions from annotations.
+
+**Installation:**
+```yaml
+dependencies:
+  view_model_generator: ^0.1.0
+dev_dependencies:
+  build_runner: ^latest
+```
+
+**Usage:**
+```dart
+import 'package:view_model_generator/view_model_generator.dart';
+
+part 'counter_view_model.vm.dart';
+
+@genProvider
+class CounterViewModel extends ViewModel {
+  int count = 0;
+  void increment() => update(() => count++);
+}
+```
+
+**Run generator:**
+```bash
+dart run build_runner build
+```
+
+**Generated code:**
+```dart
+// counter_view_model.vm.dart
+final counterViewModelProvider = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+```
+
+The generator supports ViewModels with up to 4 constructor parameters and automatically generates the appropriate `ViewModelProvider.argX` variant.
+
+Package: https://pub.dev/packages/view_model_generator
+
+---
+
+### 🔄 New Unified API: `refer.watch` & `refer.read`
+
+**Everything is Refer** - A unified, consistent API for accessing ViewModels.
+
+**New Recommended API:**
+```dart
+// Watch (reactive)
+final vm = refer.watch(counterProvider);
+
+// Read (non-reactive)
+final vm = refer.read(counterProvider);
+
+// Watch cached by key/tag
+final vm = refer.watchCached<UserViewModel>(key: 'user-123');
+final vm = refer.readCached<UserViewModel>(tag: 'current-user');
+```
+
+**Legacy API (still supported):**
+```dart
+// Old API still works for backward compatibility
+final vm = refer.watchViewModel(factory: CounterViewModelFactory());
+final vm = refer.readViewModel(factory: CounterViewModelFactory());
+```
+
+> **Note**: While `watchViewModel` and `readViewModel` are still supported, we recommend migrating to the new `refer.watch` and `refer.read` API with `ViewModelProvider` for better type safety and less boilerplate.
+
+---
+
+### 🌟 Everything is Refer
+
+`Refer` is the core abstraction of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetRefer`.
+
+This means you can use ViewModel in **any Dart class**, independent of Widgets.
+
+**Custom Refer Example:**
+```dart
+class StartTaskRefer with Refer {
+  Future<void> runStartupTasks() async {
+    final authVM = refer.watch(authProvider);
+    await authVM.checkLoginStatus();
+    
+    final configVM = refer.watch(configProvider);
+    await configVM.loadRemoteConfig();
+  }
+  
+  @override
+  void dispose() {
+    super.dispose();
+    // Clean up all watched ViewModels
+  }
+}
+```
+
+Use cases:
+- **Pure Dart Tests**: Test ViewModel interactions without `testWidgets`
+- **Startup Tasks**: Execute initialization logic before any Widget is rendered
+
+See [Custom Refer Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md#custom-refer) for details.
+
+---
+
+### 🔧 Other Changes
+
+- Renamed `ViewModelPauseProvider` to `ReferPauseProvider` for consistency
+- Improved type inference for `ViewModelProvider.argX` variants
+
 
 ## 0.8.4
 - Update docs about design philosophy
