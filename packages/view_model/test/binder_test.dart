@@ -32,8 +32,8 @@ class DisposableViewModelFactory with ViewModelFactory<DisposableViewModel> {
   DisposableViewModel build() => DisposableViewModel();
 }
 
-// 3. Define a TestBinder that mixes in Refer
-class TestBinder with Refer {
+// 3. Define a TestBinder that mixes in Vef
+class TestBinder with Vef {
   int updateCount = 0;
 
   @override
@@ -44,10 +44,10 @@ class TestBinder with Refer {
 }
 
 void main() {
-  group('Refer Tests', () {
-    test('Refer can create and watch ViewModel', () async {
+  group('Vef Tests', () {
+    test('Vef can create and watch ViewModel', () async {
       final binder = TestBinder();
-      final vm = binder.refer.watch(TestViewModelFactory());
+      final vm = binder.vef.watch(TestViewModelFactory());
 
       expect(vm, isA<TestViewModel>());
       expect(vm.count, 0);
@@ -65,9 +65,9 @@ void main() {
       binder.dispose();
     });
 
-    test('Refer disposes ViewModel when disposed', () {
+    test('Vef disposes ViewModel when disposed', () {
       final binder = TestBinder();
-      final vm = binder.refer.watch(DisposableViewModelFactory());
+      final vm = binder.vef.watch(DisposableViewModelFactory());
 
       expect(vm.isDisposed, false);
 
@@ -87,8 +87,8 @@ void main() {
         key: 'shared_vm',
       );
 
-      final vm1 = binder1.refer.watch(factory);
-      final vm2 = binder2.refer.watch(factory);
+      final vm1 = binder1.vef.watch(factory);
+      final vm2 = binder2.vef.watch(factory);
 
       expect(vm1, equals(vm2));
 
@@ -103,9 +103,9 @@ void main() {
       expect(vm1.isDisposed, true);
     });
 
-    test('Refer can read ViewModel without listening', () {
+    test('Vef can read ViewModel without listening', () {
       final binder = TestBinder();
-      final vm = binder.refer.read(TestViewModelFactory());
+      final vm = binder.vef.read(TestViewModelFactory());
 
       expect(vm.count, 0);
 
@@ -119,29 +119,29 @@ void main() {
       binder.dispose();
     });
 
-    test('Refer recycleViewModel forces recreation', () {
+    test('Vef recycleViewModel forces recreation', () {
       final binder = TestBinder();
       final factory = TestViewModelFactory();
 
-      final vm1 = binder.refer.watch(factory);
+      final vm1 = binder.vef.watch(factory);
       vm1.increment();
       expect(vm1.count, 1);
 
       // Recycle
-      binder.refer.recycle(vm1);
+      binder.vef.recycle(vm1);
 
       // onUpdate should be called during recycle (to refresh host)
       expect(binder.updateCount, 1);
 
       // Watch again, should get a new instance
-      final vm2 = binder.refer.watch(factory);
+      final vm2 = binder.vef.watch(factory);
       expect(vm2, isNot(equals(vm1)));
       expect(vm2.count, 0); // New instance state
 
       binder.dispose();
     });
 
-    test('Refer init and dispose lifecycle', () {
+    test('Vef init and dispose lifecycle', () {
       final binder = TestBinder();
       binder.init(); // Should not throw
       expect(binder.isDisposed, false);
@@ -151,7 +151,7 @@ void main() {
 
       // Creating VM after dispose should throw
       expect(
-        () => binder.refer.watch(TestViewModelFactory()),
+        () => binder.vef.watch(TestViewModelFactory()),
         throwsA(isA<ViewModelError>()),
       );
     });

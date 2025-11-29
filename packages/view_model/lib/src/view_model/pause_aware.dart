@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:view_model/src/view_model/pause_provider.dart';
 
 /// A controller that manages pause/resume lifecycle for a ViewModel, based on a
-/// collection of [ReferPauseProvider]s.
+/// collection of [VefPauseProvider]s.
 ///
 /// This class is designed to be flexible and can work with any source of
 /// lifecycle events, such as route navigation or application state changes. For
 /// Flutter's default behavior, use the provided default providers. For custom
-/// or mixed-stack environments, implement your own [ReferPauseProvider] and
+/// or mixed-stack environments, implement your own [VefPauseProvider] and
 /// pass them to the constructor.
 class PauseAwareController {
   // A callback triggered when the view model should pause.
@@ -25,28 +25,28 @@ class PauseAwareController {
   /// [PageRoutePauseProvider] and [AppPauseProvider].
   ///
   /// For custom lifecycle sources (e.g., mixed-stack environments), provide a
-  /// list of your custom [ReferPauseProvider] implementations.
+  /// list of your custom [VefPauseProvider] implementations.
   PauseAwareController({
     required this.onWidgetPause,
     required this.onWidgetResume,
-    required List<ReferPauseProvider> providers,
+    required List<VefPauseProvider> providers,
     required this.binderName,
-    List<ReferPauseProvider>? disposableProviders,
+    List<VefPauseProvider>? disposableProviders,
   }) : _disposableProviders = disposableProviders ?? [] {
     _providers.addAll(providers);
     _setupSubscriptions();
   }
 
   // A list of providers that determine the pause state.
-  final List<ReferPauseProvider> _providers = [];
+  final List<VefPauseProvider> _providers = [];
 
-  List<ReferPauseProvider> get providers => List.unmodifiable(_providers);
+  List<VefPauseProvider> get providers => List.unmodifiable(_providers);
 
   // Providers that should be disposed when this controller is disposed.
-  final List<ReferPauseProvider> _disposableProviders;
+  final List<VefPauseProvider> _disposableProviders;
 
   // Holds subscriptions to the pause state streams of the providers.
-  final Map<ReferPauseProvider, StreamSubscription<bool>> _subscriptions = {};
+  final Map<VefPauseProvider, StreamSubscription<bool>> _subscriptions = {};
 
   // Combines all provider states to determine the final pause state.
   // Returns true if the view model is currently paused.
@@ -62,7 +62,7 @@ class PauseAwareController {
     }
   }
 
-  void _subscribeToProvider(ReferPauseProvider provider) {
+  void _subscribeToProvider(VefPauseProvider provider) {
     if (_subscriptions.containsKey(provider)) return;
     // ignore: cancel_subscriptions
     final subscription = provider.onPauseStateChanged.listen((shouldPause) {
@@ -71,13 +71,13 @@ class PauseAwareController {
     _subscriptions[provider] = subscription;
   }
 
-  void addProvider(ReferPauseProvider provider) {
+  void addProvider(VefPauseProvider provider) {
     if (_providers.contains(provider)) return;
     _providers.add(provider);
     _subscribeToProvider(provider);
   }
 
-  void removeProvider(ReferPauseProvider provider) {
+  void removeProvider(VefPauseProvider provider) {
     if (_providers.remove(provider)) {
       final subscription = _subscriptions.remove(provider);
       subscription?.cancel();
@@ -88,7 +88,7 @@ class PauseAwareController {
 
   /// Handles a pause state change signaled by a single provider.
   void _handleProviderStateChange(
-    ReferPauseProvider provider,
+    VefPauseProvider provider,
     bool shouldPause,
   ) {
     _providerPauseStates[provider] = shouldPause;
@@ -97,7 +97,7 @@ class PauseAwareController {
 
   /// A simple map to track the pause state signaled by each provider
   /// Tracks the individual pause state of each provider.
-  final Map<ReferPauseProvider, bool> _providerPauseStates = {};
+  final Map<VefPauseProvider, bool> _providerPauseStates = {};
 
   /// Re-evaluates the combined pause state from all providers.
   void _reevaluatePauseState() {

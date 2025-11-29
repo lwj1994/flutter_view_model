@@ -52,7 +52,7 @@
         - [ValueListenableBuilder](#valuelistenablebuilder)
         - [ObserverBuilder](#observerbuilder)
         - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
-    - [自定义 Refer](#自定义-refer)
+    - [自定义 Vef](#自定义-vef)
         - [核心概念](#核心概念)
         - [示例：StartTaskRef（常用于应用启动）](#示例starttaskref常用于应用启动)
     - [DevTools 扩展](#devtools-扩展)
@@ -83,8 +83,8 @@ ViewModel 可以在内部直接依赖或读取其他 ViewModel(例如 `UserVM` �
 相比于 **GetIt**(需要手写绑定胶水代码)或 **Riverpod**(涉及复杂的图谱概念)
 ,这套方案是绝对实用主义的。它提供了自动化的生命周期管理和依赖注入,零样板代码,真正的**开箱即用**。
 
-**5. 超越 Widget:自定义 Refer**
-通过自定义 `Refer`,ViewModel 可以**脱离 Widget 独立存在**。任何 Dart 类都可以 `with Refer` 成为
+**5. 超越 Widget:自定义 Vef**
+通过自定义 `Vef`,ViewModel 可以**脱离 Widget 独立存在**。任何 Dart 类都可以 `with Vef` 成为
 ViewModel 的宿主,实现以下场景:
 
 * **后台服务**:在后台任务中运行 ViewModel 逻辑(如下载、同步)。
@@ -92,14 +92,14 @@ ViewModel 的宿主,实现以下场景:
 * **启动任务**:在任何 Widget 渲染前执行初始化逻辑。
 
 这让 ViewModel 真正做到了万能——**万物皆可 ViewModel**,不仅仅是 UI
-组件。详见[自定义 Refer](#自定义-ref)。
+组件。详见[自定义 Vef](#自定义-ref)。
 
 ---
 
 ## 快速开始
 
-- 监听 (Watch): `refer.watch<T>()` / `refer.watchCached<T>()`
-- 读取 (Read): `refer.read<T>()` / `refer.readCached<T>()`
+- 监听 (Watch): `vef.watch<T>()` / `vef.watchCached<T>()`
+- 读取 (Read): `vef.read<T>()` / `vef.readCached<T>()`
 - 副作用 (Effects): `vm.listen(onChanged)` / `vm.listenState` / `vm.listenStateSelect`
 
 ```dart
@@ -114,7 +114,7 @@ class CounterViewModel extends ViewModel {
 class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
   @override
   Widget build(BuildContext context) {
-    final vm = refer.watch(
+    final vm = vef.watch(
       ViewModelProvider<CounterViewModel>(builder: () => CounterViewModel()),
     );
     return ElevatedButton(
@@ -128,7 +128,7 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 ## 复用实例
 
 - Key: 在 factory 中设置 `key()` → 所有 widget 共享同一个实例
-- Tag: 设置 `tag()` → 通过 `refer.watchCached(tag)` 绑定最新实例
+- Tag: 设置 `tag()` → 通过 `vef.watchCached(tag)` 绑定最新实例
 - 任意参数: 传递任意 `Object` 作为 key/tag (例如 `'user:$id'`)
 
 > [!IMPORTANT]
@@ -143,8 +143,8 @@ final f = ViewModelProvider<UserViewModel>(
   builder: () => UserViewModel(userId: id),
   key: 'user:$id',
 );
-final vm1 = refer.watch(f);
-final vm2 = refer.watchCached<UserViewModel>(key: 'user:$id'); // 相同
+final vm1 = vef.watch(f);
+final vm2 = vef.watchCached<UserViewModel>(key: 'user:$id'); // 相同
 ```
 
 ## 基本用法
@@ -220,7 +220,7 @@ final counterProvider = ViewModelProvider<CounterViewModel>(
 );
 
 // 在部件中使用它
-final vm = refer.watch(counterProvider);
+final vm = vef.watch(counterProvider);
 ```
 
 **有参数**
@@ -237,7 +237,7 @@ final userProvider = ViewModelProvider.arg<UserViewModel, String>(
 );
 
 // 在部件中使用它，直接传参给 Provider
-final vm = refer.watch(userProvider('user-123'));
+final vm = vef.watch(userProvider('user-123'));
 ```
 
 这种方法使 `ViewModel` 的创建逻辑保持清晰和可重用。
@@ -391,8 +391,8 @@ class MyStateViewModel extends StateViewModel<MyState> {
 
 ### 在 Widget 中使用 ViewModel
 
-将 `ViewModelStatelessMixin` 或 `ViewModelStateMixin` 混入你的 Widget 并调用 `refer.watch` 来绑定并在
-`notifyListeners()` 被调用时重建。也可用 `refer.read` 只读取不重建。生命周期会自动为你处理。
+将 `ViewModelStatelessMixin` 或 `ViewModelStateMixin` 混入你的 Widget 并调用 `vef.watch` 来绑定并在
+`notifyListeners()` 被调用时重建。也可用 `vef.read` 只读取不重建。生命周期会自动为你处理。
 
 #### ViewModelStatelessMixin
 
@@ -411,7 +411,7 @@ class CounterStatelessWidget extends StatelessWidget
     with ViewModelStatelessMixin {
   CounterStatelessWidget({super.key});
 
-  late final vm = refer.watch(provider);
+  late final vm = vef.watch(provider);
 
   /// Builds UI bound to CounterViewModel state.
   @override
@@ -456,7 +456,7 @@ class _MyPageState extends State<MyPage>
     super.initState();
     // 2. 使用 ViewModelProvider 创建并获取 ViewModel
     // 当 MyPage 第一次构建时将创建实例；当 MyPage 被销毁且无其他监听者时也将销毁。
-    simpleVM = refer.watch(
+    simpleVM = vef.watch(
       ViewModelProvider<MySimpleViewModel>(builder: () => MySimpleViewModel()),
     );
   }
@@ -545,7 +545,7 @@ void initState() {
   super.initState();
 
   // 获取 ViewModel 实例 (通常在 initState 中获取一次或通过 getter)
-  final myVm = refer.watch(
+  final myVm = vef.watch(
     ViewModelProvider<MySimpleViewModel>(builder: () => MySimpleViewModel()),
   );
 
@@ -565,7 +565,7 @@ void dispose() {
 ## ViewModel 生命周期
 
 > [!IMPORTANT]
-> `refer.watch` 和 `refer.read` API 都会创建一个绑定并增加引用计数。只有当所有绑定都被移除时，
+> `vef.watch` 和 `vef.read` API 都会创建一个绑定并增加引用计数。只有当所有绑定都被移除时，
 `ViewModel` 才会被销毁。
 
 `ViewModel` 的生命周期是基于 **引用计数** 机制自动管理的。这确保了只要至少有一个 widget 在使用
@@ -885,7 +885,7 @@ class _MyCounterPageState extends State<MyCounterPage>
   @override
   void initState() {
     super.initState();
-    counterVM = refer.watch(
+    counterVM = vef.watch(
       ViewModelProvider<MyCounterViewModel>(
         builder: () =>
             MyCounterViewModel(
@@ -963,7 +963,7 @@ widget 的情况下对状态变化做出反应：
 
 ```dart
 // 在 initState 中
-final myVm = refer.watch<MyCounterViewModel>(/* ... */);
+final myVm = vef.watch<MyCounterViewModel>(/* ... */);
 
 // 监听整个 state 对象
 final dispose1 = myVm.listenState((previous, current) {
@@ -1008,8 +1008,8 @@ widget。当你的 widget 仅依赖于一个大型状态对象的一小部分时
 ```dart
 // 假设你有一个 MyCounterViewModel 和它的状态 MyCounterState { count, statusMessage }
 
-// 获取 ViewModel 实例 (如果你不需要整个 widget 重建，通常使用 refer.readCached)
-final myVm = refer.readCached<MyCounterViewModel>();
+// 获取 ViewModel 实例 (如果你不需要整个 widget 重建，通常使用 vef.readCached)
+final myVm = vef.readCached<MyCounterViewModel>();
 
 // 这个 widget 将只在 `state.count` 或 `state.statusMessage` 变化时重建。
 StateViewModelValueWatcher<MyCounterState>
@@ -1031,7 +1031,7 @@ return Text('计数值: ${state.count}, 状态: ${state.statusMessage}');
 ## ViewModel → ViewModel 依赖
 
 `view_model` 包提供了一个智能的依赖机制，允许 ViewModel 相互依赖。在 `ViewModel` 中使用
-`refer.read/refer.readCached`。API 与 `ViewModelStateMixin` 中的相同。
+`vef.read/vef.readCached`。API 与 `ViewModelStateMixin` 中的相同。
 
 #### 依赖机制
 
@@ -1049,7 +1049,7 @@ return Text('计数值: ${state.count}, 状态: ${state.statusMessage}');
 - **管理**: `Widget` 负责创建和销毁其所有关联的 `ViewModel`。
 - **关系**: `ViewModelA` 只是持有一个对 `ViewModelB` 的引用。
 
-本质上，从 `ViewModel` 内部调用 `refer.read` 或 `refer.watch` 与从 `Widget` 调用它们是相同的。两者都访问同一个中央管理系统。
+本质上，从 `ViewModel` 内部调用 `vef.read` 或 `vef.watch` 与从 `Widget` 调用它们是相同的。两者都访问同一个中央管理系统。
 
 这种扁平化的方法简化了生命周期管理，并避免了复杂的嵌套依赖链。
 
@@ -1083,7 +1083,7 @@ class ViewModelA extends ViewModel {
   late final ViewModelB viewModelB;
 
   ViewModelA() {
-    viewModelB = refer.readCached<ViewModelB>();
+    viewModelB = vef.readCached<ViewModelB>();
   }
 }
 ```
@@ -1098,7 +1098,7 @@ class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
   @override
   void initState() {
     super.initState();
-    viewModelA = refer.watch(ViewModelProvider(builder: () => ViewModelA()));
+    viewModelA = vef.watch(ViewModelProvider(builder: () => ViewModelA()));
   }
 
 // ...
@@ -1111,12 +1111,12 @@ class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
 
 [文档](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
 
-暂停/恢复生命周期由 `ReferPauseProvider` 管理。默认情况下,`PageRoutePauseProvider`、
-`TickerModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理 `Refer`
+暂停/恢复生命周期由 `VefPauseProvider` 管理。默认情况下,`PageRoutePauseProvider`、
+`TickerModePauseProvider` 和 `AppPauseProvider` 分别根据路由可见性和应用生命周期事件处理 `Vef`
 的暂停/恢复。
 
-当 `Refer` 被暂停时(例如:Widget 导航离开),它会停止响应 ViewModel 的状态变化,从而避免不必要的重建。ViewModel
-会继续发出通知,但暂停的 Refer 会忽略这些通知。当恢复时,Refer 会检查是否有错过的更新,如有则触发重建。
+当 `Vef` 被暂停时(例如:Widget 导航离开),它会停止响应 ViewModel 的状态变化,从而避免不必要的重建。ViewModel
+会继续发出通知,但暂停的 Vef 会忽略这些通知。当恢复时,Vef 会检查是否有错过的更新,如有则触发重建。
 
 ## 值级别重建
 
@@ -1170,7 +1170,7 @@ class MyWidget extends State with ViewModelStateMixin {
   @override
   void initState() {
     super.initState();
-    stateViewModel = refer.read(
+    stateViewModel = vef.read(
       ViewModelProvider(builder: () => MyViewModel()),
     );
   }
@@ -1190,31 +1190,31 @@ class MyWidget extends State with ViewModelStateMixin {
 }
 ```
 
-## 自定义 Refer
+## 自定义 Vef
 
-`Refer` 主要是为了某些不需要 UI 的场景设计的。例如，在 App 启动时可能需要执行一些初始化任务（如预加载数据、检查登录状态），但此时还没有任何
+`Vef` 主要是为了某些不需要 UI 的场景设计的。例如，在 App 启动时可能需要执行一些初始化任务（如预加载数据、检查登录状态），但此时还没有任何
 Widget 显示。在这种情况下，你可以创建一个 `StartTaskRef` 作为 ViewModel 的宿主来运行这些逻辑。
 
-`Refer` 是 `view_model` 库的核心，它负责管理 ViewModel 的生命周期和依赖注入。`WidgetMixin` 本质上只是
-`WidgetRef` 的一个封装。
+`Vef` 是 `view_model` 库的核心，它负责管理 ViewModel 的生命周期和依赖注入。`WidgetMixin` 本质上只是
+`WidgetVef` 的一个封装。
 
 这意味着你可以**脱离 Widget**，在任何 Dart 类中使用 ViewModel。
 
 ### 核心概念
 
-* **Refer**: 通用的 ViewModel 管理器。它模拟了宿主环境，提供 `watch` 等方法。
-* **WidgetRef**: `Refer` 的子类，专门适配 Flutter Widget，实现了 `onUpdate` -> `setState` 的桥接。
+* **Vef**: 通用的 ViewModel 管理器。它模拟了宿主环境，提供 `watch` 等方法。
+* **WidgetVef**: `Vef` 的子类，专门适配 Flutter Widget，实现了 `onUpdate` -> `setState` 的桥接。
 
 ### 示例：StartTaskRef（常用于应用启动）
 
 ```dart
 import 'package:view_model/view_model.dart';
 
-/// Refer that runs startup tasks before UI is shown.
+/// Vef that runs startup tasks before UI is shown.
 /// Typical use: preload data, check auth, warm caches.
-class StartTaskRef with Refer {
+class StartTaskRef with Vef {
   final spec = ViewModelProvider(builder: () => AppInitViewModel());
-  late final AppInitViewModel _initVM = refer.watch(spec);
+  late final AppInitViewModel _initVM = vef.watch(spec);
 
   /// Triggers startup logic. Call this from main() before runApp.
   Future<void> run() async {

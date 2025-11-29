@@ -7,7 +7,7 @@
 /// @author luwenjie on 2025/3/25 16:24:32
 library;
 
-import 'package:view_model/src/view_model/refer.dart';
+import 'package:view_model/src/view_model/vef.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
@@ -60,7 +60,7 @@ class AutoDisposeInstanceController {
   /// Human-readable name for this watcher, typically the widget class name.
   final String binderName;
 
-  final Refer ref;
+  final Vef ref;
 
   /// Creates a new auto-dispose instance controller.
   ///

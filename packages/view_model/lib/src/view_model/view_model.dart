@@ -27,9 +27,9 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
-import 'package:view_model/src/view_model/refer.dart';
+import 'package:view_model/src/view_model/vef.dart';
 
-import 'refer_zone.dart';
+import 'vef_zone.dart';
 import 'state_store.dart';
 
 /// A ViewModel implementation that extends Flutter's [ChangeNotifier].
@@ -82,12 +82,12 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 /// }
 /// ```
 mixin class ViewModel implements InstanceLifeCycle {
-  /// Returns the [Refer] interface for accessing other ViewModels.
+  /// Returns the [Vef] interface for accessing other ViewModels.
   ///
-  /// This property allows you to use `refer.watch` and `refer.read` syntax,
-  /// consistent with the "Universal Refer" pattern.
+  /// This property allows you to use `vef.watch` and `vef.read` syntax,
+  /// consistent with the "Universal Vef" pattern.
   @protected
-  RefInterface get refer => refHandler.refer;
+  VefInterface get vef => refHandler.vef;
 
   late InstanceArg _instanceArg;
   static final RouteObserver<PageRoute> routeObserver =
@@ -288,7 +288,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// This encapsulates all dependency-related logic and
   /// provides a clean separation of concerns.
   @internal
-  final RefHandler refHandler = RefHandler();
+  final VefHandler refHandler = VefHandler();
 
   /// Called when a dependency ViewModel notifies changes.
   ///

@@ -17,7 +17,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/view_model.dart';
 
-import 'refer.dart';
+import 'vef.dart';
 
 /// Mixin that integrates ViewModels with Flutter's State lifecycle.
 ///
@@ -54,7 +54,7 @@ import 'refer.dart';
 /// ```
 mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   @protected
-  late final WidgetRefer refer = WidgetRefer(
+  late final WidgetVef vef = WidgetVef(
     refreshWidget: _rebuildState,
   );
 
@@ -73,35 +73,35 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  bool get isPaused => refer.isPaused;
+  bool get isPaused => vef.isPaused;
 
   @override
   void initState() {
     super.initState();
-    refer.init();
-    refer.addPauseProvider(_appPauseProvider);
-    refer.addPauseProvider(_routePauseProvider);
-    refer.addPauseProvider(_tickerModePauseProvider);
+    vef.init();
+    vef.addPauseProvider(_appPauseProvider);
+    vef.addPauseProvider(_routePauseProvider);
+    vef.addPauseProvider(_tickerModePauseProvider);
   }
 
   @override
   void dispose() {
     super.dispose();
-    refer.dispose();
+    vef.dispose();
     _appPauseProvider.dispose();
     _routePauseProvider.dispose();
     _tickerModePauseProvider.dispose();
   }
 
   void _rebuildState() {
-    if (refer.isDisposed) return;
+    if (vef.isDisposed) return;
     if (context.mounted &&
         SchedulerBinding.instance.schedulerPhase !=
             SchedulerPhase.persistentCallbacks) {
       setState(() {});
     } else {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (!refer.isDisposed && context.mounted) {
+        if (!vef.isDisposed && context.mounted) {
           setState(() {});
         }
       });
@@ -109,6 +109,6 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   }
 
   String getWidgetBinderName() {
-    return refer.getBinderName();
+    return vef.getBinderName();
   }
 }

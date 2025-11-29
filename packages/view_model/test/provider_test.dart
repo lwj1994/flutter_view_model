@@ -19,7 +19,7 @@ class UserViewModel extends ViewModel {
 }
 
 // A mock binder to simulate the widget environment.
-class TestBinder with Refer {
+class TestBinder with Vef {
   int updates = 0;
 
   void onUpdate() {
@@ -39,7 +39,7 @@ void main() {
         builder: () => CounterViewModel(),
       );
 
-      final vm = binder.refer.watch(spec);
+      final vm = binder.vef.watch(spec);
       expect(vm, isA<CounterViewModel>());
       expect(vm.count, 0);
 
@@ -54,8 +54,8 @@ void main() {
         builder: () => CounterViewModel(),
       );
 
-      final vm1 = binder.refer.watch(spec);
-      final vm2 = binder.refer.watch(spec);
+      final vm1 = binder.vef.watch(spec);
+      final vm2 = binder.vef.watch(spec);
 
       expect(identical(vm1, vm2), isTrue);
     });
@@ -75,9 +75,9 @@ void main() {
         key: 'another-counter',
       );
 
-      final vm1 = binder.refer.watch(spec1);
-      final vm2 = binder.refer.watch(spec2);
-      final vm3 = binder.refer.watch(spec3);
+      final vm1 = binder.vef.watch(spec1);
+      final vm2 = binder.vef.watch(spec2);
+      final vm3 = binder.vef.watch(spec3);
 
       expect(identical(vm1, vm2), isTrue);
       expect(identical(vm1, vm3), isFalse);
@@ -94,8 +94,8 @@ void main() {
       expect(factory, isA<ViewModelFactory<CounterViewModel>>());
 
       final binder = TestBinder();
-      final vm1 = binder.refer.watch(factory);
-      final vm2 = binder.refer.watch(factory);
+      final vm1 = binder.vef.watch(factory);
+      final vm2 = binder.vef.watch(factory);
 
       expect(identical(vm1, vm2), isTrue);
     });
@@ -111,8 +111,8 @@ void main() {
         isSingleton: true,
       );
 
-      final vm1 = binder.refer.watch(spec1);
-      final vm2 = binder.refer.watch(spec2);
+      final vm1 = binder.vef.watch(spec1);
+      final vm2 = binder.vef.watch(spec2);
 
       expect(identical(vm1, vm2), isTrue);
     });
@@ -128,8 +128,8 @@ void main() {
         isSingleton: true,
       );
 
-      final vm1 = binder.refer.watch(spec1);
-      final vm2 = binder.refer.watch(spec2);
+      final vm1 = binder.vef.watch(spec1);
+      final vm2 = binder.vef.watch(spec2);
 
       expect(identical(vm1, vm2), isFalse);
     });
@@ -142,7 +142,7 @@ void main() {
         builder: (name) => UserViewModel(name: name),
       );
 
-      final vm = binder.refer.watch(spec('Alice'));
+      final vm = binder.vef.watch(spec('Alice'));
       expect(vm, isA<UserViewModel>());
       expect(vm.name, 'Alice');
     });
@@ -154,9 +154,9 @@ void main() {
         key: (name) => 'user-$name',
       );
 
-      final vm1 = binder.refer.watch(spec('Alice'));
-      final vm2 = binder.refer.watch(spec('Alice'));
-      final vm3 = binder.refer.watch(spec('Bob'));
+      final vm1 = binder.vef.watch(spec('Alice'));
+      final vm2 = binder.vef.watch(spec('Alice'));
+      final vm3 = binder.vef.watch(spec('Bob'));
 
       expect(identical(vm1, vm2), isTrue);
       expect(identical(vm1, vm3), isFalse);
@@ -174,9 +174,9 @@ void main() {
       final arg2 = ComplexArg('1', 'Alice');
       final arg3 = ComplexArg('2', 'Bob');
 
-      final vm1 = binder.refer.watch(spec(arg1));
-      final vm2 = binder.refer.watch(spec(arg2));
-      final vm3 = binder.refer.watch(spec(arg3));
+      final vm1 = binder.vef.watch(spec(arg1));
+      final vm2 = binder.vef.watch(spec(arg2));
+      final vm3 = binder.vef.watch(spec(arg3));
 
       expect(identical(vm1, vm2), isTrue);
       expect(identical(vm1, vm3), isFalse);
@@ -193,8 +193,8 @@ void main() {
       expect(factory, isA<ViewModelFactory<UserViewModel>>());
 
       final binder = TestBinder();
-      final vm1 = binder.refer.watch(factory);
-      final vm2 = binder.refer.watch(factory);
+      final vm1 = binder.vef.watch(factory);
+      final vm2 = binder.vef.watch(factory);
 
       expect(identical(vm1, vm2), isTrue);
       expect(vm1.name, 'Alice');

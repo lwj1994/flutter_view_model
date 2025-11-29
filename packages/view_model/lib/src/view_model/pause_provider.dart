@@ -12,7 +12,7 @@ import 'package:view_model/src/view_model/view_model.dart';
 ///   While paused, rebuilds triggered by bound ViewModels are ignored.
 /// - Call [onResume] to mark as resumed and invoke the provided callback to
 ///   trigger a single refresh.
-mixin class ReferPauseProvider {
+mixin class VefPauseProvider {
   final _controller = StreamController<bool>.broadcast();
   void pause() => _controller.add(true);
   void resume() => _controller.add(false);
@@ -25,9 +25,9 @@ mixin class ReferPauseProvider {
   Stream<bool> get onPauseStateChanged => _controller.stream;
 }
 
-/// A [ReferPauseProvider] that signals pause/resume based on the
+/// A [VefPauseProvider] that signals pause/resume based on the
 /// application's lifecycle state ([AppLifecycleState]).
-class AppPauseProvider with ReferPauseProvider {
+class AppPauseProvider with VefPauseProvider {
   StreamSubscription<AppLifecycleState>? _subscription;
 
   AppPauseProvider() {
@@ -52,13 +52,13 @@ class AppPauseProvider with ReferPauseProvider {
   }
 }
 
-/// A [ReferPauseProvider] that pauses/resumes based on [TickerMode].
+/// A [VefPauseProvider] that pauses/resumes based on [TickerMode].
 ///
 /// This provider is useful for pausing ViewModels when their widget is
 /// in a hidden state within a [TabBarView] or other [TickerMode] controlled
 /// environments. When [TickerMode] is disabled (false), the ViewModel is
 /// paused.
-class TickerModePauseProvider with ReferPauseProvider {
+class TickerModePauseProvider with VefPauseProvider {
   ValueListenable<bool>? _notifier;
   void subscribe(ValueListenable<bool> notifier) {
     if (_notifier == notifier) return;
@@ -86,9 +86,9 @@ class TickerModePauseProvider with ReferPauseProvider {
   }
 }
 
-/// A [ReferPauseProvider] that uses [RouteAware] to determine pause state
+/// A [VefPauseProvider] that uses [RouteAware] to determine pause state
 /// based on route navigation events (push, pop).
-class PageRoutePauseProvider with ReferPauseProvider, RouteAware {
+class PageRoutePauseProvider with VefPauseProvider, RouteAware {
   final List<PageRoute> _subscribedRoutes = [];
   final RouteObserver<PageRoute> _observer = ViewModel.routeObserver;
 

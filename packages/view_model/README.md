@@ -34,7 +34,7 @@
       - [Alternative: ViewModelBuilder (no mixin required)](#alternative-viewmodelbuilder-no-mixin-required)
     - [Side‑effects with listeners](#sideeffects-with-listeners)
   - [ViewModel Lifecycle](#viewmodel-lifecycle)
-      - [How It Works: Refer Counting](#how-it-works-refer-counting)
+      - [How It Works: Vef Counting](#how-it-works-vef-counting)
   - [Initialization](#initialization)
     - [Global ViewModel Lifecycle](#global-viewmodel-lifecycle)
   - [Stateful ViewModel (`StateViewModel<S>`)](#stateful-viewmodel-stateviewmodels)
@@ -51,9 +51,9 @@
     - [ValueListenableBuilder](#valuelistenablebuilder)
     - [ObserverBuilder](#observerbuilder)
     - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
-  - [Custom Refer](#custom-ref)
+  - [Custom Vef](#custom-vef)
     - [Core Concepts](#core-concepts)
-    - [Example: StartTaskRefer](#example-starttaskbinder)
+    - [Example: StartTaskVef](#example-starttaskbinder)
   - [DevTools Extension](#devtools-extension)
 
 ---
@@ -77,13 +77,13 @@ ViewModels can directly depend on and read other ViewModels internally (e.g., a 
 **4. Out-of-the-Box Simplicity**
 Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** (which involves complex graph concepts), this approach is strictly pragmatic. It provides automated lifecycle management and dependency injection immediately, with zero boilerplate.
 
-**5. Beyond Widgets: Custom Refer**
-Through custom `Refer`, ViewModels can exist **independently of Widgets**. Any Dart class can `with Refer` to become a ViewModel host, enabling use cases like:
+**5. Beyond Widgets: Custom Vef**
+Through custom `Vef`, ViewModels can exist **independently of Widgets**. Any Dart class can `with Vef` to become a ViewModel host, enabling use cases like:
 *   **Background Services:** Run ViewModel logic in background tasks (e.g., downloads, sync).
 *   **Pure Dart Tests:** Test ViewModel interactions without `testWidgets`.
 *   **Startup Tasks:** Execute initialization logic before any Widget is rendered.
 
-This makes ViewModel truly universal—**Everything can be a ViewModel**, not just UI components. See [Custom Refer](#custom-refer) for details.
+This makes ViewModel truly universal—**Everything can be a ViewModel**, not just UI components. See [Custom Vef](#custom-vef) for details.
 
 
 
@@ -91,8 +91,8 @@ This makes ViewModel truly universal—**Everything can be a ViewModel**, not ju
 
 ## Quick Start
 
-- Watch: `refer.watch<T>()` / `refer.watchCached<T>()`
-- Read: `refer.read<T>()` / `refer.readCached<T>()`
+- Watch: `vef.watch<T>()` / `vef.watchCached<T>()`
+- Read: `vef.read<T>()` / `vef.readCached<T>()`
 - Recycle: `recycle(vm)`
 - Effects: `listen(onChanged)` / `listenState` / `listenStateSelect`
 
@@ -112,7 +112,7 @@ final counterProvider = ViewModelProvider(
 class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
   @override
   Widget build(BuildContext context) {
-    final vm = refer.watch(counterProvider);
+    final vm = vef.watch(counterProvider);
     return ElevatedButton(
       onPressed: vm.increment,
       child: Text('${vm.count}'),
@@ -124,7 +124,7 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 ## Reuse One Instance
 
 - Key: set `key()` in factory → all widgets share the same instance
-- Tag: set `tag()` → bind newest instance via `refer.watchCached(tag)`
+- Tag: set `tag()` → bind newest instance via `vef.watchCached(tag)`
 - Any param: pass any `Object` as key/tag (e.g. `'user:$id'`)
 
 > [!IMPORTANT]
@@ -138,8 +138,8 @@ final Provider = ViewModelProvider<UserViewModel>(
   builder: () => UserViewModel(userId: id),
   key: 'user:$id',
 );
-final vm1 = refer.watch(Provider);
-final vm2 = refer.watchCached<UserViewModel>(key: 'user:$id'); // same
+final vm1 = vef.watch(Provider);
+final vm2 = vef.watchCached<UserViewModel>(key: 'user:$id'); // same
 ```
 
 
@@ -345,7 +345,7 @@ final counterProvider = ViewModelProvider<CounterViewModel>(
 );
 
 // Use it in a widget
-final vm = refer.watch(counterProvider);
+final vm = vef.watch(counterProvider);
 ```
 
 **Without Arguments (manual)**
@@ -359,7 +359,7 @@ final userProvider = ViewModelProvider.arg<UserViewModel, String>(
 );
 
 // Use it in a widget, passing the argument to the provider
-final vm = refer.watch(userProvider('user-123'));
+final vm = vef.watch(userProvider('user-123'));
 ```
 
 This approach keeps the `ViewModel` creation logic clean and reusable.
@@ -451,7 +451,7 @@ final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
 ### Using ViewModel in Widgets
 
 Mix `ViewModelStatelessMixin` or `ViewModelStateMixin` into Widget to bind a `ViewModel`.
-Use `refer.watch` for reactive updates, or `refer.read` to
+Use `vef.watch` for reactive updates, or `vef.read` to
 avoid rebuilds. Lifecycle (create, share, dispose) is managed for
 you automatically.
 
@@ -475,7 +475,7 @@ class CounterStatelessWidget extends StatelessWidget
   CounterStatelessWidget({super.key});
 
   /// Create and watch the ViewModel instance for UI binding.
-  late final vm = refer.watch(counterProviderForStateless);
+  late final vm = vef.watch(counterProviderForStateless);
 
   /// Builds UI bound to CounterViewModel state.
   @override
@@ -520,10 +520,10 @@ class _MyPageState extends State<MyPage>
   @override
   void initState() {
     super.initState();
-    // 2. Use refer.watch to create and get the ViewModel
+    // 2. Use vef.watch to create and get the ViewModel
     // When MyPage is built for the first time, the build() method of MySimpleViewModelFactory will be called to create an instance.
     // When MyPage is disposed, if this viewModel has no other listeners, it will also be disposed.
-    simpleVM = refer.watch(simpleVMProvider);
+    simpleVM = vef.watch(simpleVMProvider);
   }
 
   @override
@@ -609,7 +609,7 @@ void initState() {
   super.initState();
 
   // Get the ViewModel instance (usually obtained once in initState or via a getter)
-  final myVm = refer.watch(simpleVMProvider);
+  final myVm = vef.watch(simpleVMProvider);
 
   _disposeViewModelListener = myVm.listen(onChanged: () {
     print('MySimpleViewModel called notifyListeners! Current counter: ${myVm.counter}');
@@ -627,19 +627,19 @@ void dispose() {
 ## ViewModel Lifecycle
 
 > [!IMPORTANT]
-> Both `refer.watch` and `refer.read` APIs will create a binding and increment the
+> Both `vef.watch` and `vef.read` APIs will create a binding and increment the
 > reference count. The `ViewModel` is disposed only when all bindings are
 > removed.
 
 The lifecycle of a `ViewModel` is managed automatically based on a **reference counting** mechanism. This ensures that a `ViewModel` instance is kept alive as long as it is being used by at least one widget and is automatically disposed of when it's no longer needed, preventing memory leaks.
 
-#### How It Works: Refer Counting
+#### How It Works: Vef Counting
 
 The system keeps track of how many widgets are "binding" a `ViewModel` instance.
 
-1.  **Creation & First Refer**: When `WidgetA` creates or binds a `ViewModel` (`VMA`) for the first time (e.g., using `refer.watch`), the binder count for `VMA` becomes 1.
-2.  **Reuse & More Refer**: If `WidgetB` reuses the same `VMA` instance (e.g., by using `refer.watchCached` with the same key), the binder count for `VMA` increments to 2.
-3.  **Disposing a Refer**: When `WidgetA` is disposed, it stops watching `VMA`, and the binder count decrements to 1. At this point, `VMA` is **not** disposed because `WidgetB` is still using it.
+1.  **Creation & First Vef**: When `WidgetA` creates or binds a `ViewModel` (`VMA`) for the first time (e.g., using `vef.watch`), the binder count for `VMA` becomes 1.
+2.  **Reuse & More Vef**: If `WidgetB` reuses the same `VMA` instance (e.g., by using `vef.watchCached` with the same key), the binder count for `VMA` increments to 2.
+3.  **Disposing a Vef**: When `WidgetA` is disposed, it stops watching `VMA`, and the binder count decrements to 1. At this point, `VMA` is **not** disposed because `WidgetB` is still using it.
 4.  **Final Disposal**: Only when `WidgetB` is also disposed does the binder count for `VMA` drop to 0. At this moment, the `ViewModel` is considered unused, and its `dispose()` method is called automatically.
 
 This mechanism is fundamental for sharing `ViewModel`s across different parts of your widget tree, ensuring state persistence as long as it's relevant to the UI.
@@ -905,7 +905,7 @@ class _MyCounterPageState extends State<MyCounterPage>
 @override
 void initState() {
   super.initState();
-  counterVM = refer.watch(counterProviderForStateful);
+  counterVM = vef.watch(counterProviderForStateful);
 }
 
   @override
@@ -974,7 +974,7 @@ In addition to the standard `listen()` method inherited from `ViewModel`, `State
 
 ```dart
 // In initState
-final myVm = refer.watch<MyCounterViewModel>(/* ... */);
+final myVm = vef.watch<MyCounterViewModel>(/* ... */);
 
 // Listen to the entire state object
 final dispose1 = myVm.listenState((previous, current) {
@@ -1015,8 +1015,8 @@ Imagine a `UserProfileViewModel` with a state containing `userName`, `age`, and 
 ```dart
 // Assume you have a MyCounterViewModel and its state MyCounterState { count, statusMessage }
 
-// Obtain the ViewModel instance (usually with refer.readCached if you don't need the whole widget to rebuild)
-final myVm = refer.readCached<MyCounterViewModel>();
+// Obtain the ViewModel instance (usually with vef.readCached if you don't need the whole widget to rebuild)
+final myVm = vef.readCached<MyCounterViewModel>();
 
 // This widget will only rebuild if `state.count` or `state.statusMessage` changes.
 StateViewModelValueWatcher<MyCounterState>(
@@ -1051,7 +1051,7 @@ This means:
 - **Management**: The `Widget` is responsible for creating and disposing of all its associated `ViewModel`s.
 - **Relationship**: `ViewModelA` simply holds a reference to `ViewModelB`.
 
-Essentially, calling `refer.read` or `refer.watch` from within a `ViewModel` is the same as calling it from the `Widget`. Both access the same central management system.
+Essentially, calling `vef.read` or `vef.watch` from within a `ViewModel` is the same as calling it from the `Widget`. Both access the same central management system.
 
 This flattened approach simplifies lifecycle management and avoids complex, nested dependency chains.
 
@@ -1085,7 +1085,7 @@ class ViewModelA extends ViewModel {
   late final ViewModelB viewModelB;
 
   ViewModelA() {
-    viewModelB = refer.readCached<ViewModelB>();
+    viewModelB = vef.readCached<ViewModelB>();
   }
 }
 ```
@@ -1105,7 +1105,7 @@ class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
 @override
 void initState() {
   super.initState();
-  viewModelA = refer.watch(viewModelAProvider);
+  viewModelA = vef.watch(viewModelAProvider);
 }
 
   // ...
@@ -1119,11 +1119,11 @@ This system allows for a clean and decoupled architecture, where ViewModels can 
 [doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md)
 
 
-The pause/resume lifecycle is managed by `ReferPauseProvider`s. By default,
-`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming the `Refer` based
+The pause/resume lifecycle is managed by `VefPauseProvider`s. By default,
+`PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle pausing/resuming the `Vef` based
 on route visibility and app lifecycle events, reProvidertively.
 
-When a `Refer` is paused (e.g., widget navigated away), it stops responding to ViewModel state changes, preventing unnecessary rebuilds. The ViewModel continues to emit notifications, but the paused Refer ignores them. When resumed, the Refer checks for missed updates and rebuilds if necessary.
+When a `Vef` is paused (e.g., widget navigated away), it stops responding to ViewModel state changes, preventing unnecessary rebuilds. The ViewModel continues to emit notifications, but the paused Vef ignores them. When resumed, the Vef checks for missed updates and rebuilds if necessary.
 
 
 
@@ -1176,7 +1176,7 @@ class MyWidget extends State with ViewModelStateMixin {
   @override
   void initState() {
     super.initState();
-    stateViewModel = refer.read(
+    stateViewModel = vef.read(
       ViewModelProvider(builder: () => MyViewModel()),
     );
   }
@@ -1195,30 +1195,30 @@ class MyWidget extends State with ViewModelStateMixin {
   }
 }
 ```
-## Custom Refer
+## Custom Vef
 
-`Refer` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskRefer` as a host for the ViewModel to run logic.
+`Vef` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskVef` as a host for the ViewModel to run logic.
 
-`Refer` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetRefer`.
+`Vef` is the core of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetVef`.
 
 This means you can use ViewModel in any Dart class, **independent of Widgets**.
 
 ### Core Concepts
 
-*   **Refer**: A generic ViewModel manager. It simulates a host environment, providing methods like `refer.watch`.
-*   **WidgetRefer**: A subclass of `Refer` Providerifically adapted for Flutter Widgets, implementing the bridge from `onUpdate` to `setState`.
+*   **Vef**: A generic ViewModel manager. It simulates a host environment, providing methods like `vef.watch`.
+*   **WidgetVef**: A subclass of `Vef` for Flutter Widgets, implementing the bridge from `onUpdate` to `setState`.
 
-### Example: StartTaskRefer
+### Example: StartTaskVef
 
 ```dart
 import 'package:view_model/view_model.dart';
 
 final Provider = ViewModelProvider(builder: () => AppInitViewModel());
 
-/// Refer that runs startup tasks before UI is shown.
+/// Vef that runs startup tasks before UI is shown.
 /// Typical use: preload data, check auth, warm caches.
-class StartTaskRefer with Refer {
-  late final AppInitViewModel _initVM = refer.watch(Provider);
+class StartTaskVef with Vef {
+  late final AppInitViewModel _initVM = vef.watch(Provider);
 
   /// Triggers startup logic. Call this from main() before runApp.
   Future<void> run() async {
@@ -1239,7 +1239,7 @@ class StartTaskRefer with Refer {
 }
 
 // Usage in main():
-// final starter = StartTaskRefer();
+// final starter = StartTaskVef();
 // await starter.run();
 // starter.close();
 ```

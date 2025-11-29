@@ -36,7 +36,7 @@ After:
 
 ```dart
 final provider = ViewModelProvider<MyVM>(builder: MyVM.new);
-final vm = refer.watch(provider);
+final vm = vef.watch(provider);
 ```
 
 Cached access:
@@ -46,7 +46,7 @@ Cached access:
 final vm = watchCachedViewModel<MyVM>(key: 'k');
 
 // After
-final vm = refer.watchCached<MyVM>(key: 'k');
+final vm = vef.watchCached<MyVM>(key: 'k');
 ```
 
 Read (non-listening):
@@ -56,7 +56,7 @@ Read (non-listening):
 final vm = readViewModel<MyVM>(factory: MyVmFactory());
 
 // After
-final vm = refer.read(ViewModelProvider<MyVM>(builder: MyVM.new));
+final vm = vef.read(ViewModelProvider<MyVM>(builder: MyVM.new));
 ```
 
 ## Examples
@@ -68,7 +68,7 @@ final provider = ViewModelProvider<CounterViewModel>(
   builder: CounterViewModel.new,
   key: 'counter',
 );
-final vm = refer.watch(provider);
+final vm = vef.watch(provider);
 ```
 
 ### With One Argument
@@ -79,7 +79,7 @@ final userprovider = ViewModelProvider.arg<UserViewModel, String>(
   key: (id) => 'user-$id',
   tag: (id) => 'user-$id',
 );
-final vm = refer.watch(userprovider('user-123'));
+final vm = vef.watch(userprovider('user-123'));
 ```
 
 ### With Two Arguments
@@ -89,7 +89,7 @@ final provider2 = ViewModelProvider.arg2<UserVM, String, int>(
   builder: (id, page) => UserVM(id, page),
   key: (id, page) => 'user-$id:$page',
 );
-final vm = refer.watch(provider2('u42', 1));
+final vm = vef.watch(provider2('u42', 1));
 ```
 
 ### With Three Arguments
@@ -98,7 +98,7 @@ final vm = refer.watch(provider2('u42', 1));
 final provider3 = ViewModelProvider.arg3<ReportVM, String, DateTime, bool>(
   builder: (id, date, force) => ReportVM(id, date, force),
 );
-final vm = refer.watch(provider3('rid', DateTime.now(), true));
+final vm = vef.watch(provider3('rid', DateTime.now(), true));
 ```
 
 ### With Four Arguments
@@ -107,7 +107,7 @@ final vm = refer.watch(provider3('rid', DateTime.now(), true));
 final provider4 = ViewModelProvider.arg4<TaskVM, String, int, String, bool>(
   builder: (id, priority, group, silent) => TaskVM(id, priority, group, silent),
 );
-final vm = refer.watch(provider4('t1', 5, 'g1', false));
+final vm = vef.watch(provider4('t1', 5, 'g1', false));
 ```
 
 
@@ -115,13 +115,13 @@ final vm = refer.watch(provider4('t1', 5, 'g1', false));
 
 Deprecated APIs and replacements:
 
-- `watchViewModel(...)` → `refer.watch(provider)`
-- `readViewModel(...)` → `refer.read(provider)`
-- `watchCachedViewModel(...)` → `refer.watchCached(...)`
-- `readCachedViewModel(...)` → `refer.readCached(...)`
-- `maybeWatchCachedViewModel(...)` → `ref.maybeWatchCached(...)`
-- `maybeReadCachedViewModel(...)` → `ref.maybeReadCached(...)`
-- `recycleViewModel(vm)` → `refer.recycle(vm)`
+- `watchViewModel(...)` → `vef.watch(provider)`
+- `readViewModel(...)` → `vef.read(provider)`
+- `watchCachedViewModel(...)` → `vef.watchCached(...)`
+- `readCachedViewModel(...)` → `vef.readCached(...)`
+- `maybeWatchCachedViewModel(...)` → `vef.maybeWatchCached(...)`
+- `maybeReadCachedViewModel(...)` → `vef.maybeReadCached(...)`
+- `recycleViewModel(vm)` → `vef.recycle(vm)`
 
 These deprecated methods continue to work for a grace period but will be
 removed in a future release.

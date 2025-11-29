@@ -29,7 +29,7 @@ class _ViewModelState<T extends ViewModel> extends State<ViewModelBuilder<T>>
   /// provided as an argument, matching the builder's signature.
   @override
   Widget build(BuildContext context) {
-    return widget.builder.call(refer.watch(widget.provider));
+    return widget.builder.call(vef.watch(widget.provider));
   }
 }
 
@@ -60,7 +60,7 @@ class _CachedViewModelState<T extends ViewModel>
     extends State<CachedViewModelBuilder<T>> with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
-    final vm = refer.maybeWatchCached<T>(
+    final vm = vef.maybeWatchCached<T>(
       key: widget.shareKey,
       tag: widget.tag,
     );

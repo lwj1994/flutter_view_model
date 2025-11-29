@@ -9,8 +9,8 @@ import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
-import 'package:view_model/src/view_model/refer_zone.dart';
 import 'package:view_model/src/view_model/util.dart';
+import 'package:view_model/src/view_model/vef_zone.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateless_extension.dart';
@@ -22,7 +22,7 @@ import 'state_store.dart';
 /// Provides methods to create or fetch ViewModels, optionally listening
 /// to their changes to rebuild the widget. All methods are generic on
 /// `VM extends ViewModel`.
-abstract interface class RefInterface {
+abstract interface class VefInterface {
   /// Creates or fetches a `VM` and listens for its changes.
   ///
   /// Requires a `factory` to build the instance when absent. The widget
@@ -111,14 +111,14 @@ abstract interface class RefInterface {
 ///   Zone-based dependency resolution
 /// - **Pause/Resume**: Manages pause/resume lifecycle through
 /// - **Pause/Resume**: Manages pause/resume lifecycle through
-///   [ReferPauseProvider]s
+///   [VefPauseProvider]s
 /// - **Update Notifications**: Provides [onUpdate] hook for responding to
 ///   ViewModel changes
 ///
 /// ## Key Concepts
 ///
 /// - **ViewModelRef**: Generic ViewModel manager usable in any Dart class
-/// - **WidgetRef**: Specialized subclass for Flutter widgets that bridges
+/// - **WidgetVef**: Specialized subclass for Flutter widgets that bridges
 ///   [onUpdate] to `setState`
 /// - **Reference Counting**: ViewModels stay alive while at least one binder
 ///   watches them
@@ -139,14 +139,14 @@ abstract interface class RefInterface {
 /// - [onPause]: Called when the binder is paused (e.g., widget not visible)
 /// - [onResume]: Called when the binder resumes (e.g., widget becomes visible)
 ///
-/// ## Example: Custom Service Refer
+/// ## Example: Custom Service Vef
 ///
 /// ```dart
 /// class DownloadService with ViewModelRef {
 ///   late final DownloadViewModel _downloadVM;
 ///
 ///   DownloadService() {
-///     _downloadVM = refer.watch(DownloadViewModelFactory());
+///     _downloadVM = vef.watch(DownloadViewModelFactory());
 ///   }
 ///
 ///   @override
@@ -171,24 +171,24 @@ abstract interface class RefInterface {
 /// ```dart
 /// test('Test ViewModel interactions', () {
 ///   final ref = ViewModelRef();
-///   final vm = refer.watch(MyViewModelFactory());
+///   final vm = vef.watch(MyViewModelFactory());
 ///
 ///   expect(vm.count, 0);
 ///   vm.increment();
 ///   expect(vm.count, 1);
 ///
-///   ref.dispose(); // Clean up
+///   vef.dispose(); // Clean up
 /// });
 /// ```
 ///
 /// See also:
-/// - [WidgetRef]: Specialized implementation for Flutter widgets
+/// - [WidgetVef]: Specialized implementation for Flutter widgets
 /// - [ViewModelStateMixin]: Mixin that uses ViewModelRef for StatefulWidget
-/// - [ReferPauseProvider]: Interface for pause/resume providers
-mixin class Refer implements RefInterface {
+/// - [VefPauseProvider]: Interface for pause/resume providers
+mixin class Vef implements VefInterface {
   @protected
   // ignore: avoid_returning_this
-  Refer get refer => this;
+  Vef get vef => this;
   bool _dispose = false;
   final _stackPathLocator = StackPathLocator();
 
@@ -289,12 +289,12 @@ mixin class Refer implements RefInterface {
   ///
   /// Example:
   /// ```dart
-  /// var userVM = refer.watch(fac);
+  /// var userVM = vef.watch(fac);
   /// // Later, force recreation
-  /// refer.recycle(userVM);
+  /// vef.recycle(userVM);
   ///
   /// recreate new instance
-  /// userVM = refer.watch(fac);
+  /// userVM = vef.watch(fac);
   /// ```
   void recycle<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
@@ -353,7 +353,7 @@ mixin class Refer implements RefInterface {
   ///   @override
   ///   void initState() {
   ///     super.initState();
-  ///     _viewModel = refer.watch(MyViewModelFactory());
+  ///     _viewModel = vef.watch(MyViewModelFactory());
   ///   }
   ///
   ///   @override
@@ -422,7 +422,7 @@ mixin class Refer implements RefInterface {
   /// Example:
   /// ```dart
   /// void _onButtonPressed() {
-  ///   final vm = refer.read(MyViewModelFactory());
+  ///   final vm = vef.read(MyViewModelFactory());
   ///   vm.performAction(); // This will not trigger a rebuild.
   /// }
   /// ```
@@ -528,7 +528,7 @@ mixin class Refer implements RefInterface {
     }
     final Object key = factory.key() ?? _defaultViewModelKey;
     final tag = factory.tag();
-    final res = runWithRefer(
+    final res = runWithVef(
       () {
         return _instanceController.getInstance<VM>(
           factory: InstanceFactory<VM>(
@@ -538,9 +538,9 @@ mixin class Refer implements RefInterface {
             ),
             builder: factory.build,
           ),
-        )..refHandler.addRef(refer);
+        )..refHandler.addRef(vef);
       },
-      refer,
+      vef,
     );
 
     if (listen) {
@@ -593,7 +593,7 @@ mixin class Refer implements RefInterface {
   ///
   /// Example:
   /// ```dart
-  /// final vm = ref.maybeWatchCached<MyViewModel>(key: 'optional-key');
+  /// final vm = vef.maybeWatchCached<MyViewModel>(key: 'optional-key');
   /// if (vm != null) {
   ///   // Use the ViewModel
   /// }
@@ -626,11 +626,11 @@ mixin class Refer implements RefInterface {
     _instanceController.unbindInstance(viewModel);
   }
 
-  void addPauseProvider(ReferPauseProvider provider) {
+  void addPauseProvider(VefPauseProvider provider) {
     _pauseAwareController.addProvider(provider);
   }
 
-  void removePauseProvider(ReferPauseProvider provider) {
+  void removePauseProvider(VefPauseProvider provider) {
     _pauseAwareController.removeProvider(provider);
   }
 
@@ -650,7 +650,7 @@ mixin class Refer implements RefInterface {
     ViewModelFactory<VM> factory, {
     required VoidCallback onChanged,
   }) {
-    _disposes.add(refer.read(factory).listen(onChanged: onChanged));
+    _disposes.add(vef.read(factory).listen(onChanged: onChanged));
   }
 
   @override
@@ -658,7 +658,7 @@ mixin class Refer implements RefInterface {
     ViewModelFactory<VM> factory, {
     required Function(S? previous, S state) onChanged,
   }) {
-    final VM vm = refer.read<VM>(factory);
+    final VM vm = vef.read<VM>(factory);
     _disposes.add(vm.listenState(onChanged: onChanged));
   }
 
@@ -668,7 +668,7 @@ mixin class Refer implements RefInterface {
     required R Function(S state) selector,
     required Function(R? previous, R current) onChanged,
   }) {
-    final VM vm = refer.read<VM>(factory);
+    final VM vm = vef.read<VM>(factory);
     _disposes
         .add(vm.listenStateSelect(onChanged: onChanged, selector: selector));
   }
@@ -688,13 +688,13 @@ extension StateRefExtension on ViewModelStateMixin {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return refer.watch<VM>(factory);
+    return vef.watch<VM>(factory);
   }
 
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return refer.read<VM>(factory);
+    return vef.read<VM>(factory);
   }
 
   VM readCachedViewModel<VM extends ViewModel>({
@@ -702,7 +702,7 @@ extension StateRefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.readCached<VM>(
+    return vef.readCached<VM>(
       key: key,
       tag: tag,
     );
@@ -713,7 +713,7 @@ extension StateRefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.watchCached<VM>(
+    return vef.watchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -724,7 +724,7 @@ extension StateRefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.maybeWatchCached<VM>(
+    return vef.maybeWatchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -735,7 +735,7 @@ extension StateRefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.maybeReadCached<VM>(
+    return vef.maybeReadCached<VM>(
       key: key,
       tag: tag,
     );
@@ -746,13 +746,13 @@ extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return refer.watch<VM>(factory);
+    return vef.watch<VM>(factory);
   }
 
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return refer.read<VM>(factory);
+    return vef.read<VM>(factory);
   }
 
   VM readCachedViewModel<VM extends ViewModel>({
@@ -760,7 +760,7 @@ extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.readCached<VM>(
+    return vef.readCached<VM>(
       key: key,
       tag: tag,
     );
@@ -771,7 +771,7 @@ extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.watchCached<VM>(
+    return vef.watchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -782,7 +782,7 @@ extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.maybeWatchCached<VM>(
+    return vef.maybeWatchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -793,7 +793,7 @@ extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.maybeReadCached<VM>(
+    return vef.maybeReadCached<VM>(
       key: key,
       tag: tag,
     );
@@ -804,13 +804,13 @@ extension ViewModelRefExtension on ViewModel {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return refer.watch<VM>(factory);
+    return vef.watch<VM>(factory);
   }
 
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return refer.read<VM>(factory);
+    return vef.read<VM>(factory);
   }
 
   VM readCachedViewModel<VM extends ViewModel>({
@@ -818,7 +818,7 @@ extension ViewModelRefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.readCached<VM>(
+    return vef.readCached<VM>(
       key: key,
       tag: tag,
     );
@@ -829,7 +829,7 @@ extension ViewModelRefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.watchCached<VM>(
+    return vef.watchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -840,7 +840,7 @@ extension ViewModelRefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.maybeWatchCached<VM>(
+    return vef.maybeWatchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -851,7 +851,7 @@ extension ViewModelRefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return refer.maybeReadCached<VM>(
+    return vef.maybeReadCached<VM>(
       key: key,
       tag: tag,
     );

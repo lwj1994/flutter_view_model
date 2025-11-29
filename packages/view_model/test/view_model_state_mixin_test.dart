@@ -53,7 +53,7 @@ class _CounterWidgetState extends State<CounterWidget>
   @override
   void initState() {
     super.initState();
-    viewModel = refer.watch<CounterViewModel>(
+    viewModel = vef.watch<CounterViewModel>(
       widget.factory ??
           ViewModelProvider<CounterViewModel>(
             builder: () => CounterViewModel(),
@@ -110,10 +110,10 @@ class _UserWidgetState extends State<UserWidget>
     super.initState();
     if (widget.factory != null) {
       viewModel = widget.factory != null
-          ? refer.watch<UserViewModel>(
+          ? vef.watch<UserViewModel>(
               widget.factory!,
             )
-          : refer.watchCached(
+          : vef.watchCached(
               key: widget.viewModelKey,
               tag: widget.tag,
             );
@@ -147,14 +147,14 @@ class _MultiViewModelWidgetState extends State<MultiViewModelWidget>
     super.initState();
 
     // Different counters with different keys
-    counter1 = refer.watch<CounterViewModel>(
+    counter1 = vef.watch<CounterViewModel>(
       ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 10),
         key: 'counter1',
       ),
     );
 
-    counter2 = refer.watch<CounterViewModel>(
+    counter2 = vef.watch<CounterViewModel>(
       ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 20),
         key: 'counter2',
@@ -162,7 +162,7 @@ class _MultiViewModelWidgetState extends State<MultiViewModelWidget>
     );
 
     // User with tag
-    user = refer.watch<UserViewModel>(
+    user = vef.watch<UserViewModel>(
       ViewModelProvider<UserViewModel>(
         builder: () => UserViewModel(name: 'Alice', age: 25),
         tag: 'primary_user',
@@ -454,7 +454,7 @@ class _CounterReadWidgetState extends State<CounterReadWidget>
   void initState() {
     super.initState();
     // Create ViewModel that won't trigger rebuilds
-    viewModel = refer.read<CounterViewModel>(
+    viewModel = vef.read<CounterViewModel>(
       ViewModelProvider<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'read_counter',
@@ -501,14 +501,14 @@ class _MaybeViewModelWidgetState extends State<MaybeViewModelWidget>
   void initState() {
     super.initState();
     // Try to get ViewModel that doesn't exist
-    viewModel = refer.maybeWatchCached<CounterViewModel>(
+    viewModel = vef.maybeWatchCached<CounterViewModel>(
       key: 'non_existent_key',
     );
   }
 
   void createViewModel() {
     setState(() {
-      viewModel = refer.watch<CounterViewModel>(
+      viewModel = vef.watch<CounterViewModel>(
         ViewModelProvider<CounterViewModel>(
           builder: () => CounterViewModel(),
         ),
