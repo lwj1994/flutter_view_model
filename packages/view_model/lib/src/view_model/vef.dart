@@ -19,6 +19,8 @@ import 'state_store.dart';
 
 /// Interface that exposes helpers to access ViewModels from widgets.
 ///
+/// `vef` stands for ViewModel Execution Framework.
+///
 /// Provides methods to create or fetch ViewModels, optionally listening
 /// to their changes to rebuild the widget. All methods are generic on
 /// `VM extends ViewModel`.

@@ -18,44 +18,42 @@
 ---
 
 - [view\_model](#view_model)
-    - [万物皆是 ViewModel](#万物皆是-viewmodel)
-    - [快速开始](#快速开始)
-    - [复用实例](#复用实例)
-    - [基本用法](#基本用法)
-        - [添加依赖](#添加依赖)
-        - [创建 ViewModel](#创建-viewmodel)
-            - [ViewModelProvider（建议搭配生成器使用）](#viewmodelprovider建议搭配生成器使用)
-            - [Provider 生成器（推荐）](#provider-生成器推荐)
-        - [在 Widget 中使用 ViewModel](#在-widget-中使用-viewmodel)
-            - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
-            - [ViewModelStateMixin](#viewmodelstatemixin)
-            - [替代方案: ViewModelBuilder (无需 mixin)](#替代方案-viewmodelbuilder-无需-mixin)
-        - [使用监听器处理副作用](#使用监听器处理副作用)
-    - [ViewModel 生命周期](#viewmodel-生命周期)
-        - [工作原理: 引用计数](#工作原理-引用计数)
-
-    - [初始化](#初始化)
-        - [全局 ViewModel 生命周期](#全局-viewmodel-生命周期)
-    - [有状态的 ViewModel (`StateViewModel<S>`)](#有状态的-viewmodel-stateviewmodels)
-        - [定义 State 类](#定义-state-类)
-        - [创建有状态的 ViewModel](#创建有状态的-viewmodel)
-        - [为有状态的 ViewModel 创建 ViewModelFactory](#为有状态的-viewmodel-创建-viewmodelfactory)
-        - [在 Widget 中使用有状态的 ViewModel](#在-widget-中使用有状态的-viewmodel)
-        - [副作用监听器](#副作用监听器)
-        - [使用
-          `StateViewModelValueWatcher` 实现细粒度重建](#使用-stateviewmodelvaluewatcher-实现细粒度重建)
-    - [ViewModel → ViewModel 依赖](#viewmodel--viewmodel-依赖)
-        - [依赖机制](#依赖机制)
-        - [示例](#示例)
-    - [暂停/恢复生命周期](#暂停恢复生命周期)
-    - [值级别重建](#值级别重建)
-        - [ValueListenableBuilder](#valuelistenablebuilder)
-        - [ObserverBuilder](#observerbuilder)
-        - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
-    - [自定义 Vef](#自定义-vef)
-        - [核心概念](#核心概念)
-        - [示例：StartTaskRef（常用于应用启动）](#示例starttaskref常用于应用启动)
-    - [DevTools 扩展](#devtools-扩展)
+  - [万物皆是 ViewModel](#万物皆是-viewmodel)
+  - [快速开始](#快速开始)
+  - [复用实例](#复用实例)
+  - [基本用法](#基本用法)
+    - [添加依赖](#添加依赖)
+    - [创建 ViewModel](#创建-viewmodel)
+      - [ViewModelProvider（建议搭配生成器使用）](#viewmodelprovider建议搭配生成器使用)
+      - [Provider 生成器（推荐）](#provider-生成器推荐)
+    - [在 Widget 中使用 ViewModel](#在-widget-中使用-viewmodel)
+      - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
+      - [ViewModelStateMixin](#viewmodelstatemixin)
+      - [替代方案: ViewModelBuilder (无需 mixin)](#替代方案-viewmodelbuilder-无需-mixin)
+    - [使用监听器处理副作用](#使用监听器处理副作用)
+  - [ViewModel 生命周期](#viewmodel-生命周期)
+      - [工作原理: 引用计数](#工作原理-引用计数)
+  - [初始化](#初始化)
+    - [全局 ViewModel 生命周期](#全局-viewmodel-生命周期)
+  - [有状态的 ViewModel (`StateViewModel<S>`)](#有状态的-viewmodel-stateviewmodels)
+    - [定义 State 类](#定义-state-类)
+    - [创建有状态的 ViewModel](#创建有状态的-viewmodel)
+    - [为有状态的 ViewModel 创建 ViewModelFactory](#为有状态的-viewmodel-创建-viewmodelfactory)
+    - [在 Widget 中使用有状态的 ViewModel](#在-widget-中使用有状态的-viewmodel)
+    - [副作用监听器](#副作用监听器)
+    - [使用 `StateViewModelValueWatcher` 实现细粒度重建](#使用-stateviewmodelvaluewatcher-实现细粒度重建)
+  - [ViewModel → ViewModel 依赖](#viewmodel--viewmodel-依赖)
+      - [依赖机制](#依赖机制)
+      - [示例](#示例)
+  - [暂停/恢复生命周期](#暂停恢复生命周期)
+  - [值级别重建](#值级别重建)
+    - [ValueListenableBuilder](#valuelistenablebuilder)
+    - [ObserverBuilder](#observerbuilder)
+    - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
+  - [自定义 Vef](#自定义-vef)
+    - [核心概念](#核心概念)
+    - [示例：StartTaskRef（常用于应用启动）](#示例starttaskref常用于应用启动)
+  - [DevTools 扩展](#devtools-扩展)
 
 ---
 
@@ -101,6 +99,7 @@ ViewModel 的宿主,实现以下场景:
 - 监听 (Watch): `vef.watch<T>()` / `vef.watchCached<T>()`
 - 读取 (Read): `vef.read<T>()` / `vef.readCached<T>()`
 - 副作用 (Effects): `vm.listen(onChanged)` / `vm.listenState` / `vm.listenStateSelect`
+
 
 ```dart
 // 1. 定义 ViewModel
@@ -1191,6 +1190,7 @@ class MyWidget extends State with ViewModelStateMixin {
 ```
 
 ## 自定义 Vef
+> **注:** `vef` 是 **V**iewModel **E**xecution **F**ramework 的缩写。
 
 `Vef` 主要是为了某些不需要 UI 的场景设计的。例如，在 App 启动时可能需要执行一些初始化任务（如预加载数据、检查登录状态），但此时还没有任何
 Widget 显示。在这种情况下，你可以创建一个 `StartTaskRef` 作为 ViewModel 的宿主来运行这些逻辑。

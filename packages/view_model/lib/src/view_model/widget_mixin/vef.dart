@@ -2,6 +2,8 @@ import 'package:view_model/src/view_model/vef.dart';
 
 /// A specialized Vef implementation for Flutter Widgets.
 ///
+/// `vef` stands for ViewModel Execution Framework.
+///
 /// This class extends the base [Vef] functionality to integrate with
 /// Flutter's widget lifecycle. It bridges ViewModel state changes to widget
 /// rebuilds by calling the provided [refreshWidget] callback.
