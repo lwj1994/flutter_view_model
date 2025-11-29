@@ -131,10 +131,10 @@ final userViewModelProvider = ViewModelProvider.arg<UserViewModel, UserArgument>
 
 ```dart
 // For CounterViewModel
-final vm = refer.watch(counterProvider);
+final vm = vef.watch(counterProvider);
 
 // For UserViewModel
-final userVM = refer.watch(userViewModelProvider, arg: UserArgument('123'));
+final userVM = vef.watch(userViewModelProvider, arg: UserArgument('123'));
 ```
 
 ## 4. Implementation Details

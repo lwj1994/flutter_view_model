@@ -71,7 +71,7 @@ class _SubStatefulWidgetState extends State<SubStatefulWidget>
     notifier.addListener(() {
       print("_SubWidgetState TickerMode = ${notifier.value}");
     });
-    viewModel = refer.watch(ViewModelProvider(builder: () => TestViewModel()));
+    viewModel = vef.watch(ViewModelProvider(builder: () => TestViewModel()));
   }
 
   @override
@@ -100,8 +100,8 @@ class StatelessTestWidget extends StatelessWidget with ViewModelStatelessMixin {
   Widget build(BuildContext context) {
     print("StatelessTestWidget TickerMode = ${TickerMode.of(context)}");
     _tickerModeProvider.subscribe(TickerMode.getNotifier(context));
-    refer.addPauseProvider(_tickerModeProvider);
-    final viewModel = refer.watch<TestViewModel>(
+    vef.addPauseProvider(_tickerModeProvider);
+    final viewModel = vef.watch<TestViewModel>(
         ViewModelProvider(builder: () => TestViewModel()));
     return Column(
       children: [

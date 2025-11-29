@@ -10,16 +10,16 @@ library;
 import 'dart:async';
 
 import 'package:meta/meta.dart' show internal;
-import 'package:view_model/src/view_model/refer.dart';
+import 'package:view_model/src/view_model/vef.dart';
 
 import 'state_store.dart';
 
-const _referKey = #view_model_refer;
+const _vefKey = #view_model_vef;
 
-/// Runs the given [body] in a zone with the provided [refer].
+/// Runs the given [body] in a zone with the provided [vef..
 /// This makes the ref available for dependency resolution.
-R runWithRefer<R>(R Function() body, Refer refer) {
-  return runZoned(body, zoneValues: {_referKey: refer});
+R runWithVef<R>(R Function() body, Vef vef) {
+  return runZoned(body, zoneValues: {_vefKey: vef});
 }
 
 /// Handler class responsible for managing ViewModel dependencies.
@@ -40,17 +40,16 @@ R runWithRefer<R>(R Function() body, Refer refer) {
 ///     final userService = _dependencyHandler.readViewModel<UserService>();
 ///   }
 /// }
-/// ```
-@internal
-class RefHandler {
+/// ```@internal
+class VefHandler {
   /// Callback function to resolve ViewModel dependencies.
   /// This is typically set by ViewModelStateMixin to delegate
   /// dependency resolution
   /// to the State that manages the ViewModel.
   @internal
-  final List<Refer> dependencyRefs = [];
+  final List<Vef> dependencyVefs = [];
 
-  RefHandler();
+  VefHandler();
 
   /// Sets the dependency resolver callback.
   ///
@@ -63,18 +62,18 @@ class RefHandler {
   /// - [resolver]: Function that resolves dependencies with listen parameter
   @internal
   void addRef(
-    Refer ref,
+    Vef ref,
   ) {
-    if (!dependencyRefs.contains(ref)) {
-      dependencyRefs.add(ref);
+    if (!dependencyVefs.contains(ref)) {
+      dependencyVefs.add(ref);
     }
   }
 
   @internal
   void removeRef(
-    Refer ref,
+    Vef ref,
   ) {
-    dependencyRefs.remove(ref);
+    dependencyVefs.remove(ref);
   }
 
   /// Clears the dependency resolver callback and all stored dependencies.
@@ -82,15 +81,14 @@ class RefHandler {
   /// This should be called when the ViewModel is no longer managed by a State
   /// to prevent memory leaks and ensure clean disposal.
   void dispose() {
-    dependencyRefs.clear();
+    dependencyVefs.clear();
   }
 
-  Refer get refer {
-    final r =
-        (dependencyRefs.firstOrNull ?? (Zone.current[_referKey] as Refer?));
+  Vef get vef {
+    final r = (dependencyVefs.firstOrNull ?? (Zone.current[_vefKey] as Vef?));
     if (r == null) {
       throw ViewModelError(
-        'No ref available. ViewModel must be used within a Refer context',
+        'No ref available. ViewModel must be used within a Vef context',
       );
     }
     return r;

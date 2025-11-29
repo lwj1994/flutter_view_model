@@ -3,9 +3,9 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
-import 'package:view_model/src/view_model/refer.dart';
+import 'package:view_model/src/view_model/vef.dart';
 import 'package:view_model/src/view_model/util.dart';
-import 'package:view_model/src/view_model/widget_mixin/refer.dart';
+import 'package:view_model/src/view_model/widget_mixin/vef.dart';
 
 /// Stateless integration for ViewModel access from widgets.
 /// Provides a mixin and a custom Element that bridge ViewModel
@@ -21,11 +21,11 @@ mixin ViewModelStatelessMixin on StatelessWidget {
   /// Returns true if the widget is currently considered paused.
   ///
   /// This state is determined by the [PauseAwareController] and its registered
-  /// [ReferPauseProvider]s. When paused, ViewModel updates are suppressed.
-  bool get isPaused => _viewModelElement._ref.isPaused;
+  /// [VefPauseProvider]s. When paused, ViewModel updates are suppressed.
+  bool get isPaused => _viewModelElement._vef.isPaused;
 
   @protected
-  Refer get refer => _viewModelElement._ref;
+  Vef get vef => _viewModelElement._vef;
 
   /// Creates the custom Element that carries the attacher.
   /// The Element owns the `ViewModelAttacher` and connects
@@ -49,7 +49,7 @@ mixin ViewModelStatelessMixin on StatelessWidget {
 /// to `markNeedsBuild`. Manages attach and dispose with element
 /// lifecycle.
 class _StatelessViewModelElement extends StatelessElement {
-  late final WidgetRefer _ref = WidgetRefer(
+  late final WidgetVef _vef = WidgetVef(
     refreshWidget: _rebuildState,
   );
 
@@ -61,8 +61,8 @@ class _StatelessViewModelElement extends StatelessElement {
   @override
   void mount(Element? parent, dynamic newSlot) {
     super.mount(parent, newSlot);
-    _ref.init();
-    _ref.addPauseProvider(_appPauseProvider);
+    _vef.init();
+    _vef.addPauseProvider(_appPauseProvider);
   }
 
   void _rebuildState() {
@@ -84,7 +84,7 @@ class _StatelessViewModelElement extends StatelessElement {
   @override
   void unmount() {
     super.unmount();
-    _ref.dispose();
+    _vef.dispose();
     _appPauseProvider.dispose();
   }
 }

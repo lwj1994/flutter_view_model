@@ -77,7 +77,7 @@ class _GenericPageState<T> extends State<GenericPage<T>>
   @override
   void initState() {
     super.initState();
-    _vm = refer.watch<GenericVM<T>>(widget.factory);
+    _vm = vef.watch<GenericVM<T>>(widget.factory);
   }
 
   @override

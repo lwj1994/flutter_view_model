@@ -33,7 +33,7 @@ class _AwareWidgetState extends State<AwareWidget> with ViewModelStateMixin {
   @override
   void initState() {
     super.initState();
-    viewModel = refer.watch(CounterViewModelFactory());
+    viewModel = vef.watch(CounterViewModelFactory());
   }
 
   @override
@@ -48,17 +48,17 @@ class _AwareWidgetState extends State<AwareWidget> with ViewModelStateMixin {
 
 void main() {
   group('PageRouteAwareController Unit Tests', () {
-    late ReferPauseProvider provider1;
-    late ReferPauseProvider provider2;
-    late ReferPauseProvider provider3;
+    late VefPauseProvider provider1;
+    late VefPauseProvider provider2;
+    late VefPauseProvider provider3;
     late PauseAwareController controller;
     int pauseCount = 0;
     int resumeCount = 0;
 
     setUp(() {
-      provider1 = ReferPauseProvider();
-      provider2 = ReferPauseProvider();
-      provider3 = ReferPauseProvider();
+      provider1 = VefPauseProvider();
+      provider2 = VefPauseProvider();
+      provider3 = VefPauseProvider();
       pauseCount = 0;
       resumeCount = 0;
       controller = PauseAwareController(

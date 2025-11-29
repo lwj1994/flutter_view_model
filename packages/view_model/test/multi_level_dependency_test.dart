@@ -15,7 +15,7 @@ class ViewModelC with ViewModel {
   ViewModelD? _viewModelD;
 
   String get data {
-    _viewModelD ??= refer.read<ViewModelD>(
+    _viewModelD ??= vef.read<ViewModelD>(
       ViewModelProvider<ViewModelD>(builder: () => ViewModelD()),
     );
     return 'C -> ${_viewModelD!.data}';
@@ -27,7 +27,7 @@ class ViewModelB with ViewModel {
   ViewModelC? _viewModelC;
 
   String get data {
-    _viewModelC ??= refer.read<ViewModelC>(
+    _viewModelC ??= vef.read<ViewModelC>(
       ViewModelProvider<ViewModelC>(builder: () => ViewModelC()),
     );
     return 'B -> ${_viewModelC!.data}';
@@ -39,7 +39,7 @@ class ViewModelA with ViewModel {
   ViewModelB? _viewModelB;
 
   String get data {
-    _viewModelB ??= refer.read<ViewModelB>(
+    _viewModelB ??= vef.read<ViewModelB>(
       ViewModelProvider<ViewModelB>(builder: () => ViewModelB()),
     );
     return 'A -> ${_viewModelB!.data}';
@@ -57,7 +57,7 @@ class TestWidget extends StatefulWidget {
 class _TestWidgetState extends State<TestWidget> with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
-    final viewModelA = refer.watch<ViewModelA>(
+    final viewModelA = vef.watch<ViewModelA>(
       ViewModelProvider<ViewModelA>(builder: () => ViewModelA()),
     );
 

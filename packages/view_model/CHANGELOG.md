@@ -21,7 +21,7 @@ final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 
-final vm = refer.watch(counterProvider);
+final vm = vef.watch(counterProvider);
 ```
 
 **With Arguments:**
@@ -32,7 +32,7 @@ final userProvider = ViewModelProvider.arg<UserViewModel, String>(
   key: (userId) => 'user-$userId',
 );
 
-final vm = refer.watch(userProvider('user-123'));
+final vm = vef.watch(userProvider('user-123'));
 ```
 
 [Migration Guide](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_PROVIDER_MIGRATION.md)
@@ -84,48 +84,48 @@ Package: https://pub.dev/packages/view_model_generator
 
 ---
 
-### 🔄 New Unified API: `refer.watch` & `refer.read`
+### 🔄 New Unified API: `vef.watch` & `vef.read`
 
-**Everything is Refer** - A unified, consistent API for accessing ViewModels.
+**Everything is Vef** - A unified, consistent API for accessing ViewModels.
 
 **New Recommended API:**
 ```dart
 // Watch (reactive)
-final vm = refer.watch(counterProvider);
+final vm = vef.watch(counterProvider);
 
 // Read (non-reactive)
-final vm = refer.read(counterProvider);
+final vm = vef.read(counterProvider);
 
 // Watch cached by key/tag
-final vm = refer.watchCached<UserViewModel>(key: 'user-123');
-final vm = refer.readCached<UserViewModel>(tag: 'current-user');
+final vm = vef.watchCached<UserViewModel>(key: 'user-123');
+final vm = vef.readCached<UserViewModel>(tag: 'current-user');
 ```
 
 **Legacy API (still supported):**
 ```dart
 // Old API still works for backward compatibility
-final vm = refer.watchViewModel(factory: CounterViewModelFactory());
-final vm = refer.readViewModel(factory: CounterViewModelFactory());
+final vm = vef.watchViewModel(factory: CounterViewModelFactory());
+final vm = vef.readViewModel(factory: CounterViewModelFactory());
 ```
 
-> **Note**: While `watchViewModel` and `readViewModel` are still supported, we recommend migrating to the new `refer.watch` and `refer.read` API with `ViewModelProvider` for better type safety and less boilerplate.
+> **Note**: While `watchViewModel` and `readViewModel` are still supported, we recommend migrating to the new `vef.watch` and `vef.read` API with `ViewModelProvider` for better type safety and less boilerplate.
 
 ---
 
-### 🌟 Everything is Refer
+### 🌟 Everything is Vef
 
-`Refer` is the core abstraction of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetRefer`.
+`Vef` is the core abstraction of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetVef`.
 
 This means you can use ViewModel in **any Dart class**, independent of Widgets.
 
-**Custom Refer Example:**
+**Custom Vef Example:**
 ```dart
-class StartTaskRefer with Refer {
+class StartTaskVef with Vef {
   Future<void> runStartupTasks() async {
-    final authVM = refer.watch(authProvider);
+    final authVM = vef.watch(authProvider);
     await authVM.checkLoginStatus();
     
-    final configVM = refer.watch(configProvider);
+    final configVM = vef.watch(configProvider);
     await configVM.loadRemoteConfig();
   }
   
@@ -141,13 +141,13 @@ Use cases:
 - **Pure Dart Tests**: Test ViewModel interactions without `testWidgets`
 - **Startup Tasks**: Execute initialization logic before any Widget is rendered
 
-See [Custom Refer Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md#custom-refer) for details.
+See [Custom Vef Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md#custom-vef) for details.
 
 ---
 
 ### 🔧 Other Changes
 
-- Renamed `ViewModelPauseProvider` to `ReferPauseProvider` for consistency
+- Renamed `ViewModelPauseProvider` to `VefPauseProvider` for consistency
 - Improved type inference for `ViewModelProvider.argX` variants
 
 
@@ -183,12 +183,12 @@ Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** 
 
 
 ## 0.8.1
-- Fix: Custom `ReferPauseProvider` was not working properly when added late, causing pause to fail.
+- Fix: Custom `VefPauseProvider` was not working properly when added late, causing pause to fail.
 
 ## 0.8.0
-- **BREAKING CHANGE**: Reworked the `Refer` pause/resume lifecycle to a more robust and extensible provider-based architecture.
+- **BREAKING CHANGE**: Reworked the `Vef` pause/resume lifecycle to a more robust and extensible provider-based architecture.
   - Default providers `PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app app lifecycle events and tickMode.
-  - Added `ManualReferPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
+  - Added `ManualVefPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
   - For details on the new API and migration, see the [Pause/Resume Lifecycle Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md).
 
 ```dart

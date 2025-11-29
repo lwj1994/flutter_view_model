@@ -43,21 +43,21 @@ class UserProfileViewModel with ViewModel {
   String get profileData => _profileData;
 
   String get userName {
-    _authViewModel ??= refer.read<AuthViewModel>(
+    _authViewModel ??= vef.read<AuthViewModel>(
       ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
     );
     return _authViewModel!.currentUser ?? 'Guest';
   }
 
   bool get isLoggedIn {
-    _authViewModel ??= refer.read<AuthViewModel>(
+    _authViewModel ??= vef.read<AuthViewModel>(
       ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
     );
     return _authViewModel!.isAuthenticated;
   }
 
   void updateProfile(String data) {
-    _authViewModel ??= refer.read<AuthViewModel>(
+    _authViewModel ??= vef.read<AuthViewModel>(
       ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
     );
     if (_authViewModel!.isAuthenticated) {
@@ -86,10 +86,10 @@ class DashboardViewModel with ViewModel {
   String _status = 'Ready';
 
   String get welcomeMessage {
-    _authViewModel ??= refer.read<AuthViewModel>(
+    _authViewModel ??= vef.read<AuthViewModel>(
       ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
     );
-    _settingsViewModel ??= refer.read<SettingsViewModel>(
+    _settingsViewModel ??= vef.read<SettingsViewModel>(
       ViewModelProvider<SettingsViewModel>(builder: () => SettingsViewModel()),
     );
     final user = _authViewModel!.currentUser ?? 'Guest';
@@ -110,7 +110,7 @@ class CircularViewModel1 with ViewModel {
   late final CircularViewModel2 _dependency;
 
   void initializeDependencies() {
-    _dependency = refer.readCached<CircularViewModel2>();
+    _dependency = vef.readCached<CircularViewModel2>();
   }
 }
 
@@ -119,7 +119,7 @@ class CircularViewModel2 with ViewModel {
   late final CircularViewModel1 _dependency;
 
   void initializeDependencies() {
-    _dependency = refer.readCached<CircularViewModel1>();
+    _dependency = vef.readCached<CircularViewModel1>();
   }
 }
 
@@ -141,7 +141,7 @@ void main() {
       final orphanViewModel = SettingsViewModel();
 
       expect(
-        () => orphanViewModel.refer.readCached<AuthViewModel>(),
+        () => orphanViewModel.vef.readCached<AuthViewModel>(),
         throwsA(isA<ViewModelError>()),
       );
     });
@@ -150,7 +150,7 @@ void main() {
       final orphanViewModel = SettingsViewModel();
 
       expect(
-        () => orphanViewModel.refer.readCached<AuthViewModel>(),
+        () => orphanViewModel.vef.readCached<AuthViewModel>(),
         throwsA(isA<ViewModelError>()),
       );
     });

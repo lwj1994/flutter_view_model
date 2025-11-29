@@ -201,7 +201,9 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     if (startMatch == null) return null;
     var i = startMatch.end;
     // Skip whitespace
-    while (i < src.length && (src[i] == ' ' || src[i] == '\n')) i++;
+    while (i < src.length && (src[i] == ' ' || src[i] == '\n')) {
+      i++;
+    }
     final sb = StringBuffer();
     int depth = 0;
     while (i < src.length) {
