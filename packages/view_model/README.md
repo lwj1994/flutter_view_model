@@ -53,7 +53,7 @@
     - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
   - [Custom Vef](#custom-vef)
     - [Core Concepts](#core-concepts)
-    - [Example: StartTaskVef](#example-starttaskbinder)
+    - [Example: StartTaskVef](#example-starttaskvef)
   - [DevTools Extension](#devtools-extension)
 
 ---
@@ -95,6 +95,7 @@ This makes ViewModel truly universal—**Everything can be a ViewModel**, not ju
 - Read: `vef.read<T>()` / `vef.readCached<T>()`
 - Recycle: `recycle(vm)`
 - Effects: `listen(onChanged)` / `listenState` / `listenStateSelect`
+
 
 ```dart
 // 1. Define a ViewModel
@@ -1196,6 +1197,7 @@ class MyWidget extends State with ViewModelStateMixin {
 }
 ```
 ## Custom Vef
+> **Note:** `vef` stands for **V**iewModel **E**xecution **F**ramework.
 
 `Vef` is primarily designed for scenarios that do not require a UI. For example, during App startup, you might need to execute some initialization tasks (such as preloading data, checking login status), but no Widgets are displayed yet. In this case, you can create a `StartTaskVef` as a host for the ViewModel to run logic.
 
