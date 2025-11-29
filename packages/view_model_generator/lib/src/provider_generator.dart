@@ -28,7 +28,8 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     final providerName = _providerVarName(className);
 
     // Read key/tag from annotation: prefer typed Expr, fallback to raw source.
-    final exprChecker = const TypeChecker.fromRuntime(Expr);
+    final exprChecker = TypeChecker.fromUrl(
+        'package:view_model_annotation/src/annotation.dart#Expr');
     String? keyExpr;
     String? tagExpr;
     bool keyIsString = false;
