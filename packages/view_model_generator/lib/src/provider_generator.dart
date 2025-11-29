@@ -29,6 +29,8 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
 
     // Read key/tag from annotation: prefer typed Expr, fallback to raw source.
     final exprChecker = TypeChecker.fromUrl(
+        'package:view_model_annotation/src/annotation.dart#Expression');
+    final legacyExprChecker = TypeChecker.fromUrl(
         'package:view_model_annotation/src/annotation.dart#Expr');
     String? keyExpr;
     String? tagExpr;
@@ -40,7 +42,9 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     final keyReader = annotation.peek('key');
     final tagReader = annotation.peek('tag');
 
-    if (keyReader != null && keyReader.instanceOf(exprChecker)) {
+    if (keyReader != null &&
+        (keyReader.instanceOf(exprChecker) ||
+            keyReader.instanceOf(legacyExprChecker))) {
       keyExpr = keyReader.peek('code')?.stringValue;
       keyIsString = false;
     } else if (keyReader != null && keyReader.isString) {
@@ -48,7 +52,9 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       keyIsString = true;
       keyFromReaderString = true;
     }
-    if (tagReader != null && tagReader.instanceOf(exprChecker)) {
+    if (tagReader != null &&
+        (tagReader.instanceOf(exprChecker) ||
+            tagReader.instanceOf(legacyExprChecker))) {
       tagExpr = tagReader.peek('code')?.stringValue;
       tagIsString = false;
     } else if (tagReader != null && tagReader.isString) {
@@ -244,10 +250,10 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     return "'${escaped}'";
   }
 
-  /// If the source is `Expr('code')` or `Expr("code")`, unwrap to `code`.
+  /// If the source is `Expression('code')` or legacy `Expr("code")`, unwrap to `code`.
   String? _unwrapExpr(String s) {
-    if (!s.startsWith('Expr(')) return null;
-    var i = 'Expr('.length;
+    if (!s.startsWith('Expression(') && !s.startsWith('Expr(')) return null;
+    var i = s.startsWith('Expression(') ? 'Expression('.length : 'Expr('.length;
     // Skip spaces
     while (i < s.length && (s[i] == ' ' || s[i] == '\n' || s[i] == '\t')) {
       i++;

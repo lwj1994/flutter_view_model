@@ -108,7 +108,7 @@ string literals and non-string expressions.
 
 - Strings: `'fixed'`, `"ok"`, `r'${p.id}'`.
 - Objects/expressions: `Object()`, numbers, booleans, `null`.
-- Expressions marker: `Expr('...')` to unwrap non-string code into
+- Expressions marker: `Expression('...')` to unwrap non-string code into
   builder closures (e.g. `repo`, `repo.id`, `repo.compute(page)`).
 
 Rules:
@@ -145,7 +145,7 @@ class C { C({required this.p}); final P p; }
 // Generates closures returning Object()
 
 // Expressions via Expr
-@GenProvider(key: Expr('repo'), tag: Expr('repo.id'))
+@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
 class G { G({required this.repo}); final Repository repo; }
 
 // Generates non-string expression closures

@@ -21,8 +21,14 @@ const GenProvider genProvider = GenProvider();
 /// Marker type to carry a code expression string in annotations.
 /// The generator will unwrap `Expr(code)` and emit `code` as an
 /// expression inside builder closures, instead of a string literal.
-class Expr {
+class Expression {
   final String code;
   final bool isString;
-  const Expr(this.code, {this.isString = false});
+  const Expression(this.code, {this.isString = false});
+}
+
+@Deprecated("use Expression")
+class Expr extends Expression {
+  const Expr(String code, {bool isString = false})
+      : super(code, isString: isString);
 }
