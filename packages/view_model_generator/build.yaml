@@ -1,19 +1,13 @@
 targets:
   $default:
     builders:
-      view_model_generator:provider:
+      view_model_generator:view_model_generator:
         enabled: true
 
 builders:
-  provider:
+  view_model_generator:
     import: "package:view_model_generator/view_model_generator.dart"
     builder_factories: ["viewModelProviderBuilder"]
     build_extensions: { ".dart": [".vm.dart"] }
     auto_apply: dependents
     build_to: source
-    required_inputs:
-      - ".freezed.dart"
-      - ".g.dart"
-      - ".dataforge.dart"
-      - ".gr.dart"
-      - ".chopper.dart"
