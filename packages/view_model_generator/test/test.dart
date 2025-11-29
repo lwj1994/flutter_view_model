@@ -80,7 +80,7 @@ class _BaseVM {
 
 // 7. StateViewModel special case: auto compute state via fromArgs
 @ShouldGenerate(r'''
-final feedViewModelProvider =
+final feedProvider =
     ViewModelProvider.arg3<FeedViewModel, FeedState, Repository, int>(
       builder: (FeedState state, Repository repo, int page) =>
           FeedViewModel(state: state, repo: repo, page: page),

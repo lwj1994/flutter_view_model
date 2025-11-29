@@ -271,12 +271,16 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     return buf.toString();
   }
 
-  /// Compute provider variable name. Keeps default rule except special cases.
+  /// Compute provider variable name.
   ///
-  /// Special case: PostViewModel -> postProvider.
+  /// Removes 'ViewModel' suffix if present, then camelCases and appends 'Provider'.
+  /// Example: FollowPostViewModel -> followPostProvider
   String _providerVarName(String className) {
-    if (className == 'PostViewModel') return 'postProvider';
-    return _toLowerCamel(className) + 'Provider';
+    var name = className;
+    if (name.endsWith('ViewModel')) {
+      name = name.substring(0, name.length - 9);
+    }
+    return _toLowerCamel(name) + 'Provider';
   }
 
   /// Collect required, class-owned params (exclude super-forwarded params).
