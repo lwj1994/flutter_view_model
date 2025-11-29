@@ -17,6 +17,25 @@
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
 > the [view_model](https://pub.dev/packages/view_model) package to me.
 
+
+## why I built this project
+I want state and dependency management in Flutter to be simple and minimally
+intrusive. I come from an Android background and prefer the ViewModel pattern.
+After using Riverpod for a long time, I found a few mismatches for my use
+cases:
+
+- No built‑in `key/tag`: sharing the same instance across pages/widgets often
+  means threading arguments everywhere;
+- Too intrusive: frequently requires inheriting `ConsumerWidget` or wrapping
+  with `Consumer`
+- Graph‑style dependencies become hard to trace and maintain as projects grow;
+  providers depending on each other create timing/topology chains I prefer to
+  avoid. Many features (multiple provider kinds, `AsyncValue`, mutations,
+  persistence, retries) aren’t essential for me. I just need a simple tool that
+  automatically manages ViewModel instances
+
+That’s why I built this project.
+
 ---
 
 - [view\_model](#view_model)

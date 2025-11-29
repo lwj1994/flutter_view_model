@@ -15,6 +15,19 @@
 > 感谢 [Miolin](https://github.com/Miolin) 将
 > [view_model](https://pub.dev/packages/view_model) 包的权限转移给我。
 
+## 为什么写这个项目
+
+目标是为 Flutter 提供一种更简单、侵入性更低的状态与依赖管理。
+我有 Android 背景，习惯使用 ViewModel。长期使用 Riverpod 后，
+发现它在一些细节上并不贴合我的场景：
+- 缺少 `key/tag`：跨页面或组件复用不得不到处传参；
+- 侵入性较强：往往需要继承 `ConsumerWidget` 或用 `Consumer` 包裹
+- 图式依赖不够友好：Provider 彼此依赖，项目一旦变大，时序与拓扑
+  关系很难追踪与维护, 我主张 Provider 之间不应该有依赖关系；大量特性（多种 Provider、`AsyncValue`、
+  `Mutations`、持久化、重试等）并非刚需。我的诉求只是一个能自动
+  管理 ViewModel 实例的简单工具
+所以我才做了这个项目。
+
 ---
 
 - [view\_model](#view_model)

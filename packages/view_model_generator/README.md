@@ -163,4 +163,3 @@ class E { E(); }
   `arg3`, `arg4`).
 - Super forwarded params (`required super.xxx`) are excluded from
   provider argument signature.
-
