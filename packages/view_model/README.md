@@ -290,8 +290,8 @@ You can declare cache `key`/`tag` directly in `@GenProvider(...)`:
 
 - Strings: `'fixed'`, "ok", `r'${id}'`, `r'kp-$p'`
 - Objects/expressions: `Object()`, numbers, booleans, `null`
-- Expressions (non-strings) via `Expr('...')`: e.g. `Expr('repo')`,
-  `Expr('repo.id')`, `Expr('repo.compute(page)')`
+- Expressions (non-strings) via `Expression('...')`: e.g. `Expression('repo')`,
+  `Expression('repo.id')`, `Expression('repo.compute(page)')`
 
 Generated code will attach `key`/`tag` closures for arg providers (matching the
 builder signature), or constants for no-arg providers. Examples:
@@ -309,7 +309,7 @@ final bProvider = ViewModelProvider.arg<B, String>(
 );
 
 // Single arg + expressions via Expr
-@GenProvider(key: Expr('repo'), tag: Expr('repo.id'))
+@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
 class RepoVM { RepoVM({required this.repo}); final Repository repo; }
 
 // Generated

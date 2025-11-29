@@ -330,7 +330,7 @@ final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
 
 - 字符串：`'fixed'`、`"ok"`、`r'${id}'`、`r'kp-$p'`
 - 对象/表达式：`Object()`、数字、布尔、`null`
-- 表达式标记 `Expr('...')`：作为非字符串表达式在闭包中展开，如
+- 表达式标记 `Expression('...')`：作为非字符串表达式在闭包中展开，如
   `repo`、`repo.id`、`repo.compute(page)`
 
 有参 Provider 下，`key/tag` 生成与 `builder` 相同签名的闭包；
@@ -350,7 +350,7 @@ final bProvider = ViewModelProvider.arg<B, String>(
 );
 
 // 单参 + 表达式
-@GenProvider(key: Expr('repo'), tag: Expr('repo.id'))
+@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
 class RepoVM { RepoVM({required this.repo}); final Repository repo; }
 
 final repoProvider = ViewModelProvider.arg<RepoVM, Repository>(

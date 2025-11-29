@@ -26,7 +26,7 @@ class UserViewModel extends ViewModel {
   UserViewModel(this.repo);
 }
 
-@GenProvider(key: Expr('repo'), tag: "user_key")
+@GenProvider(key: Expression('repo'), tag: "user_key")
 class UserKeyViewModel extends ViewModel {
   final Repository repo;
 

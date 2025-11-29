@@ -112,7 +112,7 @@ Provider 变量名通常为 `lowerCamel(ClassName) + 'Provider'`。
 
 - 字符串：`'fixed'`、`"ok"`、`r'${p.id}'`
 - 对象 / 表达式：`Object()`、数字、布尔、`null`
-- 表达式标记：`Expr('...')`，用于在生成的闭包中展开非字符串表达式，
+- 表达式标记：`Expression('...')`，用于在生成的闭包中展开非字符串表达式，
   例如 `repo`、`repo.id`、`repo.compute(page)`
 
 规则：
@@ -147,7 +147,7 @@ class C { C({required this.p}); final P p; }
 // 生成：闭包中返回 Object()
 
 // 使用 Expr 传递非字符串表达式
-@GenProvider(key: Expr('repo'), tag: Expr('repo.id'))
+@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
 class G { G({required this.repo}); final Repository repo; }
 
 // 生成：非字符串表达式的闭包

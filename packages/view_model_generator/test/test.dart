@@ -270,7 +270,7 @@ final gProvider = ViewModelProvider.arg<G, Repository>(
   tag: (Repository repo) => repo.id,
 );
 ''')
-@GenProvider(key: Expr('repo'), tag: Expr('repo.id'))
+@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
 class G {
   final Repository repo;
   G({required this.repo});
@@ -298,7 +298,7 @@ final i2Provider = ViewModelProvider.arg2<I2, String, int>(
   tag: (String id, int page) => page,
 );
 ''')
-@GenProvider(key: Expr('id'), tag: Expr('page'))
+@GenProvider(key: Expression('id'), tag: Expression('page'))
 class I2 {
   final String id;
   final int page;
@@ -340,7 +340,7 @@ final mProvider = ViewModelProvider.arg2<M, Repository, int>(
   tag: (Repository repo, int page) => 'ok',
 );
 ''')
-@GenProvider(key: Expr('repo.compute(page)'), tag: 'ok')
+@GenProvider(key: Expression('repo.compute(page)'), tag: 'ok')
 class M {
   final Repository repo;
   final int page;
