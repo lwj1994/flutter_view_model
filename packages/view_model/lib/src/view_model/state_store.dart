@@ -203,7 +203,7 @@ class Reducer<S> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Reducer &&
+      other is Reducer<S> &&
           runtimeType == other.runtimeType &&
           builder == other.builder;
 

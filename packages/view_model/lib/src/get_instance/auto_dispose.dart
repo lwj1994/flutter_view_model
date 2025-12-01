@@ -57,10 +57,7 @@ class AutoDisposeInstanceController {
   /// Prevents duplicate listener registration for the same instance handle.
   final Map<Object, bool> _notifierListeners = {};
 
-  /// Human-readable name for this watcher, typically the widget class name.
-  final String binderName;
-
-  final Vef ref;
+  final Vef vef;
 
   /// Creates a new auto-dispose instance controller.
   ///
@@ -69,18 +66,8 @@ class AutoDisposeInstanceController {
   /// - [binderName]: Descriptive name for this watcher context
   AutoDisposeInstanceController({
     required this.onRecreate,
-    required this.binderName,
-    required this.ref,
+    required this.vef,
   });
-
-  /// Gets the unique watcher ID combining the watcher name and UUID.
-  ///
-  /// This ID is used to identify this specific watcher in the ViewModel
-  /// dependency tracking system.
-  String get _binderId => "$binderName(id=${this.hashCode})";
-
-  /// Public getter for the binder id string.
-  String get binderId => _binderId;
 
   /// Gets a ViewModel instance with automatic lifecycle management.
   ///
@@ -116,7 +103,7 @@ class AutoDisposeInstanceController {
     factory = (factory ?? InstanceFactory<T>());
     factory = factory.copyWith(
       arg: factory.arg.copyWith(
-        binderId: _binderId,
+        vefId: vef.id,
       ),
     );
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
@@ -169,7 +156,7 @@ class AutoDisposeInstanceController {
   void recycle(Object instance) {
     _instanceNotifiers.removeWhere((e) {
       if (e.instance == instance) {
-        e.recycle();
+        e.unbindAll();
         return true;
       } else {
         return false;
@@ -184,7 +171,7 @@ class AutoDisposeInstanceController {
   void unbindInstance(Object instance) {
     for (final e in _instanceNotifiers) {
       if (e.instance == instance) {
-        e.removeBinder(_binderId);
+        e.unbindVef(vef.id);
         break;
       }
     }
@@ -209,9 +196,9 @@ class AutoDisposeInstanceController {
   Future<void> dispose() async {
     for (final e in _instanceNotifiers) {
       if (e.instance is ViewModel) {
-        (e.instance as ViewModel).refHandler.removeRef(ref);
+        (e.instance as ViewModel).refHandler.removeRef(vef);
       }
-      e.removeBinder(_binderId);
+      e.unbindVef(vef.id);
     }
     _instanceNotifiers.clear();
   }

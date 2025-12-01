@@ -4,10 +4,14 @@ on:
   push:
     branches:
       - main
+      - develop
 
 jobs:
   codecov-upload:
     runs-on: self-hosted  # Specify job runs on self-hosted runner
+    defaults:
+      run:
+        working-directory: packages/view_model
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -15,15 +19,16 @@ jobs:
       - name: 👷 Install Dependencies
         timeout-minutes: 1
         run: |
-          fvm dart pub get
+          puro dart --version
+          puro dart pub get
 
       - name: 🔎 Check format
         timeout-minutes: 1
-        run: fvm dart format --set-exit-if-changed -l 80 -o none lib/
+        run: puro dart format --set-exit-if-changed -l 80 -o none lib/
 
       - name: 📈 Check analyzer
         timeout-minutes: 1
-        run: fvm dart analyze --fatal-infos --fatal-warnings lib/
+        run: puro dart analyze --fatal-infos --fatal-warnings lib/
 
       #- name: 🌐 Setup Chrome
       #  uses: browser-actions/setup-chrome@latest
@@ -31,10 +36,11 @@ jobs:
       - name: 🧪 Run tests
         timeout-minutes: 2
         run: |
-          fvm flutter test --coverage  test/test.dart
+          puro flutter test --coverage test
 
       - name: 📥 Upload coverage to Codecov
         timeout-minutes: 1
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/view_model/coverage/lcov.info

@@ -65,7 +65,6 @@ void main() {
         providers: [provider1, provider2, provider3],
         onWidgetPause: () => pauseCount++,
         onWidgetResume: () => resumeCount++,
-        binderName: () => 'test',
       );
     });
 
@@ -240,4 +239,44 @@ void main() {
       },
     );
   });
+
+  group('PauseAwareController Provider Management', () {
+    test('manages providers and callbacks', () async {
+      bool isPaused = false;
+      final controller = PauseAwareController(
+        onWidgetPause: () => isPaused = true,
+        onWidgetResume: () => isPaused = false,
+        providers: [],
+      );
+
+      final provider = TestPauseProvider();
+      controller.addProvider(provider);
+
+      expect(controller.isPaused, false);
+
+      provider.setPaused(true);
+      // Wait for stream event
+      await Future.delayed(Duration.zero);
+      expect(controller.isPaused, true);
+      expect(isPaused, true);
+
+      provider.setPaused(false);
+      await Future.delayed(Duration.zero);
+      expect(controller.isPaused, false);
+      expect(isPaused, false);
+
+      controller.removeProvider(provider);
+      expect(controller.providers, isEmpty);
+    });
+  });
+}
+
+class TestPauseProvider extends VefPauseProvider {
+  void setPaused(bool paused) {
+    if (paused) {
+      pause();
+    } else {
+      resume();
+    }
+  }
 }

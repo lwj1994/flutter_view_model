@@ -200,6 +200,67 @@ void main() {
       expect(vm1.name, 'Alice');
     });
   });
+
+  group('ViewModelProvider Args', () {
+    test('arg providers build correct instances', () {
+      final p1 = ViewModelProvider.arg<TestModel, int>(
+        builder: (a) => TestModel(),
+      );
+      final factory1 = p1(1);
+      expect(factory1.build(), isA<TestModel>());
+
+      final p2 = ViewModelProvider.arg2<TestModel, int, String>(
+        builder: (a, b) => TestModel(),
+      );
+      final factory2 = p2(1, 'a');
+      expect(factory2.build(), isA<TestModel>());
+
+      final p3 = ViewModelProvider.arg3<TestModel, int, String, bool>(
+        builder: (a, b, c) => TestModel(),
+      );
+      final factory3 = p3(1, 'a', true);
+      expect(factory3.build(), isA<TestModel>());
+
+      final p4 = ViewModelProvider.arg4<TestModel, int, String, bool, double>(
+        builder: (a, b, c, d) => TestModel(),
+      );
+      final factory4 = p4(1, 'a', true, 1.0);
+      expect(factory4.build(), isA<TestModel>());
+    });
+
+    test('creates correct factory properties', () {
+      final provider = ViewModelProvider(
+        builder: () => TestModel(),
+        key: 'key1',
+        tag: 'tag1',
+        isSingleton: true,
+      );
+
+      expect(provider.key(), 'key1');
+      expect(provider.tag(), 'tag1');
+      expect(provider.singleton(), true);
+      expect(provider.build(), isA<TestModel>());
+    });
+
+    test('arg provider creates correct factory properties', () {
+      final argProvider = ViewModelProvider.arg<TestModel, int>(
+        builder: (i) => TestModel(),
+        key: (i) => 'key$i',
+        tag: (i) => 'tag$i',
+        isSingleton: (i) => i % 2 == 0,
+      );
+
+      final factory1 = argProvider(1);
+      expect(factory1.key(), 'key1');
+      expect(factory1.tag(), 'tag1');
+      expect(factory1.singleton(), false);
+
+      final factory2 = argProvider(2);
+      expect(factory2.key(), 'key2');
+      expect(factory2.tag(), 'tag2');
+      expect(factory2.singleton(), true);
+    });
+  });
 }
 
 class ComplexArg {
@@ -219,3 +280,5 @@ class ComplexArg {
   @override
   int get hashCode => id.hashCode ^ name.hashCode;
 }
+
+class TestModel extends ViewModel {}

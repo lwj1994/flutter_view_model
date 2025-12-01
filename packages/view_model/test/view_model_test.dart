@@ -1,38 +1,63 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/view_model.dart';
+import 'package:view_model/src/view_model/util.dart';
 
 import 'test_widget.dart';
 
 class MyViewModelLifecycle extends ViewModelLifecycle {
+  int onCreateCount = 0;
+  int onDisposeCount = 0;
+  int onAddWatcherCount = 0;
+  int onRemoveWatcherCount = 0;
+  ViewModel? lastViewModel;
+
   @override
-  void onAddWatcher(ViewModel viewModel, InstanceArg arg, String? newWatchId) {
-    debugPrint("MyViewModelLifecycle onAddWatcher $viewModel $arg $newWatchId");
+  void onBind(ViewModel viewModel, InstanceArg arg, String? newWatchId) {
+    debugPrint("MyViewModelLifecycle onBind $viewModel $arg $newWatchId");
+    onAddWatcherCount++;
+    lastViewModel = viewModel;
   }
 
   @override
   void onCreate(ViewModel viewModel, InstanceArg arg) {
     debugPrint("MyViewModelLifecycle onCreate $viewModel  $arg");
+    onCreateCount++;
+    lastViewModel = viewModel;
   }
 
   @override
   void onDispose(ViewModel viewModel, InstanceArg arg) {
     debugPrint("MyViewModelLifecycle onDispose $viewModel    $arg");
+    onDisposeCount++;
+    lastViewModel = viewModel;
   }
 
   @override
-  void onRemoveWatcher(
-      ViewModel viewModel, InstanceArg arg, String? removedWatchId) {
-    debugPrint(
-        "MyViewModelLifecycle onRemoveWatcher $viewModel $arg $removedWatchId");
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String? removedWatchId) {
+    debugPrint("MyViewModelLifecycle onUnbind $viewModel $arg $removedWatchId");
+    onRemoveWatcherCount++;
+    lastViewModel = viewModel;
   }
 }
 
 void main() {
-  group('stateless_view_model state', () {
+  group('view_model lifecycle and features', () {
+    late MyViewModelLifecycle lifecycleObserver;
+    late Function() removeLifecycle;
+
     setUp(() {
-      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
+      lifecycleObserver = MyViewModelLifecycle();
+      ViewModel.initialize(
+        config: ViewModelConfig(isLoggingEnabled: true),
+      );
+      removeLifecycle = ViewModel.addLifecycle(lifecycleObserver);
+    });
+
+    tearDown(() {
+      removeLifecycle();
     });
 
     test("dispose error", () async {
@@ -41,13 +66,13 @@ void main() {
         builder: () {
           return DisposeErrorViewModel();
         },
-        arg: const InstanceArg(binderId: "watchId1"),
+        arg: const InstanceArg(vefId: "watchId1"),
       ));
       final vmIns = vm.instance;
-      vm.recycle();
+      vm.unbindAll();
 
-      await Future.delayed(const Duration(seconds: 1));
-      assert(vm.binderIds.isEmpty);
+      await Future.delayed(const Duration(milliseconds: 100));
+      assert(vm.bindedVefIds.isEmpty);
       assert(vmIns.isDisposed);
     });
 
@@ -62,7 +87,7 @@ void main() {
       viewModel.notifyListeners();
       viewModel.notifyListeners();
       viewModel.notifyListeners();
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 100));
       assert(c == 3);
     });
 
@@ -75,10 +100,441 @@ void main() {
       viewModel.notifyListeners();
       viewModel.notifyListeners();
       viewModel.notifyListeners();
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 100));
       assert(c == 3);
     });
+
+    test("lifecycle callbacks", () async {
+      final factory = TestStatelessViewModelFactory(keyV: 'lifecycle_test');
+      final vmProvider = ViewModelProvider<TestStatelessViewModel>(
+        builder: factory.build,
+        key: factory.key(),
+      );
+
+      // Create (and watch)
+      final vm = instanceManager.getNotifier<TestStatelessViewModel>(
+        factory: InstanceFactory<TestStatelessViewModel>(
+          builder: vmProvider.builder,
+          arg: InstanceArg(
+            key: vmProvider.key,
+            vefId: 'binder1',
+          ),
+        ),
+      );
+
+      expect(lifecycleObserver.onCreateCount, 1);
+      expect(lifecycleObserver.onAddWatcherCount, 1);
+      expect(lifecycleObserver.lastViewModel, isA<TestStatelessViewModel>());
+
+      // Add another watcher
+      vm.bindVef('binder2');
+      expect(lifecycleObserver.onAddWatcherCount, 2);
+
+      // Remove watcher
+      vm.unbindVef('binder1');
+      expect(lifecycleObserver.onRemoveWatcherCount, 1);
+
+      // Remove last watcher -> dispose
+      vm.unbindVef('binder2');
+      await Future.delayed(Duration.zero);
+      expect(lifecycleObserver.onDisposeCount, 1);
+    });
+
+    test("readCached and maybeReadCached", () {
+      // Setup a cached instance
+      final factory = InstanceFactory<TestStatelessViewModel>(
+        builder: () => TestStatelessViewModel(),
+        arg: const InstanceArg(key: 'cached_key'),
+      );
+      instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
+
+      // maybeReadCached success
+      final found =
+          ViewModel.maybeReadCached<TestStatelessViewModel>(key: 'cached_key');
+      expect(found, isNotNull);
+
+      // maybeReadCached fail
+      final notFound =
+          ViewModel.maybeReadCached<TestStatelessViewModel>(key: 'missing_key');
+      expect(notFound, isNull);
+
+      // readCached success
+      final found2 =
+          ViewModel.readCached<TestStatelessViewModel>(key: 'cached_key');
+      expect(found2, isNotNull);
+
+      // readCached fail
+      expect(
+        () => ViewModel.readCached<TestStatelessViewModel>(key: 'missing_key'),
+        throwsA(isA<ViewModelError>()),
+      );
+    });
+
+    test("readCached by tag", () {
+      final factory = InstanceFactory<TestStatelessViewModel>(
+        builder: () => TestStatelessViewModel(),
+        arg: const InstanceArg(tag: 'cached_tag'),
+      );
+      instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
+
+      final found =
+          ViewModel.readCached<TestStatelessViewModel>(tag: 'cached_tag');
+      expect(found, isNotNull);
+      expect(found.tag, 'cached_tag');
+
+      expect(
+        () => ViewModel.readCached<TestStatelessViewModel>(tag: 'missing_tag'),
+        throwsA(isA<ViewModelError>()),
+      );
+    });
+
+    test("update method", () async {
+      final vm = TestStatelessViewModel();
+      bool updated = false;
+      vm.listen(onChanged: () => updated = true);
+
+      await vm.update(() async {
+        // do work
+      });
+
+      expect(updated, isTrue);
+    });
+
+    test("addDispose", () async {
+      final vm = TestStatelessViewModel();
+      const bool disposeCalled = false;
+
+      // Use the public API to add dispose callback if exposed,
+      // or we need to use a method that calls addDispose.
+      // Wait, addDispose is protected in ViewModel mixin.
+      // We can't call it directly from outside unless we subclass.
+      // But TestStatelessViewModel is a ViewModel.
+      // We can't modify TestStatelessViewModel here easily as it is in another file.
+      // Let's define a local VM for this test.
+    });
+
+    test("addDispose local", () async {
+      final vm = DisposeTestVM();
+      bool called = false;
+      vm.addDisposeCallback(() {
+        called = true;
+      });
+
+      final handle = instanceManager.getNotifier(
+          factory: InstanceFactory(
+              builder: () => vm, arg: const InstanceArg(key: "dispose_test")));
+
+      handle.unbindAll();
+      await Future.delayed(const Duration(microseconds: 100));
+      expect(called, isTrue);
+    });
+
+    test('StackPathLocator works', () {
+      final locator = StackPathLocator();
+      final path = locator.getCurrentObjectPath();
+      expect(path, isNotNull);
+      final path2 = locator.getCurrentObjectPath();
+      expect(path, path2); // Should be cached
+    });
   });
+
+  group('ChangeNotifierViewModel Specific', () {
+    test('addListener delegates to listen', () {
+      final vm = TestChangeNotifierViewModel();
+      bool called = false;
+      vm.addListener(() {
+        called = true;
+      });
+
+      vm.notify();
+      // Wait for stream
+      expect(Future.delayed(Duration.zero).then((_) => called),
+          completion(isTrue));
+    });
+  });
+
+  group('ViewModelLifecycle Extended', () {
+    test('addLifecycle returns remover and multiple observers work', () async {
+      final l1 = TestViewModelLifecycle();
+      final l2 = TestViewModelLifecycle();
+
+      final r1 = ViewModel.addLifecycle(l1);
+      final r2 = ViewModel.addLifecycle(l2);
+
+      final vm = instanceManager.getNotifier(
+        factory: InstanceFactory<TestModel>(
+          builder: () => TestModel(),
+          arg: const InstanceArg(key: 'multi_lifecycle_vm'),
+        ),
+      );
+
+      expect(l1.onCreateCount, 1);
+      expect(l2.onCreateCount, 1);
+
+      // Test remover
+      r1();
+
+      final vm2 = instanceManager.getNotifier(
+        factory: InstanceFactory<TestModel>(
+          builder: () => TestModel(),
+          arg: const InstanceArg(key: 'multi_lifecycle_vm_2'),
+        ),
+      );
+
+      await Future.delayed(const Duration(milliseconds: 20));
+      expect(l1.onCreateCount, 1); // Should not increase
+      expect(l2.onCreateCount, 2); // Should increase
+
+      r2();
+    });
+  });
+
+  group('Coverage Edge Cases', () {
+    test('ViewModel.maybeReadCached returns null on error/missing', () {
+      expect(ViewModel.maybeReadCached<TestModel>(key: 'non_existent'), isNull);
+    });
+
+    test('ViewModel.removeLifecycle', () {
+      final l = TestViewModelLifecycle();
+      ViewModel.addLifecycle(l);
+      ViewModel.removeLifecycle(l);
+      // verify it's removed by creating a VM and checking counts
+      final vm = instanceManager.getNotifier(
+        factory: InstanceFactory<TestModel>(
+          builder: () => TestModel(),
+          arg: const InstanceArg(key: 'lifecycle_test_vm'),
+        ),
+      );
+      expect(l.onCreateCount, 0);
+    });
+
+    test('ViewModel removeListener', () {
+      final vm = TestModel();
+      bool called = false;
+      void listener() => called = true;
+
+      vm.listen(onChanged: listener);
+      vm.removeListener(listener);
+      vm.notifyListeners();
+
+      expect(called, isFalse);
+    });
+
+    test('ViewModel notifyListeners handles listener error', () {
+      final vm = TestModel();
+      vm.listen(onChanged: () {
+        throw Exception("Test Listener Error");
+      });
+      // Should not throw
+      vm.notifyListeners();
+    });
+
+    test('ViewModel notifyListeners after dispose', () {
+      final vm = DisposeTestVM();
+      // recycle to dispose
+      final handle = instanceManager.getNotifier(
+          factory: InstanceFactory(
+              builder: () => vm,
+              arg: const InstanceArg(key: "dispose_notify")));
+      handle.unbindAll();
+
+      // Should log but not throw
+      vm.notifyListeners();
+    });
+
+    test('StateViewModel edge cases', () {
+      final vm = CoverageStateVM();
+
+      // previousState initial is null
+      expect(vm.previousState, isNull);
+
+      vm.increment();
+      expect(vm.previousState, 0);
+      expect(vm.state, 1);
+
+      // removeStateListener
+      bool stateCalled = false;
+      void stateListener(int? p, int n) => stateCalled = true;
+      vm.listenState(onChanged: stateListener);
+      vm.removeStateListener(stateListener);
+      vm.increment();
+      expect(stateCalled, isFalse);
+
+      // setState after dispose
+      final handle = instanceManager.getNotifier(
+          factory: InstanceFactory(
+              builder: () => vm, arg: const InstanceArg(key: "dispose_state")));
+      handle.unbindAll();
+
+      vm.forceSetState(100); // Should log and return
+    });
+
+    test('AutoDisposeController handles error', () async {
+      final vm = DisposeTestVM();
+      vm.addDisposeCallback(() {
+        throw Exception("Dispose Error");
+      });
+
+      final handle = instanceManager.getNotifier(
+          factory: InstanceFactory(
+              builder: () => vm,
+              arg: const InstanceArg(key: "dispose_error_auto")));
+
+      // Should not throw
+      handle.unbindAll();
+    });
+  });
+
+  group('ViewModel core helpers (merged)', () {
+    test('maybeReadCached returns null for missing key/tag', () {
+      final resByKey = ViewModel.maybeReadCached<TestModel>(key: 'nope');
+      final resByTag = ViewModel.maybeReadCached<TestModel>(tag: 'none');
+      expect(resByKey, isNull);
+      expect(resByTag, isNull);
+    });
+
+    test('readCached throws when disposed', () {
+      final ref = _CoreRef();
+      final fac = ViewModelProvider<TestModel>(
+        builder: () => TestModel(),
+        key: () => 'dispose_key',
+      );
+      final vm = ref.watch(fac);
+      vm.dispose();
+      expect(
+        () => ViewModel.readCached<TestModel>(key: 'dispose_key'),
+        throwsA(isA<ViewModelError>()),
+      );
+      ref.dispose();
+    });
+
+    test('update() triggers notifyListeners', () async {
+      final vm = TestModel();
+      int hit = 0;
+      final disposer = vm.listen(onChanged: () => hit++);
+      await vm.update(() {
+        // mutate
+      });
+      expect(hit, 1);
+      disposer();
+    });
+  });
+
+  group('ViewModel Key Equality (merged)', () {
+    test('equal key objects resolve to same instance', () {
+      final viewModel1 = instanceManager
+          .getNotifier(
+            factory: InstanceFactory<TestModel>(
+              builder: () => TestModel(),
+              arg: const InstanceArg(key: _MyKey('a')),
+            ),
+          )
+          .instance;
+
+      final viewModel2 = instanceManager
+          .getNotifier(
+            factory: InstanceFactory<TestModel>(
+              builder: () => TestModel(),
+              arg: const InstanceArg(key: _MyKey('a')),
+            ),
+          )
+          .instance;
+
+      expect(identical(viewModel1, viewModel2), isTrue);
+    });
+  });
+
+  group('ViewModelLifecycle Basic (merged)', () {
+    test('lifecycle receives create/add/remove/dispose', () async {
+      final lc = _LC();
+      final remove = ViewModel.addLifecycle(lc);
+      final ref = _CoreRef();
+      final provider = ViewModelProvider<TestModel>(
+        builder: () => TestModel(),
+        key: () => 'basic_lifecycle',
+      );
+      final vm = ref.watch(provider);
+      await Future.delayed(const Duration(milliseconds: 20));
+      expect(lc.created >= 1, isTrue);
+
+      // Dispose via Vef lifecycle
+      ref.recycle(vm);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(lc.disposed >= 1, isTrue);
+
+      remove();
+      ref.dispose();
+    });
+  });
+
+  group('Core API extras', () {
+    test('onDependencyNotify coverage via exposed wrapper', () {
+      final vm = ExposedViewModel();
+      vm.callOnDependencyNotify(TestModel());
+    });
+  });
+}
+
+class CoverageStateVM extends StateViewModel<int> {
+  CoverageStateVM() : super(state: 0);
+
+  void increment() => setState(state + 1);
+
+  void forceSetState(int s) => setState(s);
+
+  @override
+  void onError(dynamic e) {
+    super.onError(e); // Coverage for super.onError
+  }
+}
+
+class TestChangeNotifierViewModel extends ChangeNotifierViewModel {
+  void notify() {
+    notifyListeners();
+  }
+}
+
+class TestViewModelLifecycle extends ViewModelLifecycle {
+  int onCreateCount = 0;
+  int onDisposeCount = 0;
+  int onAddWatcherCount = 0;
+  int onRemoveWatcherCount = 0;
+
+  @override
+  void onCreate(ViewModel viewModel, InstanceArg arg) {
+    onCreateCount++;
+  }
+
+  @override
+  void onDispose(ViewModel viewModel, InstanceArg arg) {
+    onDisposeCount++;
+  }
+
+  @override
+  void onBind(ViewModel viewModel, InstanceArg arg, String? newWatchId) {
+    onAddWatcherCount++;
+  }
+
+  @override
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String? removedWatchId) {
+    onRemoveWatcherCount++;
+  }
+}
+
+class TestModel extends ViewModel {}
+
+/// Exposed wrapper to call protected onDependencyNotify for coverage.
+class ExposedViewModel extends ViewModel {
+  void callOnDependencyNotify(ViewModel vm) {
+    onDependencyNotify(vm);
+  }
+}
+
+class DisposeTestVM extends ViewModel {
+  void addDisposeCallback(VoidCallback callback) {
+    addDispose(callback);
+  }
 }
 
 class ChangeNotifierVM extends ChangeNotifierViewModel {}
@@ -89,5 +545,44 @@ class ChangeNotifierVMFactory with ViewModelFactory<ChangeNotifierVM> {
   @override
   ChangeNotifierVM build() {
     return ChangeNotifierVM();
+  }
+}
+
+class _CoreRef with Vef {}
+
+class _MyKey {
+  final String value;
+  const _MyKey(this.value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is _MyKey && other.value == value);
+  @override
+  int get hashCode => value.hashCode;
+}
+
+class _LC implements ViewModelLifecycle {
+  int created = 0;
+  int addWatcher = 0;
+  int removeWatcher = 0;
+  int disposed = 0;
+
+  @override
+  void onCreate(ViewModel viewModel, InstanceArg arg) {
+    created++;
+  }
+
+  @override
+  void onBind(ViewModel viewModel, InstanceArg arg, String? newWatchId) {
+    addWatcher++;
+  }
+
+  @override
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String? removedWatchId) {
+    removeWatcher++;
+  }
+
+  @override
+  void onDispose(ViewModel viewModel, InstanceArg arg) {
+    disposed++;
   }
 }

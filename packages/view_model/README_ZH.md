@@ -31,6 +31,7 @@
 ---
 
 - [view\_model](#view_model)
+  - [为什么写这个项目](#为什么写这个项目)
   - [万物皆是 ViewModel](#万物皆是-viewmodel)
   - [快速开始](#快速开始)
   - [复用实例](#复用实例)
@@ -66,7 +67,6 @@
   - [自定义 Vef](#自定义-vef)
     - [核心概念](#核心概念)
     - [示例：StartTaskRef（常用于应用启动）](#示例starttaskref常用于应用启动)
-  - [DevTools 扩展](#devtools-扩展)
 
 ---
 
@@ -258,145 +258,10 @@ final vm = vef.watch(userProvider('user-123'));
 
 #### Provider 生成器（推荐）
 
-使用 `view_model_generator` 自动生成 Provider。
-文档
-https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README_ZH.md
-
-**安装**
-
-```yaml
-dependencies:
-  view_model: ^latest_version
-
-dev_dependencies:
-  build_runner: ^latest_version
-  view_model_generator: ^latest_version
-```
-
-**使用**
-
-1）给 ViewModel 添加注解：
-
-```dart
-import 'package:view_model/view_model.dart';
-import 'package:view_model_annotation/view_model_annotation.dart';
-
-part 'counter_view_model.vm.dart';
-
-@genProvider
-class CounterViewModel extends ViewModel {
-  int count = 0;
-  void increment() => update(() => count++);
-}
-```
-
-2）运行构建（Flutter）：
-
-```bash
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-纯 Dart：
-
-```bash
-dart run build_runner build
-```
-
-3）生成的 Provider（无参示例）：
-
-```dart
-final counterProvider = ViewModelProvider<CounterViewModel>(
-  builder: () => CounterViewModel(),
-);
-```
-
-**带构造函数参数（最多 4 个）**：生成 `arg/arg2/arg3/arg4` 变体，
-会排除 `required super.xxx` 的转发参数。
-
-```dart
-@genProvider
-class UserViewModel extends ViewModel {
-  final String userId;
-  UserViewModel(this.userId);
-}
-
-// 生成
-final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
-  builder: (String userId) => UserViewModel(userId),
-);
-```
-
-**Key/Tag 声明**：在 `@GenProvider(...)` 中声明，支持：
-
-- 字符串：`'fixed'`、`"ok"`、`r'${id}'`、`r'kp-$p'`
-- 对象/表达式：`Object()`、数字、布尔、`null`
-- 表达式标记 `Expression('...')`：作为非字符串表达式在闭包中展开，如
-  `repo`、`repo.id`、`repo.compute(page)`
-
-有参 Provider 下，`key/tag` 生成与 `builder` 相同签名的闭包；
-无参 Provider 下，`key/tag` 直接作为常量插入。
-
-示例：
-
-```dart
-// 单参 + 字符串模板
-@GenProvider(key: r'kp-$p', tag: r'tg-$p')
-class B { B({required this.p}); final String p; }
-
-final bProvider = ViewModelProvider.arg<B, String>(
-  builder: (String p) => B(p: p),
-  key: (String p) => 'kp-$p',
-  tag: (String p) => 'tg-$p',
-);
-
-// 单参 + 表达式
-@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
-class RepoVM { RepoVM({required this.repo}); final Repository repo; }
-
-final repoProvider = ViewModelProvider.arg<RepoVM, Repository>(
-  builder: (Repository repo) => RepoVM(repo: repo),
-  key: (Repository repo) => repo,
-  tag: (Repository repo) => repo.id,
-);
-
-// 无参 + 常量
-@GenProvider(key: 'fixed', tag: Object())
-class E extends ViewModel { E(); }
-
-final eProvider = ViewModelProvider<E>(
-  builder: () => E(),
-  key: 'fixed',
-  tag: Object(),
-);
-```
-
-**Factory 优先（适配 StateViewModel）**：
-
-如果类中定义了 `factory ClassName.provider(...)`，生成器会优先选择
-这个 factory（当参数数量匹配时）。对于 `StateViewModel<S>`，通常可以
-在 factory 中基于入参初始化 `state`：
-
-```dart
-@genProvider
-class MyStateViewModel extends StateViewModel<MyState> {
-  final String name;
-
-  MyStateViewModel({required MyState state, required this.name})
-      : super(state);
-
-  factory MyStateViewModel.provider(Arg arg) => MyStateViewModel(
-        state: MyState(name: arg.name),
-        name: arg.name,
-      );
-}
-```
-
-**参数来源说明**：
-
-- Provider 的参数来自主构造（匿名构造）的必填参数，
-  会排除 `required super.xxx` 的转发参数；
-- 当存在 `factory ClassName.provider(...)` 时，生成器优先使用该
-  factory，此时 `builder` 的签名以 factory 的必填参数为准。
+推荐使用 `view_model_generator` 自动生成 Provider，减少样板并保持一致。
+更多细节见生成器文档与迁移指南：
+- Generator: https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README_ZH.md
+- Migration: https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_PROVIDER_MIGRATION.md
 
 
 
@@ -703,7 +568,7 @@ abstract class ViewModelLifecycle {
   /// - [viewModel]: 被监听的 ViewModel
   /// - [arg]: 实例参数
   /// - [newBinderId]: 新绑定者的唯一标识符
-  void onAddBinder(ViewModel viewModel, InstanceArg arg, String newBinderId) {}
+  void onBind(ViewModel viewModel, InstanceArg arg, String newBinderId) {}
 
   /// 当一个绑定者从 ViewModel 中移除时调用。
   ///
@@ -711,48 +576,11 @@ abstract class ViewModelLifecycle {
   /// - [viewModel]: 被取消监听的 ViewModel
   /// - [arg]: 实例参数
   /// - [removedBinderId]: 被移除的绑定者的唯一标识符
-  void onRemoveBinder(ViewModel viewModel, InstanceArg arg, String removedBinderId) {}
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String removedBinderId) {}
 
   /// 当 ViewModel 被销毁时调用。
   ///
   /// 参数:-
-
-  [
-
-  viewModel
-
-  ]
-
-      :
-
-  被
-
-  销
-
-  毁
-
-  的
-
-  ViewModel
-
-  -
-
-  [
-
-  arg
-
-  ]
-
-      :
-
-  实
-
-  例
-
-  参
-
-  数
-
   void onDispose(ViewModel viewModel, InstanceArg arg) {}
 }
 ```
@@ -1252,20 +1080,3 @@ class StartTaskRef with Vef {
 // await starter.run();
 // starter.close();
 ```
-
-
-## DevTools 扩展
-
-启用 DevTools 扩展以进行实时 ViewModel 监控。
-
-在项目的根目录中创建 `devtools_options.yaml`。
-
-```yaml
-description: This file stores settings for Dart & Flutter DevTools.
-documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
-extensions:
-  - view_model: true
-```
-
-![](https://i.imgur.com/5itXPYD.png)
-![](https://imgur.com/83iOQhy.png)
