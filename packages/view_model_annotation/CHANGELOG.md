@@ -1,3 +1,6 @@
+## 0.2.1
+- Rename `Expr` to `Expression`
+
 ## 0.2.0
 - Add `key` and `tag` support in `@GenProvider` for both strings and
   non-string expressions.
