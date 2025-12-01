@@ -1,3 +1,6 @@
+## 0.2.1
+- fix bugs
+
 ## 0.2.0
 * Add key/tag support in `@GenProvider` for both strings and
   non-string expressions
