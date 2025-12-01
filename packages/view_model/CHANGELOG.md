@@ -1,3 +1,6 @@
+## 0.9.1
+- update dependencies
+
 ## 0.9.0
 🎉 **Major Update: Introducing ViewModelProvider & Code Generator**
 
