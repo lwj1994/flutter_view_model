@@ -7,7 +7,14 @@ targets:
 builders:
   view_model_generator:
     import: "package:view_model_generator/view_model_generator.dart"
-    builder_factories: ["viewModelProviderBuilder"]
-    build_extensions: { ".dart": [".vm.dart"] }
+    builder_factories: [ "viewModelProviderBuilder" ]
+    build_extensions: { ".dart": [ ".vm.dart" ] }
     auto_apply: dependents
     build_to: source
+    # run after freezed/json/dataforge/auto_route/chopper
+    required_inputs:
+      - ".freezed.dart"
+      - ".g.dart"
+      - ".data.dart"
+      - ".gr.dart"
+      - ".chopper.dart"
