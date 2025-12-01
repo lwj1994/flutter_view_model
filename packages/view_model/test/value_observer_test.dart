@@ -233,5 +233,21 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       expect(find.text('Builder2: 102'), findsOneWidget); // Should not change
     });
+
+    testWidgets('shared key works - second instance ignores initial value',
+        (tester) async {
+      final key = Object();
+      final obs1 = ObservableValue<int>(10, shareKey: key);
+      final obs2 = ObservableValue<int>(20,
+          shareKey: key); // Should share state with obs1
+
+      // Since they share key, they should share the underlying ViewModel state.
+      // The second one's initialValue should be ignored as VM already exists.
+      expect(obs1.value, 10);
+      expect(obs2.value, 10);
+
+      obs1.value = 30;
+      expect(obs2.value, 30);
+    });
   });
 }

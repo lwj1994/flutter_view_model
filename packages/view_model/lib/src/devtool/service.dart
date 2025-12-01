@@ -234,4 +234,29 @@ class DevToolsService {
       'viewModelTypes': stats.viewModelTypes,
     };
   }
+
+  /// Testing helper: returns ViewModel data snapshot for assertions.
+  ///
+  /// Exposes the same structure as the DevTools extension
+  /// `ext.view_model.getViewModelData`. No side effects and no logic changes.
+  /// Intended only for unit tests to improve coverage.
+  Map<String, dynamic> debugGetViewModelData() {
+    return _getViewModelData();
+  }
+
+  /// Testing helper: returns dependency graph snapshot for assertions.
+  ///
+  /// Mirrors `ext.view_model.getDependencyGraph` content. Pure wrapper to
+  /// private method for test visibility, keeping implementation unchanged.
+  Map<String, dynamic> debugGetDependencyGraph() {
+    return _getDependencyGraph();
+  }
+
+  /// Testing helper: returns computed stats from tracker.
+  ///
+  /// Convenience wrapper for verifying statistics without using service
+  /// extensions. No functional changes to production behavior.
+  Map<String, int> debugGetStats() {
+    return _getStatsFromTracker();
+  }
 }

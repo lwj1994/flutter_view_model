@@ -440,18 +440,18 @@ mixin class ViewModel implements InstanceLifeCycle {
   @protected
   @mustCallSuper
   @override
-  void onAddBinder(InstanceArg arg, String newWatchId) {
+  void onBindVef(InstanceArg arg, String newWatchId) {
     for (final element in _viewModelLifecycles) {
-      element.onAddWatcher(this, arg, newWatchId);
+      element.onBind(this, arg, newWatchId);
     }
   }
 
   @protected
   @mustCallSuper
   @override
-  void onRemoveBinder(InstanceArg arg, String removedWatchId) {
+  void onUnbindVef(InstanceArg arg, String vefId) {
     for (final element in _viewModelLifecycles) {
-      element.onRemoveWatcher(this, arg, removedWatchId);
+      element.onUnbind(this, arg, vefId);
     }
   }
 
@@ -618,11 +618,7 @@ abstract class StateViewModel<T> with ViewModel {
       viewModelLog("notifyListeners after Disposed");
       return;
     }
-    try {
-      _store.notifyListeners();
-    } catch (e) {
-      onError(e);
-    }
+    _store.notifyListeners();
   }
 
   /// Updates the state and notifies all listeners.
@@ -848,17 +844,16 @@ abstract class ViewModelLifecycle {
   /// Parameters:
   /// - [viewModel]: The ViewModel being watched
   /// - [arg]: Instance arguments
-  /// - [newWatchId]: Unique identifier for the new watcher
-  void onAddWatcher(ViewModel viewModel, InstanceArg arg, String newWatchId) {}
+  /// - [vefId]: Unique identifier for the new watcher
+  void onBind(ViewModel viewModel, InstanceArg arg, String vefId) {}
 
   /// Called when a watcher is removed from a ViewModel.
   ///
   /// Parameters:
   /// - [viewModel]: The ViewModel being unwatched
   /// - [arg]: Instance arguments
-  /// - [removedWatchId]: Unique identifier for the removed watcher
-  void onRemoveWatcher(
-      ViewModel viewModel, InstanceArg arg, String removedWatchId) {}
+  /// - [vefId]: Unique identifier for the removed watcher
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String vefId) {}
 
   /// Called when a ViewModel is disposed.
   ///

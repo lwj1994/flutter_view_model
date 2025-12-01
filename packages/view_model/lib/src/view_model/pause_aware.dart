@@ -17,8 +17,6 @@ class PauseAwareController {
   // A callback triggered when the view model should resume.
   final Function() onWidgetResume;
 
-  final String Function() binderName;
-
   /// Creates a [PauseAwareController] with the given pause/resume callbacks.
   ///
   /// If no [providers] are provided, it defaults to using Flutter's standard
@@ -30,7 +28,6 @@ class PauseAwareController {
     required this.onWidgetPause,
     required this.onWidgetResume,
     required List<VefPauseProvider> providers,
-    required this.binderName,
     List<VefPauseProvider>? disposableProviders,
   }) : _disposableProviders = disposableProviders ?? [] {
     _providers.addAll(providers);

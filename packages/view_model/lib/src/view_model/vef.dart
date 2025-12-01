@@ -188,6 +188,10 @@ abstract interface class VefInterface {
 /// - [ViewModelStateMixin]: Mixin that uses ViewModelRef for StatefulWidget
 /// - [VefPauseProvider]: Interface for pause/resume providers
 mixin class Vef implements VefInterface {
+  String get id {
+    return "${getName()}#$hashCode";
+  }
+
   @protected
   // ignore: avoid_returning_this
   Vef get vef => this;
@@ -201,8 +205,7 @@ mixin class Vef implements VefInterface {
 
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: onUpdate,
-    binderName: getBinderName(),
-    ref: this,
+    vef: this,
   );
   final Map<ViewModel, bool> _stateListeners = {};
   final _defaultViewModelKey = Object();
@@ -245,7 +248,7 @@ mixin class Vef implements VefInterface {
     if (_hasMissedUpdates) {
       _hasMissedUpdates = false;
       onUpdate();
-      viewModelLog("${getBinderName()} Resume with missed updates, updated");
+      viewModelLog("${getName()} Resume with missed updates, updated");
     }
   }
 
@@ -257,7 +260,6 @@ mixin class Vef implements VefInterface {
       onWidgetResume: onResume,
       providers: [],
       disposableProviders: [],
-      binderName: getBinderName,
     );
   }
 
@@ -273,7 +275,7 @@ mixin class Vef implements VefInterface {
   /// Returns an empty string in release mode for performance.
   ///
   /// Example output: `lib/pages/counter_page.dart:25  _CounterPageState`
-  String getBinderName() {
+  String getName() {
     if (!kDebugMode) return "$runtimeType";
 
     final pathInfo = _stackPathLocator.getCurrentObjectPath();
@@ -472,6 +474,13 @@ mixin class Vef implements VefInterface {
     InstanceArg arg = const InstanceArg(),
     bool listen = true,
   }) {
+    // ensure getName call
+    if (kDebugMode) {
+      getName();
+    }
+    if (isDisposed) {
+      throw ViewModelError("$VM was Disposed!");
+    }
     if (VM == ViewModel || VM == dynamic) {
       throw ViewModelError("VM must extends ViewModel");
     }
@@ -573,7 +582,7 @@ mixin class Vef implements VefInterface {
         if (_pauseAwareController.isPaused) {
           _hasMissedUpdates = true;
           viewModelLog(
-            "${getBinderName()} is paused, delay rebuild",
+            "${getName()} is paused, delay rebuild",
           );
           return;
         }

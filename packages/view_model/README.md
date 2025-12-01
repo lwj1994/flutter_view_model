@@ -39,6 +39,7 @@ That’s why I built this project.
 ---
 
 - [view\_model](#view_model)
+  - [why I built this project](#why-i-built-this-project)
   - [Everything is ViewModel](#everything-is-viewmodel)
   - [Quick Start](#quick-start)
   - [Reuse One Instance](#reuse-one-instance)
@@ -46,7 +47,6 @@ That’s why I built this project.
     - [Adding Dependencies](#adding-dependencies)
     - [Creating a ViewModel](#creating-a-viewmodel)
       - [ViewModelProvider](#viewmodelprovider)
-      - [Provider Generator (Recommended)](#provider-generator-recommended)
     - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
       - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [ViewModelStateMixin](#viewmodelstatemixin)
@@ -73,7 +73,6 @@ That’s why I built this project.
   - [Custom Vef](#custom-vef)
     - [Core Concepts](#core-concepts)
     - [Example: StartTaskVef](#example-starttaskvef)
-  - [DevTools Extension](#devtools-extension)
 
 ---
 
@@ -220,16 +219,11 @@ class MySimpleViewModel extends ViewModel {
 
 #### ViewModelProvider
 
-`ViewModelProvider` defines how a `ViewModel` is created and identified in the
-cache. You can write it by hand, or — recommended — generate it automatically
-with `view_model_generator` to reduce boilerplate and stay consistent.
-
-[Migration Guide](
-  https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_Provider_MIGRATION.md)
-
-**Recommended: Generate providers**
-
-see [document](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README.md) for more details.
+`ViewModelProvider` defines how a `ViewModel` is created and cached.
+Prefer using `view_model_generator` to cut boilerplate and keep consistency.
+See docs for details:
+- Generator: https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README.md
+- Migration: https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_Provider_MIGRATION.md
 
 1) Annotate your `ViewModel` with `@genProvider` (or `@GenProvider(...)`).
 
@@ -394,79 +388,6 @@ use `tag` to group/discover. You can then use `watchCached` to get the cached in
 
 > **Note**: If you use a custom key object, implement `==` and `hashCode` to
 > ensure correct cache lookup.
-
-
-#### Provider Generator (Recommended)
-
-To reduce boilerplate when defining `ViewModelProvider`s, you can use the `view_model_generator` package to automatically generate provider code.  see: https://pub.dev/packages/view_model_generator
- 
-**Installation**
-
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  view_model: ^latest_version
-  
-
-dev_dependencies:
-  build_runner: ^latest_version
-  view_model_generator: ^latest_version
-```
-
-**Usage**
-
-1. Annotate your ViewModel with `@genProvider`:
-
-```dart
-import 'package:view_model/view_model.dart';
-import 'package:view_model_generator/view_model_generator.dart';
-
-part 'counter_view_model.vm.dart';
-
-@genProvider
-class CounterViewModel extends ViewModel {
-  int count = 0;
-  void increment() => update(() => count++);
-}
-```
-
-2. Run the code generator:
-
-```bash
-dart run build_runner build
-```
-
-3. The generator will create a `counter_view_model.vm.dart` file with:
-
-```dart
-final counterProvider = ViewModelProvider<CounterViewModel>(
-  builder: () => CounterViewModel(),
-);
-```
-
-**With Constructor Arguments**
-
-The generator supports ViewModels with up to 4 constructor parameters:
-
-```dart
-@genProvider
-class UserViewModel extends ViewModel {
-  final String userId;
-  UserViewModel(this.userId);
-}
-```
-
-Generates:
-
-```dart
-final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
-  builder: (String userId) => UserViewModel(userId),
-);
-```
-
-
----
 
 ### Using ViewModel in Widgets
 
@@ -770,7 +691,7 @@ abstract class ViewModelLifecycle {
   /// - [viewModel]: The ViewModel being watched
   /// - [arg]: Instance arguments
   /// - [newBinderId]: Unique identifier for the new binder
-  void onAddBinder(ViewModel viewModel, InstanceArg arg, String newBinderId) {}
+  void onBind(ViewModel viewModel, InstanceArg arg, String newBinderId) {}
 
   /// Called when a binder is removed from a ViewModel.
   ///
@@ -778,7 +699,7 @@ abstract class ViewModelLifecycle {
   /// - [viewModel]: The ViewModel being unwatched
   /// - [arg]: Instance arguments
   /// - [removedBinderId]: Unique identifier for the removed binder
-  void onRemoveBinder(
+  void onUnbind(
       ViewModel viewModel, InstanceArg arg, String removedBinderId) {}
 
   /// Called when a ViewModel is disposed.
@@ -1264,20 +1185,3 @@ class StartTaskVef with Vef {
 // await starter.run();
 // starter.close();
 ```
-
-
-## DevTools Extension
-
-Enable the DevTools extension for real‑time ViewModel monitoring.
-
-create `devtools_options.yaml` in root directory of project.
-
-```yaml
-description: This file stores settings for Dart & Flutter DevTools.
-documentation: https://docs.flutter.dev/tools/devtools/extensions#configure-extension-enablement-states
-extensions:
-  - view_model: true
-```
-
-![](https://i.imgur.com/5itXPYD.png)
-![](https://imgur.com/83iOQhy.png)

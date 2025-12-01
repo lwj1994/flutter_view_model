@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/view_model.dart';
+import 'package:view_model/src/view_model/vef_zone.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 
 // Test ViewModels
 class CounterViewModel extends StateViewModel<int> {
@@ -434,7 +436,129 @@ void main() {
       // Widget should be disposed without errors
       expect(find.text('Empty'), findsOneWidget);
     });
+
+    testWidgets('maybeWatchCached returns null if not found', (tester) async {
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return const VefTestWidget();
+          },
+        ),
+      );
+    });
   });
+
+  group('VefHandler', () {
+    test('manages refs manually', () {
+      final handler = VefHandler();
+      final vef = TestVef();
+
+      handler.addRef(vef);
+      expect(handler.vef, vef);
+
+      handler.removeRef(vef);
+      expect(() => handler.vef, throwsA(isA<ViewModelError>()));
+    });
+
+    test('runWithVef sets zone value', () {
+      final vef = TestVef();
+      runWithVef(() {
+        final handler = VefHandler();
+        // Should pick up from Zone
+        expect(handler.vef, vef);
+      }, vef);
+    });
+
+    test('dispose clears refs', () {
+      final handler = VefHandler();
+      final vef = TestVef();
+      handler.addRef(vef);
+
+      handler.dispose();
+      expect(() => handler.vef, throwsA(isA<ViewModelError>()));
+    });
+  });
+
+  group('Vef Mixin', () {
+    test('isDisposed default false', () {
+      final v = TestVef();
+      expect(v.isDisposed, false);
+    });
+
+    test('vef getter returns self', () {
+      final v = TestVef();
+      expect(v.exposedVef, v);
+    });
+  });
+
+  group('Vef Mixin Coverage', () {
+    test('performForAllViewModels', () {
+      final v = TestVef();
+      final vm = v.watch(ViewModelProvider(builder: () => CounterViewModel()));
+
+      int count = 0;
+      v.performForAllViewModels((viewModel) {
+        count++;
+        expect(viewModel, vm);
+      });
+
+      expect(count, 1);
+    });
+
+    test('listen / listenState on Vef', () async {
+      final v = TestVef();
+      final factory = ViewModelProvider(builder: () => CounterViewModel());
+
+      // Ensure VM is created and we have reference
+      final vm = v.read(factory);
+
+      bool called = false;
+      v.listen(factory, onChanged: () {
+        called = true;
+      });
+
+      vm.increment(); // triggers notifyListeners
+      await Future.delayed(Duration.zero);
+
+      expect(called, isTrue);
+
+      // listenState
+      bool stateCalled = false;
+      v.listenState<CounterViewModel, int>(factory, onChanged: (p, n) {
+        stateCalled = true;
+      });
+
+      vm.increment();
+      await Future.delayed(Duration.zero);
+      expect(stateCalled, isTrue);
+
+      // listenStateSelect
+      bool selectCalled = false;
+      v.listenStateSelect<CounterViewModel, int, int>(factory,
+          selector: (s) => s,
+          onChanged: (p, n) {
+            selectCalled = true;
+          });
+
+      vm.increment();
+      await Future.delayed(Duration.zero);
+      expect(selectCalled, isTrue);
+    });
+
+    test('maybeReadCached returns null on error', () {
+      final v = TestVef();
+      expect(v.maybeReadCached<CounterViewModel>(key: 'missing'), isNull);
+    });
+
+    test('maybeWatchCached returns null on error', () {
+      final v = TestVef();
+      expect(v.maybeWatchCached<CounterViewModel>(key: 'missing'), isNull);
+    });
+  });
+}
+
+class TestVef with Vef {
+  Vef get exposedVef => vef;
 }
 
 // Additional test widgets
@@ -532,5 +656,32 @@ class _MaybeViewModelWidgetState extends State<MaybeViewModelWidget>
         ],
       ),
     );
+  }
+}
+
+class VefTestWidget extends StatefulWidget {
+  const VefTestWidget({super.key});
+
+  @override
+  _VefTestWidgetState createState() => _VefTestWidgetState();
+}
+
+class _VefTestWidgetState extends State<VefTestWidget>
+    with ViewModelStateMixin {
+  @override
+  void initState() {
+    super.initState();
+    // Test maybeWatchCachedViewModel
+    final vm = maybeWatchCachedViewModel<CounterViewModel>(key: 'non_existent');
+    assert(vm == null);
+
+    // Test maybeReadCachedViewModel
+    final vm2 = maybeReadCachedViewModel<CounterViewModel>(key: 'non_existent');
+    assert(vm2 == null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container();
   }
 }

@@ -124,17 +124,16 @@ class Store<T> {
   /// builder is provided.
   InstanceHandle<T> getNotifier({required InstanceFactory<T> factory}) {
     final realKey = factory.arg.key ?? Object();
-    final watchId = factory.arg.binderId;
+    final vefId = factory.arg.vefId;
     final arg = factory.arg.copyWith(
       key: realKey,
     );
     // cache
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
-      final newWatcher =
-          watchId != null && !notifier.binderIds.contains(watchId);
-      if (newWatcher) {
-        notifier.addNewBinder(watchId);
+      final newBind = vefId != null && !notifier.bindedVefIds.contains(vefId);
+      if (newBind) {
+        notifier.bindVef(vefId);
       }
       return notifier;
     }
@@ -203,7 +202,7 @@ class InstanceHandle<T> with ChangeNotifier {
   final InstanceArg arg;
 
   /// List of watcher IDs currently watching this instance.
-  final List<String> binderIds = List.empty(growable: true);
+  final List<String> bindedVefIds = List.empty(growable: true);
 
   /// Factory function for creating new instances of this type.
   final T Function() factory;
@@ -242,11 +241,11 @@ class InstanceHandle<T> with ChangeNotifier {
   ///
   /// Parameters:
   /// - [id]: The watcher ID to add (ignored if null or already exists)
-  void _addBinder(String? id) {
-    if (binderIds.contains(id) || id == null) return;
-    binderIds.add(id);
+  void bindVef(String? id) {
+    if (bindedVefIds.contains(id) || id == null) return;
+    bindedVefIds.add(id);
     if (_instance is InstanceLifeCycle) {
-      (_instance as InstanceLifeCycle).onAddBinder(arg, id);
+      (_instance as InstanceLifeCycle).onBindVef(arg, id);
     }
   }
 
@@ -258,14 +257,14 @@ class InstanceHandle<T> with ChangeNotifier {
   ///
   /// Parameters:
   /// - [id]: The watcher ID to remove
-  void removeBinder(String id) {
-    if (binderIds.remove(id)) {
+  void unbindVef(String id) {
+    if (bindedVefIds.remove(id)) {
       if (_instance is InstanceLifeCycle) {
-        (_instance as InstanceLifeCycle).onRemoveBinder(arg, id);
+        (_instance as InstanceLifeCycle).onUnbindVef(arg, id);
       }
     }
-    if (binderIds.isEmpty) {
-      recycle();
+    if (bindedVefIds.isEmpty) {
+      _recycle();
     }
   }
 
@@ -282,10 +281,20 @@ class InstanceHandle<T> with ChangeNotifier {
   /// This method marks the instance for disposal, notifies listeners,
   /// and calls the disposal lifecycle methods. The instance becomes
   /// unusable after this call.
-  void recycle() {
+  void _recycle() {
     _action = InstanceAction.dispose;
     notifyListeners();
     onDispose();
+  }
+
+  void unbindAll() {
+    for (int i = 0; i < bindedVefIds.length; i++) {
+      if (_instance is InstanceLifeCycle) {
+        (_instance as InstanceLifeCycle).onUnbindVef(arg, bindedVefIds[i]);
+      }
+    }
+    bindedVefIds.clear();
+    _recycle();
   }
 
   /// Recreates the instance with optional custom builder.
@@ -311,7 +320,7 @@ class InstanceHandle<T> with ChangeNotifier {
 
   @override
   String toString() {
-    return "InstanceHandle<$T>(index=$index, $arg, watchIds=$binderIds)";
+    return "InstanceHandle<$T>(index=$index, $arg, bindedVefIds=$bindedVefIds)";
   }
 
   /// Handles instance creation lifecycle.
@@ -326,17 +335,7 @@ class InstanceHandle<T> with ChangeNotifier {
     if (_instance is InstanceLifeCycle) {
       (_instance as InstanceLifeCycle).onCreate(arg);
     }
-    _addBinder(arg.binderId);
-  }
-
-  /// Adds a new watcher to this instance.
-  ///
-  /// This is a public method for adding watchers after instance creation.
-  ///
-  /// Parameters:
-  /// - [id]: The watcher ID to add
-  void addNewBinder(String id) {
-    _addBinder(id);
+    bindVef(arg.vefId);
   }
 
   /// Safely calls the instance's disposal method.
@@ -361,7 +360,6 @@ class InstanceHandle<T> with ChangeNotifier {
   void onDispose() {
     _tryCallInstanceDispose();
     _instance = null;
-    binderIds.clear();
   }
 }
 
@@ -399,15 +397,15 @@ abstract interface class InstanceLifeCycle {
   ///
   /// Parameters:
   /// - [arg]: Instance arguments
-  /// - [newBinderId]: ID of the new watcher
-  void onAddBinder(InstanceArg arg, String newBinderId);
+  /// - [vefId]: ID of the new watcher
+  void onBindVef(InstanceArg arg, String vefId);
 
   /// Called when a watcher stops watching this ViewModel.
   ///
   /// Parameters:
   /// - [arg]: Instance arguments
-  /// - [removedBinderId]: ID of the removed watcher
-  void onRemoveBinder(InstanceArg arg, String removedBinderId);
+  /// - [vefId]: ID of the removed watcher
+  void onUnbindVef(InstanceArg arg, String vefId);
 
   /// Called when the ViewModel instance is being disposed.
   ///
@@ -458,7 +456,7 @@ class InstanceArg {
   /// This ID is used for lifecycle tracking and automatic cleanup.
   /// When the watcher is disposed, the instance can be automatically
   /// cleaned up if no other watchers remain.
-  final String? binderId;
+  final String? vefId;
 
 //<editor-fold desc="Data Methods">
   /// Creates new instance arguments.
@@ -466,11 +464,11 @@ class InstanceArg {
   /// Parameters:
   /// - [key]: Unique identifier for caching (optional)
   /// - [tag]: Logical grouping identifier (optional)
-  /// - [binderId]: Watcher identifier for lifecycle tracking (optional)
+  /// - [vefId]: Watcher identifier for lifecycle tracking (optional)
   const InstanceArg({
     this.key,
     this.tag,
-    this.binderId,
+    this.vefId,
   });
 
   @override
@@ -480,25 +478,25 @@ class InstanceArg {
           runtimeType == other.runtimeType &&
           key == other.key &&
           tag == other.tag &&
-          binderId == other.binderId);
+          vefId == other.vefId);
 
   @override
-  int get hashCode => key.hashCode ^ tag.hashCode ^ binderId.hashCode;
+  int get hashCode => key.hashCode ^ tag.hashCode ^ vefId.hashCode;
 
   @override
   String toString() {
-    return 'InstanceArg( key: $key, tag: $tag, binderId: $binderId)';
+    return 'InstanceArg( key: $key, tag: $tag, vefId: $vefId)';
   }
 
   InstanceArg copyWith({
     Object? key,
     Object? tag,
-    String? binderId,
+    String? vefId,
   }) {
     return InstanceArg(
       key: key ?? this.key,
       tag: tag ?? this.tag,
-      binderId: binderId ?? this.binderId,
+      vefId: vefId ?? this.vefId,
     );
   }
 
@@ -506,7 +504,7 @@ class InstanceArg {
     return {
       'key': key,
       'tag': tag,
-      'binderId': binderId,
+      'vefId': vefId,
     };
   }
 
@@ -514,7 +512,7 @@ class InstanceArg {
     return InstanceArg(
       key: map['key'],
       tag: map['tag'] as Object,
-      binderId: map['binderId'] as String,
+      vefId: map['vefId'] as String,
     );
   }
 

@@ -58,4 +58,24 @@ void main() {
       }
     });
   });
+
+  group('state_view_model extras', () {
+    test('listenState unsubscription works', () {
+      final vm = TestViewModel(state: "0");
+      final dispose = vm.listenState(onChanged: (prev, curr) {});
+      dispose();
+    });
+
+    test('notifyListeners after dispose is ignored', () {
+      final vm = TestViewModel(state: "0");
+      vm.onDispose(const InstanceArg());
+      vm.notifyListeners();
+    });
+
+    test('setState after dispose is ignored', () {
+      final vm = TestViewModel(state: "0");
+      vm.onDispose(const InstanceArg());
+      vm.setState("1");
+    });
+  });
 }

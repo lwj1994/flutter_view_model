@@ -107,8 +107,4 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
       });
     }
   }
-
-  String getWidgetBinderName() {
-    return vef.getBinderName();
-  }
 }

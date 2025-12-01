@@ -90,11 +90,13 @@ void main() {
   testWidgets('ViewModelStateMixin correctly generates binder name for a State',
       (tester) async {
     // Arrange: Pump our test widget.
-    await tester.pumpWidget(const MaterialApp(home: TestPage()));
+    await tester.pumpWidget(const MaterialApp(home: TestPage()),
+        duration: const Duration(seconds: 1));
 
     // Act: Find the state to access the result.
     final state = tester.state(find.byType(TestPage)) as _TestPageState;
-    final name = state.getWidgetBinderName();
+
+    final name = state.vef.getName();
     print(name);
 
     // Assert: Check if the binder name correctly identifies the state class and file.
@@ -111,7 +113,7 @@ void main() {
 
     // Act: Find the state to access the result.
     final state = tester.state(find.byType(TestPage2)) as _TestPageState2;
-    final name = state.getWidgetBinderName();
+    final name = state.vef.getName();
     print(name);
     // Assert: Check if the binder name correctly identifies the SUBCLASS.
     expect(name, isNotNull);
