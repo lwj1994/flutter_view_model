@@ -567,16 +567,16 @@ abstract class ViewModelLifecycle {
   /// 参数:
   /// - [viewModel]: 被监听的 ViewModel
   /// - [arg]: 实例参数
-  /// - [newBinderId]: 新绑定者的唯一标识符
-  void onBind(ViewModel viewModel, InstanceArg arg, String newBinderId) {}
+  /// - [vefId]: 新绑定者的唯一标识符
+  void onBind(ViewModel viewModel, InstanceArg arg, String vefId) {}
 
   /// 当一个绑定者从 ViewModel 中移除时调用。
   ///
   /// 参数:
   /// - [viewModel]: 被取消监听的 ViewModel
   /// - [arg]: 实例参数
-  /// - [removedBinderId]: 被移除的绑定者的唯一标识符
-  void onUnbind(ViewModel viewModel, InstanceArg arg, String removedBinderId) {}
+  /// - [vefId]: 被移除的绑定者的唯一标识符
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String vefId) {}
 
   /// 当 ViewModel 被销毁时调用。
   ///

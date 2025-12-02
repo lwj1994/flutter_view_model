@@ -690,17 +690,17 @@ abstract class ViewModelLifecycle {
   /// Parameters:
   /// - [viewModel]: The ViewModel being watched
   /// - [arg]: Instance arguments
-  /// - [newBinderId]: Unique identifier for the new binder
-  void onBind(ViewModel viewModel, InstanceArg arg, String newBinderId) {}
+  /// - [vefId]: Unique identifier for the new binder
+  void onBind(ViewModel viewModel, InstanceArg arg, String vefId) {}
 
   /// Called when a binder is removed from a ViewModel.
   ///
   /// Parameters:
   /// - [viewModel]: The ViewModel being unwatched
   /// - [arg]: Instance arguments
-  /// - [removedBinderId]: Unique identifier for the removed binder
+  /// - [vefId]: Unique identifier for the removed binder
   void onUnbind(
-      ViewModel viewModel, InstanceArg arg, String removedBinderId) {}
+      ViewModel viewModel, InstanceArg arg, String vefId) {}
 
   /// Called when a ViewModel is disposed.
   ///
@@ -1175,7 +1175,7 @@ class StartTaskVef with Vef {
   }
 
   /// Disposes binder and all bound ViewModels.
-  void close() {
+  void dispose() {
     super.dispose();
   }
 }
