@@ -1,3 +1,6 @@
+## 0.9.2
+- add more tests
+
 ## 0.9.1
 - update dependencies
 

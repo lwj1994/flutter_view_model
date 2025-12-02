@@ -14,7 +14,7 @@ class TestLifeCycleModel implements InstanceLifeCycle {
   int onDisposeCount = 0;
   int onAddBinderCount = 0;
   int onRemoveBinderCount = 0;
-  String? lastBinderId;
+  String? lastVefId;
 
   @override
   void onCreate(InstanceArg arg) {
@@ -27,21 +27,21 @@ class TestLifeCycleModel implements InstanceLifeCycle {
   }
 
   @override
-  void onBindVef(InstanceArg arg, String newBinderId) {
+  void onBindVef(InstanceArg arg, String vefId) {
     onAddBinderCount++;
-    lastBinderId = newBinderId;
+    lastVefId = vefId;
   }
 
   @override
-  void onUnbindVef(InstanceArg arg, String removedBinderId) {
+  void onUnbindVef(InstanceArg arg, String vefId) {
     onRemoveBinderCount++;
-    lastBinderId = removedBinderId;
+    lastVefId = vefId;
   }
 }
 
 class ErrorDisposeModel implements InstanceLifeCycle {
   @override
-  void onBindVef(InstanceArg arg, String newBinderId) {}
+  void onBindVef(InstanceArg arg, String vefId) {}
 
   @override
   void onCreate(InstanceArg arg) {}
@@ -52,7 +52,7 @@ class ErrorDisposeModel implements InstanceLifeCycle {
   }
 
   @override
-  void onUnbindVef(InstanceArg arg, String removedBinderId) {}
+  void onUnbindVef(InstanceArg arg, String vefId) {}
 }
 
 class UnusedModel {}
@@ -271,11 +271,11 @@ void main() {
 
       handle.bindVef('binder1');
       expect(model.onAddBinderCount, 1);
-      expect(model.lastBinderId, 'binder1');
+      expect(model.lastVefId, 'binder1');
 
       handle.unbindVef('binder1');
       expect(model.onRemoveBinderCount, 1);
-      expect(model.lastBinderId, 'binder1');
+      expect(model.lastVefId, 'binder1');
 
       // removing last binder triggers recycle
       expect(model.onDisposeCount, 1);
