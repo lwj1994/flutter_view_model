@@ -1,10 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/vef.dart';
-import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/widget_mixin/vef.dart';
 
 /// Stateless integration for ViewModel access from widgets.
@@ -16,7 +14,6 @@ mixin ViewModelStatelessMixin on StatelessWidget {
       _StatelessViewModelElement(
     this,
   );
-  final _stackPathLocator = StackPathLocator();
 
   /// Returns true if the widget is currently considered paused.
   ///
@@ -27,26 +24,23 @@ mixin ViewModelStatelessMixin on StatelessWidget {
   @protected
   Vef get vef => _viewModelElement._vef;
 
-  /// Creates the custom Element that carries the attacher.
-  /// The Element owns the `ViewModelAttacher` and connects
-  /// ViewModel notifications to `markNeedsBuild` for this
-  /// widget.
+  /// Creates the custom Element that bridges ViewModel updates.
+  /// The Element owns `WidgetVef` and connects its refresh to
+  /// `markNeedsBuild` for this widget.
   @override
   StatelessElement createElement() {
     return _viewModelElement;
   }
 
-  String getViewModelBinderName() {
-    if (!kDebugMode) return "";
-
-    final pathInfo = _stackPathLocator.getCurrentObjectPath();
-    return pathInfo.isNotEmpty ? "$pathInfo#$runtimeType" : "$runtimeType";
+  @visibleForTesting
+  String getVefName() {
+    return _viewModelElement._vef.getName();
   }
 }
 
 /// Custom Element for `ViewModelStatelessMixin`.
-/// Owns the `ViewModelAttacher` and binds its rebuild callback
-/// to `markNeedsBuild`. Manages attach and dispose with element
+/// Owns `WidgetVef` and binds its rebuild callback to
+/// `markNeedsBuild`. Manages attach and dispose with element
 /// lifecycle.
 class _StatelessViewModelElement extends StatelessElement {
   late final WidgetVef _vef = WidgetVef(

@@ -104,29 +104,13 @@ void main() {
       final handle =
           instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
 
-      // Simulate recreate action on handle
-      // We need to manually trigger the listener on the handle.
-      // Handle's action listener is triggered when notifyListeners is called on handle?
-      // Handle extends ChangeNotifier.
-
-      // In store.dart, `notifyListeners` is called when action changes.
-      // But action is set internally.
-      // `recycle` sets action to dispose.
-      // `recreate` action?
-      // There is `InstanceAction.recreate`.
-      // When does it happen?
-      // It seems `InstanceHandle` doesn't have public method to set action to recreate easily from outside unless we use internal mechanism or specific scenario.
-      // But let's check if we can trigger it via `recycle` and then getting it again?
-      // No, `recycle` sets `dispose`.
-
-      // If we can't easily trigger `recreate` action, we might skip this specific callback test or rely on internal knowledge.
-      // However, `controller.recycle` calls `e.recycle()` which sets `dispose`.
-
-      // Let's check `store.dart` for `InstanceAction.recreate`.
-      // It might be used when a new instance replaces an old one in the same handle?
-      // `InstanceHandle` has `_instance`.
-
-      // Let's just test what we can.
+      // Recreate action simulation note
+      // Action changes are internal to store.dart and trigger `notifyListeners`.
+      // `recycle` sets action to `dispose`. `InstanceAction.recreate` occurs
+      // when a new instance replaces an old one within the same handle.
+      // There is no public API to force `recreate` directly from a test.
+      // See `src/get_instance/store.dart` for action transitions.
+      // TODO: add a minimal scenario that naturally leads to `recreate`.
     });
 
     test('performForAllInstances', () {

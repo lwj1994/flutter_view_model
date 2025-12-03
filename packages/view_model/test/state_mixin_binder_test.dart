@@ -132,7 +132,7 @@ void main() {
     // Act: Access the widget to read binder name.
     final widget =
         tester.widget(find.byType(StatelessTestPage)) as StatelessTestPage;
-    final name = widget.getViewModelBinderName();
+    final name = widget.getVefName();
     print(name);
 
     // Assert: Check file and runtime type markers.
