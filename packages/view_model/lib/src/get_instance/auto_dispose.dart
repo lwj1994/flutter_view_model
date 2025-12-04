@@ -127,6 +127,34 @@ class AutoDisposeInstanceController {
     return notifier.instance;
   }
 
+  List<T> getInstancesByTag<T>(Object tag, {bool listen = true}) {
+    final notifiers = instanceManager.getNotifiersByTag<T>(tag);
+    final List<T> result = [];
+    for (final notifier in notifiers) {
+      if (listen) {
+        if (_notifierListeners[notifier] != true) {
+          _notifierListeners[notifier] = true;
+          _instanceNotifiers.add(notifier);
+          notifier.addListener(() {
+            switch (notifier.action) {
+              case null:
+                break;
+              case InstanceAction.dispose:
+                break;
+              case InstanceAction.recreate:
+                onRecreate.call();
+                break;
+            }
+          });
+        }
+        // bind vef
+        notifier.bindVef(vef.id);
+      }
+      result.add(notifier.instance);
+    }
+    return result;
+  }
+
   /// Executes an action for all tracked ViewModel instances.
   ///
   /// This method iterates through all tracked instance notifiers and applies
