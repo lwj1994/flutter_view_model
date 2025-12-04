@@ -168,6 +168,13 @@ class InstanceManager {
       );
     }
   }
+
+  List<InstanceHandle<T>> getNotifiersByTag<T>(Object tag) {
+    if (T == dynamic) {
+      throw ViewModelError("T is dynamic");
+    }
+    return _getStore<T>().getInstancesByTag(tag);
+  }
 }
 
 /// Factory configuration for ViewModel instance creation and retrieval.
