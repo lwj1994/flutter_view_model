@@ -469,6 +469,18 @@ mixin class Vef implements VefInterface {
     return viewModel;
   }
 
+  List<VM> watchCachesByTag<VM extends ViewModel>(Object tag) {
+    final res = _instanceController.getInstancesByTag<VM>(tag, listen: true);
+    for (final vm in res) {
+      _addListener(vm);
+    }
+    return res;
+  }
+
+  List<VM> readCachesByTag<VM extends ViewModel>(Object tag) {
+    return _instanceController.getInstancesByTag<VM>(tag, listen: false);
+  }
+
   VM _getViewModel<VM extends ViewModel>({
     ViewModelFactory<VM>? factory,
     InstanceArg arg = const InstanceArg(),

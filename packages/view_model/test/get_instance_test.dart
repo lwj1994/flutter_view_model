@@ -382,5 +382,40 @@ void main() {
           factory: InstanceFactory(arg: const InstanceArg(tag: 'tagB')));
       expect(foundB, t2);
     });
+
+    test('index increment logic', () {
+      final h1 = instanceManager.getNotifier<TestModel>(
+          factory: InstanceFactory(builder: () => TestModel()));
+      final h2 = instanceManager.getNotifier<TestModel>(
+          factory: InstanceFactory(builder: () => TestModel()));
+      final h3 = instanceManager.getNotifier<TestModel>(
+          factory: InstanceFactory(builder: () => TestModel()));
+
+      expect(h1.index, lessThan(h2.index));
+      expect(h2.index, lessThan(h3.index));
+      expect(h2.index, h1.index + 1);
+      expect(h3.index, h2.index + 1);
+    });
+
+    test('getInstancesByTag returns sorted by index desc', () {
+      const tag = 'sorted_tag';
+      final h1 = instanceManager.getNotifier<TestModel>(
+          factory: InstanceFactory(
+              builder: () => TestModel(), arg: const InstanceArg(tag: tag)));
+      final h2 = instanceManager.getNotifier<TestModel>(
+          factory: InstanceFactory(
+              builder: () => TestModel(), arg: const InstanceArg(tag: tag)));
+      final h3 = instanceManager.getNotifier<TestModel>(
+          factory: InstanceFactory(
+              builder: () => TestModel(), arg: const InstanceArg(tag: tag)));
+
+      final list = instanceManager.getNotifiersByTag<TestModel>(tag);
+      expect(list.length, 3);
+      expect(list[0], h3);
+      expect(list[1], h2);
+      expect(list[2], h1);
+      expect(list[0].index > list[1].index, isTrue);
+      expect(list[1].index > list[2].index, isTrue);
+    });
   });
 }

@@ -187,4 +187,83 @@ void main() {
       ref.dispose();
     });
   });
+
+  group('Vef tag operations', () {
+    test('watchCachesByTag returns all instances and listens', () {
+      final ref = TestRefWithCounter();
+      const tag = 'group-1';
+
+      // Create instances
+      final vm1 = ref.watch(ViewModelProvider(
+        builder: () => SimpleVM(),
+        tag: tag,
+        key: 'k1',
+      ));
+      final vm2 = ref.watch(ViewModelProvider(
+        builder: () => SimpleVM(),
+        tag: tag,
+        key: 'k2',
+      ));
+
+      // Reset updates from initial watch
+      ref.updates = 0;
+
+      // Watch by tag
+      final list = ref.watchCachesByTag<SimpleVM>(tag);
+      expect(list.length, 2);
+      expect(list.contains(vm1), isTrue);
+      expect(list.contains(vm2), isTrue);
+
+      // Verify updates
+      vm1.notifyListeners();
+      expect(ref.updates, 1);
+
+      vm2.notifyListeners();
+      expect(ref.updates, 2);
+
+      ref.dispose();
+    });
+
+    test('readCachesByTag returns all instances without listening', () {
+      final ref = TestRefWithCounter();
+      const tag = 'group-2';
+
+      // Create instances
+      final vm1 = ref.read(ViewModelProvider(
+        builder: () => SimpleVM(),
+        tag: tag,
+        key: 'k3',
+      ));
+      final vm2 = ref.read(ViewModelProvider(
+        builder: () => SimpleVM(),
+        tag: tag,
+        key: 'k4',
+      ));
+
+      // Reset updates from initial watch
+      ref.updates = 0;
+
+      // Read by tag
+      final list = ref.readCachesByTag<SimpleVM>(tag);
+      expect(list.length, 2);
+      expect(list.contains(vm1), isTrue);
+      expect(list.contains(vm2), isTrue);
+
+      // Verify NO updates
+      vm1.notifyListeners();
+      expect(ref.updates, 0);
+
+      vm2.notifyListeners();
+      expect(ref.updates, 0);
+
+      ref.dispose();
+    });
+
+    test('watchCachesByTag returns empty list for unknown tag', () {
+      final ref = TestRefWithCounter();
+      final list = ref.watchCachesByTag<SimpleVM>('unknown');
+      expect(list, isEmpty);
+      ref.dispose();
+    });
+  });
 }

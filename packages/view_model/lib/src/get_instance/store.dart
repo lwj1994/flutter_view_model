@@ -68,13 +68,20 @@ class Store<T> {
     if (tag == null) {
       return l.firstOrNull;
     } else {
-      for (final InstanceHandle<T> instance in l) {
-        if (instance.arg.tag == tag) {
-          return instance;
-        }
-      }
-      return null;
+      return getInstancesByTag(tag).firstOrNull;
     }
+  }
+
+  List<InstanceHandle<T>> getInstancesByTag(Object tag) {
+    if (_instances.isEmpty) return [];
+    final List<InstanceHandle<T>> result = [];
+    for (final handle in _instances.values) {
+      if (handle.arg.tag == tag) {
+        result.add(handle);
+      }
+    }
+    result.sort((a, b) => b.index.compareTo(a.index));
+    return result;
   }
 
   /// Sets up disposal listening for an instance handle.
