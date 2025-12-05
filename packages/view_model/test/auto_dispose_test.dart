@@ -147,5 +147,81 @@ void main() {
 
       expect(handle.bindedVefIds.any((id) => id == mockRef.id), isFalse);
     });
+    group('getInstancesByTag', () {
+      test('returns instances with matching tag', () {
+        const tag = 'test_tag';
+        final factory1 = InstanceFactory<TestStatelessViewModel>(
+          builder: () => TestStatelessViewModel(),
+          arg: const InstanceArg(key: 'vm1', tag: tag),
+        );
+        final factory2 = InstanceFactory<TestStatelessViewModel>(
+          builder: () => TestStatelessViewModel(),
+          arg: const InstanceArg(key: 'vm2', tag: tag),
+        );
+
+        // Create instances first
+        instanceManager.getNotifier<TestStatelessViewModel>(factory: factory1);
+        instanceManager.getNotifier<TestStatelessViewModel>(factory: factory2);
+
+        final instances =
+            controller.getInstancesByTag<TestStatelessViewModel>(tag);
+
+        expect(instances.length, 2);
+        expect(controller.instanceNotifiers.length, 2);
+      });
+
+      test('listen: true attaches listeners and binds vef', () {
+        const tag = 'listen_true_tag';
+        final factory = InstanceFactory<TestStatelessViewModel>(
+          builder: () => TestStatelessViewModel(),
+          arg: const InstanceArg(key: 'vm_listen', tag: tag),
+        );
+
+        instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
+
+        controller.getInstancesByTag<TestStatelessViewModel>(tag, listen: true);
+
+        final handle = instanceManager.getNotifier<TestStatelessViewModel>(
+            factory: factory);
+        expect(handle.bindedVefIds.contains(mockRef.id), isTrue);
+        expect(controller.instanceNotifiers.length, 1);
+      });
+
+      test('listen: false does not attach listeners or bind vef', () {
+        const tag = 'listen_false_tag';
+        final factory = InstanceFactory<TestStatelessViewModel>(
+          builder: () => TestStatelessViewModel(),
+          arg: const InstanceArg(key: 'vm_no_listen', tag: tag),
+        );
+
+        instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
+
+        controller.getInstancesByTag<TestStatelessViewModel>(tag,
+            listen: false);
+
+        final handle = instanceManager.getNotifier<TestStatelessViewModel>(
+            factory: factory);
+        expect(handle.bindedVefIds.contains(mockRef.id), isFalse);
+        expect(controller.instanceNotifiers, isEmpty);
+      });
+    });
+
+    test('dispose cleans up refs from ViewModel', () async {
+      final factory = InstanceFactory<TestStatelessViewModel>(
+        builder: () => TestStatelessViewModel(),
+        arg: const InstanceArg(key: 'dispose_cleanup_test'),
+      );
+
+      final vm =
+          controller.getInstance<TestStatelessViewModel>(factory: factory);
+
+      // Manually add ref to simulate usage
+      vm.refHandler.addRef(mockRef);
+      expect(vm.refHandler.dependencyVefs.contains(mockRef), isTrue);
+
+      await controller.dispose();
+
+      expect(vm.refHandler.dependencyVefs.contains(mockRef), isFalse);
+    });
   });
 }
