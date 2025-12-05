@@ -1,3 +1,6 @@
+## 0.10.0
+- Feat: Introduce methods to retrieve and watch multiple ViewModel instances by tag (`readCachesByTag`, `watchCachesByTag`)
+
 ## 0.9.2
 - add more tests
 
