@@ -15,7 +15,7 @@ class ExtensionToolbar extends StatelessWidget implements PreferredSizeWidget {
       ),
       backgroundColor: Theme.of(context).colorScheme.surface,
       elevation: 1,
-      actions: [],
+      actions: const [],
     );
   }
 

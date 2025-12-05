@@ -13,9 +13,9 @@ class ExtensionMain extends StatefulWidget {
 class _ExtensionMainState extends State<ExtensionMain> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const ExtensionToolbar(),
-      body: const ViewModelInspector(),
+    return const Scaffold(
+      appBar: ExtensionToolbar(),
+      body: ViewModelInspector(),
     );
   }
 }
