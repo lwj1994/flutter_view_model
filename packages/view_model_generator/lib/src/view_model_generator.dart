@@ -8,7 +8,7 @@ import 'package:view_model_generator/src/provider_generator.dart';
 /// with the extension `.vm.dart`.
 Builder viewModelProviderBuilder(BuilderOptions options) {
   return PartBuilder(
-    [ViewModelProviderGenerator()],
+    [const ViewModelProviderGenerator()],
     '.vm.dart',
   );
 }

@@ -190,7 +190,7 @@ Future<void> main() async {
 
   testAnnotatedElements<GenProvider>(
     reader,
-    ViewModelProviderGenerator(), // Instantiate your Generator
+    const ViewModelProviderGenerator(), // Instantiate your Generator
   );
 }
 
