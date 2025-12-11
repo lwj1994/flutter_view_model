@@ -346,3 +346,43 @@ class M {
   final int page;
   M({required this.repo, required this.page});
 }
+
+// 22. Singleton mode
+@ShouldGenerate(r'''
+final singletonVMProvider = ViewModelProvider<SingletonVM>(
+  builder: () => SingletonVM(),
+  key: 'SingletonVM',
+  isSingleton: true,
+);
+''')
+@GenProvider(isSingleton: true)
+class SingletonVM {
+  SingletonVM();
+}
+
+// 23. Singleton mode with explicit key (explicit key wins)
+@ShouldGenerate(r'''
+final singletonWithKeyVMProvider = ViewModelProvider<SingletonWithKeyVM>(
+  builder: () => SingletonWithKeyVM(),
+  key: 'MyKey',
+  isSingleton: true,
+);
+''')
+@GenProvider(isSingleton: true, key: 'MyKey')
+class SingletonWithKeyVM {
+  SingletonWithKeyVM();
+}
+
+// 24. Singleton mode with args
+@ShouldGenerate(r'''
+final singletonArgVMProvider = ViewModelProvider.arg<SingletonArgVM, int>(
+  builder: (int id) => SingletonArgVM(id),
+  key: (int id) => 'SingletonArgVM',
+  isSingleton: (int id) => true,
+);
+''')
+@GenProvider(isSingleton: true)
+class SingletonArgVM {
+  final int id;
+  SingletonArgVM(this.id);
+}
