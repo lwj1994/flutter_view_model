@@ -88,12 +88,17 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     }
 
     final ConstructorElement? mainCtor = element.unnamedConstructor;
-    if (mainCtor == null) {
-      return '// Skipped: No unnamed constructor for $className';
+    final matchingFactory = _findProviderFactory(element);
+
+    if (mainCtor == null && matchingFactory == null) {
+      return '// Skipped: No unnamed constructor or provider factory for $className';
     }
 
-    // Collect required, class-owned params from main constructor.
-    final effectiveParams = _requiredOwnParams(mainCtor);
+    // Collect required, class-owned params.
+    // Priority: factory 'provider', then main constructor.
+    final effectiveParams = matchingFactory != null
+        ? _requiredOwnParams(matchingFactory)
+        : _requiredOwnParams(mainCtor!);
 
     final argCount = effectiveParams.length;
 
@@ -102,7 +107,13 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       // No-args provider
       final buffer = StringBuffer();
       buffer.writeln('final $providerName = ViewModelProvider<$className>(');
-      buffer.writeln('  builder: () => $className(),');
+
+      if (matchingFactory != null) {
+        buffer
+            .writeln('  builder: () => $className.${matchingFactory.name}(),');
+      } else {
+        buffer.writeln('  builder: () => $className(),');
+      }
       if (keyExpr != null) {
         final k = keyExpr.trim();
         final expr = keyIsString
@@ -132,29 +143,16 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       return '// Skipped: constructor with > 4 required parameters';
     }
 
-    // Prefer factory named 'provider' if it exists.
-    final matchingFactory = _findProviderFactory(element);
-
     // Prepare builder signature
     final builderArgs = <String>[];
     final typeArgs = <String>[className];
     final callArgs = <String>[];
 
-    if (matchingFactory != null) {
-      final factoryParams = _requiredOwnParams(matchingFactory);
-      for (final p in factoryParams) {
-        final typeStr = p.type.getDisplayString(withNullability: true);
-        typeArgs.add(typeStr);
-        builderArgs.add('$typeStr ${p.name}');
-        callArgs.add(p.isNamed ? '${p.name}: ${p.name}' : p.name);
-      }
-    } else {
-      for (final p in effectiveParams) {
-        final typeStr = p.type.getDisplayString(withNullability: true);
-        typeArgs.add(typeStr);
-        builderArgs.add('$typeStr ${p.name}');
-        callArgs.add(p.isNamed ? '${p.name}: ${p.name}' : p.name);
-      }
+    for (final p in effectiveParams) {
+      final typeStr = p.type.getDisplayString(withNullability: true);
+      typeArgs.add(typeStr);
+      builderArgs.add('$typeStr ${p.name}');
+      callArgs.add(p.isNamed ? '${p.name}: ${p.name}' : p.name);
     }
 
     // Build the provider line with correct suffix: arg for 1, argN for N>=2

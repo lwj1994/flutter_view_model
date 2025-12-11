@@ -386,3 +386,20 @@ class SingletonArgVM {
   final int id;
   SingletonArgVM(this.id);
 }
+
+// 25. factory with no args (provider) should be used if present
+@ShouldGenerate(r'''
+final islandProvider = ViewModelProvider<IslandViewModel>(
+  builder: () => IslandViewModel.provider(),
+);
+''')
+@GenProvider()
+class IslandViewModel extends StateViewModel<IslandViewModelState> {
+  IslandViewModel({required IslandViewModelState state}) : super(state);
+
+  factory IslandViewModel.provider() {
+    return IslandViewModel(state: IslandViewModelState());
+  }
+}
+
+class IslandViewModelState {}
