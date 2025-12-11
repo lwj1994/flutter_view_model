@@ -12,7 +12,7 @@
 
 [ChangeLog](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md)
 
-[English Doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README_ZH.md) | [AI Guide](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/AI_GUIDE.md)
+[English Doc](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README_ZH.md) 
 
 > Thank [Miolin](https://github.com/Miolin) for transferring the permission of
 > the [view_model](https://pub.dev/packages/view_model) package to me.
@@ -223,7 +223,7 @@ class MySimpleViewModel extends ViewModel {
 Prefer using `view_model_generator` to cut boilerplate and keep consistency.
 See docs for details:
 - Generator: https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README.md
-- Migration: https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_Provider_MIGRATION.md
+- Migration: https://github.com/lwj1994/flutter_view_model/blob/main/docs/VIEWMODEL_PROVIDER_MIGRATION.md
 
 1) Annotate your `ViewModel` with `@genProvider` (or `@GenProvider(...)`).
 
