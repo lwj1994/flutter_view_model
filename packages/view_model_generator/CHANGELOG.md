@@ -1,3 +1,6 @@
+## 0.2.2
+- Support `isSingleton`
+
 ## 0.2.1
 - fix bugs
 

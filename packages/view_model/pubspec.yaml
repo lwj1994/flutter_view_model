@@ -2,7 +2,7 @@ name: view_model
 description: Everything is ViewModel. Enjoy automatic lifecycle
   management, prevent memory leaks, and share state effortlessly.
   Simple, lightweight, and powerful.
-version: 0.10.0-dev.1
+version: 0.10.0-dev.2
 homepage: https://github.com/lwj1994/flutter_view_model
 repository: https://github.com/lwj1994/flutter_view_model
 issue_tracker: https://github.com/lwj1994/flutter_view_model/issues
@@ -30,7 +30,7 @@ dependencies:
   flutter:
     sdk: flutter
   meta: any
-  view_model_annotation: ^0.2.1
+  view_model_annotation: ^0.2.2
   stack_trace: any
 dev_dependencies:
   flutter_test:
