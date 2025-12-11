@@ -1,4 +1,7 @@
 ## 0.2.1
+- Support `isSingleton`
+
+## 0.2.1
 - Rename `Expr` to `Expression`
 
 ## 0.2.0
