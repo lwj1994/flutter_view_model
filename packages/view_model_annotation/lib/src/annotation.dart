@@ -11,8 +11,13 @@ class GenProvider {
   final Object? key;
   final Object? tag;
 
+  /// Whether to use singleton mode. This is just a convenient way to
+  /// set a unique key for you.
+  /// Note that the priority is lower than the key parameter.
+  final bool isSingleton;
+
   /// Create a `GenProvider` annotation instance.
-  const GenProvider({this.key, this.tag});
+  const GenProvider({this.key, this.tag, this.isSingleton = false});
 }
 
 /// Shorthand constant for `GenProvider`.

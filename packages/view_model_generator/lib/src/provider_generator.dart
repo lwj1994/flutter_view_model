@@ -41,6 +41,8 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
 
     final keyReader = annotation.peek('key');
     final tagReader = annotation.peek('tag');
+    final isSingletonReader = annotation.peek('isSingleton');
+    bool isSingleton = isSingletonReader?.boolValue ?? false;
 
     if (keyReader != null &&
         (keyReader.instanceOf(exprChecker) ||
@@ -74,6 +76,15 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
         tagExpr = anno['tag'];
         if (tagExpr != null) tagIsString = _isStringLiteral(tagExpr.trim());
       }
+      if (!isSingleton) {
+        final s = anno['isSingleton'];
+        if (s == 'true') isSingleton = true;
+      }
+    }
+
+    if (keyExpr == null && isSingleton) {
+      keyExpr = "'$className'";
+      keyIsString = true;
     }
 
     final ConstructorElement? mainCtor = element.unnamedConstructor;
@@ -109,6 +120,9 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
                 : _normalizeStringLiteral(t))
             : (_unwrapExpr(t) ?? t);
         buffer.writeln('  tag: $expr,');
+      }
+      if (isSingleton) {
+        buffer.writeln('  isSingleton: true,');
       }
       buffer.writeln(');');
       return buffer.toString();
@@ -175,6 +189,9 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
               (_isStringLiteral(t) ? _normalizeStringLiteral(t) : t));
       buffer.writeln('  tag: (${builderArgs.join(', ')}) => $expr,');
     }
+    if (isSingleton) {
+      buffer.writeln('  isSingleton: (${builderArgs.join(', ')}) => true,');
+    }
 
     buffer.writeln(');');
     return buffer.toString();
@@ -196,10 +213,11 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       if (src.startsWith('@GenProvider') || src.startsWith('@genProvider')) {
         final key = _extractArg(src, 'key');
         final tag = _extractArg(src, 'tag');
-        return {'key': key, 'tag': tag};
+        final isSingleton = _extractArg(src, 'isSingleton');
+        return {'key': key, 'tag': tag, 'isSingleton': isSingleton};
       }
     }
-    return {'key': null, 'tag': null};
+    return {'key': null, 'tag': null, 'isSingleton': null};
   }
 
   String? _extractArg(String src, String name) {
