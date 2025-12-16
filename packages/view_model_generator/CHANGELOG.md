@@ -1,3 +1,6 @@
+## 0.2.4
+- Add `$view_model_Singleton_` prefix to the generated key for Singleton ViewModels to prevent naming collisions.
+
 ## 0.2.3
 - fix bugs
 
