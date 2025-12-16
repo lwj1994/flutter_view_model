@@ -83,7 +83,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     }
 
     if (keyExpr == null && isSingleton) {
-      keyExpr = "'$className'";
+      keyExpr = "'\\\$view_model_Singleton_$className'";
       keyIsString = true;
     }
 

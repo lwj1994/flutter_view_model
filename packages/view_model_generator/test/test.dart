@@ -351,7 +351,7 @@ class M {
 @ShouldGenerate(r'''
 final singletonVMProvider = ViewModelProvider<SingletonVM>(
   builder: () => SingletonVM(),
-  key: 'SingletonVM',
+  key: '\$view_model_Singleton_SingletonVM',
   isSingleton: true,
 );
 ''')
@@ -377,7 +377,7 @@ class SingletonWithKeyVM {
 @ShouldGenerate(r'''
 final singletonArgVMProvider = ViewModelProvider.arg<SingletonArgVM, int>(
   builder: (int id) => SingletonArgVM(id),
-  key: (int id) => 'SingletonArgVM',
+  key: (int id) => '\$view_model_Singleton_SingletonArgVM',
   isSingleton: (int id) => true,
 );
 ''')
