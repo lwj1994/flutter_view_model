@@ -8,6 +8,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
   late final Object? _key;
   late final Object? _tag;
   final bool isSingleton;
+  ViewModelProvider<T>? _proxy;
 
   ViewModelProvider({
     required this.builder,
@@ -23,8 +24,23 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     _tag = tag;
   }
 
+  /// Enables test-time override of factory properties.
+  /// When set, overrides `builder`, `key`, `tag`, and `isSingleton`.
+  void setProxy(ViewModelProvider<T> provider) {
+    this._proxy = provider;
+  }
+
+  /// Clears any proxy overrides and restores original behavior.
+  void clearProxy() {
+    _proxy = null;
+  }
+
   @override
   Object? key() {
+    if (_proxy != null) {
+      return _proxy?.key();
+    }
+
     if (_key == null) {
       return super.key();
     } else {
@@ -33,13 +49,28 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
   }
 
   @override
-  Object? tag() => _tag;
+  Object? tag() {
+    if (_proxy != null) {
+      return _proxy?.tag();
+    }
+    return _tag;
+  }
 
   @override
-  T build() => builder();
+  T build() {
+    if (_proxy != null) {
+      return _proxy!.build();
+    }
+    return builder();
+  }
 
   @override
-  bool singleton() => isSingleton;
+  bool singleton() {
+    if (_proxy != null) {
+      return _proxy!.singleton();
+    }
+    return isSingleton;
+  }
 
   /// Creates an arg-based provider with one argument.
   ///
@@ -128,14 +159,34 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
   /// Determines if the instance should be singleton for the given arg.
   final bool Function(A argument)? isSingleton;
 
+  /// Proxy for test-time override.
+  ///
+  /// When set, the proxy overrides `builder`, `key`, `tag`, and
+  /// `isSingleton` computations. Use `setProxy` to install and
+  /// `clearProxy` to remove.
+  ViewModelProviderWithArg<VM, A>? _proxy;
+
+  /// Enables test-time override of arg-based provider behavior.
+  ///
+  /// Replaces this spec with values from the provided proxy when calling.
+  void setProxy(ViewModelProviderWithArg<VM, A> provider) {
+    _proxy = provider;
+  }
+
+  /// Clears any proxy overrides and restores original behavior.
+  void clearProxy() {
+    _proxy = null;
+  }
+
   /// Converts this spec into a `ViewModelFactory` using `arg`.
   /// The factory defers building until requested by the binder.
   ViewModelFactory<VM> call(A arg) {
+    final spec = _proxy ?? this;
     return ViewModelProvider<VM>(
-      builder: () => builder(arg),
-      key: key?.call(arg),
-      tag: tag?.call(arg),
-      isSingleton: isSingleton?.call(arg) ?? false,
+      builder: () => spec.builder(arg),
+      key: spec.key?.call(arg),
+      tag: spec.tag?.call(arg),
+      isSingleton: spec.isSingleton?.call(arg) ?? false,
     );
   }
 }
@@ -153,12 +204,32 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
   final Object? Function(A a, B b)? tag;
   final bool Function(A a, B b)? isSingleton;
 
+  /// Proxy for test-time override.
+  ///
+  /// When set, the proxy overrides `builder`, `key`, `tag`, and
+  /// `isSingleton` computations. Use `setProxy` to install and
+  /// `clearProxy` to remove.
+  ViewModelProviderWithArg2<VM, A, B>? _proxy;
+
+  /// Enables test-time override of arg-based provider behavior.
+  ///
+  /// Replaces this spec with values from the provided proxy when calling.
+  void setProxy(ViewModelProviderWithArg2<VM, A, B> provider) {
+    _proxy = provider;
+  }
+
+  /// Clears any proxy overrides and restores original behavior.
+  void clearProxy() {
+    _proxy = null;
+  }
+
   ViewModelFactory<VM> call(A a, B b) {
+    final spec = _proxy ?? this;
     return ViewModelProvider<VM>(
-      builder: () => builder(a, b),
-      key: key?.call(a, b),
-      tag: tag?.call(a, b),
-      isSingleton: isSingleton?.call(a, b) ?? false,
+      builder: () => spec.builder(a, b),
+      key: spec.key?.call(a, b),
+      tag: spec.tag?.call(a, b),
+      isSingleton: spec.isSingleton?.call(a, b) ?? false,
     );
   }
 }
@@ -176,12 +247,32 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
   final Object? Function(A a, B b, C c)? tag;
   final bool Function(A a, B b, C c)? isSingleton;
 
+  /// Proxy for test-time override.
+  ///
+  /// When set, the proxy overrides `builder`, `key`, `tag`, and
+  /// `isSingleton` computations. Use `setProxy` to install and
+  /// `clearProxy` to remove.
+  ViewModelProviderWithArg3<VM, A, B, C>? _proxy;
+
+  /// Enables test-time override of arg-based provider behavior.
+  ///
+  /// Replaces this spec with values from the provided proxy when calling.
+  void setProxy(ViewModelProviderWithArg3<VM, A, B, C> provider) {
+    _proxy = provider;
+  }
+
+  /// Clears any proxy overrides and restores original behavior.
+  void clearProxy() {
+    _proxy = null;
+  }
+
   ViewModelFactory<VM> call(A a, B b, C c) {
+    final spec = _proxy ?? this;
     return ViewModelProvider<VM>(
-      builder: () => builder(a, b, c),
-      key: key?.call(a, b, c),
-      tag: tag?.call(a, b, c),
-      isSingleton: isSingleton?.call(a, b, c) ?? false,
+      builder: () => spec.builder(a, b, c),
+      key: spec.key?.call(a, b, c),
+      tag: spec.tag?.call(a, b, c),
+      isSingleton: spec.isSingleton?.call(a, b, c) ?? false,
     );
   }
 }
@@ -199,12 +290,32 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
   final Object? Function(A a, B b, C c, D d)? tag;
   final bool Function(A a, B b, C c, D d)? isSingleton;
 
+  /// Proxy for test-time override.
+  ///
+  /// When set, the proxy overrides `builder`, `key`, `tag`, and
+  /// `isSingleton` computations. Use `setProxy` to install and
+  /// `clearProxy` to remove.
+  ViewModelProviderWithArg4<VM, A, B, C, D>? _proxy;
+
+  /// Enables test-time override of arg-based provider behavior.
+  ///
+  /// Replaces this spec with values from the provided proxy when calling.
+  void setProxy(ViewModelProviderWithArg4<VM, A, B, C, D> provider) {
+    _proxy = provider;
+  }
+
+  /// Clears any proxy overrides and restores original behavior.
+  void clearProxy() {
+    _proxy = null;
+  }
+
   ViewModelFactory<VM> call(A a, B b, C c, D d) {
+    final spec = _proxy ?? this;
     return ViewModelProvider<VM>(
-      builder: () => builder(a, b, c, d),
-      key: key?.call(a, b, c, d),
-      tag: tag?.call(a, b, c, d),
-      isSingleton: isSingleton?.call(a, b, c, d) ?? false,
+      builder: () => spec.builder(a, b, c, d),
+      key: spec.key?.call(a, b, c, d),
+      tag: spec.tag?.call(a, b, c, d),
+      isSingleton: spec.isSingleton?.call(a, b, c, d) ?? false,
     );
   }
 }
