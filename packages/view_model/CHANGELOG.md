@@ -1,3 +1,10 @@
+## 0.11.0
+
+- Add: test-time proxy overrides for providers
+  - `ViewModelProviderWithArg/Arg2/Arg3/Arg4` now support `setProxy` and
+    `clearProxy` to override `builder`, `key`, `tag`, `isSingleton` during tests.
+  - Mirrors existing no-arg `ViewModelProvider` proxy behavior for consistency.
+
 ## 0.10.0
 - Feat: Introduce methods to retrieve and watch multiple ViewModel instances by tag (`readCachesByTag`, `watchCachesByTag`)
 
