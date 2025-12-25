@@ -410,6 +410,13 @@ mixin class ViewModel implements InstanceLifeCycle {
     _initDevtool();
   }
 
+  @visibleForTesting
+  static void reset() {
+    _initialized = false;
+    _config = ViewModelConfig();
+    _viewModelLifecycles.clear();
+  }
+
   /// Initializes DevTools integration if in debug mode.
   ///
   /// This method is called automatically by [initialize] and sets up:

@@ -16,6 +16,61 @@ class UserViewModel extends ViewModel {
 }
 
 void main() {
+  group('ViewModelProvider Proxy', () {
+    test('overrides builder, key, tag, isSingleton', () {
+      final binder = TestBinder();
+      final base = ViewModelProvider<UserViewModel>(
+        builder: () => UserViewModel(name: 'Base'),
+        key: 'base-key',
+        tag: 'base-tag',
+        isSingleton: false,
+      );
+
+      final override = ViewModelProvider<UserViewModel>(
+        builder: () => UserViewModel(name: 'Override'),
+        key: 'override-key',
+        tag: 'override-tag',
+        isSingleton: true,
+      );
+
+      base.setProxy(override);
+
+      expect(base.key(), 'override-key');
+      expect(base.tag(), 'override-tag');
+      expect(base.singleton(), true);
+
+      final vm = binder.vef.watch(base);
+      expect(vm.name, 'Override');
+    });
+
+    test('clearProxy restores original behavior', () {
+      final binder = TestBinder();
+      final base = ViewModelProvider<UserViewModel>(
+        builder: () => UserViewModel(name: 'Base'),
+        key: 'base-key',
+        tag: 'base-tag',
+        isSingleton: false,
+      );
+
+      final override = ViewModelProvider<UserViewModel>(
+        builder: () => UserViewModel(name: 'Override'),
+        key: 'override-key',
+        tag: 'override-tag',
+        isSingleton: true,
+      );
+
+      base.setProxy(override);
+      base.clearProxy();
+
+      expect(base.key(), 'base-key');
+      expect(base.tag(), 'base-tag');
+      expect(base.singleton(), false);
+
+      final vm = binder.vef.watch(base);
+      expect(vm.name, 'Base');
+    });
+  });
+
   group('Arg Provider Proxy', () {
     test('arg overrides via proxy', () {
       final binder = TestBinder();
@@ -82,6 +137,25 @@ void main() {
       expect(vm1.tag, 't2-A');
     });
 
+    test('arg2 clearProxy restores behavior', () {
+      final binder = TestBinder();
+      final base = ViewModelProvider.arg2<UserViewModel, String, int>(
+        builder: (name, _) => UserViewModel(name: name),
+        key: (name, _) => 'user-$name',
+      );
+      final override = ViewModelProviderWithArg2<UserViewModel, String, int>(
+        builder: (name, _) => UserViewModel(name: 'P2-$name'),
+        key: (name, _) => 'p2-$name',
+        tag: (name, _) => 't2-$name',
+        isSingleton: (name, _) => true,
+      );
+      base.setProxy(override);
+      base.clearProxy();
+
+      final vm1 = binder.vef.watch(base('A', 1));
+      expect(vm1.name, 'A');
+    });
+
     test('arg3 overrides via proxy', () {
       final binder = TestBinder();
       final base = ViewModelProvider.arg3<UserViewModel, String, int, bool>(
@@ -102,6 +176,23 @@ void main() {
       expect(vm1.name, 'P3-A');
       expect(identical(vm1, vm2), isTrue);
       expect(vm1.tag, 't3-A');
+    });
+
+    test('arg3 clearProxy restores behavior', () {
+      final binder = TestBinder();
+      final base = ViewModelProvider.arg3<UserViewModel, String, int, bool>(
+        builder: (name, _, __) => UserViewModel(name: name),
+        key: (name, _, __) => 'user-$name',
+      );
+      final override =
+          ViewModelProviderWithArg3<UserViewModel, String, int, bool>(
+        builder: (name, _, __) => UserViewModel(name: 'P3-$name'),
+      );
+      base.setProxy(override);
+      base.clearProxy();
+
+      final vm1 = binder.vef.watch(base('A', 1, true));
+      expect(vm1.name, 'A');
     });
 
     test('arg4 overrides via proxy', () {
@@ -125,6 +216,24 @@ void main() {
       expect(vm1.name, 'P4-A');
       expect(identical(vm1, vm2), isTrue);
       expect(vm1.tag, 't4-A');
+    });
+
+    test('arg4 clearProxy restores behavior', () {
+      final binder = TestBinder();
+      final base =
+          ViewModelProvider.arg4<UserViewModel, String, int, bool, double>(
+        builder: (name, _, __, ___) => UserViewModel(name: name),
+        key: (name, _, __, ___) => 'user-$name',
+      );
+      final override =
+          ViewModelProviderWithArg4<UserViewModel, String, int, bool, double>(
+        builder: (name, _, __, ___) => UserViewModel(name: 'P4-$name'),
+      );
+      base.setProxy(override);
+      base.clearProxy();
+
+      final vm1 = binder.vef.watch(base('A', 1, true, 1.0));
+      expect(vm1.name, 'A');
     });
   });
 }
