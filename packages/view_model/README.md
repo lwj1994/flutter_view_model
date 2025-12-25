@@ -1185,3 +1185,61 @@ class StartTaskVef with Vef {
 // await starter.run();
 // starter.close();
 ```
+
+## Testing
+
+The `view_model` package creates `ViewModel`s strictly via `ViewModelProvider`. This makes it easy to mock `ViewModel`s in tests using the `setProxy` method.
+
+### setProxy
+
+You can use `setProxy` to intercept the creation of a `ViewModel` and return a mock instance instead. This is particularly useful for widget tests where you want to isolate the widget from the complex logic of the real `ViewModel`.
+
+```dart
+// 1. Define your ViewModel and Provider
+class AuthViewModel extends ViewModel {
+  bool get isLoggedIn => true;
+  void login() {}
+}
+
+final authProvider = ViewModelProvider(builder: () => AuthViewModel());
+
+// 2. Define a Mock ViewModel
+class MockAuthViewModel extends AuthViewModel {
+  @override
+  bool get isLoggedIn => false;
+}
+
+// 3. Setup the proxy in your test
+void main() {
+  testWidgets('Test Auth Page', (tester) async {
+    // Override the real AuthViewModel with the Mock one
+    authProvider.setProxy(
+      ViewModelProvider(builder: () => MockAuthViewModel()),
+    );
+
+    await tester.pumpWidget(MyApp());
+    
+    // ... Verify your UI ...
+
+    // Clean up after test
+    authProvider.clearProxy();
+  });
+}
+```
+
+This mechanism works for both standard `ViewModelProvider` and argument-based providers (like `ViewModelProvider.arg`).
+
+```dart
+// For provider with arguments
+final userProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (id) => UserViewModel(id),
+);
+
+// In test
+userProvider.setProxy(
+  ViewModelProvider.arg<UserViewModel, String>(
+    builder: (id) => MockUserViewModel(id),
+  ),
+);
+```
+
