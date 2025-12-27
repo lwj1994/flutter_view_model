@@ -273,6 +273,9 @@ final vm = vef.watch(userProvider('user-123'));
 
 #### ViewModelStatelessMixin
 
+> [!WARNING]
+> 最好不要使用 `ViewModelStatelessMixin`。因为 `StatelessWidget` 被设计为没有完整的生命周期（没有 `dispose`），无法自然地触发 `ViewModel` 的销毁。目前的实现是通过拦截 `Element` 生命周期来实现的，但这很容易和别的 Mixin Element 产生冲突。
+
 ```dart
 import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
