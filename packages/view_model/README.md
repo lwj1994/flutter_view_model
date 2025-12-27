@@ -397,6 +397,10 @@ avoid rebuilds. Lifecycle (create, share, dispose) is managed for
 you automatically.
 
 #### ViewModelStatelessMixin
+
+> [!WARNING]
+> It is recommended NOT to use `ViewModelStatelessMixin`. `StatelessWidget` is designed without a complete lifecycle (i.e., no `dispose` method), so it cannot naturally trigger `ViewModel` disposal. This implementation works by intercepting the `Element` lifecycle, which can easily conflict with other mixins that affect the `Element`.
+
 `ViewModelStatelessMixin` enables `StatelessWidget` to bind a
 `ViewModel`. 
 
