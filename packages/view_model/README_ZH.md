@@ -41,8 +41,8 @@
       - [ViewModelProvider（建议搭配生成器使用）](#viewmodelprovider建议搭配生成器使用)
       - [Provider 生成器（推荐）](#provider-生成器推荐)
     - [在 Widget 中使用 ViewModel](#在-widget-中使用-viewmodel)
-      - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [ViewModelStateMixin](#viewmodelstatemixin)
+      - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [替代方案: ViewModelBuilder (无需 mixin)](#替代方案-viewmodelbuilder-无需-mixin)
     - [使用监听器处理副作用](#使用监听器处理副作用)
   - [ViewModel 生命周期](#viewmodel-生命周期)
@@ -268,48 +268,8 @@ final vm = vef.watch(userProvider('user-123'));
 
 ### 在 Widget 中使用 ViewModel
 
-将 `ViewModelStatelessMixin` 或 `ViewModelStateMixin` 混入你的 Widget 并调用 `vef.watch` 来绑定并在
+将 `ViewModelStateMixin` 或 `ViewModelStatelessMixin` 混入你的 Widget 并调用 `vef.watch` 来绑定并在
 `notifyListeners()` 被调用时重建。也可用 `vef.read` 只读取不重建。生命周期会自动为你处理。
-
-#### ViewModelStatelessMixin
-
-> [!WARNING]
-> 最好不要使用 `ViewModelStatelessMixin`。因为 `StatelessWidget` 被设计为没有完整的生命周期（没有 `dispose`），无法自然地触发 `ViewModel` 的销毁。目前的实现是通过拦截 `Element` 生命周期来实现的，但这很容易和别的 Mixin Element 产生冲突。
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:view_model/view_model.dart';
-
-/// Stateless widget using ViewModelStatelessMixin.
-/// Displays counter state and a button to increment.
-// ignore: must_be_immutable
-final provider = ViewModelProvider<CounterViewModel>(
-  builder: () => CounterViewModel(),
-);
-
-class CounterStatelessWidget extends StatelessWidget
-    with ViewModelStatelessMixin {
-  CounterStatelessWidget({super.key});
-
-  late final vm = vef.watch(provider);
-
-  /// Builds UI bound to CounterViewModel state.
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Text('Count: ${vm.state}'),
-          ElevatedButton(
-            onPressed: vm.increment,
-            child: const Text('Increment'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-```
 
 #### ViewModelStateMixin
 
@@ -364,6 +324,46 @@ class _MyPageState extends State<MyPage>
         onPressed: () => simpleVM.incrementCounter(), // 调用 ViewModel 的方法
         tooltip: 'Increment',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+```
+
+#### ViewModelStatelessMixin
+
+> [!WARNING]
+> 最好不要使用 `ViewModelStatelessMixin`。因为 `StatelessWidget` 被设计为没有完整的生命周期（没有 `dispose`），无法自然地触发 `ViewModel` 的销毁。目前的实现是通过拦截 `Element` 生命周期来实现的，但这很容易和别的 Mixin Element 产生冲突。
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:view_model/view_model.dart';
+
+/// Stateless widget using ViewModelStatelessMixin.
+/// Displays counter state and a button to increment.
+// ignore: must_be_immutable
+final provider = ViewModelProvider<CounterViewModel>(
+  builder: () => CounterViewModel(),
+);
+
+class CounterStatelessWidget extends StatelessWidget
+    with ViewModelStatelessMixin {
+  CounterStatelessWidget({super.key});
+
+  late final vm = vef.watch(provider);
+
+  /// Builds UI bound to CounterViewModel state.
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          Text('Count: ${vm.state}'),
+          ElevatedButton(
+            onPressed: vm.increment,
+            child: const Text('Increment'),
+          ),
+        ],
       ),
     );
   }

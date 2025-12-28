@@ -48,8 +48,8 @@ That’s why I built this project.
     - [Creating a ViewModel](#creating-a-viewmodel)
       - [ViewModelProvider](#viewmodelprovider)
     - [Using ViewModel in Widgets](#using-viewmodel-in-widgets)
-      - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [ViewModelStateMixin](#viewmodelstatemixin)
+      - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
       - [Alternative: ViewModelBuilder (no mixin required)](#alternative-viewmodelbuilder-no-mixin-required)
     - [Side‑effects with listeners](#sideeffects-with-listeners)
   - [ViewModel Lifecycle](#viewmodel-lifecycle)
@@ -391,54 +391,10 @@ use `tag` to group/discover. You can then use `watchCached` to get the cached in
 
 ### Using ViewModel in Widgets
 
-Mix `ViewModelStatelessMixin` or `ViewModelStateMixin` into Widget to bind a `ViewModel`.
+Mix `ViewModelStateMixin` or `ViewModelStatelessMixin` into Widget to bind a `ViewModel`.
 Use `vef.watch` for reactive updates, or `vef.read` to
 avoid rebuilds. Lifecycle (create, share, dispose) is managed for
 you automatically.
-
-#### ViewModelStatelessMixin
-
-> [!WARNING]
-> It is recommended NOT to use `ViewModelStatelessMixin`. `StatelessWidget` is designed without a complete lifecycle (i.e., no `dispose` method), so it cannot naturally trigger `ViewModel` disposal. This implementation works by intercepting the `Element` lifecycle, which can easily conflict with other mixins that affect the `Element`.
-
-`ViewModelStatelessMixin` enables `StatelessWidget` to bind a
-`ViewModel`. 
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:view_model/view_model.dart';
-
-/// Stateless widget using ViewModelStatelessMixin.
-/// Displays counter state and a button to increment.
-// ignore: must_be_immutable
-final counterProviderForStateless = ViewModelProvider(
-  builder: CounterViewModel.new,
-);
-
-class CounterStatelessWidget extends StatelessWidget
-    with ViewModelStatelessMixin {
-  CounterStatelessWidget({super.key});
-
-  /// Create and watch the ViewModel instance for UI binding.
-  late final vm = vef.watch(counterProviderForStateless);
-
-  /// Builds UI bound to CounterViewModel state.
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Text('Count: ${vm.state}'),
-          ElevatedButton(
-            onPressed: vm.increment,
-            child: const Text('Increment'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-```
 
 #### ViewModelStateMixin
 
@@ -494,6 +450,50 @@ class _MyPageState extends State<MyPage>
         onPressed: () => simpleVM.incrementCounter(), // Call the ViewModel's method
         tooltip: 'Increment',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+```
+
+#### ViewModelStatelessMixin
+
+> [!WARNING]
+> It is recommended NOT to use `ViewModelStatelessMixin`. `StatelessWidget` is designed without a complete lifecycle (i.e., no `dispose` method), so it cannot naturally trigger `ViewModel` disposal. This implementation works by intercepting the `Element` lifecycle, which can easily conflict with other mixins that affect the `Element`.
+
+`ViewModelStatelessMixin` enables `StatelessWidget` to bind a
+`ViewModel`. 
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:view_model/view_model.dart';
+
+/// Stateless widget using ViewModelStatelessMixin.
+/// Displays counter state and a button to increment.
+// ignore: must_be_immutable
+final counterProviderForStateless = ViewModelProvider(
+  builder: CounterViewModel.new,
+);
+
+class CounterStatelessWidget extends StatelessWidget
+    with ViewModelStatelessMixin {
+  CounterStatelessWidget({super.key});
+
+  /// Create and watch the ViewModel instance for UI binding.
+  late final vm = vef.watch(counterProviderForStateless);
+
+  /// Builds UI bound to CounterViewModel state.
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          Text('Count: ${vm.state}'),
+          ElevatedButton(
+            onPressed: vm.increment,
+            child: const Text('Increment'),
+          ),
+        ],
       ),
     );
   }
