@@ -444,6 +444,58 @@ void main() {
     });
   });
 
+  group('Factory Key Change Returns Different ViewModel', () {
+    test('different key returns different ViewModel instance via vef.read', () {
+      final vef = _CoreRef();
+
+      // Create factory with key1
+      final factory1 = TestViewModelFactory(keyV: 'key1');
+      final vm1 = vef.read(factory1);
+
+      // Create factory with key2
+      final factory2 = TestViewModelFactory(keyV: 'key2');
+      final vm2 = vef.read(factory2);
+
+      // Should be different instances
+      expect(identical(vm1, vm2), isFalse);
+      expect(vm1.hashCode, isNot(equals(vm2.hashCode)));
+
+      vef.dispose();
+    });
+
+    test('same key returns same ViewModel instance via vef.read', () {
+      final vef = _CoreRef();
+
+      // Create factory with same key
+      final factory1 = TestViewModelFactory(keyV: 'same_key');
+      final factory2 = TestViewModelFactory(keyV: 'same_key');
+
+      final vm1 = vef.read(factory1);
+      final vm2 = vef.read(factory2);
+
+      // Should be the same instance
+      expect(identical(vm1, vm2), isTrue);
+
+      vef.dispose();
+    });
+
+    test('null key returns same ViewModel instance for same type', () {
+      final vef = _CoreRef();
+
+      // Create factory without key (null key)
+      final factory1 = TestViewModelFactory();
+      final factory2 = TestViewModelFactory();
+
+      final vm1 = vef.read(factory1);
+      final vm2 = vef.read(factory2);
+
+      // With null key, vef.read shares instance for same type
+      expect(identical(vm1, vm2), isTrue);
+
+      vef.dispose();
+    });
+  });
+
   group('ViewModelLifecycle Basic (merged)', () {
     test('lifecycle receives create/add/remove/dispose', () async {
       final lc = _LC();
