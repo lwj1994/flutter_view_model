@@ -123,7 +123,7 @@ class CounterViewModel extends ViewModel {
 }
 
 // 2. Define a Provider
-final counterProvider = ViewModelProvider(
+final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 
@@ -153,12 +153,12 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 > or [freezed](https://pub.dev/packages/freezed) to simplify this implementation.
 
 ```dart
-final Provider = ViewModelProvider<UserViewModel>(
+ViewModelFactory<UserViewModel> get provider => ViewModelProvider<UserViewModel>(
   builder: () => UserViewModel(userId: id),
   key: 'user:$id',
 );
-final vm1 = vef.watch(Provider);
-final vm2 = vef.watchCached<UserViewModel>(key: 'user:$id'); // same
+UserViewModel get vm1 => vef.watch(provider);
+UserViewModel get vm2 => vef.watchCached<UserViewModel>(key: 'user:$id'); // same
 ```
 
 
@@ -404,7 +404,7 @@ import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
 
 // Assume MySimpleViewModel is defined
-final simpleVMProvider = ViewModelProvider(builder: () => MySimpleViewModel());
+final simpleVMProvider = ViewModelProvider<MySimpleViewModel>(builder: () => MySimpleViewModel());
 
 class MyPage extends StatefulWidget {
   const MyPage({super.key});
@@ -415,17 +415,10 @@ class MyPage extends StatefulWidget {
 
 class _MyPageState extends State<MyPage>
     with ViewModelStateMixin<MyPage> {
-  // 1. Mix in the Mixin
-  late final MySimpleViewModel simpleVM;
-
-  @override
-  void initState() {
-    super.initState();
-    // 2. Use vef.watch to create and get the ViewModel
-    // When MyPage is built for the first time, the build() method of MySimpleViewModelFactory will be called to create an instance.
-    // When MyPage is disposed, if this viewModel has no other listeners, it will also be disposed.
-    simpleVM = vef.watch(simpleVMProvider);
-  }
+  // Use vef.watch to create and get the ViewModel
+  // When MyPage is built for the first time, the ViewModel will be created.
+  // When MyPage is disposed and no other listeners exist, it will also be disposed.
+  MySimpleViewModel get simpleVM => vef.watch(simpleVMProvider);
 
   @override
   Widget build(BuildContext context) {
@@ -471,7 +464,7 @@ import 'package:view_model/view_model.dart';
 /// Stateless widget using ViewModelStatelessMixin.
 /// Displays counter state and a button to increment.
 // ignore: must_be_immutable
-final counterProviderForStateless = ViewModelProvider(
+final counterProviderForStateless = ViewModelProvider<CounterViewModel>(
   builder: CounterViewModel.new,
 );
 
@@ -480,7 +473,7 @@ class CounterStatelessWidget extends StatelessWidget
   CounterStatelessWidget({super.key});
 
   /// Create and watch the ViewModel instance for UI binding.
-  late final vm = vef.watch(counterProviderForStateless);
+  CounterViewModel get vm => vef.watch(counterProviderForStateless);
 
   /// Builds UI bound to CounterViewModel state.
   @override
@@ -504,7 +497,7 @@ class CounterStatelessWidget extends StatelessWidget
 
 ```dart
 // Example: Using ViewModelBuilder without mixing ViewModelStateMixin
-final simpleVMProviderForBuilder = ViewModelProvider(builder: () => MySimpleViewModel());
+final simpleVMProviderForBuilder = ViewModelProvider<MySimpleViewModel>(builder: () => MySimpleViewModel());
 ViewModelBuilder<MySimpleViewModel>(
   Provider: simpleVMProviderForBuilder,
   builder: (vm) {
@@ -840,18 +833,11 @@ class MyCounterPage extends StatefulWidget {
 
 class _MyCounterPageState extends State<MyCounterPage>
     with ViewModelStateMixin<MyCounterPage> {
-  late final MyCounterViewModel counterVM;
+  final counterProviderForStateful = ViewModelProvider<MyCounterViewModel>(
+    builder: () => MyCounterViewModel(initialState: MyCounterState(count: 10, statusMessage: "Initialized")),
+  );
 
-  final counterProviderForStateful = ViewModelProvider(
-  builder: () => MyCounterViewModel(initialState: MyCounterState(count: 10, statusMessage: "Initialized")
-);
-
-// ... (inside _MyCounterPageState)
-@override
-void initState() {
-  super.initState();
-  counterVM = vef.watch(counterProviderForStateful);
-}
+  MyCounterViewModel get counterVM => vef.watch(counterProviderForStateful);
 
   @override
   Widget build(BuildContext context) {
@@ -1040,18 +1026,11 @@ When you create `ViewModelA` in your widget, the dependency mechanism will autom
 
 ```dart
 
-final viewModelAProvider = ViewModelProvider(builder: () => ViewModelA());
+final viewModelAProvider = ViewModelProvider<ViewModelA>(builder: () => ViewModelA());
 
 // In your widget
 class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
-  late final ViewModelA viewModelA;
-
-// ... (inside _MyWidgetState)
-@override
-void initState() {
-  super.initState();
-  viewModelA = vef.watch(viewModelAProvider);
-}
+  ViewModelA get viewModelA => vef.watch(viewModelAProvider);
 
   // ...
 }
@@ -1159,12 +1138,12 @@ This means you can use ViewModel in any Dart class, **independent of Widgets**.
 ```dart
 import 'package:view_model/view_model.dart';
 
-final Provider = ViewModelProvider(builder: () => AppInitViewModel());
+final provider = ViewModelProvider<AppInitViewModel>(builder: () => AppInitViewModel());
 
 /// Vef that runs startup tasks before UI is shown.
 /// Typical use: preload data, check auth, warm caches.
 class StartTaskVef with Vef {
-  late final AppInitViewModel _initVM = vef.watch(Provider);
+  AppInitViewModel get _initVM => vef.watch(provider);
 
   /// Triggers startup logic. Call this from main() before runApp.
   Future<void> run() async {
@@ -1205,7 +1184,7 @@ class AuthViewModel extends ViewModel {
   void login() {}
 }
 
-final authProvider = ViewModelProvider(builder: () => AuthViewModel());
+final authProvider = ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel());
 
 // 2. Define a Mock ViewModel
 class MockAuthViewModel extends AuthViewModel {

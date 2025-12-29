@@ -151,12 +151,12 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 
 ```dart
 
-final f = ViewModelProvider<UserViewModel>(
+ViewModelFactory<UserViewModel> get f => ViewModelProvider<UserViewModel>(
   builder: () => UserViewModel(userId: id),
   key: 'user:$id',
 );
-final vm1 = vef.watch(f);
-final vm2 = vef.watchCached<UserViewModel>(key: 'user:$id'); // 相同
+UserViewModel get vm1 => vef.watch(f);
+UserViewModel get vm2 => vef.watchCached<UserViewModel>(key: 'user:$id'); // 相同
 ```
 
 ## 基本用法
@@ -288,18 +288,11 @@ class MyPage extends StatefulWidget {
 
 class _MyPageState extends State<MyPage>
     with ViewModelStateMixin<MyPage> {
-  // 1. 混入 Mixin
-  late final MySimpleViewModel simpleVM;
-
-  @override
-  void initState() {
-    super.initState();
-    // 2. 使用 ViewModelProvider 创建并获取 ViewModel
-    // 当 MyPage 第一次构建时将创建实例；当 MyPage 被销毁且无其他监听者时也将销毁。
-    simpleVM = vef.watch(
-      ViewModelProvider<MySimpleViewModel>(builder: () => MySimpleViewModel()),
-    );
-  }
+  // 使用 vef.watch 创建并获取 ViewModel
+  // 当 MyPage 第一次构建时将创建实例；当 MyPage 被销毁且无其他监听者时也将销毁。
+  MySimpleViewModel get simpleVM => vef.watch(
+    ViewModelProvider<MySimpleViewModel>(builder: () => MySimpleViewModel()),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +343,7 @@ class CounterStatelessWidget extends StatelessWidget
     with ViewModelStatelessMixin {
   CounterStatelessWidget({super.key});
 
-  late final vm = vef.watch(provider);
+  CounterViewModel get vm => vef.watch(provider);
 
   /// Builds UI bound to CounterViewModel state.
   @override
@@ -723,20 +716,13 @@ class MyCounterPage extends StatefulWidget {
 
 class _MyCounterPageState extends State<MyCounterPage>
     with ViewModelStateMixin<MyCounterPage> {
-  late final MyCounterViewModel counterVM;
+  final counterProvider = ViewModelProvider<MyCounterViewModel>(
+    builder: () => MyCounterViewModel(
+      initialState: MyCounterState(count: 10, statusMessage: "Initialized"),
+    ),
+  );
 
-  @override
-  void initState() {
-    super.initState();
-    counterVM = vef.watch(
-      ViewModelProvider<MyCounterViewModel>(
-        builder: () =>
-            MyCounterViewModel(
-              initialState: MyCounterState(count: 10, statusMessage: "Initialized"),
-            ),
-      ),
-    );
-  }
+  MyCounterViewModel get counterVM => vef.watch(counterProvider);
 
   @override
   Widget build(BuildContext context) {
@@ -936,15 +922,9 @@ class ViewModelA extends ViewModel {
 ```dart
 // 在你的 widget 中
 class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
-  late final ViewModelA viewModelA;
+  ViewModelA get viewModelA => vef.watch(ViewModelProvider(builder: () => ViewModelA()));
 
-  @override
-  void initState() {
-    super.initState();
-    viewModelA = vef.watch(ViewModelProvider(builder: () => ViewModelA()));
-  }
-
-// ...
+  // ...
 }
 ```
 
@@ -1057,8 +1037,8 @@ import 'package:view_model/view_model.dart';
 /// Vef that runs startup tasks before UI is shown.
 /// Typical use: preload data, check auth, warm caches.
 class StartTaskRef with Vef {
-  final spec = ViewModelProvider(builder: () => AppInitViewModel());
-  late final AppInitViewModel _initVM = vef.watch(spec);
+  final spec = ViewModelProvider<AppInitViewModel>(builder: () => AppInitViewModel());
+  AppInitViewModel get _initVM => vef.watch(spec);
 
   /// Triggers startup logic. Call this from main() before runApp.
   Future<void> run() async {
