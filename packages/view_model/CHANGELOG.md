@@ -1,3 +1,6 @@
+## 0.12.0 
+- update docs
+
 ## 0.11.0
 
 - Add: test-time proxy overrides for providers
