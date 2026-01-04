@@ -413,7 +413,7 @@ final nullArgProvider = ViewModelProvider.arg<NullArg, int?>(
 class NullArg {
   final int? id;
 
-  NullArg({this.id});
+  NullArg({required this.id});
 }
 
 @ShouldGenerate(r'''
