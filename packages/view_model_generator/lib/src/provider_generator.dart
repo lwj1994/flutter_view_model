@@ -97,8 +97,8 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     // Collect required, class-owned params.
     // Priority: factory 'provider', then main constructor.
     final effectiveParams = matchingFactory != null
-        ? _requiredOwnParams(matchingFactory)
-        : _requiredOwnParams(mainCtor!);
+        ? _ownParams(matchingFactory)
+        : _ownParams(mainCtor!);
 
     final argCount = effectiveParams.length;
 
@@ -305,12 +305,12 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     return _toLowerCamel(name) + 'Provider';
   }
 
-  /// Collect required, class-owned params (exclude super-forwarded params).
-  List _requiredOwnParams(ExecutableElement exec) {
+  /// Collect all class-owned params (exclude super-forwarded params).
+  ///
+  /// Includes both required and optional parameters to support
+  /// nullable optional arguments like `{this.id}`.
+  List _ownParams(ExecutableElement exec) {
     return exec.formalParameters
-        .where((p) =>
-            (p as dynamic).isRequiredPositional ||
-            (p as dynamic).isRequiredNamed)
         .where((p) => p is! SuperFormalParameterElement)
         .toList();
   }
