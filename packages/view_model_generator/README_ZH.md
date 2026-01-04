@@ -163,3 +163,39 @@ class E { E(); }
 
 - 最多支持 4 个必填构造参数（`arg`、`arg2`、`arg3`、`arg4`）。
 - 会排除 `required super.xxx` 的转发参数，不计入 Provider 生成签名。
+
+## 参数处理规则
+
+- **主构造函数**：仅收集 **required** 参数。可选参数（如 `{this.id}`）会被忽略。
+- **Factory `provider`**：收集 **所有** 参数（包括可选参数）。这让你可以完全控制暴露哪些参数。
+
+示例：
+
+```dart
+@genProvider
+class MyViewModel {
+  final String userId;
+  final bool showDetail;
+  
+  // 可选参数 `showDetail` 在生成 provider 时会被忽略
+  MyViewModel({required this.userId, this.showDetail = false});
+}
+// 生成：ViewModelProvider.arg<MyViewModel, String>(...)
+// `showDetail` 使用默认值
+
+// 如需包含可选参数，请定义 factory：
+@genProvider
+class MyViewModel2 {
+  final String userId;
+  final bool showDetail;
+  
+  MyViewModel2({required this.userId, this.showDetail = false});
+  
+  // Factory provider 会包含你定义的所有参数
+  factory MyViewModel2.provider({
+    required String userId,
+    bool showDetail = false,
+  }) => MyViewModel2(userId: userId, showDetail: showDetail);
+}
+// 生成：ViewModelProvider.arg2<MyViewModel2, String, bool>(...)
+```

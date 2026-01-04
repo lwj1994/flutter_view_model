@@ -163,3 +163,41 @@ class E { E(); }
   `arg3`, `arg4`).
 - Super forwarded params (`required super.xxx`) are excluded from
   provider argument signature.
+
+## Parameter Handling Rules
+
+- **Main constructor**: Only **required** parameters are collected.
+  Optional parameters (e.g., `{this.id}`) are ignored.
+- **Factory `provider`**: **All** parameters (including optional) are
+  collected. This gives you full control over which arguments to expose.
+
+Example:
+
+```dart
+@genProvider
+class MyViewModel {
+  final String userId;
+  final bool showDetail;
+  
+  // Optional param `showDetail` will be ignored when generating provider
+  MyViewModel({required this.userId, this.showDetail = false});
+}
+// Generates: ViewModelProvider.arg<MyViewModel, String>(...)
+// `showDetail` uses default value
+
+// To include optional params, define a factory:
+@genProvider
+class MyViewModel2 {
+  final String userId;
+  final bool showDetail;
+  
+  MyViewModel2({required this.userId, this.showDetail = false});
+  
+  // Factory provider includes all params you define
+  factory MyViewModel2.provider({
+    required String userId,
+    bool showDetail = false,
+  }) => MyViewModel2(userId: userId, showDetail: showDetail);
+}
+// Generates: ViewModelProvider.arg2<MyViewModel2, String, bool>(...)
+```
