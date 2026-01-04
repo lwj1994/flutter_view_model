@@ -94,11 +94,14 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       return '// Skipped: No unnamed constructor or provider factory for $className';
     }
 
-    // Collect required, class-owned params.
-    // Priority: factory 'provider', then main constructor.
+    // Collect class-owned params.
+    // Priority: factory 'provider' (all params), then main constructor
+    // (required only).
+    // Factory provider collects ALL params (including optional) to give full
+    // control. Main constructor only collects REQUIRED params for simplicity.
     final effectiveParams = matchingFactory != null
         ? _ownParams(matchingFactory)
-        : _ownParams(mainCtor!);
+        : _requiredOwnParams(mainCtor!);
 
     final argCount = effectiveParams.length;
 
@@ -307,10 +310,22 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
 
   /// Collect all class-owned params (exclude super-forwarded params).
   ///
-  /// Includes both required and optional parameters to support
-  /// nullable optional arguments like `{this.id}`.
+  /// Used for factory provider to include both required and optional
+  /// parameters.
   List _ownParams(ExecutableElement exec) {
     return exec.formalParameters
+        .where((p) => p is! SuperFormalParameterElement)
+        .toList();
+  }
+
+  /// Collect only required class-owned params (exclude super-forwarded).
+  ///
+  /// Used for main constructor to only include required parameters.
+  List _requiredOwnParams(ExecutableElement exec) {
+    return exec.formalParameters
+        .where((p) =>
+            (p as dynamic).isRequiredPositional ||
+            (p as dynamic).isRequiredNamed)
         .where((p) => p is! SuperFormalParameterElement)
         .toList();
   }
