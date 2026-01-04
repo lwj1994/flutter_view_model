@@ -403,3 +403,29 @@ class IslandViewModel extends StateViewModel<IslandViewModelState> {
 }
 
 class IslandViewModelState {}
+
+@ShouldGenerate(r'''
+final nullArgProvider = ViewModelProvider.arg<NullArg, int?>(
+  builder: (int? id) => NullArg(id: id),
+);
+''')
+@genProvider
+class NullArg {
+  final int? id;
+
+  NullArg({this.id});
+}
+
+@ShouldGenerate(r'''
+final nullArg2Provider = ViewModelProvider.arg3<NullArg2, int?, String?, int>(
+  builder: (int? id, String? name, int age) =>
+      NullArg2.provider(id: id, name: name, age: age),
+);
+''')
+@genProvider
+class NullArg2 {
+  final int? id;
+  NullArg2({this.id});
+  factory NullArg2.provider({int? id, String? name, required int age}) =>
+      NullArg2(id: id);
+}
