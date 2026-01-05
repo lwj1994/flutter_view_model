@@ -59,7 +59,7 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
   void initState() {
     super.initState();
     // Register your custom provider to the Vef
-    binder.addPauseProvider(_manualPauseProvider);
+    vef.addPauseProvider(_manualPauseProvider);
   }
 
   void togglePause() {
