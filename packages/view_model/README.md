@@ -151,6 +151,10 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 > `==` operator and `hashCode` for correct cache lookup. You can use 
 > third-party libraries like [equatable](https://pub.dev/packages/equatable) 
 > or [freezed](https://pub.dev/packages/freezed) to simplify this implementation.
+>
+> **Caution with Collections**: Dart's default `List`, `Set`, and `Map` use **identity equality**. 
+> Two lists with the same content `['a', 'b']` are considered different keys. 
+> To use them as keys, convert them to a primitive (e.g., `list.toString()`) or use a wrapper that implements deep equality.
 
 ```dart
 ViewModelFactory<UserViewModel> get provider => ViewModelProvider<UserViewModel>(

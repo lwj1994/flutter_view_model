@@ -148,6 +148,10 @@ class CounterPage extends StatelessWidget with ViewModelStatelessMixin {
 > `hashCode` 方法，以保证缓存查找的准确性。可以使用第三方库如
 > [equatable](https://pub.dev/packages/equatable) 或
 > [freezed](https://pub.dev/packages/freezed) 来简化实现。
+>
+> **注意集合类型**：Dart 默认的 `List`, `Set`, `Map` 使用**引用相等性 (Identity Equality)**。
+> 内容相同的两个列表 `['a', 'b']` 会被视作不同的 key。
+> 若要用作 key，请转换为基本类型（如 `list.toString()`）或使用实现了深度比较的包装类。
 
 ```dart
 
