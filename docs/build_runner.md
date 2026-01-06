@@ -1,151 +1,159 @@
+# ViewModel Provider Generator
 
-# ViewModel Provider Generator with `build_runner`
+Code generator for the `view_model` package. It generates `ViewModelProvider` specs for your `ViewModel` classes.
 
-This document outlines a code generation solution using `build_runner` to automate the creation of `ViewModelProvider` and `ViewModelProvider.arg`/`ViewModelProvider.arg2`/`ViewModelProvider.arg3`/`ViewModelProvider.arg4`/`ViewModelProvider.arg5` .
-
-## 1. Motivation
-
-Manually creating `ViewModelProvider` for each `ViewModel` can be repetitive and error-prone, especially for `ViewModel`s with constructor arguments.
-
-**Manual (Without Generator):**
-
-```dart
-// For a ViewModel without arguments
-final counterProvider = ViewModelProvider(builder: () => CounterViewModel());
-
-// For a ViewModel with arguments
-final userProvider = ViewModelProvider.arg<UserViewModel, UserArgument>((arg) {
-  return UserViewModel(arg);
-});
-```
-
-This generator automates the process, reducing boilerplate and improving developer experience.
-
-## 2. Solution Overview
-
-We will introduce a `@Provide` annotation. When a `ViewModel` class is annotated with `@Provide`, a corresponding `provider` will be generated automatically.
-
-- For a `ViewModel` with a default (no-argument) constructor, a `ViewModelProvider` will be generated.
-- For a `ViewModel` with a constructor that takes one argument, a `ViewModelProvider.arg` will be
-  generated.
-
-## 3. How It Works
-
-### Step 1: Add Dependencies
-
-Add `build_runner` and a new `view_model_generator` package to your `pubspec.yaml`.
+## Installation
 
 ```yaml
 dependencies:
-  flutter:
-    sdk: flutter
-  view_model: <latest_version>
+  view_model: ^latest
 
 dev_dependencies:
-  build_runner: ^2.10.4
-  view_model_generator: <latest_version> # This package will contain the generator
+  build_runner: ^latest
+  view_model_generator: ^latest
 ```
 
-### Step 2: Annotate Your ViewModel and add part directive
+## Quick Start
 
-Use the `@Provide` annotation on your `ViewModel` classes.
-
-**Example 1: ViewModel without arguments**
+### 1. Annotate Your ViewModel
 
 ```dart
 import 'package:view_model/view_model.dart';
-part 'counter_view_model.vm.dart';
 
-@Provide()
-class CounterViewModel extends ViewModel {
-  // ...
+part 'my_view_model.vm.dart';
+
+@genProvider
+class MyViewModel extends ViewModel {
+  MyViewModel();
 }
 ```
 
-**Example 2: ViewModel with arguments**
-
-```dart
-import 'package:view_model/view_model.dart';
-import 'package:view_model_annotations/view_model_annotations.dart';
-
-class UserArgument {
-  final String userId;
-  UserArgument(this.userId);
-}
-
-part 'user_view_model.vm.dart';
-
-@Provide()
-class UserViewModel extends ViewModel {
-  final UserArgument arg;
-  UserViewModel(this.arg);
-  // ...
-}
-```
-
-### Step 3: Run the Code Generator
-
-Execute the `build_runner` command in your terminal:
+### 2. Run Build Runner
 
 ```bash
-flutter pub run build_runner build --delete-conflicting-outputs
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-### Step 4: Use the Generated Code
-
-The generator will create a new file (e.g., `xx_view_model.vm.dart`) containing the `provider`. You can then use this `provider` directly in your widgets.
-
-**Generated Code (`counter_view_model.vm.dart`):**
+### 3. Use the Generated Provider
 
 ```dart
-// GENERATED CODE - DO NOT MODIFY BY HAND
+// Generated: myProvider
+final vm = vef.watch(myProvider);
+```
 
-part of 'counter_view_model.dart';
+## Generated Code Examples
 
-// **************************************************************************
-// ViewModelProviderGenerator
-// **************************************************************************
+### No Arguments
 
-final counterProvider = ViewModelProvider(
+```dart
+@genProvider
+class CounterViewModel extends ViewModel {
+  int count = 0;
+}
+
+// Generates:
+final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```
 
-**Generated Code (`user_view_model.vm.dart`):**
+### With Arguments
+
+Supports up to 4 constructor arguments:
 
 ```dart
-// GENERATED CODE - DO NOT MODIFY BY HAND
+@genProvider
+class UserViewModel extends ViewModel {
+  final String userId;
+  UserViewModel(this.userId);
+}
 
-part of 'user_view_model.dart';
-
-// **************************************************************************
-// ViewModelProviderGenerator
-// **************************************************************************
-
-final userViewModelProvider = ViewModelProvider.arg<UserViewModel, UserArgument>(
-  (arg) => UserViewModel(arg),
+// Generates ViewModelProvider.arg:
+final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (String userId) => UserViewModel(userId),
 );
 ```
 
-**Usage in a Widget:**
+### With Key/Tag
+
+Use `@GenProvider` with `key` and `tag` for instance sharing:
 
 ```dart
-// For CounterViewModel
-final vm = vef.watch(counterProvider);
+@GenProvider(key: r'user-$id', tag: r'user-$id')
+class UserViewModel extends ViewModel {
+  final String id;
+  UserViewModel(this.id);
+}
 
-// For UserViewModel
-final userVM = vef.watch(userViewModelProvider, arg: UserArgument('123'));
+// Generates closures for key/tag:
+final userProvider = ViewModelProvider.arg<UserViewModel, String>(
+  builder: (String id) => UserViewModel(id),
+  key: (String id) => 'user-$id',
+  tag: (String id) => 'user-$id',
+);
 ```
 
-## 4. Implementation Details
+### Using Expression()
 
-The `view_model_generator` package will contain:
+For non-string key/tag values, use `Expression()`:
 
-- **`@Provide` annotation**: A simple class `class Provide { const Provide(); }`.
-- **Generator Logic**: A `Builder` that uses the `source_gen` package to:
-    1. Find all classes annotated with `@Provide`.
-    2. Inspect the constructor of each annotated class.
-    3. Generate the appropriate `ViewModelProvider` or `ViewModelProvider.arg` based on the constructor
-       signature.
+```dart
+@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
+class DataViewModel extends ViewModel {
+  final Repository repo;
+  DataViewModel({required this.repo});
+}
 
-This approach provides a robust, scalable, and easy-to-use solution for managing `ViewModel` creation.
+// Generates expression closures (not string interpolation):
+final dataProvider = ViewModelProvider.arg<DataViewModel, Repository>(
+  builder: (Repository repo) => DataViewModel(repo: repo),
+  key: (Repository repo) => repo,        // Returns the object itself
+  tag: (Repository repo) => repo.id,     // Returns repo.id
+);
+```
+
+### Factory Preference
+
+If you define a `factory ClassName.provider(...)`, the generator will use it:
+
+```dart
+@genProvider
+class MyViewModel extends BaseModel {
+  final String name;
+  
+  MyViewModel({required super.baseField, required this.name});
+  
+  // Generator prefers this factory
+  factory MyViewModel.provider({required String name}) => 
+    MyViewModel(baseField: 'default', name: name);
+}
+
+// Uses factory instead of main constructor:
+final myProvider = ViewModelProvider.arg<MyViewModel, String>(
+  builder: (String name) => MyViewModel.provider(name: name),
+);
+```
+
+## Parameter Rules
+
+| Constructor Type | Parameters Collected |
+|-----------------|---------------------|
+| Main constructor | Only **required** parameters |
+| `factory .provider()` | **All** parameters (including optional) |
+
+This allows precise control over the generated provider signature.
+
+## Naming Convention
+
+- Provider name: `lowerCamelCase(ClassName) + 'Provider'`
+- Special: `PostViewModel` → `postProvider` (removes common suffixes)
+
+## Limits
+
+- Maximum 4 constructor arguments (`arg`, `arg2`, `arg3`, `arg4`)
+- Super forwarded params (`required super.xxx`) are excluded
+
+## Links
+
+- [view_model package](https://pub.dev/packages/view_model)
+- [Generator README](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model_generator/README.md)
