@@ -51,12 +51,7 @@ import 'state_store.dart';
 ///   }
 /// }
 /// ```
-class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
-  @override
-  void addListener(VoidCallback listener) {
-    listen(onChanged: listener);
-  }
-}
+class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {}
 
 /// Base mixin class for all ViewModels in the application.
 ///
@@ -65,6 +60,9 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 /// - Listener management for reactive updates
 /// - Static methods for reading existing ViewModels
 /// - Integration with the ViewModel system
+///
+/// Implements [Listenable] for compatibility with Flutter's standard listener
+/// patterns like [ListenableBuilder] and [AnimatedBuilder].
 ///
 /// ViewModels using this mixin are automatically managed by the system and will
 /// be disposed when no longer needed.
@@ -81,7 +79,7 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {
 ///   }
 /// }
 /// ```
-mixin class ViewModel implements InstanceLifeCycle {
+mixin class ViewModel implements InstanceLifeCycle, Listenable {
   /// Returns the [Vef] interface for accessing other ViewModels.
   ///
   /// This property allows you to use `vef.watch` and `vef.read` syntax,
@@ -259,7 +257,7 @@ mixin class ViewModel implements InstanceLifeCycle {
     _viewModelLifecycles.remove(value);
   }
 
-  final List<VoidCallback?> _listeners = [];
+  final List<VoidCallback> _listeners = [];
   static ViewModelConfig _config = ViewModelConfig();
 
   /// Gets the current ViewModel configuration.
@@ -302,10 +300,25 @@ mixin class ViewModel implements InstanceLifeCycle {
   @protected
   void onDependencyNotify(ViewModel vm) {}
 
+  /// Adds a listener to this ViewModel.
+  ///
+  /// This method is part of the [Listenable] interface, allowing ViewModel
+  /// to work with Flutter's standard listener patterns like [ListenableBuilder].
+  ///
+  /// Parameters:
+  /// - [listener]: The listener function to add
+  @override
+  void addListener(VoidCallback listener) {
+    _listeners.add(listener);
+  }
+
   /// Removes a listener from this ViewModel.
+  ///
+  /// This method is part of the [Listenable] interface.
   ///
   /// Parameters:
   /// - [listener]: The listener function to remove
+  @override
   void removeListener(VoidCallback listener) {
     _listeners.remove(listener);
   }
@@ -332,7 +345,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   /// }
   /// ```
   @protected
-  Future<void> addDispose(Function() block) async {
+  void addDispose(Function() block) {
     _autoDisposeController.addDispose(block);
   }
 
@@ -369,7 +382,7 @@ mixin class ViewModel implements InstanceLifeCycle {
   void notifyListeners() {
     for (final element in _listeners) {
       try {
-        element?.call();
+        element.call();
       } catch (e) {
         viewModelLog("error on $e");
       }
@@ -507,7 +520,7 @@ mixin class ViewModel implements InstanceLifeCycle {
 /// ```
 abstract class StateViewModel<T> with ViewModel {
   late final ViewModelStateStore<T> _store;
-  final List<Function(T? previous, T state)?> _stateListeners = [];
+  final List<Function(T? previous, T state)> _stateListeners = [];
 
   /// Adds a state-specific listener that receives both previous and
   /// current state.
@@ -595,7 +608,7 @@ abstract class StateViewModel<T> with ViewModel {
       if (_isDisposed) return;
       for (final element in _stateListeners) {
         try {
-          element?.call(event.previousState, event.currentState);
+          element.call(event.previousState, event.currentState);
         } catch (e) {
           //
         }
@@ -603,7 +616,7 @@ abstract class StateViewModel<T> with ViewModel {
 
       for (final element in _listeners) {
         try {
-          element?.call();
+          element.call();
         } catch (e) {
           //
         }

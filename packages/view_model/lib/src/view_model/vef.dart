@@ -112,7 +112,6 @@ abstract interface class VefInterface {
 /// - **Dependency Injection**: Resolves ViewModel dependencies using
 ///   Zone-based dependency resolution
 /// - **Pause/Resume**: Manages pause/resume lifecycle through
-/// - **Pause/Resume**: Manages pause/resume lifecycle through
 ///   [VefPauseProvider]s
 /// - **Update Notifications**: Provides [onUpdate] hook for responding to
 ///   ViewModel changes

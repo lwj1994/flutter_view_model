@@ -83,7 +83,7 @@ void main() {
       expect(find.text('cached:tag-updated'), findsOneWidget);
     });
 
-    testWidgets('CachedViewModelBuilder renders nothing when instance missing',
+    testWidgets('CachedViewModelBuilder throws error when instance missing',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: CachedViewModelBuilder<TestViewModel>(
@@ -92,7 +92,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('should-not-render'), findsNothing);
+      expect(tester.takeException(), isNotNull);
     });
   });
 }

@@ -7,6 +7,7 @@
 /// @author luwenjie on 2025/3/25 16:24:32
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:view_model/src/view_model/vef.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
@@ -55,7 +56,10 @@ class AutoDisposeInstanceController {
   /// Map tracking which notifiers already have listeners attached.
   ///
   /// Prevents duplicate listener registration for the same instance handle.
-  final Map<Object, bool> _notifierListeners = {};
+  /// Map tracking which notifiers already have listeners attached.
+  ///
+  /// Prevents duplicate listener registration for the same instance handle.
+  final Map<Object, VoidCallback> _notifierListeners = {};
 
   final Vef vef;
 
@@ -109,10 +113,9 @@ class AutoDisposeInstanceController {
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
       factory: factory,
     );
-    if (_notifierListeners[notifier] != true) {
-      _notifierListeners[notifier] = true;
+    if (!_notifierListeners.containsKey(notifier)) {
       _instanceNotifiers.add(notifier);
-      notifier.addListener(() {
+      final listener = () {
         switch (notifier.action) {
           case null:
             break;
@@ -122,7 +125,9 @@ class AutoDisposeInstanceController {
             onRecreate.call();
             break;
         }
-      });
+      };
+      _notifierListeners[notifier] = listener;
+      notifier.addListener(listener);
     }
     return notifier.instance;
   }
@@ -132,10 +137,9 @@ class AutoDisposeInstanceController {
     final List<T> result = [];
     for (final notifier in notifiers) {
       if (listen) {
-        if (_notifierListeners[notifier] != true) {
-          _notifierListeners[notifier] = true;
+        if (!_notifierListeners.containsKey(notifier)) {
           _instanceNotifiers.add(notifier);
-          notifier.addListener(() {
+          final listener = () {
             switch (notifier.action) {
               case null:
                 break;
@@ -145,7 +149,9 @@ class AutoDisposeInstanceController {
                 onRecreate.call();
                 break;
             }
-          });
+          };
+          _notifierListeners[notifier] = listener;
+          notifier.addListener(listener);
         }
         // bind vef
         notifier.bindVef(vef.id);
@@ -221,13 +227,17 @@ class AutoDisposeInstanceController {
   ///   super.dispose();
   /// }
   /// ```
-  Future<void> dispose() async {
+  void dispose() {
     for (final e in _instanceNotifiers) {
       if (e.instance is ViewModel) {
         (e.instance as ViewModel).refHandler.removeRef(vef);
       }
       e.unbindVef(vef.id);
+      if (_notifierListeners.containsKey(e)) {
+        e.removeListener(_notifierListeners[e]!);
+      }
     }
+    _notifierListeners.clear();
     _instanceNotifiers.clear();
   }
 }
