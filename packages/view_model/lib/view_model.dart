@@ -7,11 +7,48 @@
 ///
 /// ## Quick Start
 ///
-/// - **Watch**: `watchViewModel<T>()` / `watchCachedViewModel<T>()`
-/// - **Read**: `readViewModel<T>()` / `readCachedViewModel<T>()`
-/// - **Global**: `ViewModel.readCached<T>()` / `ViewModel.maybeReadCached<T>()`
-/// - **Recycle**: `recycleViewModel(vm)`
-/// - **Effects**: `listen(onChanged)` / `listenState` / `listenStateSelect`
+/// ```dart
+/// // 1. Define a ViewModel
+/// class CounterViewModel extends ViewModel {
+///   int count = 0;
+///   void increment() => update(() => count++);
+/// }
+///
+/// // 2. Create a Provider
+/// final counterProvider = ViewModelProvider<CounterViewModel>(
+///   builder: () => CounterViewModel(),
+/// );
+///
+/// // 3. Use in a Widget
+/// class CounterPage extends StatefulWidget {
+///   @override
+///   State<CounterPage> createState() => _CounterPageState();
+/// }
+///
+/// class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
+///   @override
+///   Widget build(BuildContext context) {
+///     final vm = vef.watch(counterProvider);
+///     return ElevatedButton(
+///       onPressed: vm.increment,
+///       child: Text('Count: ${vm.count}'),
+///     );
+///   }
+/// }
+/// ```
+///
+/// ## The `vef` Accessor
+///
+/// `vef` (ViewModel Execution Framework) is your gateway to ViewModels:
+///
+/// | Method | Description |
+/// |--------|-------------|
+/// | `vef.watch(provider)` | Get VM and rebuild on changes |
+/// | `vef.read(provider)` | Get VM without rebuilding |
+/// | `vef.watchCached<T>(key:)` | Get cached VM by key with rebuilds |
+/// | `vef.readCached<T>(key:)` | Get cached VM by key, no rebuilds |
+/// | `vef.listen(provider, onChanged:)` | Side effects, auto-disposed |
+/// | `vef.recycle(vm)` | Force dispose and recreate |
 ///
 /// ## Core Features
 ///
@@ -27,53 +64,6 @@
 ///   each other.
 /// - **DevTools Extension**: Monitor and debug ViewModels in real-time with
 ///   the Flutter DevTools extension.
-///
-/// ## Basic Usage
-///
-/// ```dart
-/// // 1. Create a ViewModel
-/// class CounterViewModel extends ViewModel {
-///   int _counter = 0;
-///   int get counter => _counter;
-///
-///   void increment() {
-///     update(() {
-///       _counter++;
-///     });
-///   }
-/// }
-///
-/// // 2. Create a factory
-/// class CounterFactory with ViewModelFactory<CounterViewModel> {
-///   @override
-///   CounterViewModel build() => CounterViewModel();
-/// }
-///
-/// // 3. Use in a widget
-/// class CounterWidget extends StatefulWidget {
-///   @override
-///   _CounterWidgetState createState() => _CounterWidgetState();
-/// }
-///
-/// class _CounterWidgetState extends State<CounterWidget>
-///                       with ViewModelStateMixin {
-///   late final counterVM = watchViewModel<CounterViewModel>(factory:
-///                                                          CounterFactory());
-///
-///   @override
-///   Widget build(BuildContext context) {
-///     return Column(
-///       children: [
-///         Text('Count: ${counterVM.counter}'),
-///         ElevatedButton(
-///           onPressed: counterVM.increment,
-///           child: Text('Increment'),
-///         ),
-///       ],
-///     );
-///   }
-/// }
-/// ```
 library;
 
 export "package:view_model/src/get_instance/store.dart" show InstanceArg;

@@ -124,6 +124,7 @@ class ViewModelStateStore<S> implements StateStore<S> {
   /// This method can be used to trigger a refresh when the state object
   /// itself hasn't changed but its internal properties might have.
   void notifyListeners() {
+    if (_stateStreamController.isClosed) return;
     _stateStreamController.add(DiffState(_previousState, _state));
   }
 

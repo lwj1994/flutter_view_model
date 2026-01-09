@@ -1,6 +1,7 @@
 // @author luwenjie on 2025/10/27 14:17:50
 
 import 'package:flutter/widgets.dart';
+import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 
@@ -64,7 +65,13 @@ class _CachedViewModelState<T extends ViewModel>
       key: widget.shareKey,
       tag: widget.tag,
     );
-    if (vm == null) return const SizedBox.shrink();
+    if (vm == null) {
+      assert(() {
+        throw ViewModelError(
+            "${T} not found in CachedViewModelBuilder. key: ${widget.shareKey}, tag: ${widget.tag}");
+      }());
+      return const SizedBox.shrink();
+    }
     return widget.builder.call(
       vm,
     );

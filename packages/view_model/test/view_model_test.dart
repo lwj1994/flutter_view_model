@@ -449,11 +449,11 @@ void main() {
       final vef = _CoreRef();
 
       // Create factory with key1
-      final factory1 = TestViewModelFactory(keyV: 'key1');
+      const factory1 = TestViewModelFactory(keyV: 'key1');
       final vm1 = vef.read(factory1);
 
       // Create factory with key2
-      final factory2 = TestViewModelFactory(keyV: 'key2');
+      const factory2 = TestViewModelFactory(keyV: 'key2');
       final vm2 = vef.read(factory2);
 
       // Should be different instances
@@ -467,8 +467,8 @@ void main() {
       final vef = _CoreRef();
 
       // Create factory with same key
-      final factory1 = TestViewModelFactory(keyV: 'same_key');
-      final factory2 = TestViewModelFactory(keyV: 'same_key');
+      const factory1 = TestViewModelFactory(keyV: 'same_key');
+      const factory2 = TestViewModelFactory(keyV: 'same_key');
 
       final vm1 = vef.read(factory1);
       final vm2 = vef.read(factory2);
@@ -483,8 +483,8 @@ void main() {
       final vef = _CoreRef();
 
       // Create factory without key (null key)
-      final factory1 = TestViewModelFactory();
-      final factory2 = TestViewModelFactory();
+      const factory1 = TestViewModelFactory();
+      const factory2 = TestViewModelFactory();
 
       final vm1 = vef.read(factory1);
       final vm2 = vef.read(factory2);

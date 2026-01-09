@@ -9,7 +9,7 @@ library;
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 
@@ -185,7 +185,11 @@ class Store<T> {
     T t, {
     T Function()? builder,
   }) {
-    final find = _instances.values.where((e) => e.instance == t).first;
+    final find = _instances.values.firstWhere(
+      (e) => e.instance == t,
+      orElse: () => throw ViewModelError(
+          "Cannot recreate ${T} instance. Instance not found in store."),
+    );
     return find.recreate(builder: builder);
   }
 }

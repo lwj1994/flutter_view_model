@@ -6,14 +6,25 @@ import 'package:view_model/src/view_model/vef.dart';
 import 'package:view_model/src/view_model/widget_mixin/vef.dart';
 
 /// Stateless integration for ViewModel access from widgets.
+///
 /// Provides a mixin and a custom Element that bridge ViewModel
 /// changes to StatelessWidget rebuilds. Supports watching and
 /// reading ViewModels with or without listening.
+///
+/// > **Warning**: This mixin intercepts Element lifecycle and may conflict
+/// > with other mixins. Prefer StatefulWidget with [ViewModelStateMixin].
+///
+/// > **Limitation**: Due to Flutter's @immutable constraint on StatelessWidget,
+/// > each widget instance creates exactly one Element. If the same widget
+/// > instance is mounted multiple times (e.g., via GlobalKey migration),
+/// > behavior may be unexpected. For complex use cases, use StatefulWidget.
 mixin ViewModelStatelessMixin on StatelessWidget {
+  /// The cached element for this widget.
+  ///
+  /// Using late final ensures consistent element-to-widget binding.
+  /// Note: This means a widget instance should not be mounted multiple times.
   late final _StatelessViewModelElement _viewModelElement =
-      _StatelessViewModelElement(
-    this,
-  );
+      _StatelessViewModelElement(this);
 
   /// Returns true if the widget is currently considered paused.
   ///
@@ -25,17 +36,14 @@ mixin ViewModelStatelessMixin on StatelessWidget {
   Vef get vef => _viewModelElement._vef;
 
   /// Creates the custom Element that bridges ViewModel updates.
+  ///
   /// The Element owns `WidgetVef` and connects its refresh to
   /// `markNeedsBuild` for this widget.
   @override
-  StatelessElement createElement() {
-    return _viewModelElement;
-  }
+  StatelessElement createElement() => _viewModelElement;
 
   @visibleForTesting
-  String getVefName() {
-    return _viewModelElement._vef.getName();
-  }
+  String getVefName() => _viewModelElement._vef.getName();
 }
 
 /// Custom Element for `ViewModelStatelessMixin`.

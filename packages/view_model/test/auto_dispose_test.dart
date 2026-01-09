@@ -50,7 +50,7 @@ void main() {
       );
     });
 
-    test('dispose removes binder', () async {
+    test('dispose removes binder', () {
       final factory = InstanceFactory<TestStatelessViewModel>(
         builder: () => TestStatelessViewModel(),
         arg: const InstanceArg(key: 'dispose_test'),
@@ -58,7 +58,7 @@ void main() {
 
       controller.getInstance<TestStatelessViewModel>(factory: factory);
 
-      await controller.dispose();
+      controller.dispose();
 
       final handle =
           instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
@@ -206,7 +206,7 @@ void main() {
       });
     });
 
-    test('dispose cleans up refs from ViewModel', () async {
+    test('dispose cleans up refs from ViewModel', () {
       final factory = InstanceFactory<TestStatelessViewModel>(
         builder: () => TestStatelessViewModel(),
         arg: const InstanceArg(key: 'dispose_cleanup_test'),
@@ -219,7 +219,7 @@ void main() {
       vm.refHandler.addRef(mockRef);
       expect(vm.refHandler.dependencyVefs.contains(mockRef), isTrue);
 
-      await controller.dispose();
+      controller.dispose();
 
       expect(vm.refHandler.dependencyVefs.contains(mockRef), isFalse);
     });
