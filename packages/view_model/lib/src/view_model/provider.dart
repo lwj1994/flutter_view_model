@@ -8,6 +8,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
   late final Object? _key;
   late final Object? _tag;
   final bool isSingleton;
+  final bool _aliveForever;
   ViewModelProvider<T>? _proxy;
 
   ViewModelProvider({
@@ -19,7 +20,10 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     /// set a unique key for you.
     /// Note that the priority is lower than the key parameter.
     this.isSingleton = false,
-  }) {
+
+    /// Whether the instance should live forever (never be disposed).
+    bool aliveForever = false,
+  }) : _aliveForever = aliveForever {
     _key = key;
     _tag = tag;
   }
@@ -72,6 +76,14 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     return isSingleton;
   }
 
+  @override
+  bool aliveForever() {
+    if (_proxy != null) {
+      return _proxy!.aliveForever();
+    }
+    return _aliveForever;
+  }
+
   /// Creates an arg-based provider with one argument.
   ///
   /// Use this to declare builder and sharing rules derived from `A`.
@@ -80,12 +92,15 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     Object? Function(A a)? key,
     Object? Function(A a)? tag,
     bool Function(A a)? isSingleton,
+    // defaults to false
+    bool Function(A a)? aliveForever,
   }) {
     return ViewModelProviderWithArg<VM, A>(
       builder: builder,
       key: key,
       tag: tag,
       isSingleton: isSingleton,
+      aliveForever: aliveForever,
     );
   }
 
@@ -95,12 +110,14 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     Object? Function(A a, B b)? key,
     Object? Function(A a, B b)? tag,
     bool Function(A a, B b)? isSingleton,
+    bool Function(A a, B b)? aliveForever,
   }) {
     return ViewModelProviderWithArg2<VM, A, B>(
       builder: builder,
       key: key,
       tag: tag,
       isSingleton: isSingleton,
+      aliveForever: aliveForever,
     );
   }
 
@@ -111,12 +128,14 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     Object? Function(A a, B b, C c)? key,
     Object? Function(A a, B b, C c)? tag,
     bool Function(A a, B b, C c)? isSingleton,
+    bool Function(A a, B b, C c)? aliveForever,
   }) {
     return ViewModelProviderWithArg3<VM, A, B, C>(
       builder: builder,
       key: key,
       tag: tag,
       isSingleton: isSingleton,
+      aliveForever: aliveForever,
     );
   }
 
@@ -127,12 +146,14 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     Object? Function(A a, B b, C c, D d)? key,
     Object? Function(A a, B b, C c, D d)? tag,
     bool Function(A a, B b, C c, D d)? isSingleton,
+    bool Function(A a, B b, C c, D d)? aliveForever,
   }) {
     return ViewModelProviderWithArg4<VM, A, B, C, D>(
       builder: builder,
       key: key,
       tag: tag,
       isSingleton: isSingleton,
+      aliveForever: aliveForever,
     );
   }
 }
@@ -145,6 +166,7 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
     this.key,
     this.tag,
     this.isSingleton,
+    this.aliveForever,
   });
 
   /// Builder that creates `VM` from the provided argument.
@@ -158,6 +180,9 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
 
   /// Determines if the instance should be singleton for the given arg.
   final bool Function(A argument)? isSingleton;
+
+  /// Whether the instance should live forever (never be disposed).
+  final bool Function(A argument)? aliveForever;
 
   /// Proxy for test-time override.
   ///
@@ -187,6 +212,7 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
       key: spec.key?.call(arg),
       tag: spec.tag?.call(arg),
       isSingleton: spec.isSingleton?.call(arg) ?? false,
+      aliveForever: spec.aliveForever?.call(arg) ?? false,
     );
   }
 }
@@ -197,12 +223,14 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
     this.key,
     this.tag,
     this.isSingleton,
+    this.aliveForever,
   });
 
   final VM Function(A a, B b) builder;
   final Object? Function(A a, B b)? key;
   final Object? Function(A a, B b)? tag;
   final bool Function(A a, B b)? isSingleton;
+  final bool Function(A a, B b)? aliveForever;
 
   /// Proxy for test-time override.
   ///
@@ -230,6 +258,7 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
       key: spec.key?.call(a, b),
       tag: spec.tag?.call(a, b),
       isSingleton: spec.isSingleton?.call(a, b) ?? false,
+      aliveForever: spec.aliveForever?.call(a, b) ?? false,
     );
   }
 }
@@ -240,12 +269,14 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
     this.key,
     this.tag,
     this.isSingleton,
+    this.aliveForever,
   });
 
   final VM Function(A a, B b, C c) builder;
   final Object? Function(A a, B b, C c)? key;
   final Object? Function(A a, B b, C c)? tag;
   final bool Function(A a, B b, C c)? isSingleton;
+  final bool Function(A a, B b, C c)? aliveForever;
 
   /// Proxy for test-time override.
   ///
@@ -273,6 +304,7 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
       key: spec.key?.call(a, b, c),
       tag: spec.tag?.call(a, b, c),
       isSingleton: spec.isSingleton?.call(a, b, c) ?? false,
+      aliveForever: spec.aliveForever?.call(a, b, c) ?? false,
     );
   }
 }
@@ -283,12 +315,14 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
     this.key,
     this.tag,
     this.isSingleton,
+    this.aliveForever,
   });
 
   final VM Function(A a, B b, C c, D d) builder;
   final Object? Function(A a, B b, C c, D d)? key;
   final Object? Function(A a, B b, C c, D d)? tag;
   final bool Function(A a, B b, C c, D d)? isSingleton;
+  final bool Function(A a, B b, C c, D d)? aliveForever;
 
   /// Proxy for test-time override.
   ///
@@ -316,6 +350,7 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
       key: spec.key?.call(a, b, c, d),
       tag: spec.tag?.call(a, b, c, d),
       isSingleton: spec.isSingleton?.call(a, b, c, d) ?? false,
+      aliveForever: spec.aliveForever?.call(a, b, c, d) ?? false,
     );
   }
 }

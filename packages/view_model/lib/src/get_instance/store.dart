@@ -293,6 +293,7 @@ class InstanceHandle<T> with ChangeNotifier {
   /// and calls the disposal lifecycle methods. The instance becomes
   /// unusable after this call.
   void _recycle() {
+    if (arg.aliveForever) return;
     _action = InstanceAction.dispose;
     notifyListeners();
     onDispose();
@@ -467,19 +468,25 @@ class InstanceArg {
   /// This ID is used for lifecycle tracking and automatic cleanup.
   /// When the watcher is disposed, the instance can be automatically
   /// cleaned up if no other watchers remain.
+  /// The watcher ID for lifecycle tracking.
   final String? vefId;
+
+  /// Whether the instance should live forever (never be disposed).
+  final bool aliveForever;
 
 //<editor-fold desc="Data Methods">
   /// Creates new instance arguments.
   ///
   /// Parameters:
-  /// - [key]: Unique identifier for caching (optional)
+  /// - [key]: Unique identifier for instance caching (optional)
   /// - [tag]: Logical grouping identifier (optional)
   /// - [vefId]: Watcher identifier for lifecycle tracking (optional)
+  /// - [aliveForever]: Whether the instance should live forever (optional, default: false)
   const InstanceArg({
     this.key,
     this.tag,
     this.vefId,
+    this.aliveForever = false,
   });
 
   @override
@@ -489,25 +496,29 @@ class InstanceArg {
           runtimeType == other.runtimeType &&
           key == other.key &&
           tag == other.tag &&
-          vefId == other.vefId);
+          vefId == other.vefId &&
+          aliveForever == other.aliveForever);
 
   @override
-  int get hashCode => key.hashCode ^ tag.hashCode ^ vefId.hashCode;
+  int get hashCode =>
+      key.hashCode ^ tag.hashCode ^ vefId.hashCode ^ aliveForever.hashCode;
 
   @override
   String toString() {
-    return 'InstanceArg( key: $key, tag: $tag, vefId: $vefId)';
+    return 'InstanceArg( key: $key, tag: $tag, vefId: $vefId, aliveForever: $aliveForever)';
   }
 
   InstanceArg copyWith({
     Object? key,
     Object? tag,
     String? vefId,
+    bool? aliveForever,
   }) {
     return InstanceArg(
       key: key ?? this.key,
       tag: tag ?? this.tag,
       vefId: vefId ?? this.vefId,
+      aliveForever: aliveForever ?? this.aliveForever,
     );
   }
 
@@ -516,6 +527,7 @@ class InstanceArg {
       'key': key,
       'tag': tag,
       'vefId': vefId,
+      'aliveForever': aliveForever,
     };
   }
 
@@ -524,6 +536,7 @@ class InstanceArg {
       key: map['key'],
       tag: map['tag'] as Object,
       vefId: map['vefId'] as String,
+      aliveForever: (map['aliveForever'] ?? false) as bool,
     );
   }
 

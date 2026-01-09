@@ -429,3 +429,66 @@ class NullArg2 {
   factory NullArg2.provider({int? id, String? name, required int age}) =>
       NullArg2(id: id);
 }
+
+// 26. aliveForever with Arg1
+@ShouldGenerate(r'''
+final liveForeverArg1Provider = ViewModelProvider.arg<LiveForeverArg1, int>(
+  builder: (int id) => LiveForeverArg1(id),
+  aliveForever: (int id) => true,
+);
+''')
+@GenProvider(aliveForever: true)
+class LiveForeverArg1 {
+  final int id;
+  LiveForeverArg1(this.id);
+}
+
+// 27. aliveForever with Arg2
+@ShouldGenerate(r'''
+final liveForeverArg2Provider =
+    ViewModelProvider.arg2<LiveForeverArg2, int, String>(
+      builder: (int id, String name) => LiveForeverArg2(id, name),
+      aliveForever: (int id, String name) => true,
+    );
+''')
+@GenProvider(aliveForever: true)
+class LiveForeverArg2 {
+  final int id;
+  final String name;
+  LiveForeverArg2(this.id, this.name);
+}
+
+// 28. aliveForever with Arg3
+@ShouldGenerate(r'''
+final liveForeverArg3Provider =
+    ViewModelProvider.arg3<LiveForeverArg3, int, String, bool>(
+      builder: (int id, String name, bool active) =>
+          LiveForeverArg3(id, name, active),
+      aliveForever: (int id, String name, bool active) => true,
+    );
+''')
+@GenProvider(aliveForever: true)
+class LiveForeverArg3 {
+  final int id;
+  final String name;
+  final bool active;
+  LiveForeverArg3(this.id, this.name, this.active);
+}
+
+// 29. aliveForever with Arg4
+@ShouldGenerate(r'''
+final liveForeverArg4Provider =
+    ViewModelProvider.arg4<LiveForeverArg4, int, String, bool, double>(
+      builder: (int id, String name, bool active, double score) =>
+          LiveForeverArg4(id, name, active, score),
+      aliveForever: (int id, String name, bool active, double score) => true,
+    );
+''')
+@GenProvider(aliveForever: true)
+class LiveForeverArg4 {
+  final int id;
+  final String name;
+  final bool active;
+  final double score;
+  LiveForeverArg4(this.id, this.name, this.active, this.score);
+}

@@ -16,8 +16,15 @@ class GenProvider {
   /// Note that the priority is lower than the key parameter.
   final bool isSingleton;
 
+  /// Whether the instance should live forever (never be disposed).
+  final bool aliveForever;
+
   /// Create a `GenProvider` annotation instance.
-  const GenProvider({this.key, this.tag, this.isSingleton = false});
+  const GenProvider(
+      {this.key,
+      this.tag,
+      this.isSingleton = false,
+      this.aliveForever = false});
 }
 
 /// Shorthand constant for `GenProvider`.

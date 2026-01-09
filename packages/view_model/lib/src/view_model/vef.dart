@@ -557,6 +557,7 @@ mixin class Vef implements VefInterface {
             arg: InstanceArg(
               key: key,
               tag: tag,
+              aliveForever: factory.aliveForever(),
             ),
             builder: factory.build,
           ),
