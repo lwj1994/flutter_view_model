@@ -68,7 +68,9 @@ class _CachedViewModelState<T extends ViewModel>
     if (vm == null) {
       assert(() {
         throw ViewModelError(
-            "${T} not found in CachedViewModelBuilder. key: ${widget.shareKey}, tag: ${widget.tag}");
+          "${T} not found in CachedViewModelBuilder. "
+          "key: ${widget.shareKey}, tag: ${widget.tag}",
+        );
       }());
       return const SizedBox.shrink();
     }

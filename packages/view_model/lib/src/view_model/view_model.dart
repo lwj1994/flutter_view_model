@@ -303,7 +303,8 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   /// Adds a listener to this ViewModel.
   ///
   /// This method is part of the [Listenable] interface, allowing ViewModel
-  /// to work with Flutter's standard listener patterns like [ListenableBuilder].
+  /// to work with Flutter's standard listener patterns like
+  /// [ListenableBuilder].
   ///
   /// Parameters:
   /// - [listener]: The listener function to add
