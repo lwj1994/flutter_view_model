@@ -25,7 +25,8 @@
 ///   State<CounterPage> createState() => _CounterPageState();
 /// }
 ///
-/// class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
+/// class _CounterPageState extends State<CounterPage>
+///     with ViewModelStateMixin {
 ///   @override
 ///   Widget build(BuildContext context) {
 ///     final vm = vef.watch(counterProvider);
