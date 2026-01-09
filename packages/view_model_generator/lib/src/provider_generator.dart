@@ -43,6 +43,8 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     final tagReader = annotation.peek('tag');
     final isSingletonReader = annotation.peek('isSingleton');
     bool isSingleton = isSingletonReader?.boolValue ?? false;
+    final aliveForeverReader = annotation.peek('aliveForever');
+    bool aliveForever = aliveForeverReader?.boolValue ?? false;
 
     if (keyReader != null &&
         (keyReader.instanceOf(exprChecker) ||
@@ -79,6 +81,8 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       if (!isSingleton) {
         final s = anno['isSingleton'];
         if (s == 'true') isSingleton = true;
+        final af = anno['aliveForever'];
+        if (af == 'true') aliveForever = true;
       }
     }
 
@@ -138,6 +142,9 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       if (isSingleton) {
         buffer.writeln('  isSingleton: true,');
       }
+      if (aliveForever) {
+        buffer.writeln('  aliveForever: true,');
+      }
       buffer.writeln(');');
       return buffer.toString();
     }
@@ -193,6 +200,9 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     if (isSingleton) {
       buffer.writeln('  isSingleton: (${builderArgs.join(', ')}) => true,');
     }
+    if (aliveForever) {
+      buffer.writeln('  aliveForever: (${builderArgs.join(', ')}) => true,');
+    }
 
     buffer.writeln(');');
     return buffer.toString();
@@ -215,7 +225,13 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
         final key = _extractArg(src, 'key');
         final tag = _extractArg(src, 'tag');
         final isSingleton = _extractArg(src, 'isSingleton');
-        return {'key': key, 'tag': tag, 'isSingleton': isSingleton};
+        final aliveForever = _extractArg(src, 'aliveForever');
+        return {
+          'key': key,
+          'tag': tag,
+          'isSingleton': isSingleton,
+          'aliveForever': aliveForever
+        };
       }
     }
     return {'key': null, 'tag': null, 'isSingleton': null};

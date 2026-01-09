@@ -830,6 +830,9 @@ abstract mixin class ViewModelFactory<T> {
   /// bool singleton() => true; // Only one instance allowed
   /// ```
   bool singleton() => false;
+
+  /// Returns `true` if the instance should live forever (never be disposed).
+  bool aliveForever() => false;
 }
 
 /// Abstract interface for observing ViewModel lifecycle events.
