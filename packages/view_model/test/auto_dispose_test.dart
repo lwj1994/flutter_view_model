@@ -104,13 +104,110 @@ void main() {
       final handle =
           instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
 
-      // Recreate action simulation note
-      // Action changes are internal to store.dart and trigger `notifyListeners`.
-      // `recycle` sets action to `dispose`. `InstanceAction.recreate` occurs
-      // when a new instance replaces an old one within the same handle.
-      // There is no public API to force `recreate` directly from a test.
-      // See `src/get_instance/store.dart` for action transitions.
-      // TODO: add a minimal scenario that naturally leads to `recreate`.
+      // Verify no recreate action (requires explicit recreate call)
+      expect(handle.action, isNull);
+    });
+
+    test('recreate functionality - via InstanceManager', () {
+      // Test the recreate functionality using the public InstanceManager API
+      final factory = InstanceFactory<TestViewModel>(
+        builder: () => TestViewModel(state: 'initial'),
+        arg: const InstanceArg(key: 'recreate_test'),
+      );
+
+      // Create initial instance
+      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
+      final initialHashCode = vm1.hashCode;
+
+      // Get the handle to monitor action changes
+      final handle = instanceManager.getNotifier<TestViewModel>(factory: factory);
+
+      // Track action changes
+      InstanceAction? capturedAction;
+      handle.addListener(() {
+        capturedAction = handle.action;
+      });
+
+      // Recreate the instance via InstanceManager
+      final vm2 = instanceManager.recreate(vm1);
+
+      // Verify new instance was created
+      expect(vm2, isNotNull);
+      expect(vm2.hashCode, isNot(equals(initialHashCode)),
+          reason: 'Recreate should create a new instance');
+
+      // Verify recreate action was triggered
+      expect(capturedAction, equals(InstanceAction.recreate),
+          reason: 'Recreate action should be set when instance is recreated');
+
+      // Verify the handle now points to the new instance
+      expect(handle.instance, equals(vm2));
+    });
+
+    test('recreate functionality - with custom builder', () {
+      // Test recreate with a custom builder
+      int createCount = 0;
+      final factory = InstanceFactory<TestViewModel>(
+        builder: () {
+          createCount++;
+          return TestViewModel(state: 'initial');
+        },
+        arg: const InstanceArg(key: 'recreate_custom_builder'),
+      );
+
+      // Create initial instance
+      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
+      expect(createCount, equals(1));
+
+      // Recreate with custom builder
+      int customBuilderCalled = 0;
+      final vm2 = instanceManager.recreate(
+        vm1,
+        builder: () {
+          customBuilderCalled++;
+          return TestViewModel(state: 'recreated');
+        },
+      );
+
+      // Verify custom builder was used instead of original factory builder
+      expect(customBuilderCalled, equals(1));
+      expect(createCount, equals(1),
+          reason: 'Original builder should not be called during recreate');
+
+      // Verify new instance was created
+      expect(vm2, isNotNull);
+      expect(vm2, isNot(equals(vm1)));
+    });
+
+    test('recreate preserves watchers and bindings', () {
+      // Test that recreate preserves watcher relationships
+      final factory = InstanceFactory<TestViewModel>(
+        builder: () => TestViewModel(state: 'with_watcher'),
+        arg: const InstanceArg(
+          key: 'recreate_preserve_watchers',
+          vefId: 'test_watcher_1',
+        ),
+      );
+
+      // Create instance with watcher
+      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
+      final handle = instanceManager.getNotifier<TestViewModel>(factory: factory);
+
+      // Verify initial watcher
+      expect(handle.bindedVefIds, contains('test_watcher_1'));
+      final initialWatcherCount = handle.bindedVefIds.length;
+
+      // Recreate instance
+      final vm2 = instanceManager.recreate(vm1);
+
+      // Verify watchers are preserved after recreate
+      expect(handle.bindedVefIds, contains('test_watcher_1'),
+          reason: 'Watchers should be preserved after recreate');
+      expect(handle.bindedVefIds.length, equals(initialWatcherCount),
+          reason: 'Watcher count should remain the same');
+
+      // Verify the handle points to new instance
+      expect(handle.instance, equals(vm2));
     });
 
     test('performForAllInstances', () {

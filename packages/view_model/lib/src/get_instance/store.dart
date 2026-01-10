@@ -15,6 +15,12 @@ import 'package:view_model/src/view_model/state_store.dart';
 
 import 'manager.dart';
 
+/// Sentinel value for distinguishing between "not provided" and "null" in
+/// copyWith methods.
+class _Undefined {
+  const _Undefined();
+}
+
 /// Type-specific storage for ViewModel instances.
 ///
 /// This class manages all instances of a specific ViewModel type [T],
@@ -515,16 +521,27 @@ class InstanceArg {
         'aliveForever: $aliveForever)';
   }
 
+  /// Creates a copy of this [InstanceArg] with optionally updated fields.
+  ///
+  /// This method uses a sentinel value pattern to distinguish between
+  /// "not provided" and "explicitly set to null". This allows you to
+  /// explicitly set fields to null when needed.
+  ///
+  /// Example:
+  /// ```dart
+  /// final arg = InstanceArg(key: 'myKey', tag: 'myTag');
+  /// final updated = arg.copyWith(key: null); // Explicitly sets key to null
+  /// ```
   InstanceArg copyWith({
-    Object? key,
-    Object? tag,
-    String? vefId,
+    Object? key = const _Undefined(),
+    Object? tag = const _Undefined(),
+    Object? vefId = const _Undefined(),
     bool? aliveForever,
   }) {
     return InstanceArg(
-      key: key ?? this.key,
-      tag: tag ?? this.tag,
-      vefId: vefId ?? this.vefId,
+      key: identical(key, const _Undefined()) ? this.key : key,
+      tag: identical(tag, const _Undefined()) ? this.tag : tag,
+      vefId: identical(vefId, const _Undefined()) ? this.vefId : (vefId as String?),
       aliveForever: aliveForever ?? this.aliveForever,
     );
   }
