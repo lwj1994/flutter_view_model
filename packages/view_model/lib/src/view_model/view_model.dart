@@ -781,7 +781,7 @@ abstract mixin class ViewModelFactory<T> {
   /// ViewModels with the same key will be shared across different widgets.
   /// If this returns `null`, a new instance will be created each time.
   ///
-  /// By default, returns a shared ID if [singleton] is `true`, otherwise
+  /// By default, returns a shared ID if `singleton` is `true`, otherwise
   /// `null`.
   ///
   /// Example:
@@ -789,6 +789,7 @@ abstract mixin class ViewModelFactory<T> {
   /// @override
   /// Object? key() => 'global-counter'; // Share across app
   /// ```
+  // ignore: deprecated_member_use_from_same_package
   Object? key() => (singleton()) ? _defaultShareId : null;
 
   /// Returns a tag to identify or categorize this ViewModel.
