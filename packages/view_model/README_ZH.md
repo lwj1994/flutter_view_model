@@ -231,13 +231,14 @@ class ProductHeader extends StatefulWidget {
 
 默认情况下，ViewModel 无人使用时会自动销毁。但有些 ViewModel 需要“长生不老”（比如用户会话、应用设置）。
 
-你可以通过设置 `aliveForever: true` 来实现。
+你可以通过设置 `aliveForever: true` 来实现。**强烈建议同时指定 `key`**，以便在全局范围内唯一标识和查找该实例。
 
 #### 手动定义
 
 ```dart
 final appSettingsProvider = ViewModelProvider<AppSettingsViewModel>(
   builder: () => AppSettingsViewModel(),
+  key: () => 'app_settings', // 指定一个全局 key
   aliveForever: true, // 这个实例永远不会被销毁
 );
 ```
@@ -245,7 +246,7 @@ final appSettingsProvider = ViewModelProvider<AppSettingsViewModel>(
 #### 使用生成器 (推荐)
 
 ```dart
-@GenProvider(aliveForever: true)
+@GenProvider(key: 'app_settings', aliveForever: true)
 class AppSettingsViewModel extends ViewModel {}
 ```
 
