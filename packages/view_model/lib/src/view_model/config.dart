@@ -52,14 +52,64 @@ class ViewModelConfig {
   /// Returns `true` if the values should be considered equal.
   final bool Function(dynamic previous, dynamic current)? equals;
 
+  /// Global error handler for listener errors.
+  ///
+  /// This callback is invoked when an error occurs during listener notification
+  /// in `notifyListeners()` or state listeners in `StateViewModel`. By default,
+  /// errors are only logged. Provide a custom handler to implement different
+  /// error handling strategies (e.g., reporting to crash analytics).
+  ///
+  /// Parameters:
+  /// - [error]: The error object that was thrown
+  /// - [stackTrace]: The stack trace of the error (may be null)
+  /// - [context]: A string describing where the error occurred
+  ///   (e.g., "notifyListeners", "stateListener")
+  ///
+  /// Example:
+  /// ```dart
+  /// ViewModelConfig(
+  ///   onListenerError: (error, stack, context) {
+  ///     // Report to crash analytics
+  ///     FirebaseCrashlytics.instance.recordError(error, stack);
+  ///     // Or rethrow in debug mode
+  ///     if (kDebugMode) rethrow;
+  ///   },
+  /// )
+  /// ```
+  final void Function(Object error, StackTrace? stackTrace, String context)?
+      onListenerError;
+
+  /// Global error handler for disposal errors.
+  ///
+  /// This callback is invoked when an error occurs during resource disposal
+  /// in `AutoDisposeController`. By default, errors are only logged.
+  ///
+  /// Parameters:
+  /// - [error]: The error object that was thrown
+  /// - [stackTrace]: The stack trace of the error (may be null)
+  ///
+  /// Example:
+  /// ```dart
+  /// ViewModelConfig(
+  ///   onDisposeError: (error, stack) {
+  ///     print('Disposal error: $error');
+  ///   },
+  /// )
+  /// ```
+  final void Function(Object error, StackTrace? stackTrace)? onDisposeError;
+
   /// Creates a new ViewModel configuration.
   ///
   /// Parameters:
   /// - [isLoggingEnabled]: Whether to enable debug logging
   ///   (defaults to `false`)
   /// - [equals]: Custom state equality function (optional)
+  /// - [onListenerError]: Custom listener error handler (optional)
+  /// - [onDisposeError]: Custom disposal error handler (optional)
   ViewModelConfig({
     this.isLoggingEnabled = false,
     this.equals,
+    this.onListenerError,
+    this.onDisposeError,
   });
 }

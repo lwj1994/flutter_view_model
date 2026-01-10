@@ -378,14 +378,21 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   /// This method should be called whenever the ViewModel's state changes
   /// and listeners need to be updated (e.g., to rebuild widgets).
   ///
-  /// Any exceptions thrown by listeners are caught and logged to prevent
-  /// one listener from affecting others.
+  /// Any exceptions thrown by listeners are caught and handled via the
+  /// global [ViewModelConfig.onListenerError] callback. If no custom handler
+  /// is provided, errors are logged. This prevents one listener from
+  /// affecting others.
   void notifyListeners() {
     for (final element in _listeners) {
       try {
         element.call();
-      } catch (e) {
-        viewModelLog("error on $e");
+      } catch (e, stack) {
+        final handler = config.onListenerError;
+        if (handler != null) {
+          handler(e, stack, 'notifyListeners');
+        } else {
+          viewModelLog("error on notifyListeners: $e\n$stack");
+        }
       }
     }
   }
@@ -610,16 +617,26 @@ abstract class StateViewModel<T> with ViewModel {
       for (final element in _stateListeners) {
         try {
           element.call(event.previousState, event.currentState);
-        } catch (e) {
-          //
+        } catch (e, stack) {
+          final handler = ViewModel.config.onListenerError;
+          if (handler != null) {
+            handler(e, stack, 'stateListener');
+          } else {
+            viewModelLog("error on stateListener: $e\n$stack");
+          }
         }
       }
 
       for (final element in _listeners) {
         try {
           element.call();
-        } catch (e) {
-          //
+        } catch (e, stack) {
+          final handler = ViewModel.config.onListenerError;
+          if (handler != null) {
+            handler(e, stack, 'notifyListeners');
+          } else {
+            viewModelLog("error on notifyListeners: $e\n$stack");
+          }
         }
       }
     });
@@ -710,10 +727,13 @@ abstract class StateViewModel<T> with ViewModel {
   @mustCallSuper
   @override
   void dispose() {
+    // Cancel subscription first to prevent any new events from being processed
+    // during the disposal process. This is critical to avoid race conditions
+    // where events might arrive while we're cleaning up listeners.
+    _streamSubscription.cancel();
     _store.dispose();
     _listeners.clear();
     _stateListeners.clear();
-    _streamSubscription.cancel();
     super.dispose();
   }
 
@@ -741,14 +761,21 @@ class AutoDisposeController {
 
   /// Executes all registered disposal callbacks.
   ///
-  /// Any exceptions thrown by disposal callbacks are caught and logged
-  /// to prevent one callback from affecting others.
+  /// Any exceptions thrown by disposal callbacks are caught and handled via
+  /// the global [ViewModelConfig.onDisposeError] callback. If no custom
+  /// handler is provided, errors are logged. This prevents one callback from
+  /// affecting others.
   void dispose() {
     for (final element in _disposeSet) {
       try {
         element?.call();
-      } catch (e) {
-        viewModelLog("AutoDisposeMixin error on $e");
+      } catch (e, stack) {
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog("AutoDisposeMixin error: $e\n$stack");
+        }
       }
     }
   }
@@ -822,15 +849,31 @@ abstract mixin class ViewModelFactory<T> {
 
   /// Returns `true` if this factory should create singleton instances.
   ///
-  /// When `true`, the factory will automatically return a shared ID as the key,
-  /// ensuring only one instance of type [T] exists in the system.
+  /// **DEPRECATED**: Use the `key` parameter instead for more flexibility.
   ///
-  /// Example:
+  /// **Deprecation Timeline**:
+  /// - v0.12.0: Soft deprecation (current) - warnings only
+  /// - v0.15.0: Hard deprecation (April 2026) - runtime warnings
+  /// - v1.0.0: **REMOVED** (July 2026) - will cause compilation errors
+  ///
+  /// **Migration**:
   /// ```dart
+  /// // OLD (deprecated):
   /// @override
-  /// bool singleton() => true; // Only one instance allowed
+  /// bool singleton() => true;
+  ///
+  /// // NEW (recommended):
+  /// @override
+  /// Object? key() => 'MyViewModel'; // or use the type: MyViewModel
   /// ```
-  @Deprecated('Use key instead')
+  ///
+  /// See DEPRECATION_PLAN.md for detailed migration guide.
+  @Deprecated(
+    'Use key() instead. '
+    'This parameter will be removed in v1.0.0 (July 2026). '
+    'Migration: Change singleton() => true to key() => "YourKey". '
+    'See DEPRECATION_PLAN.md for details.'
+  )
   bool singleton() => false;
 
   /// Returns `true` if the instance should live forever (never be disposed).
