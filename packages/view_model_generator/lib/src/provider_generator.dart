@@ -30,8 +30,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     // Read key/tag from annotation: prefer typed Expr, fallback to raw source.
     const exprChecker = TypeChecker.fromUrl(
         'package:view_model_annotation/src/annotation.dart#Expression');
-    const legacyExprChecker = TypeChecker.fromUrl(
-        'package:view_model_annotation/src/annotation.dart#Expr');
+
     String? keyExpr;
     String? tagExpr;
     bool keyIsString = false;
@@ -46,9 +45,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     final aliveForeverReader = annotation.peek('aliveForever');
     bool aliveForever = aliveForeverReader?.boolValue ?? false;
 
-    if (keyReader != null &&
-        (keyReader.instanceOf(exprChecker) ||
-            keyReader.instanceOf(legacyExprChecker))) {
+    if (keyReader != null && keyReader.instanceOf(exprChecker)) {
       keyExpr = keyReader.peek('code')?.stringValue;
       keyIsString = false;
     } else if (keyReader != null && keyReader.isString) {
@@ -56,9 +53,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       keyIsString = true;
       keyFromReaderString = true;
     }
-    if (tagReader != null &&
-        (tagReader.instanceOf(exprChecker) ||
-            tagReader.instanceOf(legacyExprChecker))) {
+    if (tagReader != null && tagReader.instanceOf(exprChecker)) {
       tagExpr = tagReader.peek('code')?.stringValue;
       tagIsString = false;
     } else if (tagReader != null && tagReader.isString) {
@@ -285,10 +280,10 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     return "'${escaped}'";
   }
 
-  /// If the source is `Expression('code')` or legacy `Expr("code")`, unwrap to `code`.
+  /// If the source is `Expression('code')`, unwrap to `code`.
   String? _unwrapExpr(String s) {
-    if (!s.startsWith('Expression(') && !s.startsWith('Expr(')) return null;
-    var i = s.startsWith('Expression(') ? 'Expression('.length : 'Expr('.length;
+    if (!s.startsWith('Expression(')) return null;
+    var i = 'Expression('.length;
     // Skip spaces
     while (i < s.length && (s[i] == ' ' || s[i] == '\n' || s[i] == '\t')) {
       i++;

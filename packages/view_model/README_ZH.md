@@ -4,56 +4,78 @@
 
 # view_model
 
-> Flutter 缺失的 ViewModel 方案 — 一切皆 ViewModel
+> Flutter 缺失的 ViewModel 方案 — 万物皆 ViewModel ✨
 
-[![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) [![Codecov](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
+| Package | Version |
+| :--- | :--- |
+| **view_model** | [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) |
+| **view_model_annotation** | [![Pub Version](https://img.shields.io/pub/v/view_model_annotation)](https://pub.dev/packages/view_model_annotation) |
+| **view_model_generator** | [![Pub Version](https://img.shields.io/pub/v/view_model_generator)](https://pub.dev/packages/view_model_generator) |
+
+[![Codecov](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
 [更新日志](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md) | [English Doc](https://github.com/lwj1994/flutter_view_model/blob/main/README.md)
 
-> 感谢 [Miolin](https://github.com/Miolin) 转让 `view_model` 包。
+## 😫 痛点在哪里？
 
----
+在 Flutter 开发中，状态管理总是让人头秃：
+1.  **样板代码多到哭**：为了把状态传递给 Widget，你得写一堆 Provider（比如 `BlocProvider`、`ChangeNotifierProvider`），心累！
+2.  **Context 地狱**：业务逻辑离不开 `BuildContext`，想在逻辑层互相调用？难！想测试？更难！UI 一改，逻辑全挂。
 
-## ✨ 特性
+## 💡 解决方案来了！
 
-- **零样板代码** — 无需手动注册，没有复杂的 Provider 图谱
-- **自动生命周期** — ViewModel 自动创建、缓存、销毁
-- **实例共享** — 通过 key 在多个 Widget 间共享同一 ViewModel
-- **与 Widget 解耦** — ViewModel 不持有 `BuildContext`
-- **精准刷新** — 仅重建变化的部分
-- **暂停/恢复** — Widget 不可见时自动暂停更新
-- **代码生成** — 可选的 `@genProvider` 注解进一步减少样板代码
+**view_model** 就是为了解决这些痛点而生的！它把业务逻辑和 Widget 树完全解耦，真的超好用！
 
----
+*   **默认隔离**：不像 Riverpod 那样全是全局状态，ViewModel 默认是**不共享**的。每个 Widget 都有自己独立的实例，再也不用担心状态污染啦！🛡️
+*   **显式共享**：只有当你真的想共享时，通过 `key` 就能轻松实现。🔑
+*   **零样板代码**：不用在 Widget 树顶层手动套 Provider，随用随取！✨
+*   **告别 Context**：ViewModel 之间互相调用完全不需要 Context，清爽！🍃
+*   **自动生命周期**：用的时候自动创建，不用了自动销毁，内存管理全自动！♻️
 
-## 📦 安装
+## 📦 安装搞起
 
 ```yaml
 dependencies:
-  view_model: ^latest
+  view_model: ^latest_version
 
 dev_dependencies:
-  build_runner: ^latest
-  view_model_generator: ^latest  # 可选：代码生成
+  build_runner: ^latest_version
+  view_model_generator: ^latest_version # 强烈推荐！
 ```
 
----
+## ⚡️ 三步快速上手
 
-## 🚀 快速开始
+### 1. 定义 ViewModel
+
+继承 `ViewModel`，用 `update()` 通知界面刷新。
 
 ```dart
-// 1. 定义 ViewModel
 class CounterViewModel extends ViewModel {
   int count = 0;
-  void increment() => update(() => count++);
-}
 
-// 2. 创建 Provider
+  void increment() {
+    update(() => count++);
+  }
+}
+```
+
+### 2. 创建 Provider
+
+定义一个全局 Provider，Widget 就靠它找到你的 ViewModel。
+
+```dart
 final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
+```
 
-// 3. 在 Widget 中使用
+*(小贴士：用 `view_model_generator` 可以跳过这一步哦！)* 😉
+
+### 3. 在 Widget 中使用
+
+在 `StatefulWidget` 中混入 `ViewModelStateMixin`。
+
+```dart
 class CounterPage extends StatefulWidget {
   @override
   State<CounterPage> createState() => _CounterPageState();
@@ -62,381 +84,196 @@ class CounterPage extends StatefulWidget {
 class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
-    final vm = vef.watch(counterProvider);  // 变化时重建
-    return ElevatedButton(
-      onPressed: vm.increment,
-      child: Text('计数: ${vm.count}'),
+    // 监听 provider。ViewModel 更新时，Widget 会自动重建。
+    final vm = vef.watch(counterProvider);
+
+    return Scaffold(
+      body: Center(
+        child: Text('${vm.count}'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: vm.increment,
+        child: Icon(Icons.add),
+      ),
     );
   }
 }
 ```
 
----
+## 🌈 核心功能详解
 
-## 📖 核心概念
+### 1. 数据访问 (`vef`) 🗝️
 
-### ViewModel
+`vef` (ViewModel Element Factory) 是你操作 ViewModel 的神器：
 
-带生命周期的业务逻辑容器。使用 `update()` 通知监听者：
+| 方法 | 用法 |
+| :--- | :--- |
+| `vef.watch(provider)` | **获取 + 监听**。返回实例并订阅更新（触发重建）。在 `build()` 或 `initState()` 里放心用！ |
+| `vef.read(provider)` | **仅获取**。返回实例但不订阅。**不会**触发重建。在回调（如 `onPressed`）里用它！ |
+| `vef.listen(provider)` | **仅监听**。订阅变化来处理副作用（比如弹窗），不重建 UI。会自动释放哦。 |
 
-```dart
-class UserViewModel extends ViewModel {
-  String name = '';
-  
-  Future<void> fetchUser() async {
-    final user = await api.getUser();
-    update(() => name = user.name);  // 触发重建
-  }
-  
-  @override
-  void dispose() {
-    // 清理资源
-    super.dispose();
-  }
-}
-```
+### 2. 不可变状态 (`StateViewModel`) 🔒
 
-### StateViewModel
-
-不可变状态模式，配合 `copyWith` 使用：
+对于复杂状态，不可变对象 (Immutable) 才是 YYDS！`StateViewModel` 专门为此设计。
 
 ```dart
-class CounterState {
-  final int count;
-  final String message;
-  const CounterState({this.count = 0, this.message = ''});
-  
-  CounterState copyWith({int? count, String? message}) => CounterState(
-    count: count ?? this.count,
-    message: message ?? this.message,
-  );
+// 1. 状态类
+class UserState {
+  final String name;
+  final bool isLoading;
+  UserState({this.name = '', this.isLoading = false});
 }
 
-class CounterViewModel extends StateViewModel<CounterState> {
-  CounterViewModel() : super(state: const CounterState());
-  
-  void increment() => setState(state.copyWith(
-    count: state.count + 1,
-    message: '已增加!',
-  ));
-}
-```
+// 2. ViewModel
+class UserViewModel extends StateViewModel<UserState> {
+  UserViewModel() : super(state: UserState());
 
-### ViewModelProvider
-
-定义如何构建和缓存 ViewModel：
-
-```dart
-// 简单 Provider
-final counterProvider = ViewModelProvider<CounterViewModel>(
-  builder: () => CounterViewModel(),
-  key: 'counter',      // 可选：实例共享
-  isSingleton: true,   // 可选：全局单例
-);
-
-// 带参数的 Provider
-final userProvider = ViewModelProvider.arg<UserViewModel, String>(
-  builder: (userId) => UserViewModel(userId),
-  key: (userId) => 'user:$userId',  // 从参数生成 key
-);
-```
-
-### `vef` 访问器
-
-通过 `vef` 对象访问 ViewModel：
-
-| 方法 | 说明 |
-|------|------|
-| `vef.watch(provider)` | 获取 VM 并监听变化 |
-| `vef.read(provider)` | 获取 VM 不监听变化 |
-| `vef.watchCached<T>(key:)` | 按 key 获取缓存实例并监听 |
-| `vef.readCached<T>(key:)` | 按 key 获取缓存实例不监听 |
-| `vef.listen(provider, onChanged:)` | 副作用监听，自动释放 |
-| `vef.recycle(vm)` | 强制销毁并重建 |
-
----
-
-## 🔌 Widget 集成
-
-### ViewModelStateMixin（推荐）
-
-用于 StatefulWidget 的标准模式：
-
-```dart
-class MyPage extends StatefulWidget {
-  @override
-  State<MyPage> createState() => _MyPageState();
-}
-
-class _MyPageState extends State<MyPage> with ViewModelStateMixin {
-  CounterViewModel get vm => vef.watch(counterProvider);
-  
-  @override
-  void initState() {
-    super.initState();
-    // 监听副作用（自动释放）
-    vef.listen(counterProvider, onChanged: (vm) {
-      print('计数变化: ${vm.count}');
-    });
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    return Text('计数: ${vm.count}');
+  void loadUser() async {
+    setState(state.copyWith(isLoading: true)); // 更新状态
+    // ... 请求接口 ...
+    setState(state.copyWith(isLoading: false, name: 'Alice'));
   }
 }
 ```
 
-### ViewModelBuilder（替代方案）
+#### 监听变化
 
-无需 mixin：
-
-```dart
-ViewModelBuilder<CounterViewModel>(
-  counterProvider,
-  builder: (vm) => Text('计数: ${vm.count}'),
-)
-```
-
-### ViewModelStatelessMixin
-
-> ⚠️ **警告**：通过拦截 Element 生命周期实现，可能与其他 mixin 冲突。推荐使用 StatefulWidget。
+只想在特定状态变化时搞事情（比如弹窗、跳转）？完全没问题！
 
 ```dart
-class CounterWidget extends StatelessWidget with ViewModelStatelessMixin {
-  @override
-  Widget build(BuildContext context) {
-    final vm = vef.watch(counterProvider);
-    return Text('计数: ${vm.count}');
-  }
-}
-```
-
----
-
-## 🔗 实例共享
-
-在不同 Widget 间共享同一 ViewModel：
-
-### 使用 Provider + Key
-
-```dart
-final userProvider = ViewModelProvider<UserViewModel>(
-  builder: () => UserViewModel(userId: currentUserId),
-  key: 'user:$currentUserId',
-);
-
-// WidgetA 和 WidgetB 获取的是同一个实例
-class _WidgetAState extends State<WidgetA> with ViewModelStateMixin {
-  UserViewModel get vm => vef.watch(userProvider);
-}
-
-class _WidgetBState extends State<WidgetB> with ViewModelStateMixin {
-  UserViewModel get vm => vef.watch(userProvider);  // 同一实例！
-}
-```
-
-### 按 Key 直接获取
-
-适用于深层嵌套或跨模块场景：
-
-```dart
-// 当拿不到 provider 时按 key 获取
-final vm = vef.watchCached<UserViewModel>(key: 'user:123');
-```
-
-> **注意**：实例不存在时会报错。使用 `vef.maybeWatchCached()` 可返回 null。
-
----
-
-## ♻️ 生命周期管理
-
-ViewModel 使用 **引用计数**：
-
-```mermaid
-graph LR
-    A[WidgetA watch] --> B[引用: 1]
-    B --> C[WidgetB watch]
-    C --> D[引用: 2]
-    D --> E[WidgetA 销毁]
-    E --> F[引用: 1]
-    F --> G[WidgetB 销毁]
-    G --> H[引用: 0 → dispose]
-```
-
-- 首次 `watch()` → 创建实例
-- 再次 `watch()` → 复用实例，引用 +1
-- Widget 销毁 → 引用 -1
-- 引用归零 → 调用 `ViewModel.dispose()`
-
----
-
-## ⏸️ 暂停/恢复
-
-Widget 不可见时自动暂停：
-
-- **导航**：Route 压入/弹出
-- **App 生命周期**：应用进入后台
-- **标签页**：TabBarView/PageView 切换
-
-配置：
-```dart
-MaterialApp(
-  navigatorObservers: [ViewModel.routeObserver],
-  // ...
-)
-```
-
-详见 [暂停/恢复生命周期](./docs/PAUSE_RESUME_LIFECYCLE.md)。
-
----
-
-## 🎯 精准刷新
-
-### StateViewModel 选择器
-
-监听特定 state 字段：
-
-```dart
-// 监听整个 state
-vef.listenState(counterProvider, (prev, curr) {
-  print('State 变化了');
-});
-
-// 监听特定字段
+// 监听特定属性
 vef.listenStateSelect(
-  counterProvider,
-  (state) => state.count,
-  (prev, curr) => print('计数: $prev → $curr'),
+  userProvider,
+  selector: (state) => state.isLoading,
+  onChanged: (prev, isLoading) {
+    if (isLoading) {
+      showLoadingDialog();
+    } else {
+      dismissLoadingDialog();
+    }
+  },
 );
+
+// 监听整个状态
+vef.listenState(userProvider, onChanged: (prev, state) {
+  print('状态变啦：$prev -> $state');
+});
 ```
 
-### StateViewModelValueWatcher
+### 3. 依赖注入 (参数传递) 💉
 
-仅在选定值变化时重建：
+ViewModel 需要外部参数（比如 ID 或 Repository）？必须支持！
 
 ```dart
-StateViewModelValueWatcher<CounterState>(
-  viewModel: vm,
-  selectors: [(s) => s.count],
-  builder: (state) => Text('${state.count}'),
-)
+// 定义需要参数 (int id) 的 provider
+final userProvider = ViewModelProvider.arg<UserViewModel, int>(
+  builder: (int id) => UserViewModel(id),
+);
+
+// 在 Widget 中使用
+final vm = vef.watch(userProvider(123)); // 传参只需一步
 ```
 
-### ObservableValue
+### 4. 实例共享 (Keys) 🔗
 
-轻量级共享值：
+**默认行为：隔离**
+当你调用 `vef.watch(provider)`，你拿到的是这个 Widget **独享**的全新实例。别的 Widget 用同一个 provider，拿到的是另一个实例。
+
+**共享行为：Keys**
+想在不同 Widget 间（比如商品详情页和它的 Header）共享同一个 ViewModel？加个 `key` 就行！
+
+**场景**：`ProductPage` 和子组件 `ProductHeader` 需要共享数据。
 
 ```dart
-final counter = ObservableValue<int>(0, shareKey: 'counter');
+// 1. 定义 provider，key 基于参数生成
+final productProvider = ViewModelProvider.arg<ProductViewModel, String>(
+  builder: (id) => ProductViewModel(id),
+  key: (id) => 'product_$id', // Key 相同，实例就相同
+);
 
-ObserverBuilder<int>(
-  observable: counter,
-  builder: (value) => Text('$value'),
-)
+// 2. 父组件 (Page)
+class ProductPage extends StatefulWidget {
+  final String productId;
+  // ...
+  build(context) {
+    // 创建或查找 key 为 'product_123' 的实例
+    final vm = vef.watch(productProvider(productId));
+    // ...
+  }
+}
 
-// 任意位置更新
-counter.value++;
+// 3. 子组件 (Header)
+class ProductHeader extends StatefulWidget {
+  final String productId;
+  // ...
+  build(context) {
+    // Key 一样，拿到的就是同一个实例！
+    final vm = vef.watch(productProvider(productId)); 
+    return Text(vm.title);
+  }
+}
 ```
 
----
+### 5. 自动生命周期 ♻️
 
-## ⚙️ 代码生成
+`view_model` 使用严格的**引用计数**来管理内存，不用操心！
 
-使用 `@genProvider` 自动生成 Provider：
+1.  **创建**：第一次 `watch`、`read` 或 `listen` 时，ViewModel 被创建（引用 +1）。
+2.  **存活**：只要 Widget 还在，引用就在。
+    *   `watch`：持有引用 + 监听。
+    *   `read`：持有引用（不监听）。
+    *   `listen`：内部由于也拿到了实例，所以也算持有引用。
+3.  **销毁**：Widget 销毁时，引用 -1。当引用归零，ViewModel 自动 `dispose()`。👋
+
+> **例外 (Keep Alive)**：如果你在 provider 里设置了 `aliveForever: true`，那它就**永远不会**自动销毁，哪怕引用归零。这就变成全局单例啦！
+
+### 6. 代码生成 (强烈推荐) 🤖
+
+手写 `ViewModelProvider` 太麻烦？用 `@genProvider` 解放双手！
 
 ```dart
-import 'package:view_model/view_model.dart';
-part 'counter_view_model.vm.dart';
-
 @genProvider
-class CounterViewModel extends ViewModel {
-  int count = 0;
-  void increment() => update(() => count++);
-}
-// 生成: counterProvider
+class MyViewModel extends ViewModel {}
 ```
 
-带参数：
-```dart
-@genProvider
-class UserViewModel extends ViewModel {
-  final String userId;
-  UserViewModel(this.userId);
-}
-// 生成: userViewModelProvider (ViewModelProvider.arg)
-```
-
-带 key/tag：
-```dart
-@GenProvider(key: r'user-$id', tag: r'user-$id')
-class UserViewModel extends ViewModel {
-  final String id;
-  UserViewModel(this.id);
-}
-```
-
-运行：`dart run build_runner build`
-
-详见 [Generator README](./packages/view_model_generator/README_ZH.md)
-
----
+运行 `dart run build_runner build`，Provider 自动生成！
+详情看这里 👉 [view_model_generator](../view_model_generator/README_ZH.md)
 
 ## 🧪 测试
 
-使用 `setProxy` mock ViewModel：
+用 `setProxy` 就能轻松 Mock 任何 ViewModel！
 
 ```dart
-class MockAuthViewModel extends AuthViewModel {
-  @override
-  bool get isLoggedIn => false;
-}
-
-testWidgets('显示登录提示', (tester) async {
-  // 覆盖
-  authProvider.setProxy(
-    ViewModelProvider(builder: () => MockAuthViewModel()),
+testWidgets('我的测试', (tester) async {
+  final mockVM = MockCounterViewModel();
+  
+  // 用 Mock 替换真实实现
+  counterProvider.setProxy(
+    ViewModelProvider(builder: () => mockVM)
   );
-  
+
   await tester.pumpWidget(MyApp());
-  expect(find.text('请登录'), findsOneWidget);
-  
-  // 清理
-  authProvider.clearProxy();
+  // ...
 });
 ```
 
----
-
 ## 🔧 全局配置
 
-在 `main()` 中配置：
+在 `main()` 里可以配置全局行为。
 
 ```dart
 void main() {
   ViewModel.initialize(
     config: ViewModelConfig(
-      isLoggingEnabled: true,
-      equals: (a, b) => identical(a, b),  // State 相等性判断
+      isLoggingEnabled: true, // 开启日志大法
     ),
-    lifecycles: [MyLifecycleObserver()],
+    // 添加全局导航/生命周期观察者
+    // lifecycles: [], 
   );
   runApp(MyApp());
 }
 ```
 
----
-
-## 📚 相关包
-
-| 包 | 说明 |
-|---|------|
-| [view_model](https://pub.dev/packages/view_model) | 核心库 |
-| [view_model_generator](https://pub.dev/packages/view_model_generator) | 代码生成器 |
-| [view_model_annotation](https://pub.dev/packages/view_model_annotation) | 注解 |
-
----
-
 ## 📄 License
 
-MIT License - 见 [LICENSE](./LICENSE) 文件
+MIT License - 详见 [LICENSE](./LICENSE) 文件。

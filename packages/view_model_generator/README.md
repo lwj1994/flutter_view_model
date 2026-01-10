@@ -1,33 +1,47 @@
 # view_model_generator
 
-Code generator for the `view_model` package. It generates
-`ViewModelProvider` specs for your `ViewModel` classes to simplify DI
-and instance management.
+Code generator for the `view_model` package.
+
+## The Problem
+
+When using `view_model`, you typically need to define a global `ViewModelProvider` so that your widgets can access the ViewModel. Writing this definition manually for every ViewModel is repetitive and error-prone, usually looking like this:
+
+```dart
+// Without generator :(
+final myProvider = ViewModelProvider<MyViewModel>(
+  builder: () => MyViewModel(),
+);
+```
+
+## The Solution
+
+**view_model_generator** automates this process. You simply annotate your ViewModel class, and it generates the `ViewModelProvider` for you.
+
+```dart
+// With generator :)
+@genProvider
+class MyViewModel extends ViewModel {}
+```
 
 ## Installation
 
-Add `view_model` and `view_model_generator` to your `pubspec.yaml`:
+Add `view_model_generator` to your `dev_dependencies`:
 
 ```yaml
-dependencies:
-  view_model: ^latest_version
-
 dev_dependencies:
-  build_runner: ^latest_version
   view_model_generator: ^latest_version
+  build_runner: ^latest_version
 ```
 
-## Usage
+## Features
 
-1. Annotate your `ViewModel` class with `@genProvider` or
-   `@GenProvider(...)`.
-2. Run build runner.
+### 1. Basic Usage
 
-### 1. Annotate
+1.  **Annotate**: Add `@genProvider` to your class.
+2.  **Run**: Run `dart run build_runner build`.
 
 ```dart
 import 'package:view_model/view_model.dart';
-
 part 'my_view_model.vm.dart';
 
 @genProvider
@@ -36,21 +50,7 @@ class MyViewModel extends ViewModel {
 }
 ```
 
-### 2. Run Build Runner
-
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-
-This generates `my_view_model.vm.dart` which contains `myProvider`.
-
-## Generated Code
-
-The generator creates a global `ViewModelProvider` variable for each
-annotated class.
-
-For a class named `MyViewModel`:
+This generates a file `my_view_model.vm.dart` containing:
 
 ```dart
 final myProvider = ViewModelProvider<MyViewModel>(
@@ -58,146 +58,97 @@ final myProvider = ViewModelProvider<MyViewModel>(
 );
 ```
 
-If your `ViewModel` has constructor dependencies, the generator supports
-up to 4 arguments and will generate `ViewModelProvider.arg`,
-`ViewModelProvider.arg2`, `arg3`, `arg4`.
+The generated provider name is always **camelCase** of your class name + `Provider` (e.g., `UserViewModel` -> `userProvider`).
+
+### 2. Handling Arguments (Dependency Injection)
+
+If your ViewModel constructor requires arguments (like a repository or an ID), the generator automatically creates a provider that accepts those arguments.
 
 ```dart
 @genProvider
 class UserViewModel extends ViewModel {
-  final UserRepository repo;
-  UserViewModel(this.repo);
-}
+  final int userId;
+  final Repository repo;
 
-// Generates
-final userViewModelProvider =
-    ViewModelProvider.arg<UserViewModel, UserRepository>(
-  builder: (UserRepository repo) => UserViewModel(repo),
-);
+  // The generator detects these required arguments
+  UserViewModel(this.userId, this.repo);
+}
 ```
 
-### Factory preference
+**Usage in UI:**
 
-If your class defines `factory ClassName.provider(...)`, the generator
-prefers this factory when building providers, provided the factory
-matches the required constructor argument count.
+```dart
+// 1. Pass the arguments to the provider to get the factory
+final factory = userProvider(123, repository);
+
+// 2. Watch it
+final vm = vef.watch(factory);
+```
+
+Or simply:
+
+```dart
+final vm = vef.watch(userProvider(123, repository));
+```
+
+*Note: The generator supports up to 4 required arguments.*
+
+### 3. Alive Forever (Singleton-like)
+
+If you want a ViewModel to stay in memory even when no widgets are using it (e.g., a global authentication store), set `aliveForever: true`. It is recommended to provide a **fixed key** so you can easily access this singleton instance from anywhere.
+
+```dart
+@GenProvider(aliveForever: true, key: "AuthViewModel")
+class AuthViewModel extends ViewModel {}
+```
+
+### 4. Custom Keys and Tags
+
+You can customize the `key` and `tag` used by the provider. This is useful for identifying specific instances in debug tools or logs.
+
+```dart
+@GenProvider(key: 'special_vm', tag: 'v1')
+class MyViewModel extends ViewModel {}
+```
+
+You can even use expressions:
+
+```dart
+@GenProvider(key: Expression('server_id'))
+class ServerViewModel extends ViewModel {
+  final String serverId;
+  ServerViewModel(this.serverId);
+}
+```
+
+### 5. Advanced: Factory Control
+
+By default, the generator creates the ViewModel using its main constructor, using only the **required** parameters.
+
+If you need more control (e.g., to expose optional parameters or use a named constructor), define a factory named `provider`.
 
 ```dart
 @genProvider
-class A extends Base {
-  final P p;
-  A({required super.s, required this.p});
-  factory A.provider({required P p}) => A(s: 0, p: p);
-}
+class SettingsViewModel extends ViewModel {
+  final bool isDark;
+  
+  // 'isDark' is optional here
+  SettingsViewModel({this.isDark = false});
 
-// Generates
-final aProvider = ViewModelProvider.arg<A, P>(
-  builder: (P p) => A.provider(p: p),
-);
+  // The generator will use this factory instead of the constructor.
+  // This allows you to expose 'isDark' as a required argument for the provider,
+  // or handle other logic.
+  factory SettingsViewModel.provider({required bool isDark}) => 
+      SettingsViewModel(isDark: isDark);
+}
 ```
 
-### Special naming rule
+## Summary
 
-The provider variable name is `lowerCamel(ClassName) + 'Provider'`.
-Special case: `PostViewModel` becomes `postProvider`.
-
-## Key / Tag declarations
-
-You can declare cache `key` and `tag` in `@GenProvider(...)`. Both accept
-string literals and non-string expressions.
-
-- Strings: `'fixed'`, `"ok"`, `r'${p.id}'`.
-- Objects/expressions: `Object()`, numbers, booleans, `null`.
-- Expressions marker: `Expression('...')` to unwrap non-string code into
-  builder closures (e.g. `repo`, `repo.id`, `repo.compute(page)`).
-
-Rules:
-
-- For providers with arguments, `key`/`tag` are emitted as closures with
-  the same signature as `builder`.
-- For providers without arguments, `key`/`tag` are emitted as constants
-  directly.
-
-Examples:
-
-```dart
-// Single arg, string templates
-@GenProvider(key: r'kp-$p', tag: r'tg-$p')
-class B { B({required this.p}); final P p; }
-
-// Generates
-final bProvider = ViewModelProvider.arg<B, P>(
-  builder: (P p) => B(p: p),
-  key: (P p) => 'kp-$p',
-  tag: (P p) => 'tg-$p',
-);
-
-// Single arg, nested interpolation
-@GenProvider(tag: r'${p.name}', key: r'${p.id}')
-class B2 { B2({required this.p}); final P p; }
-
-// Generates tag/key closures with string interpolation
-
-// Object constants
-@GenProvider(key: Object(), tag: Object())
-class C { C({required this.p}); final P p; }
-
-// Generates closures returning Object()
-
-// Expressions via Expr
-@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
-class G { G({required this.repo}); final Repository repo; }
-
-// Generates non-string expression closures
-
-// No-arg provider with constants
-@GenProvider(key: 'fixed', tag: Object())
-class E { E(); }
-
-// Generates constants directly in ViewModelProvider<E>
-```
-
-## Limits
-
-- Supports up to 4 required constructor arguments (`arg`, `arg2`,
-  `arg3`, `arg4`).
-- Super forwarded params (`required super.xxx`) are excluded from
-  provider argument signature.
-
-## Parameter Handling Rules
-
-- **Main constructor**: Only **required** parameters are collected.
-  Optional parameters (e.g., `{this.id}`) are ignored.
-- **Factory `provider`**: **All** parameters (including optional) are
-  collected. This gives you full control over which arguments to expose.
-
-Example:
-
-```dart
-@genProvider
-class MyViewModel {
-  final String userId;
-  final bool showDetail;
-  
-  // Optional param `showDetail` will be ignored when generating provider
-  MyViewModel({required this.userId, this.showDetail = false});
-}
-// Generates: ViewModelProvider.arg<MyViewModel, String>(...)
-// `showDetail` uses default value
-
-// To include optional params, define a factory:
-@genProvider
-class MyViewModel2 {
-  final String userId;
-  final bool showDetail;
-  
-  MyViewModel2({required this.userId, this.showDetail = false});
-  
-  // Factory provider includes all params you define
-  factory MyViewModel2.provider({
-    required String userId,
-    bool showDetail = false,
-  }) => MyViewModel2(userId: userId, showDetail: showDetail);
-}
-// Generates: ViewModelProvider.arg2<MyViewModel2, String, bool>(...)
-```
+| Feature | Annotation |
+| :--- | :--- |
+| **Basic Provider** | `@genProvider` |
+| **Arguments** | (Automatic based on constructor) |
+| **Keep Alive** | `@GenProvider(aliveForever: true)` |
+| **Custom Key** | `@GenProvider(key: ...)` |
+| **Control Creation** | `factory ClassName.provider(...)` |
