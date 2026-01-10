@@ -229,6 +229,8 @@ class InstanceHandle<T> with ChangeNotifier {
   /// The actual ViewModel instance (null when disposed).
   late T? _instance;
 
+  bool get isDisposed => _instance == null;
+
   /// Creates a new instance handle.
   ///
   /// Parameters:
@@ -270,12 +272,15 @@ class InstanceHandle<T> with ChangeNotifier {
   /// - [id]: The watcher ID to remove
   void unbindVef(String id) {
     if (bindedVefIds.remove(id)) {
-      if (_instance is InstanceLifeCycle) {
-        (_instance as InstanceLifeCycle).onUnbindVef(arg, id);
+      try {
+        if (_instance is InstanceLifeCycle) {
+          (_instance as InstanceLifeCycle).onUnbindVef(arg, id);
+        }
+      } finally {
+        if (bindedVefIds.isEmpty) {
+          _recycle();
+        }
       }
-    }
-    if (bindedVefIds.isEmpty) {
-      _recycle();
     }
   }
 

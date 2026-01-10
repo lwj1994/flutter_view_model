@@ -229,7 +229,7 @@ class AutoDisposeInstanceController {
   /// ```
   void dispose() {
     for (final e in _instanceNotifiers) {
-      if (e.instance is ViewModel) {
+      if (!e.isDisposed && e.instance is ViewModel) {
         (e.instance as ViewModel).refHandler.removeRef(vef);
       }
       e.unbindVef(vef.id);
