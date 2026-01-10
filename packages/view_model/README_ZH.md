@@ -238,7 +238,7 @@ class ProductHeader extends StatefulWidget {
 ```dart
 final appSettingsProvider = ViewModelProvider<AppSettingsViewModel>(
   builder: () => AppSettingsViewModel(),
-  key: () => 'app_settings', // 指定一个全局 key
+  key: 'app_settings', // 指定一个全局 key
   aliveForever: true, // 这个实例永远不会被销毁
 );
 ```

@@ -239,7 +239,7 @@ You can achieve this by setting `aliveForever: true`. **It is highly recommended
 ```dart
 final appSettingsProvider = ViewModelProvider<AppSettingsViewModel>(
   builder: () => AppSettingsViewModel(),
-  key: () => 'app_settings', // Specify a global key
+  key: 'app_settings', // Specify a global key
   aliveForever: true, // This instance will never be disposed
 );
 ```
