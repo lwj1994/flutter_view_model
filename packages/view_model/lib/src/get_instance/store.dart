@@ -541,7 +541,9 @@ class InstanceArg {
     return InstanceArg(
       key: identical(key, const _Undefined()) ? this.key : key,
       tag: identical(tag, const _Undefined()) ? this.tag : tag,
-      vefId: identical(vefId, const _Undefined()) ? this.vefId : (vefId as String?),
+      vefId: identical(vefId, const _Undefined())
+          ? this.vefId
+          : (vefId as String?),
       aliveForever: aliveForever ?? this.aliveForever,
     );
   }
