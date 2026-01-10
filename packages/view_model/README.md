@@ -228,7 +228,31 @@ class ProductHeader extends StatefulWidget {
 
 > **Exception (Keep Alive)**: If you set `aliveForever: true` in your provider, the ViewModel will **NEVER** be automatically disposed, even if the reference count hits 0. It behaves like a global singleton.
 
-### 6. Code Generation (Recommended)
+### 6. Alive Forever (Global State)
+
+By default, ViewModels are auto-disposed when not used. However, some ViewModels need to live forever (e.g., User Session, App Settings).
+
+You can achieve this by setting `aliveForever: true`.
+
+#### Manual Definition
+
+```dart
+final appSettingsProvider = ViewModelProvider<AppSettingsViewModel>(
+  builder: () => AppSettingsViewModel(),
+  aliveForever: true, // This instance will never be disposed
+);
+```
+
+#### Using Generator (Recommended)
+
+```dart
+@GenProvider(aliveForever: true)
+class AppSettingsViewModel extends ViewModel {}
+```
+
+Note: Even if `aliveForever` is true, the ViewModel is still **lazy-loaded**. It will be created the first time it is accessed.
+
+### 7. Code Generation (Recommended)
 
 Writing `ViewModelProvider` definitions manually is boring. Use `@genProvider` to automate it.
 
