@@ -1,3 +1,7 @@
+## 0.13.0-dev.0
+- Fix: resolve unbindVef race condition
+- Update lints
+
 ## 0.12.0 
 - update docs
 
