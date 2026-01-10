@@ -120,7 +120,8 @@ void main() {
       final initialHashCode = vm1.hashCode;
 
       // Get the handle to monitor action changes
-      final handle = instanceManager.getNotifier<TestViewModel>(factory: factory);
+      final handle =
+          instanceManager.getNotifier<TestViewModel>(factory: factory);
 
       // Track action changes
       InstanceAction? capturedAction;
@@ -191,7 +192,8 @@ void main() {
 
       // Create instance with watcher
       final vm1 = controller.getInstance<TestViewModel>(factory: factory);
-      final handle = instanceManager.getNotifier<TestViewModel>(factory: factory);
+      final handle =
+          instanceManager.getNotifier<TestViewModel>(factory: factory);
 
       // Verify initial watcher
       expect(handle.bindedVefIds, contains('test_watcher_1'));

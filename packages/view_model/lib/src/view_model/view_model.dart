@@ -868,12 +868,10 @@ abstract mixin class ViewModelFactory<T> {
   /// ```
   ///
   /// See DEPRECATION_PLAN.md for detailed migration guide.
-  @Deprecated(
-    'Use key() instead. '
-    'This parameter will be removed in v1.0.0 (July 2026). '
-    'Migration: Change singleton() => true to key() => "YourKey". '
-    'See DEPRECATION_PLAN.md for details.'
-  )
+  @Deprecated('Use key() instead. '
+      'This parameter will be removed in v1.0.0 (July 2026). '
+      'Migration: Change singleton() => true to key() => "YourKey". '
+      'See DEPRECATION_PLAN.md for details.')
   bool singleton() => false;
 
   /// Returns `true` if the instance should live forever (never be disposed).
