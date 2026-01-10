@@ -232,13 +232,14 @@ class ProductHeader extends StatefulWidget {
 
 By default, ViewModels are auto-disposed when not used. However, some ViewModels need to live forever (e.g., User Session, App Settings).
 
-You can achieve this by setting `aliveForever: true`.
+You can achieve this by setting `aliveForever: true`. **It is highly recommended to use a `key`** for such ViewModels to ensure they can be uniquely identified and retrieved globally.
 
 #### Manual Definition
 
 ```dart
 final appSettingsProvider = ViewModelProvider<AppSettingsViewModel>(
   builder: () => AppSettingsViewModel(),
+  key: () => 'app_settings', // Specify a global key
   aliveForever: true, // This instance will never be disposed
 );
 ```
@@ -246,7 +247,7 @@ final appSettingsProvider = ViewModelProvider<AppSettingsViewModel>(
 #### Using Generator (Recommended)
 
 ```dart
-@GenProvider(aliveForever: true)
+@GenProvider(key: 'app_settings', aliveForever: true)
 class AppSettingsViewModel extends ViewModel {}
 ```
 
