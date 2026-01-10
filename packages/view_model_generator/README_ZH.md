@@ -1,33 +1,47 @@
-# view_model_generator（中文）
+# view_model_generator
 
-`view_model_generator` 是为 `view_model` 包提供的代码生成器。
-它可以为你的 `ViewModel` 自动生成 `ViewModelProvider` 声明，
-从而简化依赖注入与实例管理的样板代码。
+`view_model` 的专属代码生成器 🤖
 
-## 安装
+## 😫 痛点
 
-在你的 `pubspec.yaml` 中加入：
+用 `view_model` 时，每次都要手动定义全局 `ViewModelProvider`，是不是觉得有点枯燥？
 
-```yaml
-dependencies:
-  view_model: ^latest_version
-
-dev_dependencies:
-  build_runner: ^latest_version
-  view_model_generator: ^latest_version
+```dart
+// 没用生成器 :(
+final myProvider = ViewModelProvider<MyViewModel>(
+  builder: () => MyViewModel(),
+);
 ```
 
-## 使用
+## 💡 解决方案
 
-- 第一步：在 `ViewModel` 类上添加注解 `@genProvider` 或
-  `@GenProvider(...)`。
-- 第二步：运行构建命令。
+**view_model_generator** 让你告别重复劳动！一个注解，自动搞定！✨
 
-### 1. 添加注解
+```dart
+// 用了生成器 :)
+@genProvider
+class MyViewModel extends ViewModel {}
+```
+
+## 📦 安装
+
+在 `dev_dependencies` 加入它：
+
+```yaml
+dev_dependencies:
+  view_model_generator: ^latest_version
+  build_runner: ^latest_version
+```
+
+## 🌈 功能特性
+
+### 1. 基础用法 👶
+
+1.  **加注解**：给类加上 `@genProvider`。
+2.  **跑命令**：`dart run build_runner build`。
 
 ```dart
 import 'package:view_model/view_model.dart';
-
 part 'my_view_model.vm.dart';
 
 @genProvider
@@ -36,166 +50,103 @@ class MyViewModel extends ViewModel {
 }
 ```
 
-### 2. 运行构建
-
-Flutter 项目：
-
-```bash
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-纯 Dart 项目：
-
-```bash
-dart run build_runner build
-```
-
-生成的文件 `my_view_model.vm.dart` 中会包含 `myViewModelProvider`。
-
-## 生成代码示例
-
-为每个带注解的类生成一个全局的 `ViewModelProvider` 变量。
-
-示例（类名 `MyViewModel`）：
+这就生成了 `my_view_model.vm.dart`：
 
 ```dart
-final myViewModelProvider = ViewModelProvider<MyViewModel>(
+final myProvider = ViewModelProvider<MyViewModel>(
   builder: () => MyViewModel(),
 );
 ```
 
-如果 `ViewModel` 构造函数中有依赖参数，生成器最多支持 4 个参数，
-并自动生成 `ViewModelProvider.arg`、`arg2`、`arg3`、`arg4` 变体。
+生成的 Provider 名字永远是 **小驼峰类名** + `Provider`（例如 `UserViewModel` -> `userProvider`）。
+
+### 2. 处理参数 (依赖注入) 💉
+
+如果你的构造函数需要参数（比如 Repository 或 ID），生成器超聪明，自动识别！
 
 ```dart
 @genProvider
 class UserViewModel extends ViewModel {
-  final UserRepository repo;
-  UserViewModel(this.repo);
-}
+  final int userId;
+  final Repository repo;
 
-// 生成代码：
-final userViewModelProvider =
-    ViewModelProvider.arg<UserViewModel, UserRepository>(
-  builder: (UserRepository repo) => UserViewModel(repo),
-);
+  // 生成器会检测到这些必填参数
+  UserViewModel(this.userId, this.repo);
+}
 ```
 
-## Factory 优先规则
+**在 UI 中使用：**
 
-如果类中定义了 `factory ClassName.provider(...)`，并且该 factory 的
-必填参数个数与类型满足要求，生成器会优先使用这个 factory 来生成 provider。
+```dart
+// 1. 传参给 provider 获取 factory
+final factory = userProvider(123, repository);
+
+// 2. Watch 它
+final vm = vef.watch(factory);
+```
+
+或者一步到位：
+
+```dart
+final vm = vef.watch(userProvider(123, repository));
+```
+
+*注意：最多支持 4 个必填参数哦！*
+
+### 3. Alive Forever (全局单例) ♾️
+
+想要 ViewModel 即使没人用也一直活着（比如全局 Auth 状态）？设置 `aliveForever: true`！建议配个 **固定 key**，方便全局存取。
+
+```dart
+@GenProvider(aliveForever: true, key: "AuthViewModel")
+class AuthViewModel extends ViewModel {}
+```
+
+### 4. 自定义 Key 和 Tag 🏷️
+
+你可以自定义 provider 的 `key` 和 `tag`，调试日志里看它更清晰！
+
+```dart
+@GenProvider(key: 'special_vm', tag: 'v1')
+class MyViewModel extends ViewModel {}
+```
+
+还能用表达式：
+
+```dart
+@GenProvider(key: Expression('server_id'))
+class ServerViewModel extends ViewModel {
+  final String serverId;
+  ServerViewModel(this.serverId);
+}
+```
+
+### 5. 进阶：Factory 控制 🛠️
+
+默认情况下，生成器用主构造函数，只看 **required** 参数。
+想搞点花样（比如暴露可选参数，或者用命名构造函数）？定义个叫 `provider` 的 factory 就行！
 
 ```dart
 @genProvider
-class A extends Base {
-  final P p;
-  A({required super.s, required this.p});
-  factory A.provider({required P p}) => A(s: 0, p: p);
-}
+class SettingsViewModel extends ViewModel {
+  final bool isDark;
+  
+  // 这里 'isDark' 是可选的
+  SettingsViewModel({this.isDark = false});
 
-// 生成代码：
-final aProvider = ViewModelProvider.arg<A, P>(
-  builder: (P p) => A.provider(p: p),
-);
+  // 生成器会优先用这个 factory！
+  // 这样你就能把 'isDark' 变成 provider 的必填参数，或者做点别的逻辑
+  factory SettingsViewModel.provider({required bool isDark}) => 
+      SettingsViewModel(isDark: isDark);
+}
 ```
 
-## 命名规则
+## 📝 总结
 
-Provider 变量名通常为 `lowerCamel(ClassName) + 'Provider'`。
-特殊情况：`PostViewModel` 的变量名为 `postProvider`。
-
-## Key / Tag 声明
-
-可以在 `@GenProvider(...)` 中声明缓存的 `key` 和 `tag`。
-两者均支持字符串与非字符串表达式。
-
-- 字符串：`'fixed'`、`"ok"`、`r'${p.id}'`
-- 对象 / 表达式：`Object()`、数字、布尔、`null`
-- 表达式标记：`Expression('...')`，用于在生成的闭包中展开非字符串表达式，
-  例如 `repo`、`repo.id`、`repo.compute(page)`
-
-规则：
-
-- 有参 Provider：`key` / `tag` 会生成与 `builder` 签名一致的闭包。
-- 无参 Provider：`key` / `tag` 以常量直接插入。
-
-示例：
-
-```dart
-// 单参，字符串模板
-@GenProvider(key: r'kp-$p', tag: r'tg-$p')
-class B { B({required this.p}); final P p; }
-
-// 生成
-final bProvider = ViewModelProvider.arg<B, P>(
-  builder: (P p) => B(p: p),
-  key: (P p) => 'kp-$p',
-  tag: (P p) => 'tg-$p',
-);
-
-// 单参，嵌套插值
-@GenProvider(tag: r'${p.name}', key: r'${p.id}')
-class B2 { B2({required this.p}); final P p; }
-
-// 生成：key/tag 字符串插值的闭包
-
-// 对象常量
-@GenProvider(key: Object(), tag: Object())
-class C { C({required this.p}); final P p; }
-
-// 生成：闭包中返回 Object()
-
-// 使用 Expr 传递非字符串表达式
-@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
-class G { G({required this.repo}); final Repository repo; }
-
-// 生成：非字符串表达式的闭包
-
-// 无参 + 常量
-@GenProvider(key: 'fixed', tag: Object())
-class E { E(); }
-
-// 生成：在 ViewModelProvider<E> 中直接插入常量
-```
-
-## 限制
-
-- 最多支持 4 个必填构造参数（`arg`、`arg2`、`arg3`、`arg4`）。
-- 会排除 `required super.xxx` 的转发参数，不计入 Provider 生成签名。
-
-## 参数处理规则
-
-- **主构造函数**：仅收集 **required** 参数。可选参数（如 `{this.id}`）会被忽略。
-- **Factory `provider`**：收集 **所有** 参数（包括可选参数）。这让你可以完全控制暴露哪些参数。
-
-示例：
-
-```dart
-@genProvider
-class MyViewModel {
-  final String userId;
-  final bool showDetail;
-  
-  // 可选参数 `showDetail` 在生成 provider 时会被忽略
-  MyViewModel({required this.userId, this.showDetail = false});
-}
-// 生成：ViewModelProvider.arg<MyViewModel, String>(...)
-// `showDetail` 使用默认值
-
-// 如需包含可选参数，请定义 factory：
-@genProvider
-class MyViewModel2 {
-  final String userId;
-  final bool showDetail;
-  
-  MyViewModel2({required this.userId, this.showDetail = false});
-  
-  // Factory provider 会包含你定义的所有参数
-  factory MyViewModel2.provider({
-    required String userId,
-    bool showDetail = false,
-  }) => MyViewModel2(userId: userId, showDetail: showDetail);
-}
-// 生成：ViewModelProvider.arg2<MyViewModel2, String, bool>(...)
-```
+| 特性 | 注解 |
+| :--- | :--- |
+| **基础 Provider** | `@genProvider` |
+| **参数** | (自动检测构造函数) |
+| **Keep Alive** | `@GenProvider(aliveForever: true)` |
+| **自定义 Key** | `@GenProvider(key: ...)` |
+| **控制创建** | `factory ClassName.provider(...)` |

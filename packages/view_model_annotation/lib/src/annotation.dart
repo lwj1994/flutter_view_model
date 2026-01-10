@@ -14,6 +14,7 @@ class GenProvider {
   /// Whether to use singleton mode. This is just a convenient way to
   /// set a unique key for you.
   /// Note that the priority is lower than the key parameter.
+  @Deprecated('Use key instead')
   final bool isSingleton;
 
   /// Whether the instance should live forever (never be disposed).
@@ -37,10 +38,4 @@ class Expression {
   final String code;
   final bool isString;
   const Expression(this.code, {this.isString = false});
-}
-
-@Deprecated("use Expression")
-class Expr extends Expression {
-  const Expr(String code, {bool isString = false})
-      : super(code, isString: isString);
 }

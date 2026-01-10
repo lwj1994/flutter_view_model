@@ -829,6 +829,7 @@ abstract mixin class ViewModelFactory<T> {
   /// @override
   /// bool singleton() => true; // Only one instance allowed
   /// ```
+  @Deprecated('Use key instead')
   bool singleton() => false;
 
   /// Returns `true` if the instance should live forever (never be disposed).
