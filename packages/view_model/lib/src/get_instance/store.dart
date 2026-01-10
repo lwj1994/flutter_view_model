@@ -481,7 +481,8 @@ class InstanceArg {
   /// - [key]: Unique identifier for instance caching (optional)
   /// - [tag]: Logical grouping identifier (optional)
   /// - [vefId]: Watcher identifier for lifecycle tracking (optional)
-  /// - [aliveForever]: Whether the instance should live forever (optional, default: false)
+  /// - [aliveForever]: Whether the instance should live forever (optional,
+  /// default: false)
   const InstanceArg({
     this.key,
     this.tag,
@@ -505,7 +506,8 @@ class InstanceArg {
 
   @override
   String toString() {
-    return 'InstanceArg( key: $key, tag: $tag, vefId: $vefId, aliveForever: $aliveForever)';
+    return 'InstanceArg( key: $key, tag: $tag, vefId: $vefId, '
+        'aliveForever: $aliveForever)';
   }
 
   InstanceArg copyWith({
