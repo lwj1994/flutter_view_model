@@ -19,7 +19,17 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     /// Whether to use singleton mode. This is just a convenient way to
     /// set a unique key for you.
     /// Note that the priority is lower than the key parameter.
-    @Deprecated('Use key instead') this.isSingleton = false,
+    ///
+    /// **DEPRECATED**: Use `key` parameter instead.
+    /// - Will be removed in v1.0.0 (July 2026)
+    /// - Migration: Use `key: 'YourKey'` instead of `isSingleton: true`
+    /// - See DEPRECATION_PLAN.md for details
+    @Deprecated(
+      'Use key parameter instead. '
+      'Will be removed in v1.0.0 (July 2026). '
+      'Migration: isSingleton: true → key: "YourKey"'
+    )
+    this.isSingleton = false,
 
     /// Whether the instance should live forever (never be disposed).
     bool aliveForever = false,
@@ -91,7 +101,12 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     required VM Function(A a) builder,
     Object? Function(A a)? key,
     Object? Function(A a)? tag,
-    @Deprecated('Use key instead') bool Function(A a)? isSingleton,
+    @Deprecated(
+      'Use key parameter instead. '
+      'Will be removed in v1.0.0 (July 2026). '
+      'Migration: isSingleton: (a) => true → key: (a) => "key_\$a"'
+    )
+    bool Function(A a)? isSingleton,
     // defaults to false
     bool Function(A a)? aliveForever,
   }) {
@@ -110,7 +125,11 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     required VM Function(A a, B b) builder,
     Object? Function(A a, B b)? key,
     Object? Function(A a, B b)? tag,
-    @Deprecated('Use key instead') bool Function(A a, B b)? isSingleton,
+    @Deprecated(
+      'Use key parameter instead. '
+      'Will be removed in v1.0.0 (July 2026).'
+    )
+    bool Function(A a, B b)? isSingleton,
     bool Function(A a, B b)? aliveForever,
   }) {
     return ViewModelProviderWithArg2<VM, A, B>(
@@ -129,7 +148,11 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     required VM Function(A a, B b, C c) builder,
     Object? Function(A a, B b, C c)? key,
     Object? Function(A a, B b, C c)? tag,
-    @Deprecated('Use key instead') bool Function(A a, B b, C c)? isSingleton,
+    @Deprecated(
+      'Use key parameter instead. '
+      'Will be removed in v1.0.0 (July 2026).'
+    )
+    bool Function(A a, B b, C c)? isSingleton,
     bool Function(A a, B b, C c)? aliveForever,
   }) {
     return ViewModelProviderWithArg3<VM, A, B, C>(
@@ -148,7 +171,10 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     required VM Function(A a, B b, C c, D d) builder,
     Object? Function(A a, B b, C c, D d)? key,
     Object? Function(A a, B b, C c, D d)? tag,
-    @Deprecated('Use key instead')
+    @Deprecated(
+      'Use key parameter instead. '
+      'Will be removed in v1.0.0 (July 2026).'
+    )
     bool Function(A a, B b, C c, D d)? isSingleton,
     bool Function(A a, B b, C c, D d)? aliveForever,
   }) {
@@ -170,7 +196,10 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
     required this.builder,
     this.key,
     this.tag,
-    @Deprecated('Use key instead') this.isSingleton,
+    @Deprecated(
+      'Use key instead. Will be removed in v1.0.0 (July 2026).'
+    )
+    this.isSingleton,
     this.aliveForever,
   });
 
@@ -184,7 +213,9 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
   final Object? Function(A argument)? tag;
 
   /// Determines if the instance should be singleton for the given arg.
-  @Deprecated('Use key instead')
+  @Deprecated(
+    'Use key instead. Will be removed in v1.0.0 (July 2026).'
+  )
   final bool Function(A argument)? isSingleton;
 
   /// Whether the instance should live forever (never be disposed).
@@ -229,14 +260,15 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
     required this.builder,
     this.key,
     this.tag,
-    @Deprecated('Use key instead') this.isSingleton,
+    @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
+    this.isSingleton,
     this.aliveForever,
   });
 
   final VM Function(A a, B b) builder;
   final Object? Function(A a, B b)? key;
   final Object? Function(A a, B b)? tag;
-  @Deprecated('Use key instead')
+  @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
   final bool Function(A a, B b)? isSingleton;
   final bool Function(A a, B b)? aliveForever;
 
@@ -277,14 +309,15 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
     required this.builder,
     this.key,
     this.tag,
-    @Deprecated('Use key instead') this.isSingleton,
+    @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
+    this.isSingleton,
     this.aliveForever,
   });
 
   final VM Function(A a, B b, C c) builder;
   final Object? Function(A a, B b, C c)? key;
   final Object? Function(A a, B b, C c)? tag;
-  @Deprecated('Use key instead')
+  @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
   final bool Function(A a, B b, C c)? isSingleton;
   final bool Function(A a, B b, C c)? aliveForever;
 
@@ -325,14 +358,15 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
     required this.builder,
     this.key,
     this.tag,
-    @Deprecated('Use key instead') this.isSingleton,
+    @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
+    this.isSingleton,
     this.aliveForever,
   });
 
   final VM Function(A a, B b, C c, D d) builder;
   final Object? Function(A a, B b, C c, D d)? key;
   final Object? Function(A a, B b, C c, D d)? tag;
-  @Deprecated('Use key instead')
+  @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
   final bool Function(A a, B b, C c, D d)? isSingleton;
   final bool Function(A a, B b, C c, D d)? aliveForever;
 
