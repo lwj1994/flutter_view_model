@@ -1,4 +1,5 @@
 ## 0.13.0-dev.0
+- Support `aliveForever`
 - Fix: resolve unbindVef race condition
 - Update lints
 

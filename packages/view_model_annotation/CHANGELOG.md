@@ -1,4 +1,7 @@
-## 0.2.1
+## 0.13.0-dev.0
+- Support `aliveForever`
+
+## 0.2.2
 - Support `isSingleton`
 
 ## 0.2.1

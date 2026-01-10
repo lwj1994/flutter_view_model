@@ -1,3 +1,6 @@
+## 0.13.0-dev.0
+- Support `aliveForever` in generator
+
 ## 0.3.1
 - Fix bugs
 
