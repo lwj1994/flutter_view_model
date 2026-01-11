@@ -401,21 +401,21 @@ packages:
       path: "../../view_model"
       relative: true
     source: path
-    version: "0.9.2"
+    version: "0.13.0"
   view_model_annotation:
     dependency: "direct overridden"
     description:
       path: "../../view_model_annotation"
       relative: true
     source: path
-    version: "0.2.1"
+    version: "0.13.0"
   view_model_generator:
     dependency: "direct dev"
     description:
       path: ".."
       relative: true
     source: path
-    version: "0.2.1"
+    version: "0.13.0"
   watcher:
     dependency: transitive
     description:

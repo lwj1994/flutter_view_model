@@ -1,4 +1,4 @@
-## 0.13.0-dev.0
+## 0.13.0
 - Support `aliveForever`
 
 ## 0.2.2
