@@ -16,21 +16,22 @@
 
 [更新日志](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md) | [English Doc](https://github.com/lwj1994/flutter_view_model/blob/main/README.md)
 
-## 😫 痛点在哪里？
+## 为什么选 view_model？
 
-在 Flutter 开发中，状态管理总是让人头秃：
-1.  **样板代码多到哭**：为了把状态传递给 Widget，你得写一堆 Provider（比如 `BlocProvider`、`ChangeNotifierProvider`），心累！
-2.  **Context 地狱**：业务逻辑离不开 `BuildContext`，想在逻辑层互相调用？难！想测试？更难！UI 一改，逻辑全挂。
+**万物皆 ViewModel，任何类都能处处访问。**
 
-## 💡 解决方案来了！
+其他方案让你二选一：
+- 全局状态（到处共享）
+- 手动 Provider（样板代码 + Context 地狱）
 
-**view_model** 就是为了解决这些痛点而生的！它把业务逻辑和 Widget 树完全解耦，真的超好用！
+**view_model** 两者兼得：
 
-*   **默认隔离**：不像 Riverpod 那样全是全局状态，ViewModel 默认是**不共享**的。每个 Widget 都有自己独立的实例，再也不用担心状态污染啦！🛡️
-*   **显式共享**：只有当你真的想共享时，通过 `key` 就能轻松实现。🔑
-*   **零样板代码**：不用在 Widget 树顶层手动套 Provider，随用随取！✨
-*   **告别 Context**：ViewModel 之间互相调用完全不需要 Context，清爽！🍃
-*   **自动生命周期**：用的时候自动创建，不用了自动销毁，内存管理全自动！♻️
+* ✅ **万物皆 ViewModel** - Repository、Service、任何类
+* ✅ **处处可访问，无需 Context** - 任何地方都能访问
+* ✅ **默认隔离** - 每个 Widget 独享实例
+* ✅ **按需共享** - 用 `key` 显式共享
+* ✅ **零样板** - 无需手动设置
+* ✅ **自动生命周期** - 自动创建和销毁
 
 ## 📦 安装搞起
 
