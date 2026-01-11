@@ -16,6 +16,28 @@
 
 [ChangeLog](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/main/README_ZH.md)
 
+## Table of Contents
+
+- [Why view_model?](#why-view_model)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Features](#features)
+  - [1. Universal Access with Vef](#1-universal-access-with-vef)
+  - [2. Immutable State (StateViewModel)](#2-immutable-state-stateviewmodel)
+  - [3. Dependency Injection (Arguments)](#3-dependency-injection-arguments)
+  - [4. Instance Sharing (Keys)](#4-instance-sharing-keys)
+  - [5. Automatic Lifecycle](#5-automatic-lifecycle)
+  - [6. Alive Forever (Global State)](#6-alive-forever-global-state)
+  - [7. Architecture Patterns](#7-architecture-patterns)
+  - [8. Code Generation (Recommended)](#8-code-generation-recommended)
+- [Testing](#testing)
+  - [Widget Tests](#widget-tests)
+  - [Unit Tests for Repository ViewModels](#unit-tests-for-repository-viewmodels)
+  - [Testing ViewModels that Depend on Other ViewModels](#testing-viewmodels-that-depend-on-other-viewmodels)
+- [Common Pitfalls](#common-pitfalls)
+- [Global Configuration](#global-configuration)
+- [License](#license)
+
 
 ## Why view_model?
 

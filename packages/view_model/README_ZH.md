@@ -16,6 +16,23 @@
 
 [更新日志](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md) | [English Doc](https://github.com/lwj1994/flutter_view_model/blob/main/README.md)
 
+## 目录
+
+- [为什么选 view_model？](#为什么选-view_model)
+- [📦 安装搞起](#-安装搞起)
+- [⚡️ 三步快速上手](#️-三步快速上手)
+- [🌈 核心功能详解](#-核心功能详解)
+  - [1. 数据访问 (vef)](#1-数据访问-vef-)
+  - [2. 不可变状态 (StateViewModel)](#2-不可变状态-stateviewmodel-)
+  - [3. 依赖注入 (参数传递)](#3-依赖注入-参数传递-)
+  - [4. 实例共享 (Keys)](#4-实例共享-keys-)
+  - [5. 自动生命周期](#5-自动生命周期-♻️)
+  - [6. 长生不老 (全局状态)](#6-长生不老-全局状态)
+  - [7. 代码生成 (强烈推荐)](#7-代码生成-强烈推荐-)
+- [🧪 测试](#-测试)
+- [🔧 全局配置](#-全局配置)
+- [📄 License](#-license)
+
 ## 为什么选 view_model？
 
 **万物皆 ViewModel，任何类都能处处访问。**
