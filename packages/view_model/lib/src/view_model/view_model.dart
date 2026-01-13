@@ -847,8 +847,8 @@ abstract mixin class ViewModelFactory<T> {
   /// ```
   T build();
 
-  /// (Deprecated) Returns `true` if this factory should create singleton instances.
-  /// Use [key] instead.
+  /// (Deprecated) Returns `true` if this factory should create singleton
+  /// instances. Use [key] instead.
   ///
   /// **DEPRECATED**: Use the `key` parameter instead for more flexibility.
   ///
