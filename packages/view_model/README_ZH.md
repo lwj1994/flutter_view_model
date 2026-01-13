@@ -292,9 +292,35 @@ vef.listenState(userProvider, onChanged: (prev, state) {
 });
 ```
 
+#### 💡 绝美小贴士：旧版 API 依然丝滑！
+
+如果你是老粉，习惯了 `watchViewModel`、`readViewModel` 这种仪式感满满的显式调用，完全不需要纠结！
+
+所有的旧版方法依然**全量支持**，我们在内部已经完美映射到了新的 `vef` 系统。这意味着你可以在享受新架构高性能的同时，继续保留你心爱的代码姿势：
+
+| 经典方法 (Legacy) | `vef` 等效调用 (推荐) | 备注 |
+| :--- | :--- | :--- |
+| `watchViewModel` | `vef.watch` | 👁️ 获取 + 自动监听 |
+| `readViewModel` | `vef.read` | ⚡ 仅获取，零开销 |
+| `watchCachedViewModel` | `vef.watchCached` | 📦 缓存池精准捕获 |
+| `listenViewModel` | `vef.listen` | 👂 纯听变化，不改视图 |
+| `listenViewModelState` | `vef.listenState` | 📊 状态流深度追踪 |
+| `listenViewModelStateSelect` | `vef.listenStateSelect` | 🎯 精确属性追踪 |
+
+一句话：**功能没减，性能更强，想怎么用你说了算！** ✨
+
 ### 3. 依赖注入 (参数传递) 💉
 
 ViewModel 需要外部参数（比如 ID 或 Repository）？必须支持！
+
+#### 💡 架构思考：Flutter 里的 DI 真的存在吗？🤔
+
+坦白说，如果你在找类似 Spring 或 Dagger 那种“全自动构造函数注入”，在 Flutter 领域目前是不存在的。
+
+由于 Flutter **禁用了反射 (Reflection)**，且 `build_runner` 的代码生成能力相对有限，目前几乎所有的“DI 框架”（如 `injectable` 或 `get-it`）本质上都是 **Service-Locator (服务定位点)** 模式——它们只是在全局 Map 里找对象，然后披上了一层 DI 的外衣。
+
+在 `view_model` 中，我们决定**拥抱现实**，拒绝“伪 DI”的魔法包装。我们提供了一套极其高效、显式的参数化系统。这种方式更符合 Flutter 的运行逻辑，调试起来直观透明，且完全不依赖复杂的第三方依赖链：
+
 
 ```dart
 // 定义需要参数 (int id) 的 provider

@@ -714,6 +714,40 @@ extension StateRefExtension on ViewModelStateMixin {
     return vef.watch<VM>(factory);
   }
 
+  void listenViewModel<VM extends ViewModel>({
+    required ViewModelFactory<VM> factory,
+    required VoidCallback onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listen<VM>(factory, onChanged: onChanged);
+  }
+
+  void listenViewModelState<VM extends StateViewModel<S>, S>({
+    required ViewModelFactory<VM> factory,
+    required Function(S? previous, S state) onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listenState<VM, S>(factory, onChanged: onChanged);
+  }
+
+  void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
+    required ViewModelFactory<VM> factory,
+    required R Function(S state) selector,
+    required Function(R? previous, R current) onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listenStateSelect<VM, S, R>(
+      factory,
+      selector: selector,
+      onChanged: onChanged,
+    );
+  }
+
+  void recycleViewModel<VM extends ViewModel>(VM viewModel) {
+    // ignore: invalid_use_of_protected_member
+    vef.recycle<VM>(viewModel);
+  }
+
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
@@ -772,6 +806,40 @@ extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
     return vef.watch<VM>(factory);
   }
 
+  void listenViewModel<VM extends ViewModel>({
+    required ViewModelFactory<VM> factory,
+    required VoidCallback onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listen<VM>(factory, onChanged: onChanged);
+  }
+
+  void listenViewModelState<VM extends StateViewModel<S>, S>({
+    required ViewModelFactory<VM> factory,
+    required Function(S? previous, S state) onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listenState<VM, S>(factory, onChanged: onChanged);
+  }
+
+  void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
+    required ViewModelFactory<VM> factory,
+    required R Function(S state) selector,
+    required Function(R? previous, R current) onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listenStateSelect<VM, S, R>(
+      factory,
+      selector: selector,
+      onChanged: onChanged,
+    );
+  }
+
+  void recycleViewModel<VM extends ViewModel>(VM viewModel) {
+    // ignore: invalid_use_of_protected_member
+    vef.recycle<VM>(viewModel);
+  }
+
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
@@ -828,6 +896,40 @@ extension ViewModelRefExtension on ViewModel {
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
     return vef.watch<VM>(factory);
+  }
+
+  void listenViewModel<VM extends ViewModel>({
+    required ViewModelFactory<VM> factory,
+    required VoidCallback onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listen<VM>(factory, onChanged: onChanged);
+  }
+
+  void listenViewModelState<VM extends StateViewModel<S>, S>({
+    required ViewModelFactory<VM> factory,
+    required Function(S? previous, S state) onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listenState<VM, S>(factory, onChanged: onChanged);
+  }
+
+  void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
+    required ViewModelFactory<VM> factory,
+    required R Function(S state) selector,
+    required Function(R? previous, R current) onChanged,
+  }) {
+    // ignore: invalid_use_of_protected_member
+    vef.listenStateSelect<VM, S, R>(
+      factory,
+      selector: selector,
+      onChanged: onChanged,
+    );
+  }
+
+  void recycleViewModel<VM extends ViewModel>(VM viewModel) {
+    // ignore: invalid_use_of_protected_member
+    vef.recycle<VM>(viewModel);
   }
 
   VM readViewModel<VM extends ViewModel>(
