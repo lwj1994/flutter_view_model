@@ -675,31 +675,9 @@ class AuthViewModel extends ViewModel {}
 class AuthViewModel extends ViewModel {}
 ```
 
-### ❌ Using `watch()` in callbacks
-
-This creates a new listener on every call:
-
-```dart
-// ❌ Wrong
-ElevatedButton(
-  onPressed: () {
-    final vm = vef.watch(provider);  // New listener each press!
-    vm.doSomething();
-  },
-)
-
-// ✅ Correct
-ElevatedButton(
-  onPressed: () {
-    final vm = vef.read(provider);  // No listening
-    vm.doSomething();
-  },
-)
-```
-
 ### ❌ Forgetting `copyWith` in State classes
 
-`StateViewModel` requires immutable state with `copyWith`:
+Using `copyWith` is the standard way to achieve this:
 
 ```dart
 // ❌ Wrong - no copyWith
