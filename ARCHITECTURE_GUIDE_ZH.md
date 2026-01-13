@@ -1,0 +1,1 @@
+packages/view_model/ARCHITECTURE_GUIDE_ZH.md
