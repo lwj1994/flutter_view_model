@@ -2,9 +2,11 @@
   <img src="https://lwjlol-images.oss-cn-beijing.aliyuncs.com/logo.png" alt="ViewModel Logo" height="96" />
 </p>
 
-# ✨ view_model: State Management Made Effortless
+# ✨ view_model: Lightweight Flutter State Management
 
-> **"Everything is ViewModel"** — The missing piece in Flutter architecture. Stop fighting with BuildContext and start building with pure logic.
+> **Ultra-lightweight (just `with`) | Zero intrusion | Say goodbye to BuildContext hell**
+>
+> Only ~6K lines of code, yet transforms your architecture completely 🚀
 
 | Package | Version |
 | :--- | :--- |
@@ -14,25 +16,33 @@
 
 [![Codecov](https://img.shields.io/codecov/c/github/lwj1994/flutter_view_model/main)](https://app.codecov.io/gh/lwj1994/flutter_view_model/tree/main)
 
-[ChangeLog](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md) | [中文文档](https://github.com/lwj1994/flutter_view_model/blob/main/README_ZH.md)
+[ChangeLog](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md) | [中文文档](README_ZH.md) | [Architecture Guide](ARCHITECTURE_GUIDE.md)
 
 ---
 
-## 🌟 Why you'll love `view_model`
+## 💡 Why view_model?
 
-Most state management solutions force you into a corner. You either end up with "Context Hell" or messy global singletons. **view_model** gives you the best of both worlds with zero friction.
 
-*   **🚀 Access Anywhere, Anytime**: Get your ViewModels from widgets, repositories, or services—no `BuildContext` required.
-*   **🧼 Clean Architecture by Default**: Repositories, Services, and Helpers? They can all naturally be ViewModels.
-*   **⚡ Zero Boilerplate**: Write your logic, add an annotation, and let the generator handle the boring stuff.
-*   **🧩 Smart Lifecycle**: ViewModels are created when needed and disposed of automatically when no one is watching.
-*   **🤝 Effortless Sharing**: Need a singleton? Use a `key`. Need isolation? Just don't. It's that simple.
+### ✨ Three Core Strengths
+
+#### 🪶 **Ultra-Lightweight = Zero Overhead**
+- **Minimal footprint**: Only ~6K lines of code, 3 dependencies (flutter + meta + stack_trace)
+- **Zero setup**: No root widget wrapping, no mandatory initialization
+- **On-demand creation**: ViewModels are created lazily and disposed automatically
+
+#### 🎯 **Minimal Intrusion = Maximum Compatibility**
+- **Just `with`**: Add `with ViewModelStateMixin` to your State—that's it
+- **Drop-in ready**: Works with any existing Flutter code, integrate anytime
+- **Pure Dart mixins**: Leverages Dart 3 mixin capabilities, zero inheritance pollution
+
+#### 🌈 **Complete Flexibility**
+- **Access anywhere**: Use ViewModels in Widgets, Repositories, Services—no `BuildContext` needed
+- **Automatic memory management**: Reference counting + auto-disposal means no memory leaks
+- **Share or isolate**: Need a singleton? Add a `key`. Need isolation? Don't. It's that simple.
 
 ---
 
 ## 📦 Installation
-
-Add these to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -40,28 +50,33 @@ dependencies:
 
 dev_dependencies:
   build_runner: ^latest_version
-  view_model_generator: ^latest_version # Highly recommended!
+  view_model_generator: ^latest_version  # Highly recommended for less boilerplate!
 ```
 
 ---
 
-## 🏎️ Quick Start (3 Simple Steps)
+## 🚀 Get Started in 3 Steps
 
-### 1. Define your Logic
-Extend `ViewModel` and use `update()` to tell the UI when it's time to shine.
+### Step 1️⃣: Write Your Business Logic
+
+**Just use `with ViewModel`** (yes, it's that simple):
 
 ```dart
-class CounterViewModel extends ViewModel {
+class CounterViewModel with ViewModel {
   int count = 0;
 
   void increment() {
-    update(() => count++);
+    update(() => count++);  // Automatically notifies UI
   }
 }
 ```
 
-### 2. Register with a Provider
-*(Pro-tip: Skip this by using `view_model_generator`!)*
+**Why `with` instead of `extends`?**
+Dart mixins enable composition over inheritance—more flexible and keeps your class hierarchy clean!
+
+---
+
+### Step 2️⃣: Register a Provider
 
 ```dart
 final counterProvider = ViewModelProvider<CounterViewModel>(
@@ -69,8 +84,13 @@ final counterProvider = ViewModelProvider<CounterViewModel>(
 );
 ```
 
-### 3. Use it in your Widget
-Mix in `ViewModelStateMixin` and start watching.
+**Pro tip**: Skip this step entirely by using `view_model_generator`—just add an annotation and it's auto-generated! 🎉
+
+---
+
+### Step 3️⃣: Use in Your Widget
+
+**Add one mixin, unlock superpowers**:
 
 ```dart
 class CounterPage extends StatefulWidget {
@@ -78,11 +98,12 @@ class CounterPage extends StatefulWidget {
   State<CounterPage> createState() => _CounterPageState();
 }
 
-class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
+class _CounterPageState extends State<CounterPage>
+    with ViewModelStateMixin {  // 👈 Just this one line!
+
   @override
   Widget build(BuildContext context) {
-    // vef.watch makes the widget reactive—it rebuilds when count changes!
-    final vm = vef.watch(counterProvider);
+    final vm = vef.watch(counterProvider);  // Automatically listens
 
     return Scaffold(
       body: Center(child: Text('${vm.count}')),
@@ -95,32 +116,84 @@ class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
 }
 ```
 
+**Intrusion comparison**:
+
+| Solution | Changes Required | Root Wrapping | BuildContext Dependency |
+|----------|------------------|---------------|------------------------|
+| **view_model** | ✅ Just add mixin | ❌ No | ❌ No |
+| Provider | ⚠️ InheritedWidget | ✅ Yes | ✅ Yes |
+| Riverpod | ⚠️ ConsumerWidget | ✅ Yes | ❌ No |
+| GetX | ⚠️ Often global state | ❌ No | ❌ No |
+
 ---
 
-## 🛠️ Core Magic
+## 🛠️ Core Features
 
-### 1. Universal Access with `Vef`
+### 1️⃣ Universal Access with Vef (Custom Ref)
 
-`Vef` (ViewModel Execution Framework) is your secret weapon. It’s what allows you to access logic **everywhere** without carrying a `BuildContext` around.
+**What is `vef`?**
+`Vef` = ViewModel Execution Framework. It's a mixin you can add to **any class**, giving it the power to access ViewModels anywhere!
 
-*   **Within Widgets**: Use `ViewModelStateMixin` to gain `vef` powers.
-*   **Within ViewModels**: They have `vef` built-in! A `CartViewModel` can easily read from a `UserViewModel`.
-*   **Within Any Class**: Repositories, Services, even test helpers can "be" ViewModels and coordinate with each other.
+#### 📱 In Widgets (Built-in)
 
-#### 🏁 Quick Reference: Vef Methods
+```dart
+class _MyPageState extends State<MyPage> with ViewModelStateMixin {
+  @override
+  Widget build(BuildContext context) {
+    final vm = vef.watch(myProvider);  // Auto-reactive
+    return Text(vm.data);
+  }
+}
+```
 
-| Method | The Vibe | Best For... |
+#### 🧠 In ViewModels (Built-in)
+
+ViewModels can coordinate with each other:
+
+```dart
+class CartViewModel with ViewModel {
+  void checkout() {
+    final userVM = vef.read(userProvider);  // Direct access to other VMs
+    processOrder(userVM.user);
+  }
+}
+```
+
+#### 🏗️ In Any Class (Custom Ref)
+
+Need a pure logic manager? Just `with Vef`:
+
+```dart
+class StartupTaskRunner with Vef {
+  Future<void> run() async {
+    final authVM = vef.read(authProvider);
+    await authVM.checkAuth();
+
+    final configVM = vef.read(configProvider);
+    await configVM.fetchRemoteConfig();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();  // Auto-cleans all dependencies
+  }
+}
+```
+
+#### 🎯 Quick Reference: Vef Methods
+
+| Method | Behavior | Best For |
 | :--- | :--- | :--- |
-| `vef.watch(provider)` | **Reactive** | Inside `build()` – rebuilds the UI on change. |
-| `vef.read(provider)` | **Direct** | Callbacks like `onPressed` or inside other ViewModels. |
-| `vef.listen(provider)` | **Impactful** | Side effects like navigation or showing snackbars. |
-| `vef.watchCached(key:)` | **Targeted** | Accessing a specific shared instance by its unique key. |
+| `vef.watch(provider)` | **Reactive** | Inside `build()`—rebuilds on change |
+| `vef.read(provider)` | **Direct access** | Callbacks, event handlers, or other ViewModels |
+| `vef.listen(provider)` | **Side effects** | Navigation, snackbars, etc. |
+| `vef.watchCached(key:)` | **Targeted** | Access specific shared instance by key |
 
 ---
 
-### 2. Modern Immutability (`StateViewModel`)
+### 2️⃣ Immutable State (StateViewModel)
 
-For the "Pro" developers who love clean, immutable states. Pair this with [Freezed](https://pub.dev/packages/freezed) for ultimate power. 🔒
+For developers who love clean, immutable state! Pairs beautifully with [Freezed](https://pub.dev/packages/freezed) ✨
 
 ```dart
 class UserViewModel extends StateViewModel<UserState> {
@@ -128,42 +201,27 @@ class UserViewModel extends StateViewModel<UserState> {
 
   void loadUser() async {
     setState(state.copyWith(isLoading: true));
-    // ... magic happens ...
+    // ... fetch data ...
     setState(state.copyWith(isLoading: false, name: 'Alice'));
   }
 }
 ```
 
-#### 💡 Pro-Tip: Legacy APIs are still pure magic! ✨
+**Legacy API support**: Prefer the classic `watchViewModel` syntax? Go ahead! It's fully supported and powered by the high-performance `vef` engine under the hood:
 
-If you’re a long-time user or simply prefer the explicit, ceremony-filled syntax of `watchViewModel` and `readViewModel`, don't worry—we've got you covered!
-
-The classic methods are **fully supported** and mapped directly to the high-performance `vef` engine under the hood. You get all the new architectural wins while keeping your favorite coding style:
-
-| Classic Method (Legacy) | `vef` Equivalent (Modern) | Why use it? |
+| Legacy Method | Modern Equivalent | Description |
 | :--- | :--- | :--- |
-| `watchViewModel` | `vef.watch` | 👁️ Get + Auto-track changes |
-| `readViewModel` | `vef.read` | ⚡ Zero-overhead retrieval |
-| `watchCachedViewModel` | `vef.watchCached` | 📦 High-precision cache access |
-| `listenViewModel` | `vef.listen` | 👂 React to changes without rebuilds |
-| `listenViewModelState` | `vef.listenState` | 📊 Deep state-stream tracing |
-| `listenViewModelStateSelect` | `vef.listenStateSelect` | 🎯 Pinpoint property tracking |
-
-The bottom line: **Same features, better performance. Your code, your rules.** ✨
+| `watchViewModel` | `vef.watch` | Watch + auto-rebuild |
+| `readViewModel` | `vef.read` | Direct read, zero overhead |
+| `listenViewModel` | `vef.listen` | Listen without rebuild |
 
 ---
 
-### 3. Dependency Injection (Arguments)
+### 3️⃣ Dependency Injection (Arguments)
 
-ViewModels often need data up-front—like an ID or a Repository. We made passing arguments a breeze. 💨
+**Real talk**: Many Flutter "DI" libraries are actually **Service Locators** in disguise. True DI requires reflection or powerful meta-programming, but Flutter disables reflection.
 
-#### 💡 Real Talk: The "Fake DI" in Flutter 🧐
-
-Let's be honest: True Dependency Injection (like Dagger in Android or Spring in Java) requires reflection or extremely powerful meta-programming. Since Flutter disables reflection and `build_runner` is limited, most "DI" libraries in the ecosystem (like `injectable` or `get_it`) are technically **Service Locators** in disguise.
-
-They pretend to be DI, but they're just finding objects in a global map.
-
-In `view_model`, we chose to **embrace reality** instead of chasing "fake DI" magic. We provide a clean, explicit argument system that gives you the control you need without the hidden complexity. It’s predictable, easy to debug, and works natively with Flutter’s architecture:
+We chose to **embrace reality**—use a clean, explicit argument system:
 
 ```dart
 final userProvider = ViewModelProvider.arg<UserViewModel, int>(
@@ -171,52 +229,70 @@ final userProvider = ViewModelProvider.arg<UserViewModel, int>(
 );
 
 // Usage:
-final vm = vef.watch(userProvider(42)); 
+final vm = vef.watch(userProvider(42));
 ```
+
+Simple, direct, debuggable. No magic tricks.
 
 ---
 
-### 4. Instance Sharing (Keys)
+### 4️⃣ Instance Sharing (Keys)
 
-*   **Isolation (Default)**: Every widget gets its own private ViewModel instance.
-*   **Sharing (Keys)**: Need multiple widgets to talk to the *same* instance? Just give them a `key`.
+- **Isolated by default**: Each widget gets its own ViewModel instance
+- **Shared instances**: Add a `key`, and widgets with the same key share the same instance
 
 ```dart
 final productProvider = ViewModelProvider.arg<ProductViewModel, String>(
   builder: (id) => ProductViewModel(id),
-  key: (id) => 'prod_$id', // Shared based on ID
+  key: (id) => 'prod_$id',  // Same ID = shared instance
 );
 ```
 
 ---
 
-### 5. Automatic Lifecycle ♻️
+### 5️⃣ Automatic Lifecycle ♻️
 
-We manage the memory so you don't have to. 
-1.  **Creation**: Triggers on first `watch`, `read`, or `listen`.
-2.  **Persistence**: viewModel stays alive as long as someone is watching.
-3.  **Clean-up**: Once the last widget unmounts, the ViewModel is automatically disposed of.
+**Set it and forget it—memory management handled automatically:**
 
-*Need it to live forever?* Just set `aliveForever: true`. It’s perfect for Auth sessions or App settings.
+1. **Creation**: Auto-created on first `watch` or `read`
+2. **Alive**: Stays alive as long as any widget is using it
+3. **Disposal**: Auto-cleaned when the last user unmounts
 
----
-
-## 🏗️ Architecture Patterns: Clean Code Edition
-
-In a real-world app, every layer of your architecture can benefit from `view_model`. Using ViewModels as "Repositories" allows them to coordinate with "Auth" or "Storage" services seamlessly without passing around `BuildContext`.
-
-Check out our **[Best Practices Guide](./AI_GUIDE.md)** for more in-depth patterns.
-
----
-
-## 🧪 Bulletproof Testing
-
-Testing is a first-class citizen here. Mocking ViewModels is straightforward, and you can verify your logic without ever launching a simulator.
+**Need a global singleton?** Add `aliveForever: true`, perfect for Auth, App Config, etc:
 
 ```dart
-testWidgets('Displays the right user data', (tester) async {
+final authProvider = ViewModelProvider(
+  builder: () => AuthViewModel(),
+  aliveForever: true,  // Never disposed
+);
+```
+
+---
+
+## 🏗️ Architecture Patterns
+
+In real-world apps, Repositories and Services can use `with ViewModel` to coordinate with other ViewModels—no `BuildContext` passing needed:
+
+```dart
+class UserRepository with ViewModel {
+  Future<User> fetchUser() async {
+    final token = vef.read(authProvider).token;  // Direct access
+    return api.getUser(token);
+  }
+}
+```
+
+For detailed patterns, check out our **[Architecture Guide](ARCHITECTURE_GUIDE.md)**
+
+---
+
+## 🧪 Testing Made Easy
+
+Mocking is straightforward—no simulator required:
+
+```dart
+testWidgets('Displays correct user data', (tester) async {
   final mockVM = MockUserViewModel();
-  // Override the real VM with your mock
   userProvider.setProxy(ViewModelProvider(builder: () => mockVM));
 
   await tester.pumpWidget(MyApp());
@@ -226,9 +302,9 @@ testWidgets('Displays the right user data', (tester) async {
 
 ---
 
-## 🛠️ Global Configuration
+## ⚙️ Global Configuration
 
-Set up your rules in `main()`:
+Configure in `main()`:
 
 ```dart
 void main() {
@@ -246,9 +322,37 @@ void main() {
 
 ---
 
-## 📜 License
+## 📊 The Numbers Don't Lie
 
-Distributed under the MIT License. See `LICENSE` for more information.
+| Metric | Value |
+|--------|-------|
+| Core codebase | ~6K lines (with comments) |
+| Required dependencies | 3 (flutter, meta, stack_trace) |
+| Mixins needed | 1 (`ViewModelStateMixin`) |
+| Root widget wrapping | ❌ None |
+| Mandatory initialization | ❌ Optional |
+| Performance overhead | Minimal (reference counting + Zone) |
 
 ---
+
+## 📜 License
+
+MIT License—use it freely! 💖
+
+---
+
+## 🎉 Bottom Line
+
+Tired of:
+- ❌ Passing `BuildContext` everywhere
+- ❌ Complex global state management
+- ❌ Memory leaks
+- ❌ Invasive code changes
+
+Try **view_model**! **Lightweight, clean, elegant**—it'll transform how you build Flutter apps ✨
+
+**Remember**: Just `with`, and everything becomes simple!
+
+---
+
 *Built with ❤️ for the Flutter community.*
