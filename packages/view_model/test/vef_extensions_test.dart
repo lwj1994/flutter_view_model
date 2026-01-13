@@ -304,6 +304,82 @@ void main() {
       final maybeWatchMissing =
           capturedParent!.maybeWatchCached('missing_watch_key');
       expect(maybeWatchMissing, isNull);
+
+      // Test recycleViewModel (ViewModel extension)
+      final oldChild = capturedParent!.childVM;
+      capturedParent!.recycleViewModel(oldChild);
+      // Since ParentViewModel watches childProvider, it should have a new instance now if it was in build,
+      // but here it was in init(). In real use, watch is usually in build or reactive.
+    });
+
+    testWidgets('Extensions listen and recycle coverage', (tester) async {
+      final provider = ViewModelProvider(
+          builder: () => TestViewModel(), key: 'listen_test_vm');
+      final stateProvider = ViewModelProvider(
+          builder: () => TestStateViewModel(0), key: 'listen_test_state_vm');
+
+      int stateListenCount = 0;
+      int selectChangeCount = 0;
+      int statelessListenCount = 0;
+
+      TestViewModel? capturedVM;
+      TestStateViewModel? capturedSVM;
+
+      bool registered = false;
+      await tester.pumpWidget(MaterialApp(
+        home: Column(
+          children: [
+            TestStateMixinWidget<TestViewModel>(
+              provider: provider,
+              onState: (state) {
+                if (registered) return;
+                registered = true;
+                state.listenViewModelState<TestStateViewModel, int>(
+                  factory: stateProvider,
+                  onChanged: (p, s) => stateListenCount++,
+                );
+                state.listenViewModelStateSelect<TestStateViewModel, int, bool>(
+                  factory: stateProvider,
+                  selector: (s) => s > 0,
+                  onChanged: (p, s) => selectChangeCount++,
+                );
+              },
+            ),
+            TestStatelessMixinWidget<TestViewModel>(
+              provider: provider,
+              onViewModel: (vm) => capturedVM = vm,
+              onWidget: (widget) {
+                widget.listenViewModel(
+                  factory: provider,
+                  onChanged: () => statelessListenCount++,
+                );
+                // Also capture StateViewModel for triggered changes
+                capturedSVM = widget.readViewModel(factory: stateProvider);
+              },
+            ),
+          ],
+        ),
+      ));
+
+      expect(capturedVM, isNotNull);
+      expect(capturedSVM, isNotNull);
+
+      print('Stateless listen count: $statelessListenCount');
+      capturedVM!.increment();
+      print('Stateless listen count after increment: $statelessListenCount');
+      expect(statelessListenCount, 1);
+
+      print('State listen count: $stateListenCount');
+      capturedSVM!.increment(); // 0 -> 1
+      await tester.pump(); // wait for state stream
+      print('State listen count after increment: $stateListenCount');
+      expect(stateListenCount, 1);
+      expect(selectChangeCount, 1);
+
+      capturedSVM!.increment(); // 1 -> 2
+      await tester.pump();
+      expect(stateListenCount, 2);
+      expect(selectChangeCount, 1); // selector unchanged (still > 0)
     });
   });
 }

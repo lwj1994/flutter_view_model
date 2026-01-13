@@ -111,20 +111,22 @@ final vm = vef.watch(provider4('t1', 5, 'g1', false));
 ```
 
 
-## Deprecations
+## Legacy APIs
 
-Deprecated APIs and replacements:
+The following legacy methods are still available as convenience wrappers around the `vef` system. While the `vef` namespace is recommended for consistency, you can continue using these if you prefer the explicit method syntax:
 
-- `watchViewModel(...)` → `vef.watch(provider)`
-- `readViewModel(...)` → `vef.read(provider)`
-- `watchCachedViewModel(...)` → `vef.watchCached(...)`
-- `readCachedViewModel(...)` → `vef.readCached(...)`
-- `maybeWatchCachedViewModel(...)` → `vef.maybeWatchCached(...)`
-- `maybeReadCachedViewModel(...)` → `vef.maybeReadCached(...)`
-- `recycleViewModel(vm)` → `vef.recycle(vm)`
+- `watchViewModel(...)` (Equivalent to `vef.watch`)
+- `readViewModel(...)` (Equivalent to `vef.read`)
+- `watchCachedViewModel(...)` (Equivalent to `vef.watchCached`)
+- `readCachedViewModel(...)` (Equivalent to `vef.readCached`)
+- `listenViewModel(...)` (Equivalent to `vef.listen`)
+- `listenViewModelState(...)` (Equivalent to `vef.listenState`)
+- `listenViewModelStateSelect(...)` (Equivalent to `vef.listenStateSelect`)
+- `maybeWatchCachedViewModel(...)` (Equivalent to `vef.maybeWatchCached`)
+- `maybeReadCachedViewModel(...)` (Equivalent to `vef.maybeReadCached`)
+- `recycleViewModel(vm)` (Equivalent to `vef.recycle`)
 
-These deprecated methods continue to work for a grace period but will be
-removed in a future release.
+These methods are fully compatible with the new `ViewModelProvider` system and will continue to work for the foreseeable future.
 
 ## Quick Checklist
 
