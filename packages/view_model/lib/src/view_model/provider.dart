@@ -2,7 +2,7 @@ import 'package:view_model/src/view_model/view_model.dart';
 
 /// A simple, argument-less specification for creating a ViewModel.
 /// Provides builder and optional cache identifiers (`key` and `tag`).
-/// Set `isSingleton` to reuse the same instance for identical `key`+`tag`.
+/// Use [key] (or deprecated [isSingleton]) to reuse the same instance for identical `key`+`tag`.
 class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
   final T Function() builder;
   late final Object? _key;
@@ -37,7 +37,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
   }
 
   /// Enables test-time override of factory properties.
-  /// When set, overrides `builder`, `key`, `tag`, and `isSingleton`.
+  /// When set, overrides `builder`, `key`, `tag`, and (deprecated) `isSingleton`.
   void setProxy(ViewModelProvider<T> provider) {
     this._proxy = provider;
   }
@@ -180,7 +180,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
 }
 
 /// A specification for creating a `ViewModel` from an argument.
-/// The cache identifiers and singleton flag are computed from the argument.
+/// The cache identifiers (and deprecated singleton flag) are computed from the argument.
 class ViewModelProviderWithArg<VM extends ViewModel, A> {
   ViewModelProviderWithArg({
     required this.builder,
@@ -200,7 +200,8 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
   /// Computes a cache tag from argument (optional).
   final Object? Function(A argument)? tag;
 
-  /// Determines if the instance should be singleton for the given arg.
+  /// (Deprecated) Determines if the instance should be singleton for the given arg.
+  /// Use [key] instead.
   @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
   final bool Function(A argument)? isSingleton;
 
@@ -210,7 +211,7 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
   /// Proxy for test-time override.
   ///
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
-  /// `isSingleton` computations. Use `setProxy` to install and
+  /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
   ViewModelProviderWithArg<VM, A>? _proxy;
 
@@ -254,6 +255,9 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
   final VM Function(A a, B b) builder;
   final Object? Function(A a, B b)? key;
   final Object? Function(A a, B b)? tag;
+
+  /// (Deprecated) Determines if the instance should be singleton for the given args.
+  /// Use [key] instead.
   @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
   final bool Function(A a, B b)? isSingleton;
   final bool Function(A a, B b)? aliveForever;
@@ -261,7 +265,7 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
   /// Proxy for test-time override.
   ///
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
-  /// `isSingleton` computations. Use `setProxy` to install and
+  /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
   ViewModelProviderWithArg2<VM, A, B>? _proxy;
 
@@ -303,6 +307,9 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
   final VM Function(A a, B b, C c) builder;
   final Object? Function(A a, B b, C c)? key;
   final Object? Function(A a, B b, C c)? tag;
+
+  /// (Deprecated) Determines if the instance should be singleton for the given args.
+  /// Use [key] instead.
   @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
   final bool Function(A a, B b, C c)? isSingleton;
   final bool Function(A a, B b, C c)? aliveForever;
@@ -310,7 +317,7 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
   /// Proxy for test-time override.
   ///
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
-  /// `isSingleton` computations. Use `setProxy` to install and
+  /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
   ViewModelProviderWithArg3<VM, A, B, C>? _proxy;
 
@@ -352,6 +359,9 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
   final VM Function(A a, B b, C c, D d) builder;
   final Object? Function(A a, B b, C c, D d)? key;
   final Object? Function(A a, B b, C c, D d)? tag;
+
+  /// (Deprecated) Determines if the instance should be singleton for the given args.
+  /// Use [key] instead.
   @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
   final bool Function(A a, B b, C c, D d)? isSingleton;
   final bool Function(A a, B b, C c, D d)? aliveForever;
@@ -359,7 +369,7 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
   /// Proxy for test-time override.
   ///
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
-  /// `isSingleton` computations. Use `setProxy` to install and
+  /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
   ViewModelProviderWithArg4<VM, A, B, C, D>? _proxy;
 
