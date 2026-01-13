@@ -13,14 +13,14 @@ pieces.
   arguments. Encapsulates builder and sharing rules.
 - ViewModelProvider.arg: provider for building with one argument.
 - ViewModelProvider.arg2/3/4: providers for building with 2/3/4 arguments.
-- Sharing rules: `key`, `tag`, `isSingleton`.
+- Sharing rules: `key`, `tag`, (deprecated) `isSingleton`.
 
 ## Key Semantics
 
 - `key`: Unique identifier to reuse the same instance across widgets.
 - `tag`: Label to group or discover the latest instance by tag.
-- `isSingleton`: Convenience to reuse one instance when no explicit key
-  is provided. Explicit `key` has higher priority than `isSingleton`.
+- `isSingleton` (Deprecated): Convenience to reuse one instance when no explicit key
+  is provided. Use `key` instead. Explicit `key` has higher priority than `isSingleton`.
 
 ## API Changes
 
@@ -131,5 +131,5 @@ removed in a future release.
 - Replace Factory instances with `ViewModelProvider` or `ViewModelProvider.arg*`.
 - Swap `watchViewModel/readViewModel` to `watch/read` with providers.
 - Swap cached methods to `watchCached/readCached`.
-- Verify `key/tag/isSingleton` behavior after migration.
+- Verify `key/tag/(deprecated) isSingleton` behavior after migration.
 - Update tests and examples to use providers.

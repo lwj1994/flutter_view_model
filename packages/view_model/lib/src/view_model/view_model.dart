@@ -808,8 +808,8 @@ abstract mixin class ViewModelFactory<T> {
   /// ViewModels with the same key will be shared across different widgets.
   /// If this returns `null`, a new instance will be created each time.
   ///
-  /// By default, returns a shared ID if `singleton` is `true`, otherwise
-  /// `null`.
+  /// By default, returns a shared ID if (deprecated) `singleton` is `true`,
+  /// otherwise `null`.
   ///
   /// Example:
   /// ```dart
@@ -847,7 +847,8 @@ abstract mixin class ViewModelFactory<T> {
   /// ```
   T build();
 
-  /// Returns `true` if this factory should create singleton instances.
+  /// (Deprecated) Returns `true` if this factory should create singleton instances.
+  /// Use [key] instead.
   ///
   /// **DEPRECATED**: Use the `key` parameter instead for more flexibility.
   ///

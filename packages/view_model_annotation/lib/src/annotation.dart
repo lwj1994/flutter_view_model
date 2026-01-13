@@ -14,6 +14,8 @@ class GenProvider {
   /// Whether to use singleton mode. This is just a convenient way to
   /// set a unique key for you.
   /// Note that the priority is lower than the key parameter.
+  ///
+  /// **DEPRECATED**: Use `key` parameter instead.
   @Deprecated('Use key instead')
   final bool isSingleton;
 
