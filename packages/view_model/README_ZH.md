@@ -20,6 +20,10 @@
 
 ---
 
+
+## Agent Skills
+**[Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md)**.
+
 ## 💡 为什么选择 view_model？
 
 ### ✨ 三大核心优势

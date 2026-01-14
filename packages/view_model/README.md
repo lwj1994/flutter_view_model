@@ -1,4 +1,3 @@
-For AI Agent usage, see **[Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md)**.
 
 <p align="center">
   <img src="https://lwjlol-images.oss-cn-beijing.aliyuncs.com/logo.png" alt="ViewModel Logo" height="96" />
@@ -21,6 +20,10 @@ For AI Agent usage, see **[Agent Skills](https://github.com/lwj1994/flutter_view
 [ChangeLog](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/CHANGELOG.md) | [中文文档](README_ZH.md) | [Architecture Guide](ARCHITECTURE_GUIDE.md)
 
 ---
+
+## Agent Skills
+For AI Agent usage, see **[Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md)**.
+
 
 ## 💡 Why view_model?
 
