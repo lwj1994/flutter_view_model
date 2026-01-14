@@ -1,3 +1,8 @@
+## 0.14.0-dev.0
+- Simplify Architecture Guide structure in `ARCHITECTURE_GUIDE.md` and `ARCHITECTURE_GUIDE_ZH.md`
+- Update `ViewModelStateMixin` docs
+- Fix bugs
+
 ## 0.13.0
 - Support `aliveForever`
 - Fix: resolve unbindVef race condition

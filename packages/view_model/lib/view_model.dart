@@ -49,7 +49,6 @@
 /// | `vef.watchCached<T>(key:)` | Get cached VM by key with rebuilds |
 /// | `vef.readCached<T>(key:)` | Get cached VM by key, no rebuilds |
 /// | `vef.listen(provider, onChanged:)` | Side effects, auto-disposed |
-/// | `vef.recycle(vm)` | Force dispose and recreate |
 ///
 /// ## Core Features
 ///

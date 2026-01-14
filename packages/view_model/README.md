@@ -134,6 +134,26 @@ class _CounterPageState extends State<CounterPage>
 **What is `vef`?**
 `Vef` = ViewModel Execution Framework. It's a mixin you can add to **any class**, giving it the power to access ViewModels anywhere!
 
+> 💡 **Fun fact**: `ViewModelStateMixin` is actually powered by `WidgetVef` under the hood—a Flutter-optimized variant of `Vef`. This ensures a consistent API whether you're in Widgets, ViewModels, or pure Dart classes!
+
+```dart
+class StartupTaskRunner with Vef {
+  Future<void> run() async {
+    final authVM = vef.read(authProvider);
+    await authVM.checkAuth();
+
+    final configVM = vef.read(configProvider);
+    await configVM.fetchRemoteConfig();
+
+    
+  }
+
+  @override
+  void dispose() {
+    super.dispose(); 
+  }
+}
+
 #### 📱 In Widgets (Built-in)
 
 ```dart
@@ -188,6 +208,21 @@ class StartupTaskRunner with Vef {
 | `vef.read(provider)` | **Direct access** | Callbacks, event handlers, or other ViewModels |
 | `vef.listen(provider)` | **Side effects** | Navigation, snackbars, etc. |
 | `vef.watchCached(key:)` | **Targeted** | Access specific shared instance by key |
+| `vef.readCached(key:)` | **Targeted** | Read specific shared instance without listening |
+| `vef.listenState(provider)` | **State Listener** | Listen to state changes (previous, current) |
+| `vef.listenStateSelect(provider)` | **Selector** | Listen to specific state property changes |
+
+**Legacy API support**: Prefer the classic `watchViewModel` syntax? Go ahead! It's fully supported and powered by the high-performance `vef` engine under the hood:
+
+| Legacy Method | Modern Equivalent | Description |
+| :--- | :--- | :--- |
+| `watchViewModel` | `vef.watch` | Watch + auto-rebuild |
+| `readViewModel` | `vef.read` | Direct read, zero overhead |
+| `listenViewModel` | `vef.listen` | Listen without rebuild |
+| `watchCachedViewModel` | `vef.watchCached` | Watch cached instance |
+| `readCachedViewModel` | `vef.readCached` | Read cached instance |
+| `listenViewModelState` | `vef.listenState` | Listen to state changes |
+| `listenViewModelStateSelect` | `vef.listenStateSelect` | Listen to selected state changes |
 
 ---
 
@@ -207,13 +242,6 @@ class UserViewModel extends StateViewModel<UserState> {
 }
 ```
 
-**Legacy API support**: Prefer the classic `watchViewModel` syntax? Go ahead! It's fully supported and powered by the high-performance `vef` engine under the hood:
-
-| Legacy Method | Modern Equivalent | Description |
-| :--- | :--- | :--- |
-| `watchViewModel` | `vef.watch` | Watch + auto-rebuild |
-| `readViewModel` | `vef.read` | Direct read, zero overhead |
-| `listenViewModel` | `vef.listen` | Listen without rebuild |
 
 ---
 

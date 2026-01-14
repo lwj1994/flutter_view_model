@@ -2,7 +2,7 @@ import 'package:view_model/src/view_model/view_model.dart';
 
 /// A simple, argument-less specification for creating a ViewModel.
 /// Provides builder and optional cache identifiers (`key` and `tag`).
-/// Use [key] (or deprecated [isSingleton]) to reuse the same instance for
+/// Use [key] to reuse the same instance for
 /// identical `key`+`tag`.
 class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
   final T Function() builder;

@@ -1,6 +1,9 @@
 ---
-trigger: always_on
+name: Publish Process
+description: Workflow for publishing view_model packages (annotation, generator, view_model) in the correct order.
 ---
+
+# Publish Process
 
 1. 先更新版本号。只改动 version: xxx 。其他的依赖版本不要改
 2. 始终保持   `annotation:`  版本为空
