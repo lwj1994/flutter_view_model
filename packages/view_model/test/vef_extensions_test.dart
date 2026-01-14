@@ -20,7 +20,7 @@ class TestStateViewModel extends StateViewModel<int> {
   void increment() => setState(state + 1);
 }
 
-// Widget for StateRefExtension
+// Widget for StateVefExtension
 class TestStateMixinWidget<T extends ViewModel> extends StatefulWidget {
   final ViewModelProvider<T> provider;
   final Function(T vm)? onViewModel;
@@ -58,7 +58,7 @@ class _TestStateMixinWidgetState<T extends ViewModel>
   }
 }
 
-// Widget for StatelessWidgetRefExtension
+// Widget for StatelessWidgetVefExtension
 class TestStatelessMixinWidget<T extends ViewModel> extends StatelessWidget
     with ViewModelStatelessMixin {
   final ViewModelProvider<T> provider;
@@ -82,7 +82,7 @@ class TestStatelessMixinWidget<T extends ViewModel> extends StatelessWidget
   }
 }
 
-// ViewModel for ViewModelRefExtension
+// ViewModel for ViewModelVefExtension
 class ParentViewModel extends ViewModel {
   late TestViewModel childVM;
 
@@ -111,8 +111,8 @@ class ParentViewModel extends ViewModel {
 
 void main() {
   group('Vef Extensions Coverage', () {
-    // 1. Test StateRefExtension
-    testWidgets('StateRefExtension methods work correctly', (tester) async {
+    // 1. Test StateVefExtension
+    testWidgets('StateVefExtension methods work correctly', (tester) async {
       final provider = ViewModelProvider(builder: () => TestViewModel());
       TestViewModel? capturedVM;
 
@@ -147,7 +147,7 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('StateRefExtension cached methods', (tester) async {
+    testWidgets('StateVefExtension cached methods', (tester) async {
       // Pre-populate a cached ViewModel
       final vm = TestViewModel();
       const key = 'cached_key';
@@ -172,8 +172,8 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    // 2. Test StatelessWidgetRefExtension
-    testWidgets('StatelessWidgetRefExtension watch works', (tester) async {
+    // 2. Test StatelessWidgetVefExtension
+    testWidgets('StatelessWidgetVefExtension watch works', (tester) async {
       final provider = ViewModelProvider(builder: () => TestViewModel());
       TestViewModel? capturedVM;
 
@@ -192,7 +192,7 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('StatelessWidgetRefExtension read and cache works',
+    testWidgets('StatelessWidgetVefExtension read and cache works',
         (tester) async {
       final keyedProvider = ViewModelProvider(
           builder: () => TestViewModel(), key: 'stateless_read_key');
@@ -223,7 +223,7 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('StatelessWidgetRefExtension cached methods', (tester) async {
+    testWidgets('StatelessWidgetVefExtension cached methods', (tester) async {
       final vm = TestViewModel();
       const key = 'cached_stateless_key';
 
@@ -245,8 +245,8 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    // 3. Test ViewModelRefExtension
-    testWidgets('ViewModelRefExtension methods work correctly', (tester) async {
+    // 3. Test ViewModelVefExtension
+    testWidgets('ViewModelVefExtension methods work correctly', (tester) async {
       final childProvider = ViewModelProvider(builder: () => TestViewModel());
       final parentProvider =
           ViewModelProvider(builder: () => ParentViewModel());
