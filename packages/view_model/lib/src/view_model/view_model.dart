@@ -91,20 +91,6 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   static final RouteObserver<PageRoute> routeObserver =
       RouteObserver<PageRoute>();
 
-  /// Tracks which dependency ViewModels this ViewModel is already listening to.
-  ///
-  /// This map prevents duplicate listener registration when the same dependency
-  /// ViewModel is accessed multiple times through [watchViewModel]. The
-  /// key is the
-  /// dependency ViewModel instance, and the value is always `true` when a
-  /// listener is registered.
-  ///
-  /// This optimization ensures that:
-  /// 1. Each dependency ViewModel is only listened to once
-  /// 2. Avoids memory leaks from duplicate listeners
-  /// 3. Improves performance by preventing redundant listener setup
-  final Map<ViewModel, bool> _dependencyListeners = {};
-
   /// Gets the tag associated with this ViewModel instance.
   ///
   /// The tag is set by the [ViewModelFactory.tag] method and can be used to
@@ -489,7 +475,6 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   void onDispose(InstanceArg arg) {
     _isDisposed = true;
     _autoDisposeController.dispose();
-    _dependencyListeners.clear();
     refHandler.dispose();
     dispose();
     for (final element in _viewModelLifecycles) {
