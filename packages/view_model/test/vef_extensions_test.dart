@@ -381,6 +381,69 @@ void main() {
       expect(stateListenCount, 2);
       expect(selectChangeCount, 1); // selector unchanged (still > 0)
     });
+
+    testWidgets('Additional extension coverage', (tester) async {
+      final provider = ViewModelProvider(builder: () => TestViewModel());
+      final stateProvider =
+          ViewModelProvider(builder: () => TestStateViewModel(0));
+
+      // 1. StateVefExtension: listenViewModel, recycleViewModel
+      await tester.pumpWidget(MaterialApp(
+        home: TestStateMixinWidget<TestViewModel>(
+          provider: provider,
+          onState: (state) {
+            state.listenViewModel(factory: provider, onChanged: () {});
+            final vm = state.readViewModel(factory: provider);
+            state.recycleViewModel(vm);
+          },
+        ),
+      ));
+      await tester.pump();
+
+      // 2. StatelessWidgetVefExtension: listenViewModelState, listenViewModelStateSelect, recycleViewModel
+      await tester.pumpWidget(MaterialApp(
+        home: TestStatelessMixinWidget<TestViewModel>(
+          provider: provider,
+          onWidget: (widget) {
+            widget.listenViewModelState<TestStateViewModel, int>(
+              factory: stateProvider,
+              onChanged: (p, c) {},
+            );
+            widget.listenViewModelStateSelect<TestStateViewModel, int, bool>(
+              factory: stateProvider,
+              selector: (s) => s > 0,
+              onChanged: (p, c) {},
+            );
+            final vm = widget.readViewModel(factory: provider);
+            widget.recycleViewModel(vm);
+          },
+        ),
+      ));
+      await tester.pump();
+
+      // 3. ViewModelVefExtension: listenViewModel, listenViewModelState, listenViewModelStateSelect
+      final parentProvider =
+          ViewModelProvider(builder: () => ParentViewModel());
+
+      await tester.pumpWidget(MaterialApp(
+        home: TestStateMixinWidget<ParentViewModel>(
+          provider: parentProvider,
+          onViewModel: (vm) {
+            vm.listenViewModel(factory: provider, onChanged: () {});
+            vm.listenViewModelState<TestStateViewModel, int>(
+              factory: stateProvider,
+              onChanged: (p, c) {},
+            );
+            vm.listenViewModelStateSelect<TestStateViewModel, int, bool>(
+              factory: stateProvider,
+              selector: (s) => s > 0,
+              onChanged: (p, c) {},
+            );
+          },
+        ),
+      ));
+      await tester.pump();
+    });
   });
 }
 
