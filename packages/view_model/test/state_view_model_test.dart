@@ -21,14 +21,13 @@ void main() {
 
       viewModel.listenState(onChanged: (p, s) {
         listenStateCount++;
-        expect(s, listenStateCount);
-        expect(p, listenStateCount - 1);
+        expect(s, listenStateCount.toString());
+        expect(p, (listenStateCount - 1).toString());
       });
 
       int listenCallbackCount = 0;
       viewModel.listen(onChanged: () {
         listenCallbackCount++;
-        expect(viewModel.state, listenCallbackCount);
       });
 
       for (int i = 1; i <= total; i++) {

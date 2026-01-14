@@ -1,3 +1,6 @@
+## 0.14.0-dev.1
+- Revert: remove `_dependencyListeners` and associated dependency tracking methods
+
 ## 0.14.0-dev.0
 - Simplify Architecture Guide structure in `ARCHITECTURE_GUIDE.md` and `ARCHITECTURE_GUIDE_ZH.md`
 - Update `ViewModelStateMixin` docs
