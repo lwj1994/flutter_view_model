@@ -707,7 +707,7 @@ mixin class Vef implements VefInterface {
   }
 }
 
-extension StateRefExtension on ViewModelStateMixin {
+extension StateVefExtension on ViewModelStateMixin {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
@@ -799,7 +799,7 @@ extension StateRefExtension on ViewModelStateMixin {
   }
 }
 
-extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
+extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
@@ -891,7 +891,7 @@ extension StatelessWidgetRefExtension on ViewModelStatelessMixin {
   }
 }
 
-extension ViewModelRefExtension on ViewModel {
+extension ViewModelVefExtension on ViewModel {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
