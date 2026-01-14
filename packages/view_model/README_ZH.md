@@ -133,6 +133,8 @@ class _CounterPageState extends State<CounterPage>
 **`vef` 是什么？**
 `Vef` = ViewModel Execution Framework，是一个可以加到**任何类**的 mixin。有了它，你就能在任何地方访问 ViewModel！
 
+> 💡 **冷知识**：`ViewModelStateMixin` 的幕后功臣其实是 `WidgetVef` —— 一个专门为 Flutter 优化的 `Vef` 变体。这保证了无论你在 Widget、ViewModel 还是纯 Dart 类中，都能享受到一致的 API 体验！
+
 #### 📱 在 Widget 里（自带）
 
 ```dart
@@ -187,6 +189,21 @@ class StartupTaskRunner with Vef {
 | `vef.read(provider)` | **直接访问** | 在回调、事件处理或其他 ViewModel 里用 |
 | `vef.listen(provider)` | **副作用监听** | 执行导航、弹窗等副作用操作 |
 | `vef.watchCached(key:)` | **精准访问** | 通过 key 访问特定的共享实例 |
+| `vef.readCached(key:)` | **缓存读取** | 读取特定共享实例但不监听 |
+| `vef.listenState(provider)` | **状态监听** | 监听状态变化（获取前后值） |
+| `vef.listenStateSelect(provider)` | **选择监听** | 仅当选定属性变化时触发 |
+
+**传统 API 支持**：如果你更喜欢 `watchViewModel` 这种经典写法，放心用！底层已经升级到高性能 `vef` 引擎：
+
+| 传统方法 | 现代写法 | 说明 |
+| :--- | :--- | :--- |
+| `watchViewModel` | `vef.watch` | 监听变化 + 自动重建 |
+| `readViewModel` | `vef.read` | 直接读取，零开销 |
+| `listenViewModel` | `vef.listen` | 监听变化不重建 |
+| `watchCachedViewModel` | `vef.watchCached` | 监听缓存实例 |
+| `readCachedViewModel` | `vef.readCached` | 读取缓存实例 |
+| `listenViewModelState` | `vef.listenState` | 监听状态变化 |
+| `listenViewModelStateSelect` | `vef.listenStateSelect` | 选择性监听状态 |
 
 ---
 
@@ -205,14 +222,6 @@ class UserViewModel extends StateViewModel<UserState> {
   }
 }
 ```
-
-**支持传统 API**：如果你更喜欢 `watchViewModel` 这种经典写法，放心用！底层已经升级到高性能 `vef` 引擎：
-
-| 传统方法 | 现代写法 | 说明 |
-| :--- | :--- | :--- |
-| `watchViewModel` | `vef.watch` | 监听变化 + 自动重建 |
-| `readViewModel` | `vef.read` | 直接读取，零开销 |
-| `listenViewModel` | `vef.listen` | 监听变化不重建 |
 
 ---
 
