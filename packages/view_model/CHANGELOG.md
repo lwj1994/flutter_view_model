@@ -1,3 +1,8 @@
+## 0.14.0
+- Docs: Add design philosophy section emphasizing Flutter-native, class-oriented approach
+- Docs: Add fine-grained reactivity documentation (StateViewModelValueWatcher and ObservableValue)
+- Docs: Update README tagline to highlight Flutter-native style
+
 ## 0.14.0-dev.1
 - Revert: remove `_dependencyListeners` and associated dependency tracking methods
 

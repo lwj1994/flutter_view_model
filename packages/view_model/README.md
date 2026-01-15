@@ -1,13 +1,12 @@
-
 <p align="center">
   <img src="https://lwjlol-images.oss-cn-beijing.aliyuncs.com/logo.png" alt="ViewModel Logo" height="96" />
 </p>
 
-# ✨ view_model: Lightweight Flutter State Management
+# ✨ view_model: Flutter-Native State Management
 
-> **Ultra-lightweight (just `with`) | Zero intrusion | Say goodbye to BuildContext hell**
+> **Designed for Flutter's OOP & Widget style** - Low intrusion | VM-to-VM access | Any class can be ViewModel | Fine-grained updates
 >
-> Only ~6K lines of code, yet transforms your architecture completely 🚀
+> Built for Flutter, not ported from web frameworks 🚀
 
 | Package | Version |
 | :--- | :--- |
@@ -27,6 +26,14 @@ For AI Agent usage, see **[Agent Skills](https://github.com/lwj1994/flutter_view
 
 ## 💡 Why view_model?
 
+**Flutter-native state management** built for Flutter's class-oriented nature, not ported from web frameworks.
+
+Many popular solutions bring **frontend web patterns** into Flutter without considering if they actually fit. Flutter is **class-oriented** and built around OOP, yet these solutions push you toward functions everywhere, reactive primitives, and data graphs.
+
+**view_model** works **with** Flutter's nature:
+- **Classes as first-class citizens** - `with ViewModel` on **any** class (Widgets, Repositories, Services, anything)
+- **Object-oriented composition** - not functional composition
+- **Built for Flutter's widget lifecycle** - not ported from React/Vue/Solid
 
 ### ✨ Three Core Strengths
 
@@ -247,10 +254,156 @@ class UserViewModel extends StateViewModel<UserState> {
 }
 ```
 
+---
+
+### 3️⃣ Fine-Grained Reactivity
+
+**Performance optimization starts here!** Why rebuild your whole widget when only one field changed?
+
+#### 🎯 Option 1: StateViewModelValueWatcher
+
+**Perfect for partial updates in `StateViewModel`**—only rebuild when specific fields change:
+
+```dart
+class UserViewModel extends StateViewModel<UserState> {
+  UserViewModel() : super(state: UserState(name: '', age: 0, city: ''));
+
+  void updateName(String name) => 
+    setState(state.copyWith(name: name));
+  
+  void updateAge(int age) => 
+    setState(state.copyWith(age: age));
+}
+
+// In your widget:
+class _PageState extends State<Page> with ViewModelStateMixin {
+  @override
+  Widget build(context) {
+    final vm = vef.read(userProvider);  // 👈 use read(), not watch()
+    
+    return Column(
+      children: [
+        // ✅ Only rebuilds when name OR age changes, NOT when city changes
+        StateViewModelValueWatcher<UserState>(
+          viewModel: vm,
+          selectors: [
+            (state) => state.name,
+            (state) => state.age,
+          ],
+          builder: (state) {
+            return Text('${state.name}, ${state.age} years old');
+          },
+        ),
+        
+        // ✅ Independent update area—only rebuilds when city changes
+        StateViewModelValueWatcher<UserState>(
+          viewModel: vm,
+          selectors: [(state) => state.city],
+          builder: (state) {
+            return Text('Lives in: ${state.city}');
+          },
+        ),
+      ],
+    );
+  }
+}
+```
+
+**When to use:**
+- ✅ You're using `StateViewModel`
+- ✅ Your state object has many fields
+- ✅ Different UI parts depend on different fields
+- ✅ You want surgical precision in rebuilds
 
 ---
 
-### 3️⃣ Dependency Injection (Arguments)
+#### 🎯 Option 2: ObservableValue + ObserverBuilder
+
+**Standalone reactive values**—perfect for simple, isolated state:
+
+```dart
+class _PageState extends State<Page> {
+  // Create reactive values (no ViewModel needed!)
+  final counter = ObservableValue<int>(0);
+  final username = ObservableValue<String>('Guest');
+
+  @override
+  Widget build(context) {
+    return Column(
+      children: [
+        // ✅ Only rebuilds when counter changes
+        ObserverBuilder<int>(
+          observable: counter,
+          builder: (count) => Text('Count: $count'),
+        ),
+        
+        // ✅ Only rebuilds when username changes
+        ObserverBuilder<String>(
+          observable: username,
+          builder: (name) => Text('Hello, $name!'),
+        ),
+        
+        ElevatedButton(
+          onPressed: () => counter.value++,  // Triggers rebuild
+          child: Text('Increment'),
+        ),
+      ],
+    );
+  }
+}
+```
+
+**Share values across widgets** using `shareKey`:
+
+```dart
+final sharedCounter = ObservableValue<int>(0, shareKey: 'app_counter');
+
+// Widget A:
+ObserverBuilder<int>(
+  observable: sharedCounter,
+  builder: (count) => Text('A sees: $count'),
+)
+
+// Widget B:
+ObserverBuilder<int>(
+  observable: sharedCounter,
+  builder: (count) => Text('B sees: $count'),  // Auto-synced!
+)
+```
+
+**Multiple values?** Use `ObserverBuilder2` or `ObserverBuilder3`:
+
+```dart
+ObserverBuilder2<int, String>(
+  observable1: counter,
+  observable2: username,
+  builder: (count, name) {
+    return Text('$name clicked $count times');
+  },
+)
+```
+
+**When to use:**
+- ✅ Simple, isolated state (toggles, counters, form fields)
+- ✅ No need for a full ViewModel
+- ✅ Want minimal boilerplate
+- ✅ Need to share individual values across widgets
+
+---
+
+**Performance comparison:**
+
+| Approach | Rebuild Scope | Best For |
+|----------|--------------|----------|
+| `vef.watch(provider)` | Entire widget | Simple cases, few fields |
+| `StateViewModelValueWatcher` | Selected fields only | Complex StateViewModel |
+| `ObservableValue` | Per-value granularity | Standalone reactive values |
+
+**Pro tip**: Combine them! Use `vef.watch()` for your main structure, then sprinkle `StateViewModelValueWatcher` or `ObserverBuilder` in the hot-path areas that update frequently. 🚀
+
+---
+
+### 4️⃣ Dependency Injection (Arguments)
 
 **Real talk**: Many Flutter "DI" libraries are actually **Service Locators** in disguise. True DI requires reflection or powerful meta-programming, but Flutter disables reflection.
 

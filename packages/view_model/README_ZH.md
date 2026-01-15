@@ -2,11 +2,11 @@
   <img src="https://lwjlol-images.oss-cn-beijing.aliyuncs.com/logo.png" alt="ViewModel Logo" height="96" />
 </p>
 
-# ✨ view_model：轻量级 Flutter 状态管理
+# ✨ view_model：Flutter 原生风格状态管理
 
-> **超轻量（仅需 `with`）｜零侵入性｜告别 BuildContext 地狱**
+> **契合 Flutter OOP & Widget 风格** - 低侵入｜VM 可访问 VM｜任何 class 可 ViewModel｜细粒度更新
 >
-> 只有 ~6K 行代码，却能让你的架构脱胎换骨 🚀
+> 为 Flutter 而生，非前端框架移植 🚀
 
 | Package | Version |
 | :--- | :--- |
@@ -25,6 +25,15 @@
 **[Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md)**.
 
 ## 💡 为什么选择 view_model？
+
+**Flutter 原生风格的状态管理**，专为 Flutter 的面向类特性设计，而非从前端框架移植而来。
+
+很多流行方案把**前端 Web 模式**带入 Flutter，却没考虑它们是否真的适合。Flutter 是**面向类**的，基于 OOP 构建，但这些方案却把你推向到处都是函数、响应式原语、数据图的方向。
+
+**view_model** 顺应 Flutter 的本质：
+- **类是一等公民** - 任何类都能 `with ViewModel`（Widget、Repository、Service，任何东西）
+- **面向对象组合** - 而非函数式组合
+- **为 Flutter 的 widget 生命周期而生** - 而非从 React/Vue/Solid 移植
 
 ### ✨ 三大核心优势
 
@@ -229,7 +238,154 @@ class UserViewModel extends StateViewModel<UserState> {
 
 ---
 
-### 3️⃣ 参数传递（不装 DI）
+### 3️⃣ 细粒度更新（性能杀器）
+
+**性能优化从这里开始！** 为什么只改了一个字段，就要刷新整个 widget 呢？
+
+#### 🎯 方案一：StateViewModelValueWatcher
+
+**专为 `StateViewModel` 局部更新设计**——只监听指定字段的变化：
+
+```dart
+class UserViewModel extends StateViewModel<UserState> {
+  UserViewModel() : super(state: UserState(name: '', age: 0, city: ''));
+
+  void updateName(String name) => 
+    setState(state.copyWith(name: name));
+  
+  void updateAge(int age) => 
+    setState(state.copyWith(age: age));
+}
+
+// 在 widget 里：
+class _PageState extends State<Page> with ViewModelStateMixin {
+  @override
+  Widget build(context) {
+    final vm = vef.read(userProvider);  // 👈 用 read()，不要用 watch()
+    
+    return Column(
+      children: [
+        // ✅ 只有当 name 或 age 变化时才重建，city 变化不会触发！
+        StateViewModelValueWatcher<UserState>(
+          viewModel: vm,
+          selectors: [
+            (state) => state.name,
+            (state) => state.age,
+          ],
+          builder: (state) {
+            return Text('${state.name}, ${state.age} 岁');
+          },
+        ),
+        
+        // ✅ 独立更新区域——只监听 city 的变化
+        StateViewModelValueWatcher<UserState>(
+          viewModel: vm,
+          selectors: [(state) => state.city],
+          builder: (state) {
+            return Text('居住地：${state.city}');
+          },
+        ),
+      ],
+    );
+  }
+}
+```
+
+**什么时候用：**
+- ✅ 你正在用 `StateViewModel`
+- ✅ 你的 state 对象有很多字段
+- ✅ 不同 UI 部分依赖不同字段
+- ✅ 你想要手术刀般的精准更新
+
+---
+
+#### 🎯 方案二：ObservableValue + ObserverBuilder
+
+**独立响应式值**——非常适合简单、独立的状态：
+
+```dart
+class _PageState extends State<Page> {
+  // 创建响应式值（不需要 ViewModel！）
+  final counter = ObservableValue<int>(0);
+  final username = ObservableValue<String>('访客');
+
+  @override
+  Widget build(context) {
+    return Column(
+      children: [
+        // ✅ 只在 counter 变化时重建
+        ObserverBuilder<int>(
+          observable: counter,
+          builder: (count) => Text('计数：$count'),
+        ),
+        
+        // ✅ 只在 username 变化时重建
+        ObserverBuilder<String>(
+          observable: username,
+          builder: (name) => Text('你好，$name！'),
+        ),
+        
+        ElevatedButton(
+          onPressed: () => counter.value++,  // 触发重建
+          child: Text('增加'),
+        ),
+      ],
+    );
+  }
+}
+```
+
+**跨 widget 共享值**：使用 `shareKey`：
+
+```dart
+final sharedCounter = ObservableValue<int>(0, shareKey: 'app_counter');
+
+// Widget A:
+ObserverBuilder<int>(
+  observable: sharedCounter,
+  builder: (count) => Text('A 看到：$count'),
+)
+
+// Widget B:
+ObserverBuilder<int>(
+  observable: sharedCounter,
+  builder: (count) => Text('B 看到：$count'),  // 自动同步！
+)
+```
+
+**监听多个值？** 用 `ObserverBuilder2` 或 `ObserverBuilder3`：
+
+```dart
+ObserverBuilder2<int, String>(
+  observable1: counter,
+  observable2: username,
+  builder: (count, name) {
+    return Text('$name 点击了 $count 次');
+  },
+)
+```
+
+**什么时候用：**
+- ✅ 简单、独立的状态（开关、计数器、表单字段）
+- ✅ 不需要完整的 ViewModel
+- ✅ 想要最少的模板代码
+- ✅ 需要在多个 widget 间共享单个值
+
+---
+
+**性能对比：**
+
+| 方式 | 重建范围 | 适用场景 |
+|------|---------|---------|
+| `vef.watch(provider)` | 整个 widget | 简单场景，字段少 |
+| `StateViewModelValueWatcher` | 仅选定字段 | 复杂 StateViewModel |
+| `ObservableValue` | 单值级粒度 | 独立响应式值 |
+
+**专业建议**：可以组合使用！用 `vef.watch()` 搭建主架构，再在高频更新的热点区域撒上 `StateViewModelValueWatcher` 或 `ObserverBuilder`。性能起飞！🚀
+
+---
+
+### 4️⃣ 参数传递（不装 DI）
 
 **真心话时间**：Flutter 的很多"依赖注入"库其实是**服务定位器**（Service Locator）伪装的。真正的 DI 需要反射或强大的元编程，但 Flutter 禁用了反射。
 
