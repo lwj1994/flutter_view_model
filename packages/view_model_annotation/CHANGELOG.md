@@ -1,3 +1,6 @@
+## 0.14.1
+- Minor documentation updates
+
 ## 0.14.0-dev.1
 - Development release
 

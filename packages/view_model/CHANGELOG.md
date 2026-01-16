@@ -1,3 +1,8 @@
+## 0.14.1
+- Docs: Refine "Why view_model?" section with "The 'Pain-Free' Alternative to Riverpod" focus
+- Docs: Add team background and hybrid team MVVM story to clarify design philosophy
+- Docs: Explicitly contrast with Riverpod's boilerplate (No Root Wrapping, No Forced Inheritance, etc.)
+
 ## 0.14.0
 - Docs: Add design philosophy section emphasizing Flutter-native, class-oriented approach
 - Docs: Add fine-grained reactivity documentation (StateViewModelValueWatcher and ObservableValue)
