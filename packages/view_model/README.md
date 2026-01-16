@@ -24,33 +24,8 @@
 For AI Agent usage, see **[Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md)**.
 
 
-## 💡 Why view_model?
-
-**Flutter-native state management** built for Flutter's class-oriented nature, not ported from web frameworks.
-
-Many popular solutions bring **frontend web patterns** into Flutter without considering if they actually fit. Flutter is **class-oriented** and built around OOP, yet these solutions push you toward functions everywhere, reactive primitives, and data graphs.
-
-**view_model** works **with** Flutter's nature:
-- **Classes as first-class citizens** - `with ViewModel` on **any** class (Widgets, Repositories, Services, anything)
-- **Object-oriented composition** - not functional composition
-- **Built for Flutter's widget lifecycle** - not ported from React/Vue/Solid
-
-### ✨ Three Core Strengths
-
-#### 🪶 **Ultra-Lightweight = Zero Overhead**
-- **Minimal footprint**: Only ~6K lines of code, 3 dependencies (flutter + meta + stack_trace)
-- **Zero setup**: No root widget wrapping, no mandatory initialization
-- **On-demand creation**: ViewModels are created lazily and disposed automatically
-
-#### 🎯 **Minimal Intrusion = Maximum Compatibility**
-- **Just `with`**: Add `with ViewModelStateMixin` to your State—that's it
-- **Drop-in ready**: Works with any existing Flutter code, integrate anytime
-- **Pure Dart mixins**: Leverages Dart 3 mixin capabilities, zero inheritance pollution
-
-#### 🌈 **Complete Flexibility**
-- **Access anywhere**: Use ViewModels in Widgets, Repositories, Services—no `BuildContext` needed
-- **Automatic memory management**: Reference counting + auto-disposal means no memory leaks
-- **Share or isolate**: Need a singleton? Add a `key`. Need isolation? Don't. It's that simple.
+## 💡 Why "reinventing wheel"?
+Our team is a hybrid one consisting of Android, iOS, and Flutter developers. We are accustomed to using the MVVM pattern. We used Riverpod in the past, but we didn't quite like it. We are in greater need of a library that adheres more closely to the ViewModel concept.
 
 ---
 
@@ -490,55 +465,33 @@ testWidgets('Displays correct user data', (tester) async {
 
 ## ⚙️ Global Configuration
 
-Configure in `main()`:
+Configure in `main()` to customize the system behavior:
 
 ```dart
 void main() {
   ViewModel.initialize(
     config: ViewModelConfig(
-      isLoggingEnabled: true,
+      isLoggingEnabled: true, // Enable debug logs
+      // Custom equality logic for StateViewModel & selectors
+      equals: (prev, curr) => prev == curr, 
+      // Handle errors in listeners (e.g., Crashlytics)
       onListenerError: (error, stack, context) {
-         // Report to Crashlytics
+         FirebaseCrashlytics.instance.recordError(error, stack);
+      },
+      // Handle errors during resource disposal
+      onDisposeError: (error, stack) {
+         debugPrint('Disposal error: $error');
       },
     ),
   );
   runApp(MyApp());
 }
-```
+``` |
+| Parameter | Default | Description |
+| :--- | :--- | :--- |
+| `isLoggingEnabled` | `false` | Enable/disable debug information output. |
+| `equals` | `identical` | Custom equality function for state change detection. |
+| `onListenerError` | `null` | Callback for errors thrown during listener notification. |
+| `onDisposeError` | `null` | Callback for errors thrown during object disposal. |
 
----
 
-## 📊 The Numbers Don't Lie
-
-| Metric | Value |
-|--------|-------|
-| Core codebase | ~6K lines (with comments) |
-| Required dependencies | 3 (flutter, meta, stack_trace) |
-| Mixins needed | 1 (`ViewModelStateMixin`) |
-| Root widget wrapping | ❌ None |
-| Mandatory initialization | ❌ Optional |
-| Performance overhead | Minimal (reference counting + Zone) |
-
----
-
-## 📜 License
-
-MIT License—use it freely! 💖
-
----
-
-## 🎉 Bottom Line
-
-Tired of:
-- ❌ Passing `BuildContext` everywhere
-- ❌ Complex global state management
-- ❌ Memory leaks
-- ❌ Invasive code changes
-
-Try **view_model**! **Lightweight, clean, elegant**—it'll transform how you build Flutter apps ✨
-
-**Remember**: Just `with`, and everything becomes simple!
-
----
-
-*Built with ❤️ for the Flutter community.*

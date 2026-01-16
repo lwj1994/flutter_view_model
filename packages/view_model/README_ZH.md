@@ -24,33 +24,10 @@
 ## Agent Skills
 **[Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md)**.
 
-## 💡 为什么选择 view_model？
+## 💡 为什么要写这个库？
 
-**Flutter 原生风格的状态管理**，专为 Flutter 的面向类特性设计，而非从前端框架移植而来。
+我们团队是一个由 Android、iOS 和 Flutter 开发者组成的混合团队，我们都非常习惯使用 MVVM 模式。我们过去在项目中使用过 Riverpod，但说实话，体验并不理想。我们强烈需要一个更贴合原生 ViewModel 概念的状态管理库。
 
-很多流行方案把**前端 Web 模式**带入 Flutter，却没考虑它们是否真的适合。Flutter 是**面向类**的，基于 OOP 构建，但这些方案却把你推向到处都是函数、响应式原语、数据图的方向。
-
-**view_model** 顺应 Flutter 的本质：
-- **类是一等公民** - 任何类都能 `with ViewModel`（Widget、Repository、Service，任何东西）
-- **面向对象组合** - 而非函数式组合
-- **为 Flutter 的 widget 生命周期而生** - 而非从 React/Vue/Solid 移植
-
-### ✨ 三大核心优势
-
-#### 🪶 **超轻量 = 零负担**
-- **代码量超少**：核心仅 ~6K 行，3 个依赖（flutter + meta + stack_trace）
-- **零配置启动**：无需包裹根组件，无需全局初始化
-- **按需创建**：ViewModels 只在需要时才创建，用完自动销毁
-
-#### 🎯 **低侵入性 = 改动最小**
-- **只需 `with`**：给 State 加一个 `with ViewModelStateMixin` 就完事儿
-- **不改现有代码**：兼容任何 Flutter 代码，随时可接入
-- **纯 Dart Mixin**：利用 Dart 3 mixin 特性，零继承污染
-
-#### 🌈 **自由度爆表**
-- **随处可访问**：Widget、Repository、Service 都能直接用 ViewModel，不需要 `BuildContext`
-- **自动内存管理**：引用计数 + 自动销毁，再也不担心内存泄漏
-- **想共享就共享**：需要单例？加个 `key`。需要隔离？啥也不加。就是这么简单！
 
 ---
 
@@ -473,55 +450,32 @@ testWidgets('显示正确的用户数据', (tester) async {
 
 ## ⚙️ 全局配置
 
-在 `main()` 里配置：
+在 `main()` 中配置以自定义系统行为：
 
 ```dart
 void main() {
   ViewModel.initialize(
     config: ViewModelConfig(
-      isLoggingEnabled: true,
+      isLoggingEnabled: true, // 开启调试日志
+      // StateViewModel 和 selector 的自定义相等比较逻辑
+      equals: (prev, curr) => prev == curr, 
+      // 处理监听器中的错误（例如上报到 Crashlytics）
       onListenerError: (error, stack, context) {
-         // 上报到 Crashlytics
+         FirebaseCrashlytics.instance.recordError(error, stack);
+      },
+      // 处理资源销毁期间的错误
+      onDisposeError: (error, stack) {
+         debugPrint('销毁错误: $error');
       },
     ),
   );
   runApp(MyApp());
 }
-```
+``` |
+| 参数 | 默认值 | 说明 |
+| :--- | :--- | :--- |
+| `isLoggingEnabled` | `false` | 是否开启调试信息输出。 |
+| `equals` | `identical` | 用于状态变化检测的自定义相等函数。 |
+| `onListenerError` | `null` | 监听器通知过程中抛出错误的回调。 |
+| `onDisposeError` | `null` | 对象销毁过程中抛出错误的回调。 |
 
----
-
-## 📊 轻量级证明
-
-| 指标 | 数值 |
-|------|------|
-| 核心代码量 | ~6K 行（含注释） |
-| 必需依赖 | 3 个（flutter、meta、stack_trace） |
-| 需要的 mixin | 1 个（`ViewModelStateMixin`） |
-| 需要包裹根组件 | ❌ 不需要 |
-| 需要全局初始化 | ❌ 不需要（可选） |
-| 性能开销 | 极低（引用计数 + Zone） |
-
----
-
-## 📜 开源协议
-
-MIT License - 随便用，放心用 💖
-
----
-
-## 🎉 最后说两句
-
-如果你也厌倦了：
-- ❌ BuildContext 到处传
-- ❌ 复杂的全局状态管理
-- ❌ 动不动就内存泄漏
-- ❌ 代码侵入性强
-
-那就试试 **view_model** 吧！**轻量、简洁、优雅**，让你的代码重获新生 ✨
-
-**记住**：只需要 `with`，一切都变得简单！
-
----
-
-*Built with ❤️ for the Flutter community.*
