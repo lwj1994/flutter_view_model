@@ -1,3 +1,8 @@
+## 0.14.2
+- Docs: Polish README and README_ZH for better clarity and conciseness
+- Docs: Remove emojis and simplify feature descriptions for a more professional look
+- Docs: Streamline configuration and usage examples
+
 ## 0.14.1
 - Docs: Refine "Why view_model?" section with "The 'Pain-Free' Alternative to Riverpod" focus
 - Docs: Add team background and hybrid team MVVM story to clarify design philosophy

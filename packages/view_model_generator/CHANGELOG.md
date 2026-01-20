@@ -1,3 +1,6 @@
+## 0.14.2
+- Update version for consistency
+
 ## 0.14.1
 - Minor documentation updates
 
