@@ -2,11 +2,9 @@
   <img src="https://lwjlol-images.oss-cn-beijing.aliyuncs.com/logo.png" alt="ViewModel Logo" height="96" />
 </p>
 
-# ✨ view_model: Flutter-Native State Management
+# view_model: Flutter-Native State Management
 
-> **Designed for Flutter's OOP & Widget style** - Low intrusion | VM-to-VM access | Any class can be ViewModel | Fine-grained updates
->
-> Built for Flutter, not ported from web frameworks 🚀
+Designed for Flutter's OOP and Widget style. Low intrusion, VM-to-VM access, flexible ViewModel definitions, and fine-grained updates. Built specifically for Flutter.
 
 | Package | Version |
 | :--- | :--- |
@@ -21,15 +19,14 @@
 ---
 
 ## Agent Skills
-For AI Agent usage, see **[Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md)**.
+See [Agent Skills](https://github.com/lwj1994/flutter_view_model/blob/main/skills/view_model/SKILL.md) for AI Agent usage.
 
-
-## 💡 Why "reinventing wheel"?
-Our team is a hybrid one consisting of Android, iOS, and Flutter developers. We are accustomed to using the MVVM pattern. We used Riverpod in the past, but we didn't quite like it. We are in greater need of a library that adheres more closely to the ViewModel concept.
+## Why view_model?
+Developed by a mobile development team (Android, iOS, Flutter) accustomed to MVVM. This library provides a native Flutter implementation of the ViewModel concept, addressing the limitations of existing state management solutions.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```yaml
 dependencies:
@@ -37,60 +34,43 @@ dependencies:
 
 dev_dependencies:
   build_runner: ^latest_version
-  view_model_generator: ^latest_version  # Highly recommended for less boilerplate!
+  view_model_generator: ^latest_version
 ```
 
 ---
 
-## 🚀 Get Started in 3 Steps
+## Quick Start
 
-### Step 1️⃣: Write Your Business Logic
-
-**Just use `with ViewModel`** (yes, it's that simple):
+### 1. Define ViewModel
+Use the `ViewModel` mixin for your business logic. 
 
 ```dart
 class CounterViewModel with ViewModel {
   int count = 0;
 
   void increment() {
-    update(() => count++);  // Automatically notifies UI
+    update(() => count++); // Notifies listeners
   }
 }
 ```
 
-**Why `with` instead of `extends`?**
-Dart mixins enable composition over inheritance—more flexible and keeps your class hierarchy clean!
-
----
-
-### Step 2️⃣: Register a Provider
-
+### 2. Register Provider
 ```dart
 final counterProvider = ViewModelProvider<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```
+*Tip: Use `view_model_generator` to automate provider generation.*
 
-**Pro tip**: Skip this step entirely by using `view_model_generator`—just add an annotation and it's auto-generated! 🎉
-
----
-
-### Step 3️⃣: Use in Your Widget
-
-**Add one mixin, unlock superpowers**:
+### 3. Use in Widget
+Apply `ViewModelStateMixin` to your State class to access the `vef` API.
 
 ```dart
-class CounterPage extends StatefulWidget {
-  @override
-  State<CounterPage> createState() => _CounterPageState();
-}
-
-class _CounterPageState extends State<CounterPage>
-    with ViewModelStateMixin {  // 👈 Just this one line!
-
+class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
   @override
   Widget build(BuildContext context) {
-    final vm = vef.watch(counterProvider);  // Automatically listens
+    // watch() automatically listens for changes
+    final vm = vef.watch(counterProvider);
 
     return Scaffold(
       body: Center(child: Text('${vm.count}')),
@@ -103,359 +83,94 @@ class _CounterPageState extends State<CounterPage>
 }
 ```
 
-**Intrusion comparison**:
+### Comparison
 
 | Solution | Changes Required | Root Wrapping | BuildContext Dependency |
 |----------|------------------|---------------|------------------------|
-| **view_model** | ✅ Just add mixin | ❌ No | ❌ No |
-| Provider | ⚠️ InheritedWidget | ✅ Yes | ✅ Yes |
-| Riverpod | ⚠️ ConsumerWidget | ✅ Yes | ❌ No |
-| GetX | ⚠️ Often global state | ❌ No | ❌ No |
+| **view_model** | Add mixin | No | No |
+| Provider | InheritedWidget | Yes | Yes |
+| Riverpod | ConsumerWidget | Yes | No |
+| GetX | Global state | No | No |
 
 ---
 
-## 🛠️ Core Features
+## Core Features
 
-### 1️⃣ Universal Access with Vef (Custom Ref)
+### 1. Universal Access (Vef)
+`Vef` (ViewModel Execution Framework) provides a consistent API to access ViewModels across Widgets, ViewModels, and pure Dart classes.
 
-**What is `vef`?**
-`Vef` = ViewModel Execution Framework. It's a mixin you can add to **any class**, giving it the power to access ViewModels anywhere!
-
-> 💡 **Fun fact**: `ViewModelStateMixin` is actually powered by `WidgetVef` under the hood—a Flutter-optimized variant of `Vef`. This ensures a consistent API whether you're in Widgets, ViewModels, or pure Dart classes!
-
-```dart
-class StartupTaskRunner with Vef {
-  Future<void> run() async {
-    final authVM = vef.read(authProvider);
-    await authVM.checkAuth();
-
-    final configVM = vef.read(configProvider);
-    await configVM.fetchRemoteConfig();
-
-    
-  }
-
-  @override
-  void dispose() {
-    super.dispose(); 
-  }
-}
-
-#### 📱 In Widgets (Built-in)
-
-```dart
-class _MyPageState extends State<MyPage> with ViewModelStateMixin {
-  @override
-  Widget build(BuildContext context) {
-    final vm = vef.watch(myProvider);  // Auto-reactive
-    return Text(vm.data);
-  }
-}
-```
-
-#### 🧠 In ViewModels (Built-in)
-
-ViewModels can coordinate with each other:
-
-```dart
-class CartViewModel with ViewModel {
-  void checkout() {
-    final userVM = vef.read(userProvider);  // Direct access to other VMs
-    processOrder(userVM.user);
-  }
-}
-```
-
-#### 🏗️ In Any Class (Custom Ref)
-
-Need a pure logic manager? Just `with Vef`:
-
-```dart
-class StartupTaskRunner with Vef {
-  Future<void> run() async {
-    final authVM = vef.read(authProvider);
-    await authVM.checkAuth();
-
-    final configVM = vef.read(configProvider);
-    await configVM.fetchRemoteConfig();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();  // Auto-cleans all dependencies
-  }
-}
-```
-
-#### 🎯 Quick Reference: Vef Methods
-
-| Method | Behavior | Best For |
+| Method | Behavior | Use Case |
 | :--- | :--- | :--- |
-| `vef.watch(provider)` | **Reactive** | Inside `build()`—rebuilds on change |
-| `vef.read(provider)` | **Direct access** | Callbacks, event handlers, or other ViewModels |
-| `vef.listen(provider)` | **Side effects** | Navigation, snackbars, etc. |
-| `vef.watchCached(key:)` | **Targeted** | Access specific shared instance by key |
-| `vef.readCached(key:)` | **Targeted** | Read specific shared instance without listening |
-| `vef.listenState(provider)` | **State Listener** | Listen to state changes (previous, current) |
-| `vef.listenStateSelect(provider)` | **Selector** | Listen to specific state property changes |
+| `vef.watch` | Reactive | Inside `build()`, triggers rebuilds |
+| `vef.read` | Direct access | Callbacks, event handlers |
+| `vef.listen` | Side effects | Navigation, notifications |
+| `vef.listenState` | State Listener | Monitor state transitions |
 
-**Legacy API support**: Prefer the classic `watchViewModel` syntax? Go ahead! It's fully supported and powered by the high-performance `vef` engine under the hood:
-
-| Legacy Method | Modern Equivalent | Description |
-| :--- | :--- | :--- |
-| `watchViewModel` | `vef.watch` | Watch + auto-rebuild |
-| `readViewModel` | `vef.read` | Direct read, zero overhead |
-| `listenViewModel` | `vef.listen` | Listen without rebuild |
-| `watchCachedViewModel` | `vef.watchCached` | Watch cached instance |
-| `readCachedViewModel` | `vef.readCached` | Read cached instance |
-| `listenViewModelState` | `vef.listenState` | Listen to state changes |
-| `listenViewModelStateSelect` | `vef.listenStateSelect` | Listen to selected state changes |
-
----
-
-### 2️⃣ Immutable State (StateViewModel)
-
-For developers who love clean, immutable state! Pairs beautifully with [Freezed](https://pub.dev/packages/freezed) ✨
+#### Usage Examples
+- **Widgets**: Use `ViewModelStateMixin`.
+- **ViewModels**: Built-in access to other ViewModels.
+- **Pure Classes**: Use `with Vef`.
 
 ```dart
-class UserViewModel extends StateViewModel<UserState> {
-  UserViewModel() : super(state: UserState());
-
-  void loadUser() async {
-    setState(state.copyWith(isLoading: true));
-    // ... fetch data ...
-    setState(state.copyWith(isLoading: false, name: 'Alice'));
+class TaskRunner with Vef {
+  void run() {
+    final authVM = vef.read(authProvider);
+    authVM.checkAuth();
   }
 }
 ```
 
----
+### 2. Pause Mechanism
+To save resources, `view_model` automatically defers UI updates when a widget is not visible (e.g., covered by another route, app in background, or hidden in a TabBar).
 
-### 3️⃣ Fine-Grained Reactivity
-
-**Performance optimization starts here!** Why rebuild your whole widget when only one field changed?
-
-#### 🎯 Option 1: StateViewModelValueWatcher
-
-**Perfect for partial updates in `StateViewModel`**—only rebuild when specific fields change:
-
-```dart
-class UserViewModel extends StateViewModel<UserState> {
-  UserViewModel() : super(state: UserState(name: '', age: 0, city: ''));
-
-  void updateName(String name) => 
-    setState(state.copyWith(name: name));
-  
-  void updateAge(int age) => 
-    setState(state.copyWith(age: age));
-}
-
-// In your widget:
-class _PageState extends State<Page> with ViewModelStateMixin {
-  @override
-  Widget build(context) {
-    final vm = vef.read(userProvider);  // 👈 use read(), not watch()
-    
-    return Column(
-      children: [
-        // ✅ Only rebuilds when name OR age changes, NOT when city changes
-        StateViewModelValueWatcher<UserState>(
-          viewModel: vm,
-          selectors: [
-            (state) => state.name,
-            (state) => state.age,
-          ],
-          builder: (state) {
-            return Text('${state.name}, ${state.age} years old');
-          },
-        ),
-        
-        // ✅ Independent update area—only rebuilds when city changes
-        StateViewModelValueWatcher<UserState>(
-          viewModel: vm,
-          selectors: [(state) => state.city],
-          builder: (state) {
-            return Text('Lives in: ${state.city}');
-          },
-        ),
-      ],
-    );
-  }
-}
-```
-
-**When to use:**
-- ✅ You're using `StateViewModel`
-- ✅ Your state object has many fields
-- ✅ Different UI parts depend on different fields
-- ✅ You want surgical precision in rebuilds
+- **Automatic**: `ViewModelStateMixin` handles this by default using `AppPauseProvider`, `PageRoutePauseProvider`, and `TickerModePauseProvider`.
+- **Deferred Updates**: When paused, notifications from ViewModels are queued. A single rebuild is triggered only when the widget becomes visible again.
 
 ---
 
-#### 🎯 Option 2: ObservableValue + ObserverBuilder
+### 3. Fine-Grained Reactivity
+Optimize performance by rebuilding only what is necessary.
 
-**Standalone reactive values**—perfect for simple, isolated state:
+- **StateViewModelValueWatcher**: Rebuild when specific fields of a `StateViewModel` change.
+- **ObservableValue & ObserverBuilder**: Standalone reactive values for isolated state.
 
-```dart
-class _PageState extends State<Page> {
-  // Create reactive values (no ViewModel needed!)
-  final counter = ObservableValue<int>(0);
-  final username = ObservableValue<String>('Guest');
-
-  @override
-  Widget build(context) {
-    return Column(
-      children: [
-        // ✅ Only rebuilds when counter changes
-        ObserverBuilder<int>(
-          observable: counter,
-          builder: (count) => Text('Count: $count'),
-        ),
-        
-        // ✅ Only rebuilds when username changes
-        ObserverBuilder<String>(
-          observable: username,
-          builder: (name) => Text('Hello, $name!'),
-        ),
-        
-        ElevatedButton(
-          onPressed: () => counter.value++,  // Triggers rebuild
-          child: Text('Increment'),
-        ),
-      ],
-    );
-  }
-}
-```
-
-**Share values across widgets** using `shareKey`:
-
-```dart
-final sharedCounter = ObservableValue<int>(0, shareKey: 'app_counter');
-
-// Widget A:
-ObserverBuilder<int>(
-  observable: sharedCounter,
-  builder: (count) => Text('A sees: $count'),
-)
-
-// Widget B:
-ObserverBuilder<int>(
-  observable: sharedCounter,
-  builder: (count) => Text('B sees: $count'),  // Auto-synced!
-)
-```
-
-**Multiple values?** Use `ObserverBuilder2` or `ObserverBuilder3`:
-
-```dart
-ObserverBuilder2<int, String>(
-  observable1: counter,
-  observable2: username,
-  builder: (count, name) {
-    return Text('$name clicked $count times');
-  },
-)
-```
-
-**When to use:**
-- ✅ Simple, isolated state (toggles, counters, form fields)
-- ✅ No need for a full ViewModel
-- ✅ Want minimal boilerplate
-- ✅ Need to share individual values across widgets
-
----
-
-**Performance comparison:**
-
-| Approach | Rebuild Scope | Best For |
+| Approach | Scope | Best For |
 |----------|--------------|----------|
-| `vef.watch(provider)` | Entire widget | Simple cases, few fields |
-| `StateViewModelValueWatcher` | Selected fields only | Complex StateViewModel |
-| `ObservableValue` | Per-value granularity | Standalone reactive values |
-
-**Pro tip**: Combine them! Use `vef.watch()` for your main structure, then sprinkle `StateViewModelValueWatcher` or `ObserverBuilder` in the hot-path areas that update frequently. 🚀
+| `vef.watch` | Entire widget | Simple cases |
+| `StateViewModelValueWatcher` | Selected fields | Complex states |
+| `ObservableValue` | Single value | Isolated logic |
 
 ---
 
-### 4️⃣ Dependency Injection (Arguments)
-
-**Real talk**: Many Flutter "DI" libraries are actually **Service Locators** in disguise. True DI requires reflection or powerful meta-programming, but Flutter disables reflection.
-
-We chose to **embrace reality**—use a clean, explicit argument system:
+### 4. Dependency Injection & Instance Sharing
+Use an explicit argument system for dependency injection and cross-widget instance sharing.
 
 ```dart
 final userProvider = ViewModelProvider.arg<UserViewModel, int>(
-  builder: (int id) => UserViewModel(id),
+  builder: (id) => UserViewModel(id),
+  key: (id) => 'user_$id', // Shared instance per ID
 );
 
-// Usage:
+// Usage
 final vm = vef.watch(userProvider(42));
 ```
 
-Simple, direct, debuggable. No magic tricks.
+---
+
+### 5. Lifecycle Management
+- **Auto-Lifecycle**: ViewModels are created on first use and disposed when the last vefer unbinds.
+- **Singletons**: Use `aliveForever: true` for global services (e.g., Auth, Config).
 
 ---
 
-### 4️⃣ Instance Sharing (Keys)
-
-- **Isolated by default**: Each widget gets its own ViewModel instance
-- **Shared instances**: Add a `key`, and widgets with the same key share the same instance
+## Testing
+Mocking is straightforward using `setProxy`:
 
 ```dart
-final productProvider = ViewModelProvider.arg<ProductViewModel, String>(
-  builder: (id) => ProductViewModel(id),
-  key: (id) => 'prod_$id',  // Same ID = shared instance
-);
-```
-
----
-
-### 5️⃣ Automatic Lifecycle ♻️
-
-**Set it and forget it—memory management handled automatically:**
-
-1. **Creation**: Auto-created on first `watch` or `read`
-2. **Alive**: Stays alive as long as any widget is using it
-3. **Disposal**: Auto-cleaned when the last user unmounts
-
-**Need a global singleton?** Add `aliveForever: true`, perfect for Auth, App Config, etc:
-
-```dart
-final authProvider = ViewModelProvider(
-  builder: () => AuthViewModel(),
-  aliveForever: true,  // Never disposed
-);
-```
-
----
-
-## 🏗️ Architecture Patterns
-
-In real-world apps, Repositories and Services can use `with ViewModel` to coordinate with other ViewModels—no `BuildContext` passing needed:
-
-```dart
-class UserRepository with ViewModel {
-  Future<User> fetchUser() async {
-    final token = vef.read(authProvider).token;  // Direct access
-    return api.getUser(token);
-  }
-}
-```
-
-For detailed patterns, check out our **[Architecture Guide](ARCHITECTURE_GUIDE.md)**
-
----
-
-## 🧪 Testing Made Easy
-
-Mocking is straightforward—no simulator required:
-
-```dart
-testWidgets('Displays correct user data', (tester) async {
+testWidgets('Test UI', (tester) async {
   final mockVM = MockUserViewModel();
   userProvider.setProxy(ViewModelProvider(builder: () => mockVM));
-
+  
   await tester.pumpWidget(MyApp());
   expect(find.text('Alice'), findsOneWidget);
 });
@@ -463,35 +178,25 @@ testWidgets('Displays correct user data', (tester) async {
 
 ---
 
-## ⚙️ Global Configuration
-
-Configure in `main()` to customize the system behavior:
+## Global Configuration
+Initialize in `main()` to customize system behavior:
 
 ```dart
 void main() {
   ViewModel.initialize(
     config: ViewModelConfig(
-      isLoggingEnabled: true, // Enable debug logs
-      // Custom equality logic for StateViewModel & selectors
-      equals: (prev, curr) => prev == curr, 
-      // Handle errors in listeners (e.g., Crashlytics)
-      onListenerError: (error, stack, context) {
-         FirebaseCrashlytics.instance.recordError(error, stack);
-      },
-      // Handle errors during resource disposal
-      onDisposeError: (error, stack) {
-         debugPrint('Disposal error: $error');
-      },
+      isLoggingEnabled: true,
+      equals: (prev, curr) => prev == curr,
+      onListenerError: (e, s, c) => logger.error(e, s),
     ),
   );
   runApp(MyApp());
 }
-``` |
+```
+
 | Parameter | Default | Description |
 | :--- | :--- | :--- |
-| `isLoggingEnabled` | `false` | Enable/disable debug information output. |
-| `equals` | `identical` | Custom equality function for state change detection. |
-| `onListenerError` | `null` | Callback for errors thrown during listener notification. |
-| `onDisposeError` | `null` | Callback for errors thrown during object disposal. |
-
-
+| `isLoggingEnabled` | `false` | Toggle debug logs |
+| `equals` | `identical` | Equality logic for state |
+| `onListenerError` | `null` | Global listener error handler |
+| `onDisposeError` | `null` | Global disposal error handler |
