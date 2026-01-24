@@ -2,7 +2,12 @@
 
 Lightweight Flutter state management that makes it simple.
 
-[![pub package](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model)
+| Package | Version |
+| :--- | :--- |
+| **view_model** | [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) |
+| **view_model_annotation** | [![Pub Version](https://img.shields.io/pub/v/view_model_annotation)](https://pub.dev/packages/view_model_annotation) |
+| **view_model_generator** | [![Pub Version](https://img.shields.io/pub/v/view_model_generator)](https://pub.dev/packages/view_model_generator) |
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 English | [简体中文](README_ZH.md)
@@ -449,18 +454,6 @@ class MyObserver implements ViewModelLifecycle {
   }
 }
 ```
-
-## Comparison
-
-| Feature | view_model | Provider | Riverpod | GetX |
-|---------|-----------|----------|----------|------|
-| Boilerplate | Minimal (mixin) | Medium | Low | Low |
-| Root wrapper | ❌ | ✅ | ✅ | ❌ |
-| Auto lifecycle | ✅ | ❌ | ✅ | ✅ |
-| Smart pause | ✅ | ❌ | ❌ | ❌ |
-| ViewModel deps | ✅ | ❌ | ✅ | ❌ |
-| Field-level reactivity | ✅ | ❌ | ❌ | ✅ |
-| BuildContext | Not needed | Needed | Not needed | Not needed |
 
 ## Examples
 

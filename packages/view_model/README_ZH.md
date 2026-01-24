@@ -2,7 +2,12 @@
 
 轻量级的 Flutter 状态管理库，让状态管理变得简单。
 
-[![pub package](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model)
+| 包名 | 版本 |
+| :--- | :--- |
+| **view_model** | [![Pub Version](https://img.shields.io/pub/v/view_model)](https://pub.dev/packages/view_model) |
+| **view_model_annotation** | [![Pub Version](https://img.shields.io/pub/v/view_model_annotation)](https://pub.dev/packages/view_model_annotation) |
+| **view_model_generator** | [![Pub Version](https://img.shields.io/pub/v/view_model_generator)](https://pub.dev/packages/view_model_generator) |
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 简体中文
@@ -449,18 +454,6 @@ class MyObserver implements ViewModelLifecycle {
   }
 }
 ```
-
-## 对比其他方案
-
-| 特性 | view_model | Provider | Riverpod | GetX |
-|------|-----------|----------|----------|------|
-| 样板代码 | 极少（mixin） | 中等 | 少 | 少 |
-| 根节点包装 | ❌ | ✅ | ✅ | ❌ |
-| 自动生命周期 | ✅ | ❌ | ✅ | ✅ |
-| 智能暂停 | ✅ | ❌ | ❌ | ❌ |
-| ViewModel 依赖 | ✅ | ❌ | ✅ | ❌ |
-| 字段级响应式 | ✅ | ❌ | ❌ | ✅ |
-| BuildContext | 不需要 | 需要 | 不需要 | 不需要 |
 
 ## 完整示例
 
