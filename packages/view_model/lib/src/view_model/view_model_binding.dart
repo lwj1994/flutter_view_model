@@ -676,8 +676,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     ViewModelFactory<VM> factory, {
     required VoidCallback onChanged,
   }) {
-    _disposes
-        .add(viewModelBinding.read(factory).listen(onChanged: onChanged));
+    _disposes.add(viewModelBinding.read(factory).listen(onChanged: onChanged));
   }
 
   @override
@@ -712,7 +711,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
 }
 
 @Deprecated('Use ViewModelBinding instead.')
-class Vef with ViewModelBinding {}
+typedef Vef = ViewModelBinding;
 
 extension StateViewModelBindingExtension on ViewModelStateMixin {
   VM watchViewModel<VM extends ViewModel>(

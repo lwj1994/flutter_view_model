@@ -37,13 +37,15 @@ class PauseAwareController {
   // A list of providers that determine the pause state.
   final List<ViewModelBindingPauseProvider> _providers = [];
 
-  List<ViewModelBindingPauseProvider> get providers => List.unmodifiable(_providers);
+  List<ViewModelBindingPauseProvider> get providers =>
+      List.unmodifiable(_providers);
 
   // Providers that should be disposed when this controller is disposed.
   final List<ViewModelBindingPauseProvider> _disposableProviders;
 
   // Holds subscriptions to the pause state streams of the providers.
-  final Map<ViewModelBindingPauseProvider, StreamSubscription<bool>> _subscriptions = {};
+  final Map<ViewModelBindingPauseProvider, StreamSubscription<bool>>
+      _subscriptions = {};
 
   // Combines all provider states to determine the final pause state.
   // Returns true if the view model is currently paused.

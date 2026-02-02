@@ -71,14 +71,11 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
         tagExpr = anno['tag'];
         if (tagExpr != null) tagIsString = _isStringLiteral(tagExpr.trim());
       }
-      // Removed isSingleton handling - deprecated
       if (!aliveForever) {
         final af = anno['aliveForever'];
         if (af == 'true') aliveForever = true;
       }
     }
-
-    // Removed isSingleton fallback - deprecated
 
     final ConstructorElement? mainCtor = element.unnamedConstructor;
     final matchingFactory = _findProviderFactory(element);
@@ -128,7 +125,7 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
             : (_unwrapExpr(t) ?? t);
         buffer.writeln('  tag: $expr,');
       }
-      // Removed isSingleton generation - deprecated
+
       if (aliveForever) {
         buffer.writeln('  aliveForever: true,');
       }
@@ -184,7 +181,6 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
               (_isStringLiteral(t) ? _normalizeStringLiteral(t) : t));
       buffer.writeln('  tag: (${builderArgs.join(', ')}) => $expr,');
     }
-    // Removed isSingleton generation - deprecated
     if (aliveForever) {
       buffer.writeln('  aliveForever: (${builderArgs.join(', ')}) => true,');
     }
@@ -209,13 +205,9 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
       if (src.startsWith('@GenSpec') || src.startsWith('@genSpec')) {
         final key = _extractArg(src, 'key');
         final tag = _extractArg(src, 'tag');
-        // Removed isSingleton extraction - deprecated
+
         final aliveForever = _extractArg(src, 'aliveForever');
-        return {
-          'key': key,
-          'tag': tag,
-          'aliveForever': aliveForever
-        };
+        return {'key': key, 'tag': tag, 'aliveForever': aliveForever};
       }
     }
     return {'key': null, 'tag': null};

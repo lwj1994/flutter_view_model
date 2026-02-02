@@ -2,7 +2,6 @@ library;
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
-import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/widget_mixin/view_model_binding.dart';
 import 'package:view_model/view_model.dart';

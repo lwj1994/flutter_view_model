@@ -95,6 +95,4 @@ class ViewModelBindingHandler {
     }
     return r;
   }
-  
-
 }

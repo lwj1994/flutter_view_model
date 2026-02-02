@@ -1,3 +1,8 @@
+## 0.15.0-dev.0
+- Refactor: Rename `Vef` to `ViewModelBinding` and `ViewModelProvider` to `ViewModelSpec`
+- Deprecate usage of `Vef` and `ViewModelProvider` while maintaining backward compatibility
+- Use `typedef Vef = ViewModelBinding` to support `with Vef` mixin syntax
+
 ## 0.14.2
 - Docs: Polish README and README_ZH for better clarity and conciseness
 - Docs: Remove emojis and simplify feature descriptions for a more professional look

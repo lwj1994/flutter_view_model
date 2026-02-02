@@ -1,3 +1,8 @@
+## 0.15.0-dev.0
+- Refactor: Generate `ViewModelSpec` (xxxSpec) instead of `ViewModelProvider` (xxxProvider)
+- Support both `@GenSpec` and `@GenProvider` (deprecated) annotations
+- Update internal logic to use `ViewModelBinding` and `ViewModelSpec` naming
+
 ## 0.14.2
 - Update version for consistency
 

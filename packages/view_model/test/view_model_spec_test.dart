@@ -87,7 +87,6 @@ void main() {
       final spec = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'counter',
-        isSingleton: true,
       );
 
       final factory = spec;
@@ -98,40 +97,6 @@ void main() {
       final vm2 = binder.viewModelBinding.watch(factory);
 
       expect(identical(vm1, vm2), isTrue);
-    });
-
-    test('isSingleton provides a default key', () {
-      final binder = TestBinder();
-      final spec1 = ViewModelSpec<CounterViewModel>(
-        builder: () => CounterViewModel(),
-        isSingleton: true,
-      );
-      final spec2 = ViewModelSpec<CounterViewModel>(
-        builder: () => CounterViewModel(),
-        isSingleton: true,
-      );
-
-      final vm1 = binder.viewModelBinding.watch(spec1);
-      final vm2 = binder.viewModelBinding.watch(spec2);
-
-      expect(identical(vm1, vm2), isTrue);
-    });
-
-    test('isSingleton provides a different key for different types', () {
-      final binder = TestBinder();
-      final spec1 = ViewModelSpec<CounterViewModel>(
-        builder: () => CounterViewModel(),
-        isSingleton: true,
-      );
-      final spec2 = ViewModelSpec<AnotherCounterViewModel>(
-        builder: () => AnotherCounterViewModel(),
-        isSingleton: true,
-      );
-
-      final vm1 = binder.viewModelBinding.watch(spec1);
-      final vm2 = binder.viewModelBinding.watch(spec2);
-
-      expect(identical(vm1, vm2), isFalse);
     });
   });
 
@@ -233,12 +198,10 @@ void main() {
         builder: () => TestModel(),
         key: 'key1',
         tag: 'tag1',
-        isSingleton: true,
       );
 
       expect(provider.key(), 'key1');
       expect(provider.tag(), 'tag1');
-      expect(provider.singleton(), true);
       expect(provider.build(), isA<TestModel>());
     });
 
@@ -247,18 +210,15 @@ void main() {
         builder: (i) => TestModel(),
         key: (i) => 'key$i',
         tag: (i) => 'tag$i',
-        isSingleton: (i) => i % 2 == 0,
       );
 
       final factory1 = argProvider(1);
       expect(factory1.key(), 'key1');
       expect(factory1.tag(), 'tag1');
-      expect(factory1.singleton(), false);
 
       final factory2 = argProvider(2);
       expect(factory2.key(), 'key2');
       expect(factory2.tag(), 'tag2');
-      expect(factory2.singleton(), true);
     });
 
     test('arg2 provider creates correct factory properties', () {
@@ -266,18 +226,15 @@ void main() {
         builder: (i, s) => TestModel(),
         key: (i, s) => 'key$i$s',
         tag: (i, s) => 'tag$i$s',
-        isSingleton: (i, s) => i % 2 == 0,
       );
 
       final factory1 = argProvider(1, 'a');
       expect(factory1.key(), 'key1a');
       expect(factory1.tag(), 'tag1a');
-      expect(factory1.singleton(), false);
 
       final factory2 = argProvider(2, 'b');
       expect(factory2.key(), 'key2b');
       expect(factory2.tag(), 'tag2b');
-      expect(factory2.singleton(), true);
     });
 
     test('arg3 provider creates correct factory properties', () {
@@ -285,18 +242,15 @@ void main() {
         builder: (i, s, b) => TestModel(),
         key: (i, s, b) => 'key$i$s$b',
         tag: (i, s, b) => 'tag$i$s$b',
-        isSingleton: (i, s, b) => i % 2 == 0,
       );
 
       final factory1 = argProvider(1, 'a', true);
       expect(factory1.key(), 'key1atrue');
       expect(factory1.tag(), 'tag1atrue');
-      expect(factory1.singleton(), false);
 
       final factory2 = argProvider(2, 'b', false);
       expect(factory2.key(), 'key2bfalse');
       expect(factory2.tag(), 'tag2bfalse');
-      expect(factory2.singleton(), true);
     });
 
     test('arg4 provider creates correct factory properties', () {
@@ -305,18 +259,15 @@ void main() {
         builder: (i, s, b, d) => TestModel(),
         key: (i, s, b, d) => 'key$i$s$b$d',
         tag: (i, s, b, d) => 'tag$i$s$b$d',
-        isSingleton: (i, s, b, d) => i % 2 == 0,
       );
 
       final factory1 = argProvider(1, 'a', true, 1.0);
       expect(factory1.key(), 'key1atrue1.0');
       expect(factory1.tag(), 'tag1atrue1.0');
-      expect(factory1.singleton(), false);
 
       final factory2 = argProvider(2, 'b', false, 2.0);
       expect(factory2.key(), 'key2bfalse2.0');
       expect(factory2.tag(), 'tag2bfalse2.0');
-      expect(factory2.singleton(), true);
     });
   });
 }

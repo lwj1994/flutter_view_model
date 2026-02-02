@@ -1,3 +1,8 @@
+## 0.15.0-dev.0
+- Refactor: Rename `@GenProvider` and `genProvider` to `@GenSpec` and `genSpec`
+- Deprecate usage of `@GenProvider` and `genProvider`
+- Enhance naming: focus on "Spec" definitions for ViewModels
+
 ## 0.14.2
 - Update version for consistency
 
