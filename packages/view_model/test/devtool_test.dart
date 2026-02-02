@@ -22,12 +22,12 @@ void main() {
       final handle = instanceManager.getNotifier<DevVM>(
         factory: InstanceFactory<DevVM>(
           builder: () => DevVM(),
-          arg: const InstanceArg(key: 'dev_key', vefId: 'w1'),
+          arg: const InstanceArg(key: 'dev_key', bindingId: 'w1'),
         ),
       );
 
       // Add another watcher
-      handle.bindVef('w2');
+      handle.bind('w2');
 
       final graph = tracker.dependencyGraph;
       expect(graph.viewModelInfos.isNotEmpty, isTrue);
@@ -43,11 +43,11 @@ void main() {
       expect(stats.activeInstances >= 1, isTrue);
       expect(stats.totalWatchers >= 1, isTrue);
 
-      // Remove a vef to trigger onUnbind path
-      handle.unbindVef('w1');
+      // Remove a viewModelBinding to trigger onUnbind path
+      handle.unbind('w1');
 
       // Dispose VM to trigger onDispose path and cleanup
-      handle.unbindVef('w2');
+      handle.unbind('w2');
       await Future.delayed(Duration.zero);
 
       final statsAfter = tracker.getStats();
@@ -83,10 +83,10 @@ void main() {
       final h1 = instanceManager.getNotifier<DevVM>(
         factory: InstanceFactory<DevVM>(
           builder: () => DevVM(),
-          arg: const InstanceArg(key: 'k1', vefId: 'wA'),
+          arg: const InstanceArg(key: 'k1', bindingId: 'wA'),
         ),
       );
-      h1.bindVef('wB');
+      h1.bind('wB');
 
       final graph = tracker.dependencyGraph;
       final list = graph.getInstancesOfType('DevVM');
@@ -101,10 +101,10 @@ void main() {
       final h1 = instanceManager.getNotifier<DevVM>(
         factory: InstanceFactory<DevVM>(
           builder: () => DevVM(),
-          arg: const InstanceArg(key: 'kX', vefId: 'w3'),
+          arg: const InstanceArg(key: 'kX', bindingId: 'w3'),
         ),
       );
-      h1.bindVef('w4');
+      h1.bind('w4');
 
       final graph = tracker.dependencyGraph;
       expect(graph.viewModelInfos.isNotEmpty, isTrue);
@@ -121,7 +121,7 @@ void main() {
       final handle = instanceManager.getNotifier<DevVM>(
         factory: InstanceFactory<DevVM>(
           builder: () => DevVM(),
-          arg: const InstanceArg(key: 'kA', tag: 'tA', vefId: 'wZ'),
+          arg: const InstanceArg(key: 'kA', tag: 'tA', bindingId: 'wZ'),
         ),
       );
 
@@ -139,10 +139,10 @@ void main() {
       final h = instanceManager.getNotifier<DevVM>(
         factory: InstanceFactory<DevVM>(
           builder: () => DevVM(),
-          arg: const InstanceArg(key: 'kDBG', tag: 'tDBG', vefId: 'wDBG'),
+          arg: const InstanceArg(key: 'kDBG', tag: 'tDBG', bindingId: 'wDBG'),
         ),
       );
-      h.bindVef('wDBG2');
+      h.bind('wDBG2');
 
       final svc = DevToolsService.instance;
       svc.initialize();
@@ -183,7 +183,7 @@ void main() {
       instanceManager.getNotifier<DevVM>(
         factory: InstanceFactory<DevVM>(
           builder: () => DevVM(),
-          arg: const InstanceArg(key: 'kTS', vefId: 'wTS'),
+          arg: const InstanceArg(key: 'kTS', bindingId: 'wTS'),
         ),
       );
 

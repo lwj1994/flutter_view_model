@@ -4,12 +4,12 @@ import 'package:view_model/view_model.dart';
 
 class TestModel extends ViewModel {}
 
-class AliveForeverFactory extends ViewModelProvider<TestModel> {
+class AliveForeverFactory extends ViewModelSpec<TestModel> {
   AliveForeverFactory(
       {required super.builder, super.key, super.aliveForever = false});
 }
 
-class TestRef with Vef {}
+class TestRef with ViewModelBinding {}
 
 void main() {
   setUp(() {
@@ -73,7 +73,7 @@ void main() {
 
     test('Arg-based provider supports aliveForever', () {
       final ref = TestRef();
-      final provider = ViewModelProvider.arg<TestModel, int>(
+      final provider = ViewModelSpec.arg<TestModel, int>(
         builder: (arg) => TestModel(),
         key: (arg) => 'arg_forever_$arg',
         aliveForever: (_) => true,

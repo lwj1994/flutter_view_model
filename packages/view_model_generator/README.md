@@ -4,11 +4,11 @@ Code generator for the `view_model` package.
 
 ## Overview
 
-When using `view_model`, you need to define a `ViewModelProvider` for each ViewModel. **view_model_generator** automates this by generating the provider from a simple annotation.
+When using `view_model`, you need to define a `ViewModelSpec` for each ViewModel. **view_model_generator** automates this by generating the spec from a simple annotation.
 
 **Before:**
 ```dart
-final myProvider = ViewModelProvider<MyViewModel>(
+final mySpec = ViewModelSpec<MyViewModel>(
   builder: () => MyViewModel(),
 );
 ```
@@ -45,17 +45,17 @@ class MyViewModel extends ViewModel {
 }
 ```
 
-This generates `my_view_model.vm.dart` with a camelCase provider (e.g., `UserViewModel` -> `userProvider`):
+This generates `my_view_model.vm.dart` with a camelCase spec (e.g., `UserViewModel` -> `userSpec`):
 
 ```dart
-final myProvider = ViewModelProvider<MyViewModel>(
+final mySpec = ViewModelSpec<MyViewModel>(
   builder: () => MyViewModel(),
 );
 ```
 
 ### 2. Dependency Injection
 
-The generator detects constructor parameters and creates a provider that accepts them:
+The generator detects constructor parameters and creates a spec that accepts them:
 
 ```dart
 @genProvider
@@ -69,7 +69,7 @@ class UserViewModel extends ViewModel {
 **Usage:**
 
 ```dart
-final vm = vef.watch(userProvider(123, repository));
+final vm = viewModelBinding.watch(userSpec(123, repository));
 ```
 
 *Supports up to 4 required parameters.*
@@ -119,7 +119,7 @@ class SettingsViewModel extends ViewModel {
 
 | Feature | Annotation |
 | :--- | :--- |
-| **Basic Provider** | `@genProvider` |
+| **Basic Spec** | `@genProvider` |
 | **Arguments** | (Automatic based on constructor) |
 | **Keep Alive** | `@GenProvider(aliveForever: true)` |
 | **Custom Key** | `@GenProvider(key: ...)` |

@@ -3,8 +3,8 @@ import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:view_model_annotation/view_model_annotation.dart';
 
-class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
-  const ViewModelProviderGenerator();
+class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
+  const ViewModelSpecGenerator();
 
   /// Generate provider code for the annotated class.
   ///
@@ -25,7 +25,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
       return '// Error: Class name is empty';
     }
 
-    final providerName = _providerVarName(className);
+    final specName = _specVarName(className);
 
     // Read key/tag from annotation: prefer typed Expr, fallback to raw source.
     const exprChecker = TypeChecker.fromUrl(
@@ -40,8 +40,6 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
 
     final keyReader = annotation.peek('key');
     final tagReader = annotation.peek('tag');
-    final isSingletonReader = annotation.peek('isSingleton');
-    bool isSingleton = isSingletonReader?.boolValue ?? false;
     final aliveForeverReader = annotation.peek('aliveForever');
     bool aliveForever = aliveForeverReader?.boolValue ?? false;
 
@@ -73,18 +71,14 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
         tagExpr = anno['tag'];
         if (tagExpr != null) tagIsString = _isStringLiteral(tagExpr.trim());
       }
-      if (!isSingleton) {
-        final s = anno['isSingleton'];
-        if (s == 'true') isSingleton = true;
+      // Removed isSingleton handling - deprecated
+      if (!aliveForever) {
         final af = anno['aliveForever'];
         if (af == 'true') aliveForever = true;
       }
     }
 
-    if (keyExpr == null && isSingleton) {
-      keyExpr = "'\\\$view_model_Singleton_$className'";
-      keyIsString = true;
-    }
+    // Removed isSingleton fallback - deprecated
 
     final ConstructorElement? mainCtor = element.unnamedConstructor;
     final matchingFactory = _findProviderFactory(element);
@@ -108,7 +102,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     if (argCount == 0) {
       // No-args provider
       final buffer = StringBuffer();
-      buffer.writeln('final $providerName = ViewModelProvider<$className>(');
+      buffer.writeln('final $specName = ViewModelSpec<$className>(');
 
       if (matchingFactory != null) {
         buffer
@@ -134,9 +128,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
             : (_unwrapExpr(t) ?? t);
         buffer.writeln('  tag: $expr,');
       }
-      if (isSingleton) {
-        buffer.writeln('  isSingleton: true,');
-      }
+      // Removed isSingleton generation - deprecated
       if (aliveForever) {
         buffer.writeln('  aliveForever: true,');
       }
@@ -164,7 +156,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     final suffix = argCount == 1 ? '' : argCount.toString();
     final buffer = StringBuffer();
     buffer.writeln(
-        'final $providerName = ViewModelProvider.arg$suffix<${typeArgs.join(', ')}>(');
+        'final $specName = ViewModelSpec.arg$suffix<${typeArgs.join(', ')}>(');
     buffer.writeln('  builder: (${builderArgs.join(', ')}) => ');
 
     // Builder expression
@@ -192,9 +184,7 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
               (_isStringLiteral(t) ? _normalizeStringLiteral(t) : t));
       buffer.writeln('  tag: (${builderArgs.join(', ')}) => $expr,');
     }
-    if (isSingleton) {
-      buffer.writeln('  isSingleton: (${builderArgs.join(', ')}) => true,');
-    }
+    // Removed isSingleton generation - deprecated
     if (aliveForever) {
       buffer.writeln('  aliveForever: (${builderArgs.join(', ')}) => true,');
     }
@@ -216,20 +206,19 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
         : ((el.metadata as dynamic).annotations as Iterable);
     for (final meta in metadata) {
       final src = (meta as dynamic).toSource() as String;
-      if (src.startsWith('@GenProvider') || src.startsWith('@genProvider')) {
+      if (src.startsWith('@GenSpec') || src.startsWith('@genSpec')) {
         final key = _extractArg(src, 'key');
         final tag = _extractArg(src, 'tag');
-        final isSingleton = _extractArg(src, 'isSingleton');
+        // Removed isSingleton extraction - deprecated
         final aliveForever = _extractArg(src, 'aliveForever');
         return {
           'key': key,
           'tag': tag,
-          'isSingleton': isSingleton,
           'aliveForever': aliveForever
         };
       }
     }
-    return {'key': null, 'tag': null, 'isSingleton': null};
+    return {'key': null, 'tag': null};
   }
 
   String? _extractArg(String src, String name) {
@@ -307,16 +296,17 @@ class ViewModelProviderGenerator extends GeneratorForAnnotation<GenProvider> {
     return buf.toString();
   }
 
-  /// Compute provider variable name.
+  /// Compute spec variable name.
   ///
-  /// Removes 'ViewModel' suffix if present, then camelCases and appends 'Provider'.
-  /// Example: FollowPostViewModel -> followPostProvider
-  String _providerVarName(String className) {
+  /// Removes 'ViewModel' suffix if present, then camelCases and appends
+  /// 'Spec'.
+  /// Example: FollowPostViewModel -> followPostSpec
+  String _specVarName(String className) {
     var name = className;
     if (name.endsWith('ViewModel')) {
       name = name.substring(0, name.length - 9);
     }
-    return _toLowerCamel(name) + 'Provider';
+    return _toLowerCamel(name) + 'Spec';
   }
 
   /// Collect all class-owned params (exclude super-forwarded params).

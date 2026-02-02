@@ -25,7 +25,7 @@ It's been running my production app (1M+ daily users) for a while now, so I figu
 class _PageState extends State<Page> with ViewModelStateMixin {
   @override
   Widget build(context) {
-    final vm = vef.watch(counterProvider);
+    final vm = viewModelBinding.watch(counterSpec);
     return Text('${vm.count}');
   }
 }
@@ -58,7 +58,7 @@ I got tired of state management being locked to widgets. With view_model, your *
 class UserRepository with ViewModel {
   Future<User> fetchUser() async {
     // No need to pass auth around - just grab it
-    final token = vef.read(authProvider).token;
+    final token = read(authSpec).token;
     return api.getUser(token);
   }
 }
@@ -75,9 +75,9 @@ This was a game-changer for me. Complex flows become way cleaner:
 ```dart
 class CheckoutViewModel with ViewModel {
   void processOrder() {
-    final user = vef.read(userProvider).currentUser;
-    final cart = vef.read(cartProvider).items;
-    final payment = vef.read(paymentProvider);
+    final user = read(userSpec).currentUser;
+    final cart = read(cartSpec).items;
+    final payment = read(paymentSpec);
     
     payment.charge(user, cart);
   }
@@ -132,7 +132,7 @@ class CounterViewModel with ViewModel {
 }
 
 // 2. Register it
-final counterProvider = ViewModelProvider<CounterViewModel>(
+final counterSpec = ViewModelSpec<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 
@@ -140,7 +140,7 @@ final counterProvider = ViewModelProvider<CounterViewModel>(
 class _PageState extends State<Page> with ViewModelStateMixin {
   @override
   Widget build(context) {
-    final vm = vef.watch(counterProvider);
+    final vm = viewModelBinding.watch(counterSpec);
     return FloatingActionButton(
       onPressed: vm.increment,
       child: Text('${vm.count}'),

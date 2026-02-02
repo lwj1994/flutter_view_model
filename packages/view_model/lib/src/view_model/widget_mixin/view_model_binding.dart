@@ -1,35 +1,33 @@
-import 'package:view_model/src/view_model/vef.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart';
 
-/// A specialized Vef implementation for Flutter Widgets.
+/// A specialized ViewModelBinding implementation for Flutter Widgets.
 ///
-/// `vef` stands for ViewModel Execution Framework.
-///
-/// This class extends the base [Vef] functionality to integrate with
+/// This class extends the base [ViewModelBinding] functionality to integrate with
 /// Flutter's widget lifecycle. It bridges ViewModel state changes to widget
 /// rebuilds by calling the provided [refreshWidget] callback.
 ///
-/// The [WidgetVef] is used internally by [ViewModelStateMixin] and
+/// The [WidgetViewModelBinding] is used internally by [ViewModelStateMixin] and
 /// [ViewModelStatelessMixin] to manage ViewModel lifecycles within widgets.
 ///
 /// Key responsibilities:
 /// - Triggers widget rebuilds when ViewModels notify changes via [onUpdate]
-/// - Handles pause/resume lifecycle inherited from [Vef]
+/// - Handles pause/resume lifecycle inherited from [ViewModelBinding]
 /// - Manages ViewModel disposal when the widget is disposed
 ///
 /// Example usage (typically handled internally by mixins):
 /// ```dart
-/// final vef.= WidgetVef(
+/// final binding = WidgetViewModelBinding(
 ///   refreshWidget: () => setState(() {}),
 /// );
 /// ```
-class WidgetVef with Vef {
+class WidgetViewModelBinding with ViewModelBinding {
   /// Callback function to trigger widget rebuild.
   ///
   /// This is typically a reference to the widget's `setState` method or
   /// equivalent rebuild mechanism.
   final Function() refreshWidget;
 
-  WidgetVef({
+  WidgetViewModelBinding({
     required this.refreshWidget,
   });
 

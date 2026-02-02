@@ -50,8 +50,8 @@ class CounterState {
 ```dart
 import 'package:view_model/view_model.dart';
 
-// 定义 Provider（全局单例）
-final counterProvider = ViewModelProvider<CounterViewModel>(
+// 定义 Spec（全局单例）
+final counterSpec = ViewModelSpec<CounterViewModel>(
   key: 'counter',  // 使用 key 共享实例
   builder: () => CounterViewModel(),
 );
@@ -86,8 +86,8 @@ class _CounterPageState extends State<CounterPage>
 
   @override
   Widget build(BuildContext context) {
-    // 使用 vef.watch 监听 ViewModel
-    final counter = vef.watch(counterProvider);
+    // 使用 viewModelBinding.watch 监听 ViewModel
+    final counter = viewModelBinding.watch(counterSpec);
 
     return Scaffold(
       body: Center(
@@ -133,25 +133,25 @@ void main() {
 
 ## 核心概念
 
-### Vef - ViewModel 执行框架
+### ViewModelBinding - ViewModel 执行框架
 
-Vef 提供四个核心方法来访问 ViewModel：
+ViewModelBinding 提供四个核心方法来访问 ViewModel：
 
 | 方法 | 使用场景 | 效果 |
 |------|---------|------|
-| `vef.watch(provider)` | 在 build 方法中 | 监听变化并重建 Widget |
-| `vef.read(provider)` | 在事件回调中 | 读取数据但不监听 |
-| `vef.watchCached({key})` | 访问已存在的实例 | 监听缓存的 ViewModel |
-| `vef.readCached({key})` | 读取已存在的实例 | 不监听缓存的 ViewModel |
+| `viewModelBinding.watch(provider)` | 在 build 方法中 | 监听变化并重建 Widget |
+| `viewModelBinding.read(provider)` | 在事件回调中 | 读取数据但不监听 |
+| `viewModelBinding.watchCached({key})` | 访问已存在的实例 | 监听缓存的 ViewModel |
+| `viewModelBinding.readCached({key})` | 读取已存在的实例 | 不监听缓存的 ViewModel |
 
 ```dart
 // 示例：watch vs read
 @override
 Widget build(BuildContext context) {
-  final vm = vef.watch(provider);  // ✅ 在 build 中使用 watch
+  final vm = viewModelBinding.watch(provider);  // ✅ 在 build 中使用 watch
   return ElevatedButton(
     onPressed: () {
-      final vm = vef.read(provider);  // ✅ 在回调中使用 read
+      final vm = viewModelBinding.read(provider);  // ✅ 在回调中使用 read
       vm.doSomething();
     },
     child: Text(vm.state.title),
@@ -166,7 +166,7 @@ Widget build(BuildContext context) {
 不使用 `key` 时，每个 Widget 持有独立实例，Widget 销毁时自动回收：
 
 ```dart
-final provider = ViewModelProvider<MyViewModel>(
+final provider = ViewModelSpec<MyViewModel>(
   builder: () => MyViewModel(),
   // 无 key，自动回收
 );
@@ -177,7 +177,7 @@ final provider = ViewModelProvider<MyViewModel>(
 使用 `key` 时，相同 key 的 Widget 共享同一个实例，所有 Widget 都销毁后才回收：
 
 ```dart
-final userProvider = ViewModelProvider<UserViewModel>(
+final userSpec = ViewModelSpec<UserViewModel>(
   key: 'current-user',  // 所有使用此 key 的 Widget 共享实例
   builder: () => UserViewModel(),
 );
@@ -188,7 +188,7 @@ final userProvider = ViewModelProvider<UserViewModel>(
 使用 `aliveForever: true` 时，实例永不销毁：
 
 ```dart
-final configProvider = ViewModelProvider<ConfigViewModel>(
+final configSpec = ViewModelSpec<ConfigViewModel>(
   key: 'app-config',
   aliveForever: true,  // 永久保活
   builder: () => ConfigViewModel(),
@@ -219,22 +219,22 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-### 参数化 Provider
+### 参数化 Spec
 
 支持根据参数创建和复用实例：
 
 ```dart
-// 定义带参数的 Provider
-final userProvider = ViewModelProvider.arg<UserViewModel, int>(
+// 定义带参数的 Spec
+final userSpec = ViewModelSpec.arg<UserViewModel, int>(
   builder: (userId) => UserViewModel(userId),
   key: (userId) => 'user_$userId',  // 不同参数使用不同 key
 );
 
 // 使用
 Widget build(BuildContext context) {
-  final user1 = vef.watch(userProvider(42));   // 创建 user_42
-  final user2 = vef.watch(userProvider(100));  // 创建 user_100
-  final user3 = vef.watch(userProvider(42));   // 复用 user_42
+  final user1 = viewModelBinding.watch(userSpec(42));   // 创建 user_42
+  final user2 = viewModelBinding.watch(userSpec(100));  // 创建 user_100
+  final user3 = viewModelBinding.watch(userSpec(42));   // 复用 user_42
 }
 ```
 
@@ -245,11 +245,15 @@ Widget build(BuildContext context) {
 ViewModel 可以直接访问其他 ViewModel：
 
 ```dart
+final authSpec = ViewModelSpec<AuthViewModel>(
+  builder: () => AuthViewModel(),
+);
+
 class UserProfileViewModel extends StateViewModel<UserState> {
 
   void loadProfile() {
     // 读取认证 ViewModel
-    final auth = vef.read(authProvider);
+    final auth = viewModelBinding.read(authSpec);
 
     if (auth.isLoggedIn) {
       // 加载用户数据...
@@ -261,7 +265,7 @@ class UserProfileViewModel extends StateViewModel<UserState> {
   void onCreate(InstanceArg arg) {
     super.onCreate(arg);
 
-    listenState(authProvider, (previous, next) {
+    listenState(authSpec, (previous, next) {
       if (next.isLoggedOut) {
         // 清空用户数据
         setState(const UserState());
@@ -342,7 +346,7 @@ class MyViewModel extends StateViewModel<MyState> {
 
 ## 代码生成
 
-使用 `@GenProvider` 注解自动生成 Provider：
+使用 `@GenProvider` 注解自动生成 Spec：
 
 ### 1. 添加依赖
 
@@ -386,7 +390,7 @@ dart run build_runner build
 
 ```dart
 // user_view_model.vm.dart
-final userProvider = ViewModelProvider.arg<UserViewModel, int>(
+final userSpec = ViewModelSpec.arg<UserViewModel, int>(
   builder: (userId) => UserViewModel(userId),
   key: (userId) => 'user_$userId',
 );
@@ -399,15 +403,23 @@ final userProvider = ViewModelProvider.arg<UserViewModel, int>(
 不仅限于 Widget，任何 Dart 类都可以使用：
 
 ```dart
-class StartupTask with Vef {
+class StartupTask with ViewModelBinding {
   Future<void> run() async {
-    final config = vef.read(configProvider);
+    final config = read(configSpec);
     await config.initialize();
 
-    final auth = vef.read(authProvider);
+    final auth = read(authSpec);
     await auth.checkLogin();
   }
 }
+
+final configSpec = ViewModelSpec<ConfigViewModel>(
+  builder: () => ConfigViewModel(),
+);
+
+final authSpec = ViewModelSpec<AuthViewModel>(
+  builder: () => AuthViewModel(),
+);
 
 // 在 main 中使用
 void main() {
@@ -424,12 +436,12 @@ class UserRepository with ViewModel {
 
   Future<User> fetchUser(int id) async {
     // 可以访问其他 ViewModel
-    final token = vef.read(authProvider).token;
+    final token = read(authSpec).token;
     return await api.getUser(id, token);
   }
 }
 
-final userRepoProvider = ViewModelProvider<UserRepository>(
+final userRepoSpec = ViewModelSpec<UserRepository>(
   builder: () => UserRepository(),
 );
 ```

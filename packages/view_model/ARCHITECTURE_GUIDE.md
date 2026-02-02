@@ -14,7 +14,7 @@ Whether it's a **Repository**, **Service**, or **Manager**, just mix in `ViewMod
 class UserRepository with ViewModel {
   Future<User> fetchUser() async {
     // Access other ViewModels seamlessly
-    final token = vef.read(authProvider).token;
+    final token = read(authSpec).token;
     return api.get(token);
   }
 }
@@ -30,7 +30,7 @@ ViewModels can easily inject dependencies by reading other providers.
 class CartViewModel with ViewModel {
   void checkout() {
     // 1. Get UserViewModel
-    final userVM = vef.read(userProvider);
+    final userVM = read(userSpec);
     
     // 2. Use it
     if (userVM.isLoggedIn) {
@@ -51,7 +51,7 @@ class ChatViewModel with ViewModel {
   ChatViewModel() {
     // Listen to Auth State changes
     // Reacts whenever AuthState changes
-    listenState(authProvider, (previous, next) {
+    listenState(authSpec, (previous, next) {
       if (next.isLoggedOut) {
         clearMessages();
       }
@@ -62,16 +62,16 @@ class ChatViewModel with ViewModel {
 
 ---
 
-## 4️⃣ Initialization Tasks (`with Vef`)
+## 4️⃣ Initialization Tasks (`with ViewModelBinding`)
 
-For startup logic or standalone tasks that don't need to be a ViewModel itself, use `with Vef`.
+For startup logic or standalone tasks that don't need to be a ViewModel itself, use `with ViewModelBinding`.
 
 ```dart
-class AppInitializer with Vef {
+class AppInitializer with ViewModelBinding {
   Future<void> init() async {
     // Read and initialize ViewModels
-    await vef.read(configProvider).fetch();
-    await vef.read(authProvider).check();
+    await read(configSpec).fetch();
+    await read(authSpec).check();
   }
 }
 
@@ -89,7 +89,7 @@ void main() {
 For global instances like Auth or Settings, keep them alive forever.
 
 ```dart
-final authProvider = ViewModelProvider(
+final authSpec = ViewModelSpec(
   builder: () => AuthViewModel(),
   key: 'auth', // Global key
   aliveForever: true, // Never disposed

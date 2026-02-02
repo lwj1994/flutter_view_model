@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/src/view_model/vef_zone.dart';
+import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/view_model.dart';
 
 // A simple ViewModel for testing.
@@ -8,16 +8,16 @@ class MyViewModel with ViewModel {
   final String name;
 
   MyViewModel(this.name) {
-    childViewModel1 = vef.read<ChildViewModel1>(
-        ViewModelProvider(builder: () => ChildViewModel1()));
+    childViewModel1 = viewModelBinding.read<ChildViewModel1>(
+        ViewModelSpec(builder: () => ChildViewModel1()));
   }
 
   late ChildViewModel2 childViewModel2;
   late ChildViewModel1 childViewModel1;
 
   void doSome() {
-    childViewModel2 = vef.read<ChildViewModel2>(
-        ViewModelProvider(builder: () => ChildViewModel2()));
+    childViewModel2 = viewModelBinding.read<ChildViewModel2>(
+        ViewModelSpec(builder: () => ChildViewModel2()));
   }
 }
 
@@ -42,8 +42,8 @@ class MyWidgetState extends State<MyWidget> with ViewModelStateMixin<MyWidget> {
   void initState() {
     super.initState();
     // Use a key to ensure the same ViewModel instance is shared.
-    vm = vef.watch<MyViewModel>(
-      ViewModelProvider(key: "share", builder: () => MyViewModel(widget.name)),
+    vm = viewModelBinding.watch<MyViewModel>(
+      ViewModelSpec(key: "share", builder: () => MyViewModel(widget.name)),
     );
   }
 
@@ -88,8 +88,8 @@ void main() {
 
     // Initially, the ViewModel's dependency handler should have resolvers from both states.
     expect(dependencyHandler.ownerResolvers.length, 2);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.vef), isTrue);
-    expect(dependencyHandler.ownerResolvers.contains(stateB.vef), isTrue);
+    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding), isTrue);
+    expect(dependencyHandler.ownerResolvers.contains(stateB.viewModelBinding), isTrue);
 
     // Dispose StateA by removing its widget.
     await tester.pumpWidget(
@@ -107,18 +107,18 @@ void main() {
     // After StateA is disposed, its resolver should be removed.
     expect(dependencyHandler.ownerResolvers.length, 1);
     // The remaining resolver should be from StateB.
-    expect(dependencyHandler.ownerResolvers.first, stateB.vef);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.vef), isFalse);
+    expect(dependencyHandler.ownerResolvers.first, stateB.viewModelBinding);
+    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding), isFalse);
 
     expect(() => stateB.vm.childViewModel2, throwsA(isA<Error>()));
 
     stateB.vm.doSome();
 
     expect(
-        stateB.vm.childViewModel2.refHandler.dependencyVefs.length == 1, true);
+        stateB.vm.childViewModel2.refHandler.dependencyBindings.length == 1, true);
     expect(
-        stateB.vm.childViewModel2.refHandler.dependencyVefs
-            .contains(stateB.vef),
+        stateB.vm.childViewModel2.refHandler.dependencyBindings
+            .contains(stateB.viewModelBinding),
         isTrue);
 
     expect(stateB.vm.isDisposed, false);
@@ -139,6 +139,6 @@ void main() {
 }
 
 // Extension to access private list of resolvers
-extension on VefHandler {
-  List<Vef> get ownerResolvers => dependencyVefs;
+extension on ViewModelBindingHandler {
+  List<ViewModelBinding> get ownerResolvers => dependencyBindings;
 }

@@ -1,11 +1,11 @@
-/// Annotation to mark a ViewModel for provider code generation.
-/// Each annotated class will receive a generated `ViewModelProvider`
+/// Annotation to mark a ViewModel for spec code generation.
+/// Each annotated class will receive a generated `ViewModelSpec`
 /// variable in a `.vm.dart` part file.
 ///
 /// Can only be used on classes.
-class GenProvider {
+class GenSpec {
   /// Optional string templates for cache key and tag.
-  /// When the generated provider has arguments, templates support
+  /// When the generated spec has arguments, templates support
   /// using constructor parameter names via `$name` interpolation.
   /// Example: `key: 'user-$id:$page'`.
   final Object? key;
@@ -22,15 +22,24 @@ class GenProvider {
   /// Whether the instance should live forever (never be disposed).
   final bool aliveForever;
 
-  /// Create a `GenProvider` annotation instance.
-  const GenProvider(
+  /// Create a `GenSpec` annotation instance.
+  const GenSpec(
       {this.key,
       this.tag,
       this.isSingleton = false,
       this.aliveForever = false});
 }
 
-/// Shorthand constant for `GenProvider`.
+class GenProvider extends GenSpec {
+  const GenProvider(
+      {super.key,
+      super.tag,
+      super.isSingleton = false,
+      super.aliveForever = false});
+}
+
+/// Shorthand constant for `GenSpec`.
+const GenSpec genSpec = GenSpec();
 const GenProvider genProvider = GenProvider();
 
 /// Marker type to carry a code expression string in annotations.

@@ -31,10 +31,10 @@
 
 ## 0.11.0
 
-- Add: test-time proxy overrides for providers
-  - `ViewModelProviderWithArg/Arg2/Arg3/Arg4` now support `setProxy` and
+- Add: test-time proxy overrides for specs
+  - `ViewModelSpecWithArg/Arg2/Arg3/Arg4` now support `setProxy` and
     `clearProxy` to override `builder`, `key`, `tag`, `isSingleton` during tests.
-  - Mirrors existing no-arg `ViewModelProvider` proxy behavior for consistency.
+  - Mirrors existing no-arg `ViewModelSpec` proxy behavior for consistency.
 
 ## 0.10.0
 - Feat: Introduce methods to retrieve and watch multiple ViewModel instances by tag (`readCachesByTag`, `watchCachesByTag`)
@@ -46,9 +46,9 @@
 - update dependencies
 
 ## 0.9.0
-🎉 **Major Update: Introducing ViewModelProvider & Code Generator**
+🎉 **Major Update: Introducing ViewModelSpec & Code Generator**
 
-🚀 ViewModelProvider: Simpler, Cleaner, Better
+🚀 ViewModelSpec: Simpler, Cleaner, Better
 **Replaces the verbose Factory pattern** with a declarative, type-safe provider system.
 
 **Before (Factory pattern):**
@@ -61,34 +61,34 @@ class CounterViewModelFactory extends ViewModelFactory<CounterViewModel> {
 final vm = watchViewModel(factory: CounterViewModelFactory());
 ```
 
-**After (Provider pattern):**
+**After (Spec pattern):**
 ```dart
 /// auto generated provider for CounterViewModel
-final counterProvider = ViewModelProvider<CounterViewModel>(
+final counterSpec = ViewModelSpec<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 
-final vm = vef.watch(counterProvider);
+final vm = viewModelBinding.watch(counterSpec);
 ```
 
 **With Arguments:**
 ```dart
 /// auto generated provider for UserViewModel
-final userProvider = ViewModelProvider.arg<UserViewModel, String>(
+final userSpec = ViewModelSpec.arg<UserViewModel, String>(
   builder: (userId) => UserViewModel(userId),
   key: (userId) => 'user-$userId',
 );
 
-final vm = vef.watch(userProvider('user-123'));
+final vm = viewModelBinding.watch(userSpec('user-123'));
 ```
 
-[Migration Guide](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/docs/VIEWMODEL_PROVIDER_MIGRATION.md)
+[Migration Guide](https://github.com/lwj1994/flutter_view_model/blob/main/docs/articles/VIEWMODEL_PROVIDER_MIGRATION.md)
 
 ---
 
 ### 🤖 Code Generator: Zero Boilerplate
 
-Introducing **`view_model_generator`** - automatically generate `ViewModelProvider` definitions from annotations.
+Introducing **`view_model_generator`** - automatically generate `ViewModelSpec` definitions from annotations.
 
 **Installation:**
 ```yaml
@@ -120,59 +120,59 @@ dart run build_runner build
 **Generated code:**
 ```dart
 // counter_view_model.vm.dart
-final counterProvider = ViewModelProvider<CounterViewModel>(
+final counterSpec = ViewModelSpec<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```
 
-The generator supports ViewModels with up to 4 constructor parameters and automatically generates the appropriate `ViewModelProvider.argX` variant.
+The generator supports ViewModels with up to 4 constructor parameters and automatically generates the appropriate `ViewModelSpec.argX` variant.
 
 Package: https://pub.dev/packages/view_model_generator
 
 ---
 
-### 🔄 New Unified API: `vef.watch` & `vef.read`
+### 🔄 New Unified API: `viewModelBinding.watch` & `viewModelBinding.read`
 
-**Everything is Vef** - A unified, consistent API for accessing ViewModels.
+**Everything is ViewModelBinding** - A unified, consistent API for accessing ViewModels.
 
 **New Recommended API:**
 ```dart
 // Watch (reactive)
-final vm = vef.watch(counterProvider);
+final vm = viewModelBinding.watch(counterSpec);
 
 // Read (non-reactive)
-final vm = vef.read(counterProvider);
+final vm = viewModelBinding.read(counterSpec);
 
 // Watch cached by key/tag
-final vm = vef.watchCached<UserViewModel>(key: 'user-123');
-final vm = vef.readCached<UserViewModel>(tag: 'current-user');
+final vm = viewModelBinding.watchCached<UserViewModel>(key: 'user-123');
+final vm = viewModelBinding.readCached<UserViewModel>(tag: 'current-user');
 ```
 
 **Legacy API (still supported):**
 ```dart
 // Old API still works for backward compatibility
-final vm = vef.watchViewModel(factory: CounterViewModelFactory());
-final vm = vef.readViewModel(factory: CounterViewModelFactory());
+final vm = watchViewModel(factory: CounterViewModelFactory());
+final vm = readViewModel(factory: CounterViewModelFactory());
 ```
 
-> **Note**: While `watchViewModel` and `readViewModel` are still supported, we recommend migrating to the new `vef.watch` and `vef.read` API with `ViewModelProvider` for better type safety and less boilerplate.
+> **Note**: While `watchViewModel` and `readViewModel` are still supported, we recommend migrating to the new `viewModelBinding.watch` and `viewModelBinding.read` API with `ViewModelSpec` for better type safety and less boilerplate.
 
 ---
 
-### 🌟 Everything is Vef
+### 🌟 Everything is ViewModelBinding
 
-`Vef` is the core abstraction of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetVef`.
+`ViewModelBinding` is the core abstraction of the `view_model` library, responsible for managing ViewModel lifecycle and dependency injection. `WidgetMixin` is essentially just a wrapper around `WidgetViewModelBinding`.
 
 This means you can use ViewModel in **any Dart class**, independent of Widgets.
 
-**Custom Vef Example:**
+**Custom ViewModelBinding Example:**
 ```dart
-class StartTaskVef with Vef {
+class StartTaskBinding with ViewModelBinding {
   Future<void> runStartupTasks() async {
-    final authVM = vef.watch(authProvider);
+    final authVM = read(authSpec);
     await authVM.checkLoginStatus();
     
-    final configVM = vef.watch(configProvider);
+    final configVM = read(configSpec);
     await configVM.loadRemoteConfig();
   }
   
@@ -188,14 +188,14 @@ Use cases:
 - **Pure Dart Tests**: Test ViewModel interactions without `testWidgets`
 - **Startup Tasks**: Execute initialization logic before any Widget is rendered
 
-See [Custom Vef Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md#custom-vef) for details.
+See [Custom ViewModelBinding Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/packages/view_model/README.md#viewmodelbinding---viewmodel-execution-framework) for details.
 
 ---
 
 ### 🔧 Other Changes
 
-- Renamed `ViewModelPauseProvider` to `VefPauseProvider` for consistency
-- Improved type inference for `ViewModelProvider.argX` variants
+- Renamed `ViewModelPauseProvider` to `ViewModelBindingPauseProvider` for consistency
+- Improved type inference for `ViewModelSpec.argX` variants
 
 
 ## 0.8.4
@@ -233,7 +233,7 @@ Compared to **GetIt** (which requires manual binding glue code) or **Riverpod** 
 - Fix: Custom `VefPauseProvider` was not working properly when added late, causing pause to fail.
 
 ## 0.8.0
-- **BREAKING CHANGE**: Reworked the `Vef` pause/resume lifecycle to a more robust and extensible provider-based architecture.
+- **BREAKING CHANGE**: Reworked the `ViewModelBinding` pause/resume lifecycle to a more robust and extensible provider-based architecture.
   - Default providers `PageRoutePauseProvider`, `TickerModePauseProvider` and `AppPauseProvider` handle automatic pausing for route and app app lifecycle events and tickMode.
   - Added `ManualVefPauseProvider` for easy manual control in custom UI scenarios (e.g., `TabBarView`).
   - For details on the new API and migration, see the [Pause/Resume Lifecycle Documentation](https://github.com/lwj1994/flutter_view_model/blob/main/docs/PAUSE_RESUME_LIFECYCLE.md).
@@ -518,7 +518,7 @@ extensions:
 
 ## 0.4.5
 
-- Add `ViewModelProvider` for convenient and generic ViewModel factory
+- Add `ViewModelSpec` for convenient and generic ViewModel factory
   creation.
 
 ## 0.4.4

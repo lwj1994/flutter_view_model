@@ -21,7 +21,7 @@ class TestWidget extends StatelessWidget with ViewModelStatelessMixin {
 
   @override
   Widget build(BuildContext context) {
-    vef.watch(ViewModelProvider(
+    viewModelBinding.watch(ViewModelSpec(
       builder: () => SimpleVM(id),
       tag: tag,
       key: keyV,

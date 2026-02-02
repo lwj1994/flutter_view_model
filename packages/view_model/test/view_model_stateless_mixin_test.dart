@@ -19,8 +19,8 @@ class CounterViewModel extends StateViewModel<int> {
 class CounterStatelessWidget extends StatelessWidget
     with ViewModelStatelessMixin {
   CounterStatelessWidget({super.key});
-  late final vm = vef.watch<CounterViewModel>(
-    ViewModelProvider<CounterViewModel>(
+  late final vm = viewModelBinding.watch<CounterViewModel>(
+    ViewModelSpec<CounterViewModel>(
       builder: () => CounterViewModel(),
     ),
   );
@@ -49,13 +49,13 @@ class SharedCountersStateless extends StatelessWidget
     with ViewModelStatelessMixin {
   SharedCountersStateless({super.key});
   static const sharedKey = 'shared_counter_key';
-  late final vm1 = vef.watch<CounterViewModel>(
-    ViewModelProvider<CounterViewModel>(
+  late final vm1 = viewModelBinding.watch<CounterViewModel>(
+    ViewModelSpec<CounterViewModel>(
       builder: () => CounterViewModel(initialValue: 5),
       key: sharedKey,
     ),
   );
-  late final vm2 = vef.watchCached<CounterViewModel>(
+  late final vm2 = viewModelBinding.watchCached<CounterViewModel>(
     key: sharedKey,
   );
 

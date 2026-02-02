@@ -66,13 +66,13 @@ void main() {
         builder: () {
           return DisposeErrorViewModel();
         },
-        arg: const InstanceArg(vefId: "watchId1"),
+        arg: const InstanceArg(bindingId: "watchId1"),
       ));
       final vmIns = vm.instance;
       vm.unbindAll();
 
       await Future.delayed(const Duration(milliseconds: 100));
-      assert(vm.bindedVefIds.isEmpty);
+      assert(vm.bindingIds.isEmpty);
       assert(vmIns.isDisposed);
     });
 
@@ -106,7 +106,7 @@ void main() {
 
     test("lifecycle callbacks", () async {
       final factory = TestStatelessViewModelFactory(keyV: 'lifecycle_test');
-      final vmProvider = ViewModelProvider<TestStatelessViewModel>(
+      final vmProvider = ViewModelSpec<TestStatelessViewModel>(
         builder: factory.build,
         key: factory.key(),
       );
@@ -117,7 +117,7 @@ void main() {
           builder: vmProvider.builder,
           arg: InstanceArg(
             key: vmProvider.key,
-            vefId: 'binder1',
+            bindingId: 'binder1',
           ),
         ),
       );
@@ -127,15 +127,15 @@ void main() {
       expect(lifecycleObserver.lastViewModel, isA<TestStatelessViewModel>());
 
       // Add another watcher
-      vm.bindVef('binder2');
+      vm.bind('binder2');
       expect(lifecycleObserver.onAddWatcherCount, 2);
 
       // Remove watcher
-      vm.unbindVef('binder1');
+      vm.unbind('binder1');
       expect(lifecycleObserver.onRemoveWatcherCount, 1);
 
       // Remove last watcher -> dispose
-      vm.unbindVef('binder2');
+      vm.unbind('binder2');
       await Future.delayed(Duration.zero);
       expect(lifecycleObserver.onDisposeCount, 1);
     });
@@ -395,7 +395,7 @@ void main() {
 
     test('readCached throws when disposed', () {
       final ref = _CoreRef();
-      final fac = ViewModelProvider<TestModel>(
+      final fac = ViewModelSpec<TestModel>(
         builder: () => TestModel(),
         key: () => 'dispose_key',
       );
@@ -445,54 +445,54 @@ void main() {
   });
 
   group('Factory Key Change Returns Different ViewModel', () {
-    test('different key returns different ViewModel instance via vef.read', () {
-      final vef = _CoreRef();
+    test('different key returns different ViewModel instance via viewModelBinding.read', () {
+      final viewModelBinding = _CoreRef();
 
       // Create factory with key1
       const factory1 = TestViewModelFactory(keyV: 'key1');
-      final vm1 = vef.read(factory1);
+      final vm1 = viewModelBinding.read(factory1);
 
       // Create factory with key2
       const factory2 = TestViewModelFactory(keyV: 'key2');
-      final vm2 = vef.read(factory2);
+      final vm2 = viewModelBinding.read(factory2);
 
       // Should be different instances
       expect(identical(vm1, vm2), isFalse);
       expect(vm1.hashCode, isNot(equals(vm2.hashCode)));
 
-      vef.dispose();
+      viewModelBinding.dispose();
     });
 
-    test('same key returns same ViewModel instance via vef.read', () {
-      final vef = _CoreRef();
+    test('same key returns same ViewModel instance via viewModelBinding.read', () {
+      final viewModelBinding = _CoreRef();
 
       // Create factory with same key
       const factory1 = TestViewModelFactory(keyV: 'same_key');
       const factory2 = TestViewModelFactory(keyV: 'same_key');
 
-      final vm1 = vef.read(factory1);
-      final vm2 = vef.read(factory2);
+      final vm1 = viewModelBinding.read(factory1);
+      final vm2 = viewModelBinding.read(factory2);
 
       // Should be the same instance
       expect(identical(vm1, vm2), isTrue);
 
-      vef.dispose();
+      viewModelBinding.dispose();
     });
 
     test('null key returns same ViewModel instance for same type', () {
-      final vef = _CoreRef();
+      final viewModelBinding = _CoreRef();
 
       // Create factory without key (null key)
       const factory1 = TestViewModelFactory();
       const factory2 = TestViewModelFactory();
 
-      final vm1 = vef.read(factory1);
-      final vm2 = vef.read(factory2);
+      final vm1 = viewModelBinding.read(factory1);
+      final vm2 = viewModelBinding.read(factory2);
 
-      // With null key, vef.read shares instance for same type
+      // With null key, viewModelBinding.read shares instance for same type
       expect(identical(vm1, vm2), isTrue);
 
-      vef.dispose();
+      viewModelBinding.dispose();
     });
   });
 
@@ -501,7 +501,7 @@ void main() {
       final lc = _LC();
       final remove = ViewModel.addLifecycle(lc);
       final ref = _CoreRef();
-      final provider = ViewModelProvider<TestModel>(
+      final provider = ViewModelSpec<TestModel>(
         builder: () => TestModel(),
         key: () => 'basic_lifecycle',
       );
@@ -509,7 +509,7 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 20));
       expect(lc.created >= 1, isTrue);
 
-      // Dispose via Vef lifecycle
+      // Dispose via ViewModelBinding lifecycle
       ref.recycle(vm);
       await Future.delayed(const Duration(milliseconds: 20));
 
@@ -523,7 +523,7 @@ void main() {
   group('Coverage Tests', () {
     test('readCached throws when disposed (manual verification logic)', () {
       final ref = _CoreRef();
-      final fac = ViewModelProvider<TestModel>(
+      final fac = ViewModelSpec<TestModel>(
         builder: () => TestModel(),
         key: () => 'readCached_disposed',
       );
@@ -553,7 +553,7 @@ void main() {
       // We need to call notifyListeners ON the disposed instance.
       // "vm" variable still holds it.
       final ref = _CoreRef();
-      final fac = ViewModelProvider<TestModel>(builder: () => vm);
+      final fac = ViewModelSpec<TestModel>(builder: () => vm);
       ref.watch(fac);
       ref.recycle(vm);
 
@@ -565,7 +565,7 @@ void main() {
     test('setState after dispose safely logs', () {
       final vm = CoverageStateVM();
       final ref = _CoreRef();
-      final fac = ViewModelProvider<CoverageStateVM>(builder: () => vm);
+      final fac = ViewModelSpec<CoverageStateVM>(builder: () => vm);
       ref.watch(fac);
       ref.recycle(vm);
 
@@ -610,7 +610,7 @@ void main() {
       final remove = ViewModel.addLifecycle(lc);
       final vm = TestModel();
       final ref = _CoreRef();
-      final fac = ViewModelProvider<TestModel>(builder: () => vm);
+      final fac = ViewModelSpec<TestModel>(builder: () => vm);
 
       // Trigger onCreate
       ref.watch(fac);
@@ -729,7 +729,7 @@ class ChangeNotifierVMFactory with ViewModelFactory<ChangeNotifierVM> {
   }
 }
 
-class _CoreRef with Vef {}
+class _CoreRef with ViewModelBinding {}
 
 class _MyKey {
   final String value;

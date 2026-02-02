@@ -10,7 +10,7 @@ import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
-import 'package:view_model/src/view_model/vef_zone.dart';
+import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateless_extension.dart';
@@ -19,12 +19,12 @@ import 'state_store.dart';
 
 /// Interface that exposes helpers to access ViewModels from widgets.
 ///
-/// `vef` stands for ViewModel Execution Framework.
+/// `ViewModelBinding` connects the ViewModel system with the Widget tree.
 ///
 /// Provides methods to create or fetch ViewModels, optionally listening
 /// to their changes to rebuild the widget. All methods are generic on
 /// `VM extends ViewModel`.
-abstract interface class VefInterface {
+abstract interface class ViewModelBindingInterface {
   /// Creates or fetches a `VM` and listens for its changes.
   ///
   /// Requires a `factory` to build the instance when absent. The widget
@@ -100,7 +100,7 @@ abstract interface class VefInterface {
 /// Core abstraction for managing ViewModel lifecycle and dependency
 /// injection.
 ///
-/// [ViewModelRef] is the foundation of the `view_model` library. It provides a
+/// [ViewModelBinding] is the foundation of the `view_model` library. It provides a
 /// generic mechanism for hosting and managing ViewModels independent of
 /// Flutter widgets. It can be mixed into any Dart class to gain ViewModel
 /// management capabilities.
@@ -112,14 +112,14 @@ abstract interface class VefInterface {
 /// - **Dependency Injection**: Resolves ViewModel dependencies using
 ///   Zone-based dependency resolution
 /// - **Pause/Resume**: Manages pause/resume lifecycle through
-///   [VefPauseProvider]s
+///   [ViewModelBindingPauseProvider]s
 /// - **Update Notifications**: Provides [onUpdate] hook for responding to
 ///   ViewModel changes
 ///
 /// ## Key Concepts
 ///
-/// - **ViewModelRef**: Generic ViewModel manager usable in any Dart class
-/// - **WidgetVef**: Specialized subclass for Flutter widgets that bridges
+/// - **ViewModelBinding**: Generic ViewModel manager usable in any Dart class
+/// - **WidgetViewModelBinding**: Specialized subclass for Flutter widgets that bridges
 ///   [onUpdate] to `setState`
 /// - **Reference Counting**: ViewModels stay alive while at least one binder
 ///   watches them
@@ -140,14 +140,14 @@ abstract interface class VefInterface {
 /// - [onPause]: Called when the binder is paused (e.g., widget not visible)
 /// - [onResume]: Called when the binder resumes (e.g., widget becomes visible)
 ///
-/// ## Example: Custom Service Vef
+/// ## Example: Custom Service Binding
 ///
 /// ```dart
-/// class DownloadService with ViewModelRef {
+/// class DownloadService with ViewModelBinding {
 ///   late final DownloadViewModel _downloadVM;
 ///
 ///   DownloadService() {
-///     _downloadVM = vef.watch(DownloadViewModelFactory());
+///     _downloadVM = viewModelBinding.watch(DownloadViewModelSpec());
 ///   }
 ///
 ///   @override
@@ -171,29 +171,32 @@ abstract interface class VefInterface {
 ///
 /// ```dart
 /// test('Test ViewModel interactions', () {
-///   final ref = ViewModelRef();
-///   final vm = vef.watch(MyViewModelFactory());
+///   final ref = ViewModelBinding();
+///   final vm = viewModelBinding.watch(MyViewModelSpec());
 ///
 ///   expect(vm.count, 0);
 ///   vm.increment();
 ///   expect(vm.count, 1);
 ///
-///   vef.dispose(); // Clean up
+///   viewModelBinding.dispose(); // Clean up
 /// });
 /// ```
 ///
 /// See also:
-/// - [WidgetVef]: Specialized implementation for Flutter widgets
-/// - [ViewModelStateMixin]: Mixin that uses ViewModelRef for StatefulWidget
-/// - [VefPauseProvider]: Interface for pause/resume providers
-mixin class Vef implements VefInterface {
+/// - [WidgetViewModelBinding]: Specialized implementation for Flutter widgets
+/// - [ViewModelStateMixin]: Mixin that uses ViewModelBinding for StatefulWidget
+/// - [ViewModelBindingPauseProvider]: Interface for pause/resume providers
+mixin class ViewModelBinding implements ViewModelBindingInterface {
   String get id {
     return "${getName()}#$hashCode";
   }
 
   @protected
   // ignore: avoid_returning_this
-  Vef get vef => this;
+  ViewModelBinding get viewModelBinding => this;
+
+  @Deprecated('Use viewModelBinding instead.')
+  ViewModelBinding get vef => this;
   bool _dispose = false;
   final _stackPathLocator = StackPathLocator();
 
@@ -204,7 +207,7 @@ mixin class Vef implements VefInterface {
 
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: onUpdate,
-    vef: this,
+    viewModelBinding: this,
   );
   final Map<ViewModel, bool> _stateListeners = {};
   final _defaultViewModelKey = Object();
@@ -292,12 +295,12 @@ mixin class Vef implements VefInterface {
   ///
   /// Example:
   /// ```dart
-  /// var userVM = vef.watch(fac);
+  /// var userVM = viewModelBinding.watch(fac);
   /// // Later, force recreation
-  /// vef.recycle(userVM);
+  /// viewModelBinding.recycle(userVM);
   ///
   /// recreate new instance
-  /// userVM = vef.watch(fac);
+  /// userVM = viewModelBinding.watch(fac);
   /// ```
   void recycle<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
@@ -356,7 +359,7 @@ mixin class Vef implements VefInterface {
   ///   @override
   ///   void initState() {
   ///     super.initState();
-  ///     _viewModel = vef.watch(MyViewModelFactory());
+  ///     _viewModel = viewModelBinding.watch(MyViewModelSpec());
   ///   }
   ///
   ///   @override
@@ -425,7 +428,7 @@ mixin class Vef implements VefInterface {
   /// Example:
   /// ```dart
   /// void _onButtonPressed() {
-  ///   final vm = vef.read(MyViewModelFactory());
+  ///   final vm = viewModelBinding.read(MyViewModelSpec());
   ///   vm.performAction(); // This will not trigger a rebuild.
   /// }
   /// ```
@@ -550,7 +553,7 @@ mixin class Vef implements VefInterface {
     }
     final Object key = factory.key() ?? _defaultViewModelKey;
     final tag = factory.tag();
-    final res = runWithVef(
+    final res = runWithBinding(
       () {
         return _instanceController.getInstance<VM>(
           factory: InstanceFactory<VM>(
@@ -561,9 +564,9 @@ mixin class Vef implements VefInterface {
             ),
             builder: factory.build,
           ),
-        )..refHandler.addRef(vef);
+        )..refHandler.addRef(viewModelBinding);
       },
-      vef,
+      viewModelBinding,
     );
 
     if (listen) {
@@ -616,7 +619,7 @@ mixin class Vef implements VefInterface {
   ///
   /// Example:
   /// ```dart
-  /// final vm = vef.maybeWatchCached<MyViewModel>(key: 'optional-key');
+  /// final vm = viewModelBinding.maybeWatchCached<MyViewModel>(key: 'optional-key');
   /// if (vm != null) {
   ///   // Use the ViewModel
   /// }
@@ -649,11 +652,11 @@ mixin class Vef implements VefInterface {
     _instanceController.unbindInstance(viewModel);
   }
 
-  void addPauseProvider(VefPauseProvider provider) {
+  void addPauseProvider(ViewModelBindingPauseProvider provider) {
     _pauseAwareController.addProvider(provider);
   }
 
-  void removePauseProvider(VefPauseProvider provider) {
+  void removePauseProvider(ViewModelBindingPauseProvider provider) {
     _pauseAwareController.removeProvider(provider);
   }
 
@@ -673,7 +676,8 @@ mixin class Vef implements VefInterface {
     ViewModelFactory<VM> factory, {
     required VoidCallback onChanged,
   }) {
-    _disposes.add(vef.read(factory).listen(onChanged: onChanged));
+    _disposes
+        .add(viewModelBinding.read(factory).listen(onChanged: onChanged));
   }
 
   @override
@@ -681,7 +685,7 @@ mixin class Vef implements VefInterface {
     ViewModelFactory<VM> factory, {
     required Function(S? previous, S state) onChanged,
   }) {
-    final VM vm = vef.read<VM>(factory);
+    final VM vm = viewModelBinding.read<VM>(factory);
     _disposes.add(vm.listenState(onChanged: onChanged));
   }
 
@@ -691,7 +695,7 @@ mixin class Vef implements VefInterface {
     required R Function(S state) selector,
     required Function(R? previous, R current) onChanged,
   }) {
-    final VM vm = vef.read<VM>(factory);
+    final VM vm = viewModelBinding.read<VM>(factory);
     _disposes
         .add(vm.listenStateSelect(onChanged: onChanged, selector: selector));
   }
@@ -707,11 +711,14 @@ mixin class Vef implements VefInterface {
   }
 }
 
-extension StateVefExtension on ViewModelStateMixin {
+@Deprecated('Use ViewModelBinding instead.')
+class Vef with ViewModelBinding {}
+
+extension StateViewModelBindingExtension on ViewModelStateMixin {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return vef.watch<VM>(factory);
+    return viewModelBinding.watch<VM>(factory);
   }
 
   void listenViewModel<VM extends ViewModel>({
@@ -719,7 +726,7 @@ extension StateVefExtension on ViewModelStateMixin {
     required VoidCallback onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listen<VM>(factory, onChanged: onChanged);
+    viewModelBinding.listen<VM>(factory, onChanged: onChanged);
   }
 
   void listenViewModelState<VM extends StateViewModel<S>, S>({
@@ -727,7 +734,7 @@ extension StateVefExtension on ViewModelStateMixin {
     required Function(S? previous, S state) onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listenState<VM, S>(factory, onChanged: onChanged);
+    viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
   }
 
   void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
@@ -736,7 +743,7 @@ extension StateVefExtension on ViewModelStateMixin {
     required Function(R? previous, R current) onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listenStateSelect<VM, S, R>(
+    viewModelBinding.listenStateSelect<VM, S, R>(
       factory,
       selector: selector,
       onChanged: onChanged,
@@ -745,13 +752,13 @@ extension StateVefExtension on ViewModelStateMixin {
 
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     // ignore: invalid_use_of_protected_member
-    vef.recycle<VM>(viewModel);
+    viewModelBinding.recycle<VM>(viewModel);
   }
 
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return vef.read<VM>(factory);
+    return viewModelBinding.read<VM>(factory);
   }
 
   VM readCachedViewModel<VM extends ViewModel>({
@@ -759,7 +766,7 @@ extension StateVefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.readCached<VM>(
+    return viewModelBinding.readCached<VM>(
       key: key,
       tag: tag,
     );
@@ -770,7 +777,7 @@ extension StateVefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.watchCached<VM>(
+    return viewModelBinding.watchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -781,7 +788,7 @@ extension StateVefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.maybeWatchCached<VM>(
+    return viewModelBinding.maybeWatchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -792,18 +799,18 @@ extension StateVefExtension on ViewModelStateMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.maybeReadCached<VM>(
+    return viewModelBinding.maybeReadCached<VM>(
       key: key,
       tag: tag,
     );
   }
 }
 
-extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
+extension StatelessWidgetViewModelBindingExtension on ViewModelStatelessMixin {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return vef.watch<VM>(factory);
+    return viewModelBinding.watch<VM>(factory);
   }
 
   void listenViewModel<VM extends ViewModel>({
@@ -811,7 +818,7 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
     required VoidCallback onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listen<VM>(factory, onChanged: onChanged);
+    viewModelBinding.listen<VM>(factory, onChanged: onChanged);
   }
 
   void listenViewModelState<VM extends StateViewModel<S>, S>({
@@ -819,7 +826,7 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
     required Function(S? previous, S state) onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listenState<VM, S>(factory, onChanged: onChanged);
+    viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
   }
 
   void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
@@ -828,7 +835,7 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
     required Function(R? previous, R current) onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listenStateSelect<VM, S, R>(
+    viewModelBinding.listenStateSelect<VM, S, R>(
       factory,
       selector: selector,
       onChanged: onChanged,
@@ -837,13 +844,13 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
 
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     // ignore: invalid_use_of_protected_member
-    vef.recycle<VM>(viewModel);
+    viewModelBinding.recycle<VM>(viewModel);
   }
 
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return vef.read<VM>(factory);
+    return viewModelBinding.read<VM>(factory);
   }
 
   VM readCachedViewModel<VM extends ViewModel>({
@@ -851,7 +858,7 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.readCached<VM>(
+    return viewModelBinding.readCached<VM>(
       key: key,
       tag: tag,
     );
@@ -862,7 +869,7 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.watchCached<VM>(
+    return viewModelBinding.watchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -873,7 +880,7 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.maybeWatchCached<VM>(
+    return viewModelBinding.maybeWatchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -884,18 +891,18 @@ extension StatelessWidgetVefExtension on ViewModelStatelessMixin {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.maybeReadCached<VM>(
+    return viewModelBinding.maybeReadCached<VM>(
       key: key,
       tag: tag,
     );
   }
 }
 
-extension ViewModelVefExtension on ViewModel {
+extension ViewModelBindingExtension on ViewModel {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return vef.watch<VM>(factory);
+    return viewModelBinding.watch<VM>(factory);
   }
 
   void listenViewModel<VM extends ViewModel>({
@@ -903,7 +910,7 @@ extension ViewModelVefExtension on ViewModel {
     required VoidCallback onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listen<VM>(factory, onChanged: onChanged);
+    viewModelBinding.listen<VM>(factory, onChanged: onChanged);
   }
 
   void listenViewModelState<VM extends StateViewModel<S>, S>({
@@ -911,7 +918,7 @@ extension ViewModelVefExtension on ViewModel {
     required Function(S? previous, S state) onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listenState<VM, S>(factory, onChanged: onChanged);
+    viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
   }
 
   void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
@@ -920,7 +927,7 @@ extension ViewModelVefExtension on ViewModel {
     required Function(R? previous, R current) onChanged,
   }) {
     // ignore: invalid_use_of_protected_member
-    vef.listenStateSelect<VM, S, R>(
+    viewModelBinding.listenStateSelect<VM, S, R>(
       factory,
       selector: selector,
       onChanged: onChanged,
@@ -929,13 +936,13 @@ extension ViewModelVefExtension on ViewModel {
 
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     // ignore: invalid_use_of_protected_member
-    vef.recycle<VM>(viewModel);
+    viewModelBinding.recycle<VM>(viewModel);
   }
 
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
     // ignore: invalid_use_of_protected_member
-    return vef.read<VM>(factory);
+    return viewModelBinding.read<VM>(factory);
   }
 
   VM readCachedViewModel<VM extends ViewModel>({
@@ -943,7 +950,7 @@ extension ViewModelVefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.readCached<VM>(
+    return viewModelBinding.readCached<VM>(
       key: key,
       tag: tag,
     );
@@ -954,7 +961,7 @@ extension ViewModelVefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.watchCached<VM>(
+    return viewModelBinding.watchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -965,7 +972,7 @@ extension ViewModelVefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.maybeWatchCached<VM>(
+    return viewModelBinding.maybeWatchCached<VM>(
       key: key,
       tag: tag,
     );
@@ -976,7 +983,7 @@ extension ViewModelVefExtension on ViewModel {
     Object? tag,
   }) {
     // ignore: invalid_use_of_protected_member
-    return vef.maybeReadCached<VM>(
+    return viewModelBinding.maybeReadCached<VM>(
       key: key,
       tag: tag,
     );

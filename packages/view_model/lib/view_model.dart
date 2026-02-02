@@ -14,8 +14,8 @@
 ///   void increment() => update(() => count++);
 /// }
 ///
-/// // 2. Create a Provider
-/// final counterProvider = ViewModelProvider<CounterViewModel>(
+/// // 2. Create a Spec
+/// final counterSpec = ViewModelSpec<CounterViewModel>(
 ///   builder: () => CounterViewModel(),
 /// );
 ///
@@ -29,7 +29,7 @@
 ///     with ViewModelStateMixin {
 ///   @override
 ///   Widget build(BuildContext context) {
-///     final vm = vef.watch(counterProvider);
+///     final vm = viewModelBinding.watch(counterSpec);
 ///     return ElevatedButton(
 ///       onPressed: vm.increment,
 ///       child: Text('Count: ${vm.count}'),
@@ -38,17 +38,17 @@
 /// }
 /// ```
 ///
-/// ## The `vef` Accessor
+/// ## The `viewModelBinding` Accessor
 ///
-/// `vef` (ViewModel Execution Framework) is your gateway to ViewModels:
+/// `viewModelBinding` (ViewModel Execution Framework) is your gateway to ViewModels:
 ///
 /// | Method | Description |
 /// |--------|-------------|
-/// | `vef.watch(provider)` | Get VM and rebuild on changes |
-/// | `vef.read(provider)` | Get VM without rebuilding |
-/// | `vef.watchCached<T>(key:)` | Get cached VM by key with rebuilds |
-/// | `vef.readCached<T>(key:)` | Get cached VM by key, no rebuilds |
-/// | `vef.listen(provider, onChanged:)` | Side effects, auto-disposed |
+/// | `viewModelBinding.watch(spec)` | Get VM and rebuild on changes |
+/// | `viewModelBinding.read(spec)` | Get VM without rebuilding |
+/// | `viewModelBinding.watchCached<T>(key:)` | Get cached VM by key with rebuilds |
+/// | `viewModelBinding.readCached<T>(key:)` | Get cached VM by key, no rebuilds |
+/// | `viewModelBinding.listen(spec, onChanged:)` | Side effects, auto-disposed |
 ///
 /// ## Core Features
 ///
@@ -67,11 +67,12 @@
 library;
 
 export "package:view_model/src/get_instance/store.dart" show InstanceArg;
-export "package:view_model/src/view_model/vef.dart";
+export "package:view_model/src/view_model/view_model_binding.dart";
 export "package:view_model/src/view_model/builder.dart";
 export "package:view_model/src/view_model/config.dart";
-export "package:view_model/src/view_model/provider.dart";
+export "package:view_model/src/view_model/view_model_spec.dart";
 export "package:view_model/src/view_model/pause_provider.dart";
+
 export "package:view_model/src/view_model/value_observer.dart";
 export "package:view_model/src/view_model/value_watcher.dart";
 export "package:view_model/src/view_model/view_model.dart";

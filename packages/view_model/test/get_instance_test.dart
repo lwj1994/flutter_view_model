@@ -14,7 +14,7 @@ class TestLifeCycleModel implements InstanceLifeCycle {
   int onDisposeCount = 0;
   int onAddBinderCount = 0;
   int onRemoveBinderCount = 0;
-  String? lastVefId;
+  String? lastViewModelBindingId;
 
   @override
   void onCreate(InstanceArg arg) {
@@ -27,21 +27,21 @@ class TestLifeCycleModel implements InstanceLifeCycle {
   }
 
   @override
-  void onBindVef(InstanceArg arg, String vefId) {
+  void onBind(InstanceArg arg, String bindingId) {
     onAddBinderCount++;
-    lastVefId = vefId;
+    lastViewModelBindingId = bindingId;
   }
 
   @override
-  void onUnbindVef(InstanceArg arg, String vefId) {
+  void onUnbind(InstanceArg arg, String bindingId) {
     onRemoveBinderCount++;
-    lastVefId = vefId;
+    lastViewModelBindingId = bindingId;
   }
 }
 
 class ErrorDisposeModel implements InstanceLifeCycle {
   @override
-  void onBindVef(InstanceArg arg, String vefId) {}
+  void onBind(InstanceArg arg, String bindingId) {}
 
   @override
   void onCreate(InstanceArg arg) {}
@@ -52,7 +52,7 @@ class ErrorDisposeModel implements InstanceLifeCycle {
   }
 
   @override
-  void onUnbindVef(InstanceArg arg, String vefId) {}
+  void onUnbind(InstanceArg arg, String bindingId) {}
 }
 
 class UnusedModel {}
@@ -182,13 +182,13 @@ void main() {
       print(b.index);
       assert(a.index < b.index);
       final c = instanceManager.getNotifier<TestModel>(
-          factory: InstanceFactory.vef(
-        vefId: "watchId_c",
+          factory: InstanceFactory.binding(
+        bindingId: "watchId_c",
       ));
       assert(c == b);
       b.unbindAll();
       await Future.delayed(const Duration(seconds: 1));
-      assert(c.bindedVefIds.isEmpty);
+      assert(c.bindingIds.isEmpty);
     });
 
     test('find exiting', () async {
@@ -269,13 +269,13 @@ void main() {
 
       expect(model.onCreateCount, 1);
 
-      handle.bindVef('binder1');
+      handle.bind('binder1');
       expect(model.onAddBinderCount, 1);
-      expect(model.lastVefId, 'binder1');
+      expect(model.lastViewModelBindingId, 'binder1');
 
-      handle.unbindVef('binder1');
+      handle.unbind('binder1');
       expect(model.onRemoveBinderCount, 1);
-      expect(model.lastVefId, 'binder1');
+      expect(model.lastViewModelBindingId, 'binder1');
 
       // removing last binder triggers recycle
       expect(model.onDisposeCount, 1);
@@ -297,9 +297,9 @@ void main() {
     });
 
     test('InstanceArg equality', () {
-      const arg1 = InstanceArg(key: 'k', tag: 't', vefId: 'b');
-      const arg2 = InstanceArg(key: 'k', tag: 't', vefId: 'b');
-      const arg3 = InstanceArg(key: 'k2', tag: 't', vefId: 'b');
+      const arg1 = InstanceArg(key: 'k', tag: 't', bindingId: 'b');
+      const arg2 = InstanceArg(key: 'k', tag: 't', bindingId: 'b');
+      const arg3 = InstanceArg(key: 'k2', tag: 't', bindingId: 'b');
 
       expect(arg1, equals(arg2));
       expect(arg1.hashCode, equals(arg2.hashCode));
@@ -336,8 +336,8 @@ void main() {
     });
 
     test('watch factory creates correct arg', () {
-      final f = InstanceFactory.vef(vefId: 'w1');
-      expect(f.arg.vefId, 'w1');
+      final f = InstanceFactory.binding(bindingId: 'w1');
+      expect(f.arg.bindingId, 'w1');
       expect(f.builder, isNull);
     });
   });

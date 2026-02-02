@@ -29,7 +29,7 @@ import 'package:view_model_annotation/view_model_annotation.dart';
 
 part 'my_view_model.vm.dart';
 
-@GenProvider()
+@GenSpec()
 class MyViewModel extends ViewModel {
   // Your logic here
 }
@@ -42,5 +42,4 @@ dart run build_runner build
 ```
 
 This will generate `my_view_model.vm.dart` containing a
-`myProvider` variable.
-
+`mySpec` variable.

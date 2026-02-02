@@ -50,8 +50,8 @@ class CounterState {
 ```dart
 import 'package:view_model/view_model.dart';
 
-// Define Provider (global singleton)
-final counterProvider = ViewModelProvider<CounterViewModel>(
+// Define Spec (global singleton)
+final counterSpec = ViewModelSpec<CounterViewModel>(
   key: 'counter',  // Use key to share instance
   builder: () => CounterViewModel(),
 );
@@ -86,8 +86,8 @@ class _CounterPageState extends State<CounterPage>
 
   @override
   Widget build(BuildContext context) {
-    // Use vef.watch to listen to ViewModel
-    final counter = vef.watch(counterProvider);
+    // Use viewModelBinding.watch to listen to ViewModel
+    final counter = viewModelBinding.watch(counterSpec);
 
     return Scaffold(
       body: Center(
@@ -133,25 +133,25 @@ void main() {
 
 ## Core Concepts
 
-### Vef - ViewModel Execution Framework
+### ViewModelBinding - ViewModel Execution Framework
 
-Vef provides four core methods to access ViewModels:
+ViewModelBinding provides four core methods to access ViewModels:
 
 | Method | Usage | Effect |
 |--------|-------|--------|
-| `vef.watch(provider)` | In build method | Listen to changes and rebuild widget |
-| `vef.read(provider)` | In event callbacks | Read data without listening |
-| `vef.watchCached({key})` | Access existing instance | Listen to cached ViewModel |
-| `vef.readCached({key})` | Read existing instance | Don't listen to cached ViewModel |
+| `viewModelBinding.watch(provider)` | In build method | Listen to changes and rebuild widget |
+| `viewModelBinding.read(provider)` | In event callbacks | Read data without listening |
+| `viewModelBinding.watchCached({key})` | Access existing instance | Listen to cached ViewModel |
+| `viewModelBinding.readCached({key})` | Read existing instance | Don't listen to cached ViewModel |
 
 ```dart
 // Example: watch vs read
 @override
 Widget build(BuildContext context) {
-  final vm = vef.watch(provider);  // ✅ Use watch in build
+  final vm = viewModelBinding.watch(provider);  // ✅ Use watch in build
   return ElevatedButton(
     onPressed: () {
-      final vm = vef.read(provider);  // ✅ Use read in callbacks
+      final vm = viewModelBinding.read(provider);  // ✅ Use read in callbacks
       vm.doSomething();
     },
     child: Text(vm.state.title),
@@ -166,7 +166,7 @@ Widget build(BuildContext context) {
 Without `key`, each widget has its own instance, auto-disposed when widget unmounts:
 
 ```dart
-final provider = ViewModelProvider<MyViewModel>(
+final provider = ViewModelSpec<MyViewModel>(
   builder: () => MyViewModel(),
   // No key, auto cleanup
 );
@@ -177,7 +177,7 @@ final provider = ViewModelProvider<MyViewModel>(
 With `key`, widgets with same key share one instance, disposed when all widgets unmount:
 
 ```dart
-final userProvider = ViewModelProvider<UserViewModel>(
+final userSpec = ViewModelSpec<UserViewModel>(
   key: 'current-user',  // All widgets with this key share instance
   builder: () => UserViewModel(),
 );
@@ -188,7 +188,7 @@ final userProvider = ViewModelProvider<UserViewModel>(
 With `aliveForever: true`, instance never disposes:
 
 ```dart
-final configProvider = ViewModelProvider<ConfigViewModel>(
+final configSpec = ViewModelSpec<ConfigViewModel>(
   key: 'app-config',
   aliveForever: true,  // Never dispose
   builder: () => ConfigViewModel(),
@@ -219,22 +219,22 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-### Parameterized Providers
+### Parameterized Specs
 
 Create and reuse instances based on parameters:
 
 ```dart
 // Define provider with parameter
-final userProvider = ViewModelProvider.arg<UserViewModel, int>(
+final userSpec = ViewModelSpec.arg<UserViewModel, int>(
   builder: (userId) => UserViewModel(userId),
   key: (userId) => 'user_$userId',  // Different params use different keys
 );
 
 // Usage
 Widget build(BuildContext context) {
-  final user1 = vef.watch(userProvider(42));   // Create user_42
-  final user2 = vef.watch(userProvider(100));  // Create user_100
-  final user3 = vef.watch(userProvider(42));   // Reuse user_42
+  final user1 = viewModelBinding.watch(userSpec(42));   // Create user_42
+  final user2 = viewModelBinding.watch(userSpec(100));  // Create user_100
+  final user3 = viewModelBinding.watch(userSpec(42));   // Reuse user_42
 }
 ```
 
@@ -245,11 +245,15 @@ Supports 1-4 parameters: `arg`, `arg2`, `arg3`, `arg4`
 ViewModels can directly access other ViewModels:
 
 ```dart
+final authSpec = ViewModelSpec<AuthViewModel>(
+  builder: () => AuthViewModel(),
+);
+
 class UserProfileViewModel extends StateViewModel<UserState> {
 
   void loadProfile() {
     // Read auth ViewModel
-    final auth = vef.read(authProvider);
+    final auth = viewModelBinding.read(authSpec);
 
     if (auth.isLoggedIn) {
       // Load user data...
@@ -261,7 +265,7 @@ class UserProfileViewModel extends StateViewModel<UserState> {
   void onCreate(InstanceArg arg) {
     super.onCreate(arg);
 
-    listenState(authProvider, (previous, next) {
+    listenState(authSpec, (previous, next) {
       if (next.isLoggedOut) {
         // Clear user data
         setState(const UserState());
@@ -342,7 +346,7 @@ class MyViewModel extends StateViewModel<MyState> {
 
 ## Code Generation
 
-Use `@GenProvider` annotation to auto-generate providers:
+Use `@GenProvider` annotation to auto-generate specs:
 
 ### 1. Add Dependencies
 
@@ -386,7 +390,7 @@ Generated code:
 
 ```dart
 // user_view_model.vm.dart
-final userProvider = ViewModelProvider.arg<UserViewModel, int>(
+final userSpec = ViewModelSpec.arg<UserViewModel, int>(
   builder: (userId) => UserViewModel(userId),
   key: (userId) => 'user_$userId',
 );
@@ -399,15 +403,23 @@ final userProvider = ViewModelProvider.arg<UserViewModel, int>(
 Not limited to widgets, any Dart class can use it:
 
 ```dart
-class StartupTask with Vef {
+class StartupTask with ViewModelBinding {
   Future<void> run() async {
-    final config = vef.read(configProvider);
+    final config = read(configSpec);
     await config.initialize();
 
-    final auth = vef.read(authProvider);
+    final auth = read(authSpec);
     await auth.checkLogin();
   }
 }
+
+final configSpec = ViewModelSpec<ConfigViewModel>(
+  builder: () => ConfigViewModel(),
+);
+
+final authSpec = ViewModelSpec<AuthViewModel>(
+  builder: () => AuthViewModel(),
+);
 
 // Use in main
 void main() {
@@ -424,12 +436,12 @@ class UserRepository with ViewModel {
 
   Future<User> fetchUser(int id) async {
     // Can access other ViewModels
-    final token = vef.read(authProvider).token;
+    final token = read(authSpec).token;
     return await api.getUser(id, token);
   }
 }
 
-final userRepoProvider = ViewModelProvider<UserRepository>(
+final userRepoSpec = ViewModelSpec<UserRepository>(
   builder: () => UserRepository(),
 );
 ```

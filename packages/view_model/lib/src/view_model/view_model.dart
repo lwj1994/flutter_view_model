@@ -7,7 +7,7 @@
 /// - [ViewModel]: Base mixin for stateless ViewModels
 /// - [StateViewModel]: Abstract class for stateful ViewModels
 /// - [ViewModelFactory]: Factory interface for creating ViewModels
-/// - [ViewModelProvider]: Default implementation of ViewModelFactory
+/// - [ViewModelSpec]: Default implementation of ViewModelFactory
 /// - [ViewModelLifecycle]: Interface for ViewModel lifecycle callbacks
 ///
 /// The ViewModel system provides automatic lifecycle management,
@@ -27,9 +27,9 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
-import 'package:view_model/src/view_model/vef.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart';
 
-import 'vef_zone.dart';
+import 'package:view_model/src/view_model/binding_zone.dart';
 import 'state_store.dart';
 
 /// A ViewModel implementation that extends Flutter's [ChangeNotifier].
@@ -80,12 +80,12 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {}
 /// }
 /// ```
 mixin class ViewModel implements InstanceLifeCycle, Listenable {
-  /// Returns the [Vef] interface for accessing other ViewModels.
+  /// Returns the [ViewModelBinding] interface for accessing other ViewModels.
   ///
-  /// This property allows you to use `vef.watch` and `vef.read` syntax,
-  /// consistent with the "Universal Vef" pattern.
+  /// This property allows you to use `viewModelBinding.watch` and `viewModelBinding.read` syntax,
+  /// consistent with the "Universal Binding" pattern.
   @protected
-  VefInterface get vef => refHandler.vef;
+  ViewModelBindingInterface get viewModelBinding => refHandler.binding;
 
   late InstanceArg _instanceArg;
   static final RouteObserver<PageRoute> routeObserver =
@@ -167,8 +167,8 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   /// not create new instances.
   ///
   /// Parameters:
-  /// - [key]: The unique key from [ViewModelFactory.key].
-  /// - [tag]: The tag from [ViewModelFactory.tag].
+  /// - [key]: The unique key from [ViewModelFactoryBase.key].
+  /// - [tag]: The tag from [ViewModelFactoryBase.tag].
   ///
   /// Returns the matching ViewModel instance.
   ///
@@ -272,7 +272,7 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   /// This encapsulates all dependency-related logic and
   /// provides a clean separation of concerns.
   @internal
-  final VefHandler refHandler = VefHandler();
+  final ViewModelBindingHandler refHandler = ViewModelBindingHandler();
 
   /// Called when a dependency ViewModel notifies changes.
   ///
@@ -454,18 +454,18 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   @protected
   @mustCallSuper
   @override
-  void onBindVef(InstanceArg arg, String newWatchId) {
+  void onBind(InstanceArg arg, String bindingId) {
     for (final element in _viewModelLifecycles) {
-      element.onBind(this, arg, newWatchId);
+      element.onBind(this, arg, bindingId);
     }
   }
 
   @protected
   @mustCallSuper
   @override
-  void onUnbindVef(InstanceArg arg, String vefId) {
+  void onUnbind(InstanceArg arg, String bindingId) {
     for (final element in _viewModelLifecycles) {
-      element.onUnbind(this, arg, vefId);
+      element.onUnbind(this, arg, bindingId);
     }
   }
 
@@ -774,7 +774,7 @@ class AutoDisposeController {
 ///
 /// Example:
 /// ```dart
-/// class MyViewModelFactory with ViewModelFactory<MyViewModel> {
+/// class MyViewModelFactory with ViewModelFactoryBase<MyViewModel> {
 ///   @override
 ///   MyViewModel build() => MyViewModel();
 ///
@@ -897,16 +897,16 @@ abstract class ViewModelLifecycle {
   /// Parameters:
   /// - [viewModel]: The ViewModel being watched
   /// - [arg]: Instance arguments
-  /// - [vefId]: Unique identifier for the new watcher
-  void onBind(ViewModel viewModel, InstanceArg arg, String vefId) {}
+  /// - [bindingId]: Unique identifier for the new watcher
+  void onBind(ViewModel viewModel, InstanceArg arg, String bindingId) {}
 
   /// Called when a watcher is removed from a ViewModel.
   ///
   /// Parameters:
   /// - [viewModel]: The ViewModel being unwatched
   /// - [arg]: Instance arguments
-  /// - [vefId]: Unique identifier for the removed watcher
-  void onUnbind(ViewModel viewModel, InstanceArg arg, String vefId) {}
+  /// - [bindingId]: Unique identifier for the removed watcher
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String bindingId) {}
 
   /// Called when a ViewModel is disposed.
   ///

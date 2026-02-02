@@ -14,9 +14,9 @@ class SimpleStateVM extends StateViewModel<SimpleState> {
   SimpleStateVM({required SimpleState initial}) : super(state: initial);
 }
 
-class TestRef with Vef {}
+class TestRef with ViewModelBinding {}
 
-class TestRefWithCounter with Vef {
+class TestRefWithCounter with ViewModelBinding {
   int updates = 0;
   @override
   void onUpdate() {
@@ -28,7 +28,7 @@ class TestRefWithCounter with Vef {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('Vef core API (pure Dart)', () {
+  group('ViewModelBinding core API (pure Dart)', () {
     test('maybeWatchCached returns null when not found', () {
       final ref = TestRef();
       final vm = ref.maybeWatchCached<SimpleVM>(key: 'missing');
@@ -38,7 +38,7 @@ void main() {
 
     test('watchCached/maybeWatchCached by key returns same instance', () async {
       final ref = TestRef();
-      final provider = ViewModelProvider<SimpleVM>(
+      final provider = ViewModelSpec<SimpleVM>(
         builder: () => SimpleVM(),
         key: 'kv-1',
       );
@@ -53,7 +53,7 @@ void main() {
 
     test('readCached by tag returns same instance', () async {
       final ref = TestRef();
-      final provider = ViewModelProvider<SimpleVM>(
+      final provider = ViewModelSpec<SimpleVM>(
         builder: () => SimpleVM(),
         tag: 'tg-1',
       );
@@ -80,7 +80,7 @@ void main() {
       ref.dispose();
       expect(
         () => ref.watch<SimpleVM>(
-          ViewModelProvider(builder: () => SimpleVM()),
+          ViewModelSpec(builder: () => SimpleVM()),
         ),
         throwsA(isA<Error>()),
       );
@@ -89,14 +89,14 @@ void main() {
     test('listen/listenState/listenStateSelect callbacks fire', () async {
       final ref = TestRef();
       int listens = 0;
-      final provider = ViewModelProvider(builder: () => SimpleVM());
+      final provider = ViewModelSpec(builder: () => SimpleVM());
       ref.listen<SimpleVM>(provider, onChanged: () => listens++);
       final vm = ref.watch<SimpleVM>(provider);
       vm.notifyListeners();
       expect(listens, 1);
 
       int stateListens = 0;
-      final stateProvider = ViewModelProvider(
+      final stateProvider = ViewModelSpec(
         builder: () => SimpleStateVM(initial: const SimpleState(0)),
       );
       final svm = ref.watch<SimpleStateVM>(stateProvider);
@@ -119,10 +119,10 @@ void main() {
     });
   });
 
-  group('Vef pause/resume missed updates', () {
+  group('ViewModelBinding pause/resume missed updates', () {
     test('updates queued while paused, flushed on resume', () async {
       final ref = TestRefWithCounter();
-      final provider = ViewModelProvider(builder: () => SimpleVM());
+      final provider = ViewModelSpec(builder: () => SimpleVM());
       final vm = ref.watch<SimpleVM>(provider);
       ref.updates = 0;
 
@@ -143,10 +143,10 @@ void main() {
     });
   });
 
-  group('Vef recycle creates fresh instance', () {
+  group('ViewModelBinding recycle creates fresh instance', () {
     test('recycle then watch returns new instance', () {
       final ref = TestRef();
-      final fac = ViewModelProvider<SimpleVM>(builder: () => SimpleVM());
+      final fac = ViewModelSpec<SimpleVM>(builder: () => SimpleVM());
       final a = ref.watch(fac);
       ref.recycle(a);
       final b = ref.watch(fac);
@@ -155,7 +155,7 @@ void main() {
     });
   });
 
-  group('Vef extras', () {
+  group('ViewModelBinding extras', () {
     test('getName returns non-empty debug id', () {
       final ref = TestRef();
       expect(ref.getName(), isNotEmpty);
@@ -181,25 +181,25 @@ void main() {
     test('reading with non-specific VM type throws', () {
       final ref = TestRef();
       expect(
-        () => ref.read<ViewModel>(ViewModelProvider(builder: () => SimpleVM())),
+        () => ref.read<ViewModel>(ViewModelSpec(builder: () => SimpleVM())),
         throwsA(isA<Error>()),
       );
       ref.dispose();
     });
   });
 
-  group('Vef tag operations', () {
+  group('ViewModelBinding tag operations', () {
     test('watchCachesByTag returns all instances and listens', () {
       final ref = TestRefWithCounter();
       const tag = 'group-1';
 
       // Create instances
-      final vm1 = ref.watch(ViewModelProvider(
+      final vm1 = ref.watch(ViewModelSpec(
         builder: () => SimpleVM(),
         tag: tag,
         key: 'k1',
       ));
-      final vm2 = ref.watch(ViewModelProvider(
+      final vm2 = ref.watch(ViewModelSpec(
         builder: () => SimpleVM(),
         tag: tag,
         key: 'k2',
@@ -229,12 +229,12 @@ void main() {
       const tag = 'group-2';
 
       // Create instances
-      final vm1 = ref.read(ViewModelProvider(
+      final vm1 = ref.read(ViewModelSpec(
         builder: () => SimpleVM(),
         tag: tag,
         key: 'k3',
       ));
-      final vm2 = ref.read(ViewModelProvider(
+      final vm2 = ref.read(ViewModelSpec(
         builder: () => SimpleVM(),
         tag: tag,
         key: 'k4',

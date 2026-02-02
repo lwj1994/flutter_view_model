@@ -1,15 +1,8 @@
-/// Automatic disposal controller for ViewModel instances.
-///
-/// This file provides automatic lifecycle management for ViewModel instances,
-/// ensuring proper cleanup when widgets are disposed. The controller tracks
-/// instance usage and automatically removes watchers when no longer needed.
-///
-/// @author luwenjie on 2025/3/25 16:24:32
 library;
 
 import 'package:flutter/foundation.dart';
-import 'package:view_model/src/view_model/vef.dart';
 import 'package:view_model/src/view_model/state_store.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 import 'manager.dart';
@@ -61,7 +54,7 @@ class AutoDisposeInstanceController {
   /// Prevents duplicate listener registration for the same instance handle.
   final Map<Object, VoidCallback> _notifierListeners = {};
 
-  final Vef vef;
+  final ViewModelBinding viewModelBinding;
 
   /// Creates a new auto-dispose instance controller.
   ///
@@ -70,7 +63,7 @@ class AutoDisposeInstanceController {
   /// - [binderName]: Descriptive name for this watcher context
   AutoDisposeInstanceController({
     required this.onRecreate,
-    required this.vef,
+    required this.viewModelBinding,
   });
 
   /// Gets a ViewModel instance with automatic lifecycle management.
@@ -96,6 +89,8 @@ class AutoDisposeInstanceController {
   ///   factory: InstanceFactory<MyViewModel>(
   ///     arg: InstanceArg(key: 'custom'),
   ///   ),
+  ///   // ignore: deprecated_member_use
+  ///   viewModelBinding: viewModelBinding,
   /// );
   /// ```
   T getInstance<T>({
@@ -107,7 +102,7 @@ class AutoDisposeInstanceController {
     factory = (factory ?? InstanceFactory<T>());
     factory = factory.copyWith(
       arg: factory.arg.copyWith(
-        vefId: vef.id,
+        bindingId: viewModelBinding.id,
       ),
     );
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
@@ -153,8 +148,8 @@ class AutoDisposeInstanceController {
           _notifierListeners[notifier] = listener;
           notifier.addListener(listener);
         }
-        // bind vef
-        notifier.bindVef(vef.id);
+        // bind viewModelBinding
+        notifier.bind(viewModelBinding.id);
       }
       result.add(notifier.instance);
     }
@@ -205,7 +200,7 @@ class AutoDisposeInstanceController {
   void unbindInstance(Object instance) {
     for (final e in _instanceNotifiers) {
       if (e.instance == instance) {
-        e.unbindVef(vef.id);
+        e.unbind(viewModelBinding.id);
         break;
       }
     }
@@ -230,9 +225,9 @@ class AutoDisposeInstanceController {
   void dispose() {
     for (final e in _instanceNotifiers) {
       if (!e.isDisposed && e.instance is ViewModel) {
-        (e.instance as ViewModel).refHandler.removeRef(vef);
+        (e.instance as ViewModel).refHandler.removeRef(viewModelBinding);
       }
-      e.unbindVef(vef.id);
+      e.unbind(viewModelBinding.id);
       if (_notifierListeners.containsKey(e)) {
         e.removeListener(_notifierListeners[e]!);
       }

@@ -19,9 +19,9 @@ class CounterViewModel extends StateViewModel<int> {
 enum TestTag { primary, secondary }
 
 void main() {
-  group('ViewModelProvider', () {
+  group('ViewModelSpec', () {
     test('should create factory with required builder', () {
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
       );
 
@@ -32,7 +32,7 @@ void main() {
     });
 
     test('should build ViewModel instance correctly', () {
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test_name'),
       );
 
@@ -43,7 +43,7 @@ void main() {
 
     test('should handle custom key correctly', () {
       const customKey = 'my_custom_key';
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         key: customKey,
       );
@@ -52,7 +52,7 @@ void main() {
     });
 
     test('should handle null key correctly', () {
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         key: null,
       );
@@ -62,7 +62,7 @@ void main() {
     });
 
     test('should handle singleton mode correctly', () {
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         isSingleton: true,
       );
@@ -73,7 +73,7 @@ void main() {
 
     test('should prioritize custom key over singleton default key', () {
       const customKey = 'priority_key';
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         key: customKey,
         isSingleton: true,
@@ -86,7 +86,7 @@ void main() {
 
     test('should handle custom tag correctly', () {
       const customTag = 'my_tag';
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         tag: customTag,
       );
@@ -96,7 +96,7 @@ void main() {
 
     test('should handle object tag correctly', () {
       final customTag = {'type': 'test', 'id': 123};
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         tag: customTag,
       );
@@ -105,7 +105,7 @@ void main() {
     });
 
     test('should handle null tag correctly', () {
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         tag: null,
       );
@@ -114,7 +114,7 @@ void main() {
     });
 
     test('should work with StateViewModel', () {
-      final factory = ViewModelProvider<CounterViewModel>(
+      final factory = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
       );
 
@@ -129,7 +129,7 @@ void main() {
     test('should handle all parameters together', () {
       const customKey = 'full_test_key';
       const customTag = 'full_test_tag';
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('full_test'),
         key: customKey,
         tag: customTag,
@@ -145,7 +145,7 @@ void main() {
     });
 
     test('should create different instances when not singleton', () {
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('instance'),
         isSingleton: false,
       );
@@ -159,7 +159,7 @@ void main() {
 
     test('should handle complex builder logic', () {
       int counter = 0;
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () {
           counter++;
           return TestViewModel('instance_$counter');
@@ -175,7 +175,7 @@ void main() {
     });
 
     test('should handle enum tag', () {
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         tag: TestTag.primary,
       );
@@ -187,7 +187,7 @@ void main() {
       const originalKey = 'original_key';
       const originalTag = 'original_tag';
 
-      final factory = ViewModelProvider<TestViewModel>(
+      final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('test'),
         key: originalKey,
         tag: originalTag,

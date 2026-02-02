@@ -32,8 +32,8 @@ class DisposableViewModelFactory with ViewModelFactory<DisposableViewModel> {
   DisposableViewModel build() => DisposableViewModel();
 }
 
-// 3. Define a TestBinder that mixes in Vef
-class TestBinder with Vef {
+// 3. Define a TestBinder that mixes in ViewModelBinding
+class TestBinder with ViewModelBinding {
   int updateCount = 0;
 
   @override
@@ -44,10 +44,10 @@ class TestBinder with Vef {
 }
 
 void main() {
-  group('Vef Tests', () {
-    test('Vef can create and watch ViewModel', () async {
+  group('ViewModelBinding Tests', () {
+    test('ViewModelBinding can create and watch ViewModel', () async {
       final binder = TestBinder();
-      final vm = binder.vef.watch(TestViewModelFactory());
+      final vm = binder.viewModelBinding.watch(TestViewModelFactory());
 
       expect(vm, isA<TestViewModel>());
       expect(vm.count, 0);
@@ -65,9 +65,9 @@ void main() {
       binder.dispose();
     });
 
-    test('Vef disposes ViewModel when disposed', () {
+    test('ViewModelBinding disposes ViewModel when disposed', () {
       final binder = TestBinder();
-      final vm = binder.vef.watch(DisposableViewModelFactory());
+      final vm = binder.viewModelBinding.watch(DisposableViewModelFactory());
 
       expect(vm.isDisposed, false);
 
@@ -82,13 +82,13 @@ void main() {
       final binder2 = TestBinder();
 
       // Use a key to share instance
-      final factory = ViewModelProvider<DisposableViewModel>(
+      final factory = ViewModelSpec<DisposableViewModel>(
         builder: () => DisposableViewModel(),
         key: 'shared_vm',
       );
 
-      final vm1 = binder1.vef.watch(factory);
-      final vm2 = binder2.vef.watch(factory);
+      final vm1 = binder1.viewModelBinding.watch(factory);
+      final vm2 = binder2.viewModelBinding.watch(factory);
 
       expect(vm1, equals(vm2));
 
@@ -103,9 +103,9 @@ void main() {
       expect(vm1.isDisposed, true);
     });
 
-    test('Vef can read ViewModel without listening', () {
+    test('ViewModelBinding can read ViewModel without listening', () {
       final binder = TestBinder();
-      final vm = binder.vef.read(TestViewModelFactory());
+      final vm = binder.viewModelBinding.read(TestViewModelFactory());
 
       expect(vm.count, 0);
 
@@ -119,29 +119,29 @@ void main() {
       binder.dispose();
     });
 
-    test('Vef recycleViewModel forces recreation', () {
+    test('ViewModelBinding recycleViewModel forces recreation', () {
       final binder = TestBinder();
       final factory = TestViewModelFactory();
 
-      final vm1 = binder.vef.watch(factory);
+      final vm1 = binder.viewModelBinding.watch(factory);
       vm1.increment();
       expect(vm1.count, 1);
 
       // Recycle
-      binder.vef.recycle(vm1);
+      binder.viewModelBinding.recycle(vm1);
 
       // onUpdate should be called during recycle (to refresh host)
       expect(binder.updateCount, 1);
 
       // Watch again, should get a new instance
-      final vm2 = binder.vef.watch(factory);
+      final vm2 = binder.viewModelBinding.watch(factory);
       expect(vm2, isNot(equals(vm1)));
       expect(vm2.count, 0); // New instance state
 
       binder.dispose();
     });
 
-    test('Vef init and dispose lifecycle', () {
+    test('ViewModelBinding init and dispose lifecycle', () {
       final binder = TestBinder();
       binder.init(); // Should not throw
       expect(binder.isDisposed, false);
@@ -151,7 +151,7 @@ void main() {
 
       // Creating VM after dispose should throw
       expect(
-        () => binder.vef.watch(TestViewModelFactory()),
+        () => binder.viewModelBinding.watch(TestViewModelFactory()),
         throwsA(isA<ViewModelError>()),
       );
     });

@@ -10,16 +10,16 @@ library;
 import 'dart:async';
 
 import 'package:meta/meta.dart' show internal;
-import 'package:view_model/src/view_model/vef.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart';
 
 import 'state_store.dart';
 
-const _vefKey = #view_model_vef;
+const _bindingKey = #view_model_binding;
 
-/// Runs the given [body] in a zone with the provided [vef..
-/// This makes the ref available for dependency resolution.
-R runWithVef<R>(R Function() body, Vef vef) {
-  return runZoned(body, zoneValues: {_vefKey: vef});
+/// Runs the given [body] in a zone with the provided [binding].
+/// This makes the binding available for dependency resolution.
+R runWithBinding<R>(R Function() body, ViewModelBinding binding) {
+  return runZoned(body, zoneValues: {_bindingKey: binding});
 }
 
 /// Handler class responsible for managing ViewModel dependencies.
@@ -40,16 +40,17 @@ R runWithVef<R>(R Function() body, Vef vef) {
 ///     final userService = _dependencyHandler.readViewModel<UserService>();
 ///   }
 /// }
-/// ```@internal
-class VefHandler {
+/// ```
+@internal
+class ViewModelBindingHandler {
   /// Callback function to resolve ViewModel dependencies.
   /// This is typically set by ViewModelStateMixin to delegate
   /// dependency resolution
   /// to the State that manages the ViewModel.
   @internal
-  final List<Vef> dependencyVefs = [];
+  final List<ViewModelBinding> dependencyBindings = [];
 
-  VefHandler();
+  ViewModelBindingHandler();
 
   /// Sets the dependency resolver callback.
   ///
@@ -62,18 +63,18 @@ class VefHandler {
   /// - [resolver]: Function that resolves dependencies with listen parameter
   @internal
   void addRef(
-    Vef ref,
+    ViewModelBinding ref,
   ) {
-    if (!dependencyVefs.contains(ref)) {
-      dependencyVefs.add(ref);
+    if (!dependencyBindings.contains(ref)) {
+      dependencyBindings.add(ref);
     }
   }
 
   @internal
   void removeRef(
-    Vef ref,
+    ViewModelBinding ref,
   ) {
-    dependencyVefs.remove(ref);
+    dependencyBindings.remove(ref);
   }
 
   /// Clears the dependency resolver callback and all stored dependencies.
@@ -81,16 +82,19 @@ class VefHandler {
   /// This should be called when the ViewModel is no longer managed by a State
   /// to prevent memory leaks and ensure clean disposal.
   void dispose() {
-    dependencyVefs.clear();
+    dependencyBindings.clear();
   }
 
-  Vef get vef {
-    final r = (dependencyVefs.firstOrNull ?? (Zone.current[_vefKey] as Vef?));
+  ViewModelBinding get binding {
+    final r = (dependencyBindings.firstOrNull ??
+        (Zone.current[_bindingKey] as ViewModelBinding?));
     if (r == null) {
       throw ViewModelError(
-        'No ref available. ViewModel must be used within a Vef context',
+        'No binding available. ViewModel must be used within a ViewModelBinding context',
       );
     }
     return r;
   }
+  
+
 }

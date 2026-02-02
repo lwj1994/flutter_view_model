@@ -20,9 +20,9 @@ class TestStateViewModel extends StateViewModel<int> {
   void increment() => setState(state + 1);
 }
 
-// Widget for StateVefExtension
+// Widget for StateViewModelBindingExtension
 class TestStateMixinWidget<T extends ViewModel> extends StatefulWidget {
-  final ViewModelProvider<T> provider;
+  final ViewModelSpec<T> provider;
   final Function(T vm)? onViewModel;
   final Function(_TestStateMixinWidgetState<T> state)? onState;
 
@@ -58,10 +58,10 @@ class _TestStateMixinWidgetState<T extends ViewModel>
   }
 }
 
-// Widget for StatelessWidgetVefExtension
+// Widget for StatelessWidgetViewModelBindingExtension
 class TestStatelessMixinWidget<T extends ViewModel> extends StatelessWidget
     with ViewModelStatelessMixin {
-  final ViewModelProvider<T> provider;
+  final ViewModelSpec<T> provider;
   final Function(T vm)? onViewModel;
   final Function(TestStatelessMixinWidget<T> widget)? onWidget;
 
@@ -82,16 +82,16 @@ class TestStatelessMixinWidget<T extends ViewModel> extends StatelessWidget
   }
 }
 
-// ViewModel for ViewModelVefExtension
+// ViewModel for ViewModelViewModelBindingExtension
 class ParentViewModel extends ViewModel {
   late TestViewModel childVM;
 
-  void init(ViewModelProvider<TestViewModel> provider) {
+  void init(ViewModelSpec<TestViewModel> provider) {
     // Test watchViewModel extension (although unusual for VM to watch, it registers dependency)
     childVM = watchViewModel(factory: provider);
   }
 
-  TestViewModel readChild(ViewModelProvider<TestViewModel> provider) {
+  TestViewModel readChild(ViewModelSpec<TestViewModel> provider) {
     // Test readViewModel extension
     return readViewModel(factory: provider);
   }
@@ -110,10 +110,10 @@ class ParentViewModel extends ViewModel {
 }
 
 void main() {
-  group('Vef Extensions Coverage', () {
-    // 1. Test StateVefExtension
-    testWidgets('StateVefExtension methods work correctly', (tester) async {
-      final provider = ViewModelProvider(builder: () => TestViewModel());
+  group('ViewModelBinding Extensions Coverage', () {
+    // 1. Test StateViewModelBindingExtension
+    testWidgets('StateViewModelBindingExtension methods work correctly', (tester) async {
+      final provider = ViewModelSpec(builder: () => TestViewModel());
       TestViewModel? capturedVM;
 
       await tester.pumpWidget(MaterialApp(
@@ -147,7 +147,7 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('StateVefExtension cached methods', (tester) async {
+    testWidgets('StateViewModelBindingExtension cached methods', (tester) async {
       // Pre-populate a cached ViewModel
       final vm = TestViewModel();
       const key = 'cached_key';
@@ -172,9 +172,9 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    // 2. Test StatelessWidgetVefExtension
-    testWidgets('StatelessWidgetVefExtension watch works', (tester) async {
-      final provider = ViewModelProvider(builder: () => TestViewModel());
+    // 2. Test StatelessWidgetViewModelBindingExtension
+    testWidgets('StatelessWidgetViewModelBindingExtension watch works', (tester) async {
+      final provider = ViewModelSpec(builder: () => TestViewModel());
       TestViewModel? capturedVM;
 
       await tester.pumpWidget(MaterialApp(
@@ -192,9 +192,9 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('StatelessWidgetVefExtension read and cache works',
+    testWidgets('StatelessWidgetViewModelBindingExtension read and cache works',
         (tester) async {
-      final keyedProvider = ViewModelProvider(
+      final keyedProvider = ViewModelSpec(
           builder: () => TestViewModel(), key: 'stateless_read_key');
       TestViewModel? capturedVM;
 
@@ -223,7 +223,7 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    testWidgets('StatelessWidgetVefExtension cached methods', (tester) async {
+    testWidgets('StatelessWidgetViewModelBindingExtension cached methods', (tester) async {
       final vm = TestViewModel();
       const key = 'cached_stateless_key';
 
@@ -245,11 +245,11 @@ void main() {
       expect(find.text('1'), findsOneWidget);
     });
 
-    // 3. Test ViewModelVefExtension
-    testWidgets('ViewModelVefExtension methods work correctly', (tester) async {
-      final childProvider = ViewModelProvider(builder: () => TestViewModel());
+    // 3. Test ViewModelViewModelBindingExtension
+    testWidgets('ViewModelViewModelBindingExtension methods work correctly', (tester) async {
+      final childProvider = ViewModelSpec(builder: () => TestViewModel());
       final parentProvider =
-          ViewModelProvider(builder: () => ParentViewModel());
+          ViewModelSpec(builder: () => ParentViewModel());
 
       ParentViewModel? capturedParent;
 
@@ -275,7 +275,7 @@ void main() {
       // Test maybeReadCachedViewModel
       const key = 'vm_extension_key_2';
       final keyedProvider =
-          ViewModelProvider(builder: () => TestViewModel(), key: key);
+          ViewModelSpec(builder: () => TestViewModel(), key: key);
 
       // We need to create the keyed VM first.
       // Since we are inside a widget context, we can use capturedParent to watch/create it.
@@ -313,9 +313,9 @@ void main() {
     });
 
     testWidgets('Extensions listen and recycle coverage', (tester) async {
-      final provider = ViewModelProvider(
+      final provider = ViewModelSpec(
           builder: () => TestViewModel(), key: 'listen_test_vm');
-      final stateProvider = ViewModelProvider(
+      final stateProvider = ViewModelSpec(
           builder: () => TestStateViewModel(0), key: 'listen_test_state_vm');
 
       int stateListenCount = 0;
@@ -383,11 +383,11 @@ void main() {
     });
 
     testWidgets('Additional extension coverage', (tester) async {
-      final provider = ViewModelProvider(builder: () => TestViewModel());
+      final provider = ViewModelSpec(builder: () => TestViewModel());
       final stateProvider =
-          ViewModelProvider(builder: () => TestStateViewModel(0));
+          ViewModelSpec(builder: () => TestStateViewModel(0));
 
-      // 1. StateVefExtension: listenViewModel, recycleViewModel
+      // 1. StateViewModelBindingExtension: listenViewModel, recycleViewModel
       await tester.pumpWidget(MaterialApp(
         home: TestStateMixinWidget<TestViewModel>(
           provider: provider,
@@ -400,7 +400,7 @@ void main() {
       ));
       await tester.pump();
 
-      // 2. StatelessWidgetVefExtension: listenViewModelState, listenViewModelStateSelect, recycleViewModel
+      // 2. StatelessWidgetViewModelBindingExtension: listenViewModelState, listenViewModelStateSelect, recycleViewModel
       await tester.pumpWidget(MaterialApp(
         home: TestStatelessMixinWidget<TestViewModel>(
           provider: provider,
@@ -421,9 +421,9 @@ void main() {
       ));
       await tester.pump();
 
-      // 3. ViewModelVefExtension: listenViewModel, listenViewModelState, listenViewModelStateSelect
+      // 3. ViewModelViewModelBindingExtension: listenViewModel, listenViewModelState, listenViewModelStateSelect
       final parentProvider =
-          ViewModelProvider(builder: () => ParentViewModel());
+          ViewModelSpec(builder: () => ParentViewModel());
 
       await tester.pumpWidget(MaterialApp(
         home: TestStateMixinWidget<ParentViewModel>(

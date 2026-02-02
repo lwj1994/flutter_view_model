@@ -4,11 +4,11 @@
 
 ## 😫 痛点
 
-用 `view_model` 时，每次都要手动定义全局 `ViewModelProvider`，是不是觉得有点枯燥？
+用 `view_model` 时，每次都要手动定义全局 `ViewModelSpec`，是不是觉得有点枯燥？
 
 ```dart
 // 没用生成器 :(
-final myProvider = ViewModelProvider<MyViewModel>(
+final mySpec = ViewModelSpec<MyViewModel>(
   builder: () => MyViewModel(),
 );
 ```
@@ -53,12 +53,12 @@ class MyViewModel extends ViewModel {
 这就生成了 `my_view_model.vm.dart`：
 
 ```dart
-final myProvider = ViewModelProvider<MyViewModel>(
+final mySpec = ViewModelSpec<MyViewModel>(
   builder: () => MyViewModel(),
 );
 ```
 
-生成的 Provider 名字永远是 **小驼峰类名** + `Provider`（例如 `UserViewModel` -> `userProvider`）。
+生成的 Spec 名字永远是 **小驼峰类名** + `Spec`（例如 `UserViewModel` -> `userSpec`）。
 
 ### 2. 处理参数 (依赖注入) 💉
 
@@ -78,17 +78,17 @@ class UserViewModel extends ViewModel {
 **在 UI 中使用：**
 
 ```dart
-// 1. 传参给 provider 获取 factory
-final factory = userProvider(123, repository);
+// 1. 传参给 spec 获取 factory
+final factory = userSpec(123, repository);
 
 // 2. Watch 它
-final vm = vef.watch(factory);
+final vm = viewModelBinding.watch(factory);
 ```
 
 或者一步到位：
 
 ```dart
-final vm = vef.watch(userProvider(123, repository));
+final vm = viewModelBinding.watch(userSpec(123, repository));
 ```
 
 *注意：最多支持 4 个必填参数哦！*
@@ -104,7 +104,7 @@ class AuthViewModel extends ViewModel {}
 
 ### 4. 自定义 Key 和 Tag 🏷️
 
-你可以自定义 provider 的 `key` 和 `tag`，调试日志里看它更清晰！
+你可以自定义 spec 的 `key` 和 `tag`，调试日志里看它更清晰！
 
 ```dart
 @GenProvider(key: 'special_vm', tag: 'v1')
@@ -135,7 +135,7 @@ class SettingsViewModel extends ViewModel {
   SettingsViewModel({this.isDark = false});
 
   // 生成器会优先用这个 factory！
-  // 这样你就能把 'isDark' 变成 provider 的必填参数，或者做点别的逻辑
+  // 这样你就能把 'isDark' 变成 spec 的必填参数，或者做点别的逻辑
   factory SettingsViewModel.provider({required bool isDark}) => 
       SettingsViewModel(isDark: isDark);
 }
@@ -145,7 +145,7 @@ class SettingsViewModel extends ViewModel {
 
 | 特性 | 注解 |
 | :--- | :--- |
-| **基础 Provider** | `@genProvider` |
+| **基础 Spec** | `@genProvider` |
 | **参数** | (自动检测构造函数) |
 | **Keep Alive** | `@GenProvider(aliveForever: true)` |
 | **自定义 Key** | `@GenProvider(key: ...)` |

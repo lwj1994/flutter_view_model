@@ -29,8 +29,8 @@ class _TestPageState extends State<TestPage>
   @override
   void initState() {
     super.initState();
-    // vef.watch will internally trigger the binder name generation.
-    viewModel = vef.watch<TestViewModel>(TestViewModelFactory());
+    // viewModelBinding.watch will internally trigger the binder name generation.
+    viewModel = viewModelBinding.watch<TestViewModel>(TestViewModelFactory());
   }
 
   @override
@@ -48,7 +48,7 @@ class StatelessTestPage extends StatelessWidget with ViewModelStatelessMixin {
   @override
   Widget build(BuildContext context) {
     // Watch a ViewModel to exercise attacher in stateless mixin.
-    final vm = vef.watch<TestViewModel>(
+    final vm = viewModelBinding.watch<TestViewModel>(
       TestViewModelFactory(),
     );
     return const Placeholder();
@@ -66,8 +66,8 @@ class _TestPageState2 extends _BasePageState<TestPage2> {
   @override
   void initState() {
     super.initState();
-    // vef.watch will internally trigger the binder name generation.
-    viewModel = vef.watch<TestViewModel>(TestViewModelFactory());
+    // viewModelBinding.watch will internally trigger the binder name generation.
+    viewModel = viewModelBinding.watch<TestViewModel>(TestViewModelFactory());
   }
 
   @override
@@ -96,7 +96,7 @@ void main() {
     // Act: Find the state to access the result.
     final state = tester.state(find.byType(TestPage)) as _TestPageState;
 
-    final name = state.vef.getName();
+    final name = state.viewModelBinding.getName();
     print(name);
 
     // Assert: Check if the binder name correctly identifies the state class and file.
@@ -113,7 +113,7 @@ void main() {
 
     // Act: Find the state to access the result.
     final state = tester.state(find.byType(TestPage2)) as _TestPageState2;
-    final name = state.vef.getName();
+    final name = state.viewModelBinding.getName();
     print(name);
     // Assert: Check if the binder name correctly identifies the SUBCLASS.
     expect(name, isNotNull);
@@ -132,7 +132,7 @@ void main() {
     // Act: Access the widget to read binder name.
     final widget =
         tester.widget(find.byType(StatelessTestPage)) as StatelessTestPage;
-    final name = widget.getVefName();
+    final name = widget.getViewModelBindingName();
     print(name);
 
     // Assert: Check file and runtime type markers.

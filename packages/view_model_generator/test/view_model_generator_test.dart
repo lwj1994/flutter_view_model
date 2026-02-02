@@ -4,20 +4,20 @@ import 'package:view_model_generator/src/provider_generator.dart';
 
 // 1. Test no-args constructor
 @ShouldGenerate(r'''
-final noArgsProvider = ViewModelProvider<NoArgs>(builder: () => NoArgs());
+final noArgsSpec = ViewModelSpec<NoArgs>(builder: () => NoArgs());
 ''')
-@genProvider
+@genSpec
 class NoArgs {
   NoArgs();
 }
 
 // 2. Test constructor with args (ensure fix works: String? name -> String name)
 @ShouldGenerate(r'''
-final oneArgProvider = ViewModelProvider.arg<OneArg, String>(
+final oneArgSpec = ViewModelSpec.arg<OneArg, String>(
   builder: (String name) => OneArg(name),
 );
 ''')
-@genProvider
+@genSpec
 class OneArg {
   final String name;
 
@@ -26,11 +26,11 @@ class OneArg {
 
 // 3. Test named args (verify isRequiredNamed logic)
 @ShouldGenerate(r'''
-final namedArgProvider = ViewModelProvider.arg<NamedArg, int>(
+final namedArgSpec = ViewModelSpec.arg<NamedArg, int>(
   builder: (int id) => NamedArg(id: id),
 );
 ''')
-@genProvider
+@genSpec
 class NamedArg {
   final int id;
 
@@ -39,9 +39,9 @@ class NamedArg {
 
 // 4. Test ignoring named constructors, only take main constructor (verify unnamedConstructor fix)
 @ShouldGenerate(r'''
-final mainCtorProvider = ViewModelProvider<MainCtor>(builder: () => MainCtor());
+final mainCtorSpec = ViewModelSpec<MainCtor>(builder: () => MainCtor());
 ''')
-@genProvider
+@genSpec
 class MainCtor {
   MainCtor(); // Main constructor
 
@@ -49,11 +49,11 @@ class MainCtor {
 }
 
 @ShouldGenerate(r'''
-final vmWithArg2Provider = ViewModelProvider.arg2<VmWithArg2, String, int>(
+final vmWithArg2Spec = ViewModelSpec.arg2<VmWithArg2, String, int>(
   builder: (String name, int age) => VmWithArg2(name, age),
 );
 ''')
-@genProvider
+@genSpec
 class VmWithArg2 {
   final String name;
   final int age;
@@ -63,11 +63,11 @@ class VmWithArg2 {
 
 // 6. Test ignoring super parameters: only recognize class-owned params
 @ShouldGenerate(r'''
-final postProvider = ViewModelProvider.arg<PostViewModel, String>(
+final postSpec = ViewModelSpec.arg<PostViewModel, String>(
   builder: (String args) => PostViewModel(args: args),
 );
 ''')
-@genProvider
+@genSpec
 class PostViewModel extends _BaseVM {
   final String args;
   PostViewModel({required super.state, required this.args});
@@ -80,13 +80,12 @@ class _BaseVM {
 
 // 7. StateViewModel special case: auto compute state via fromArgs
 @ShouldGenerate(r'''
-final feedProvider =
-    ViewModelProvider.arg3<FeedViewModel, FeedState, Repository, int>(
-      builder: (FeedState state, Repository repo, int page) =>
-          FeedViewModel(state: state, repo: repo, page: page),
-    );
+final feedSpec = ViewModelSpec.arg3<FeedViewModel, FeedState, Repository, int>(
+  builder: (FeedState state, Repository repo, int page) =>
+      FeedViewModel(state: state, repo: repo, page: page),
+);
 ''')
-@genProvider
+@genSpec
 class FeedViewModel extends StateViewModel<FeedState> {
   final Repository repo;
   final int page;
@@ -109,11 +108,9 @@ class FeedState {
 
 // 8. Prefer factory named 'provider' when it matches main ctor (excluding super)
 @ShouldGenerate(r'''
-final aProvider = ViewModelProvider.arg<A, P>(
-  builder: (P p) => A.provider(p: p),
-);
+final aSpec = ViewModelSpec.arg<A, P>(builder: (P p) => A.provider(p: p));
 ''')
-@genProvider
+@genSpec
 class A extends Base {
   final P p;
   A({required super.s, required this.p});
@@ -132,13 +129,13 @@ class P {
 
 // 9. key/tag templates with args
 @ShouldGenerate(r'''
-final bProvider = ViewModelProvider.arg<B, P>(
+final bSpec = ViewModelSpec.arg<B, P>(
   builder: (P p) => B(p: p),
   key: (P p) => 'kp-$p',
   tag: (P p) => 'tg-$p',
 );
 ''')
-@GenProvider(key: r'kp-$p', tag: r'tg-$p')
+@GenSpec(key: r'kp-$p', tag: r'tg-$p')
 class B {
   final P p;
   B({required this.p});
@@ -146,13 +143,13 @@ class B {
 
 // 10. key/tag templates with nested interpolation
 @ShouldGenerate(r'''
-final b2Provider = ViewModelProvider.arg<B2, P>(
+final b2Spec = ViewModelSpec.arg<B2, P>(
   builder: (P p) => B2(p: p),
   key: (P p) => '${p.id}',
   tag: (P p) => '${p.name}',
 );
 ''')
-@GenProvider(key: r'${p.id}', tag: r'${p.name}')
+@GenSpec(key: r'${p.id}', tag: r'${p.name}')
 class B2 {
   final P p;
   B2({required this.p});
@@ -161,13 +158,12 @@ class B2 {
 // (removed duplicate B3 block; see test 11 below)
 
 @ShouldGenerate(r'''
-final feedVM2Provider =
-    ViewModelProvider.arg3<FeedVM2, FeedState, Repository, int>(
-      builder: (FeedState state, Repository repo, int page) =>
-          FeedVM2(state: state, repo: repo, page: page),
-    );
+final feedVM2Spec = ViewModelSpec.arg3<FeedVM2, FeedState, Repository, int>(
+  builder: (FeedState state, Repository repo, int page) =>
+      FeedVM2(state: state, repo: repo, page: page),
+);
 ''')
-@genProvider
+@genSpec
 class FeedVM2 extends StateViewModel<FeedState> {
   final Repository repo;
   final int page;
@@ -182,27 +178,27 @@ Future<void> main() async {
   // 1. Get reader, read all files under test/src
   final reader = await initializeLibraryReaderForDirectory(
     'test',
-    'test.dart', // Specify the input file just written
+    'view_model_generator_test.dart',
   );
 
   // 2. Run tests
   initializeBuildLogTracking();
 
-  testAnnotatedElements<GenProvider>(
+  testAnnotatedElements<GenSpec>(
     reader,
-    const ViewModelProviderGenerator(), // Instantiate your Generator
+    const ViewModelSpecGenerator(), // Instantiate your Generator
   );
 }
 
 // 11. key const Object + tag with interpolation for arg builder
 @ShouldGenerate(r'''
-final b3Provider = ViewModelProvider.arg<B3, P>(
+final b3Spec = ViewModelSpec.arg<B3, P>(
   builder: (P p) => B3(p: p),
-  key: (P p) => Object(),
+  key: (P p) => const Object(),
   tag: (P p) => '${p.name}',
 );
 ''')
-@GenProvider(key: Object(), tag: r'${p.name}')
+@GenSpec(key: const Object(), tag: r'${p.name}')
 class B3 {
   final P p;
   B3({required this.p});
@@ -210,12 +206,12 @@ class B3 {
 
 // 12. tag constant Object for single-arg builder
 @ShouldGenerate(r'''
-final cProvider = ViewModelProvider.arg<C, P>(
+final cSpec = ViewModelSpec.arg<C, P>(
   builder: (P p) => C(p: p),
-  tag: (P p) => Object(),
+  tag: (P p) => const Object(),
 );
 ''')
-@GenProvider(tag: Object())
+@GenSpec(tag: const Object())
 class C {
   final P p;
   C({required this.p});
@@ -223,13 +219,13 @@ class C {
 
 // 13. key closure + tag constant Object
 @ShouldGenerate(r'''
-final dProvider = ViewModelProvider.arg<D, P>(
+final dSpec = ViewModelSpec.arg<D, P>(
   builder: (P p) => D(p: p),
   key: (P p) => '${p.id}',
-  tag: (P p) => Object(),
+  tag: (P p) => const Object(),
 );
 ''')
-@GenProvider(key: r'${p.id}', tag: Object())
+@GenSpec(key: r'${p.id}', tag: const Object())
 class D {
   final P p;
   D({required this.p});
@@ -237,25 +233,25 @@ class D {
 
 // 14. no-arg provider with constant key/tag
 @ShouldGenerate(r'''
-final eProvider = ViewModelProvider<E>(
+final eSpec = ViewModelSpec<E>(
   builder: () => E(),
   key: 'fixed',
-  tag: Object(),
+  tag: const Object(),
 );
 ''')
-@GenProvider(key: 'fixed', tag: Object())
+@GenSpec(key: 'fixed', tag: const Object())
 class E {
   E();
 }
 
 // 15. arg2 provider, constant tag
 @ShouldGenerate(r'''
-final fProvider = ViewModelProvider.arg2<F, P, int>(
+final fSpec = ViewModelSpec.arg2<F, P, int>(
   builder: (P p, int n) => F(p, n),
-  tag: (P p, int n) => Object(),
+  tag: (P p, int n) => const Object(),
 );
 ''')
-@GenProvider(tag: Object())
+@GenSpec(tag: const Object())
 class F {
   final P p;
   final int n;
@@ -264,13 +260,13 @@ class F {
 
 // 16. Expr for expression unwrapping to non-string
 @ShouldGenerate(r'''
-final gProvider = ViewModelProvider.arg<G, Repository>(
+final gSpec = ViewModelSpec.arg<G, Repository>(
   builder: (Repository repo) => G(repo: repo),
   key: (Repository repo) => repo,
   tag: (Repository repo) => repo.id,
 );
 ''')
-@GenProvider(key: Expression('repo'), tag: Expression('repo.id'))
+@GenSpec(key: Expression('repo'), tag: Expression('repo.id'))
 class G {
   final Repository repo;
   G({required this.repo});
@@ -278,13 +274,13 @@ class G {
 
 // 17. Mixed: string literal for key/tag, no Expr needed
 @ShouldGenerate(r'''
-final hProvider = ViewModelProvider.arg<H, P>(
+final hSpec = ViewModelSpec.arg<H, P>(
   builder: (P p) => H(p: p),
   key: (P p) => '${p.id}',
   tag: (P p) => 'user_key',
 );
 ''')
-@GenProvider(key: r'${p.id}', tag: 'user_key')
+@GenSpec(key: r'${p.id}', tag: 'user_key')
 class H {
   final P p;
   H({required this.p});
@@ -292,13 +288,13 @@ class H {
 
 // 18. arg2 with Expr for id/page
 @ShouldGenerate(r'''
-final i2Provider = ViewModelProvider.arg2<I2, String, int>(
+final i2Spec = ViewModelSpec.arg2<I2, String, int>(
   builder: (String id, int page) => I2(id, page),
   key: (String id, int page) => id,
   tag: (String id, int page) => page,
 );
 ''')
-@GenProvider(key: Expression('id'), tag: Expression('page'))
+@GenSpec(key: Expression('id'), tag: Expression('page'))
 class I2 {
   final String id;
   final int page;
@@ -307,13 +303,13 @@ class I2 {
 
 // 19. constants: number/bool
 @ShouldGenerate(r'''
-final kProvider = ViewModelProvider.arg<K, P>(
+final kSpec = ViewModelSpec.arg<K, P>(
   builder: (P p) => K(p: p),
   key: (P p) => 123,
   tag: (P p) => true,
 );
 ''')
-@GenProvider(key: 123, tag: true)
+@GenSpec(key: 123, tag: true)
 class K {
   final P p;
   K({required this.p});
@@ -321,12 +317,12 @@ class K {
 
 // 20. null tag
 @ShouldGenerate(r'''
-final nProvider = ViewModelProvider.arg<N, P>(
+final nSpec = ViewModelSpec.arg<N, P>(
   builder: (P p) => N(p: p),
   tag: (P p) => null,
 );
 ''')
-@GenProvider(tag: null)
+@GenSpec(tag: null)
 class N {
   final P p;
   N({required this.p});
@@ -334,54 +330,49 @@ class N {
 
 // 21. complex Expr method call
 @ShouldGenerate(r'''
-final mProvider = ViewModelProvider.arg2<M, Repository, int>(
+final mSpec = ViewModelSpec.arg2<M, Repository, int>(
   builder: (Repository repo, int page) => M(repo: repo, page: page),
   key: (Repository repo, int page) => repo.compute(page),
   tag: (Repository repo, int page) => 'ok',
 );
 ''')
-@GenProvider(key: Expression('repo.compute(page)'), tag: 'ok')
+@GenSpec(key: Expression('repo.compute(page)'), tag: 'ok')
 class M {
   final Repository repo;
   final int page;
   M({required this.repo, required this.page});
 }
 
-// 22. Singleton mode
+// 22. Singleton mode - REMOVED (deprecated)
 @ShouldGenerate(r'''
-final singletonVMProvider = ViewModelProvider<SingletonVM>(
+final singletonVMSpec = ViewModelSpec<SingletonVM>(
   builder: () => SingletonVM(),
-  key: '\$view_model_Singleton_SingletonVM',
-  isSingleton: true,
 );
 ''')
-@GenProvider(isSingleton: true)
+@GenSpec()
 class SingletonVM {
   SingletonVM();
 }
 
-// 23. Singleton mode with explicit key (explicit key wins)
+// 23. Singleton mode with explicit key - REMOVED (deprecated)
 @ShouldGenerate(r'''
-final singletonWithKeyVMProvider = ViewModelProvider<SingletonWithKeyVM>(
+final singletonWithKeyVMSpec = ViewModelSpec<SingletonWithKeyVM>(
   builder: () => SingletonWithKeyVM(),
   key: 'MyKey',
-  isSingleton: true,
 );
 ''')
-@GenProvider(isSingleton: true, key: 'MyKey')
+@GenSpec(key: 'MyKey')
 class SingletonWithKeyVM {
   SingletonWithKeyVM();
 }
 
-// 24. Singleton mode with args
+// 24. Singleton mode with args - REMOVED (deprecated)
 @ShouldGenerate(r'''
-final singletonArgVMProvider = ViewModelProvider.arg<SingletonArgVM, int>(
+final singletonArgVMSpec = ViewModelSpec.arg<SingletonArgVM, int>(
   builder: (int id) => SingletonArgVM(id),
-  key: (int id) => '\$view_model_Singleton_SingletonArgVM',
-  isSingleton: (int id) => true,
 );
 ''')
-@GenProvider(isSingleton: true)
+@GenSpec()
 class SingletonArgVM {
   final int id;
   SingletonArgVM(this.id);
@@ -389,11 +380,11 @@ class SingletonArgVM {
 
 // 25. factory with no args (provider) should be used if present
 @ShouldGenerate(r'''
-final islandProvider = ViewModelProvider<IslandViewModel>(
+final islandSpec = ViewModelSpec<IslandViewModel>(
   builder: () => IslandViewModel.provider(),
 );
 ''')
-@GenProvider()
+@GenSpec()
 class IslandViewModel extends StateViewModel<IslandViewModelState> {
   IslandViewModel({required IslandViewModelState state}) : super(state);
 
@@ -405,11 +396,11 @@ class IslandViewModel extends StateViewModel<IslandViewModelState> {
 class IslandViewModelState {}
 
 @ShouldGenerate(r'''
-final nullArgProvider = ViewModelProvider.arg<NullArg, int?>(
+final nullArgSpec = ViewModelSpec.arg<NullArg, int?>(
   builder: (int? id) => NullArg(id: id),
 );
 ''')
-@genProvider
+@genSpec
 class NullArg {
   final int? id;
 
@@ -417,12 +408,12 @@ class NullArg {
 }
 
 @ShouldGenerate(r'''
-final nullArg2Provider = ViewModelProvider.arg3<NullArg2, int?, String?, int>(
+final nullArg2Spec = ViewModelSpec.arg3<NullArg2, int?, String?, int>(
   builder: (int? id, String? name, int age) =>
       NullArg2.provider(id: id, name: name, age: age),
 );
 ''')
-@genProvider
+@genSpec
 class NullArg2 {
   final int? id;
   NullArg2({this.id});
@@ -432,12 +423,12 @@ class NullArg2 {
 
 // 26. aliveForever with Arg1
 @ShouldGenerate(r'''
-final liveForeverArg1Provider = ViewModelProvider.arg<LiveForeverArg1, int>(
+final liveForeverArg1Spec = ViewModelSpec.arg<LiveForeverArg1, int>(
   builder: (int id) => LiveForeverArg1(id),
   aliveForever: (int id) => true,
 );
 ''')
-@GenProvider(aliveForever: true)
+@GenSpec(aliveForever: true)
 class LiveForeverArg1 {
   final int id;
   LiveForeverArg1(this.id);
@@ -445,13 +436,12 @@ class LiveForeverArg1 {
 
 // 27. aliveForever with Arg2
 @ShouldGenerate(r'''
-final liveForeverArg2Provider =
-    ViewModelProvider.arg2<LiveForeverArg2, int, String>(
-      builder: (int id, String name) => LiveForeverArg2(id, name),
-      aliveForever: (int id, String name) => true,
-    );
+final liveForeverArg2Spec = ViewModelSpec.arg2<LiveForeverArg2, int, String>(
+  builder: (int id, String name) => LiveForeverArg2(id, name),
+  aliveForever: (int id, String name) => true,
+);
 ''')
-@GenProvider(aliveForever: true)
+@GenSpec(aliveForever: true)
 class LiveForeverArg2 {
   final int id;
   final String name;
@@ -460,14 +450,14 @@ class LiveForeverArg2 {
 
 // 28. aliveForever with Arg3
 @ShouldGenerate(r'''
-final liveForeverArg3Provider =
-    ViewModelProvider.arg3<LiveForeverArg3, int, String, bool>(
+final liveForeverArg3Spec =
+    ViewModelSpec.arg3<LiveForeverArg3, int, String, bool>(
       builder: (int id, String name, bool active) =>
           LiveForeverArg3(id, name, active),
       aliveForever: (int id, String name, bool active) => true,
     );
 ''')
-@GenProvider(aliveForever: true)
+@GenSpec(aliveForever: true)
 class LiveForeverArg3 {
   final int id;
   final String name;
@@ -477,14 +467,14 @@ class LiveForeverArg3 {
 
 // 29. aliveForever with Arg4
 @ShouldGenerate(r'''
-final liveForeverArg4Provider =
-    ViewModelProvider.arg4<LiveForeverArg4, int, String, bool, double>(
+final liveForeverArg4Spec =
+    ViewModelSpec.arg4<LiveForeverArg4, int, String, bool, double>(
       builder: (int id, String name, bool active, double score) =>
           LiveForeverArg4(id, name, active, score),
       aliveForever: (int id, String name, bool active, double score) => true,
     );
 ''')
-@GenProvider(aliveForever: true)
+@GenSpec(aliveForever: true)
 class LiveForeverArg4 {
   final int id;
   final String name;

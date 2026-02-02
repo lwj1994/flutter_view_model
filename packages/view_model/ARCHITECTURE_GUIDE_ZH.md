@@ -14,7 +14,7 @@
 class UserRepository with ViewModel {
   Future<User> fetchUser() async {
     // 无缝访问其他 ViewModel
-    final token = vef.read(authProvider).token;
+    final token = read(authSpec).token;
     return api.get(token);
   }
 }
@@ -30,7 +30,7 @@ ViewModel 之间可以通过读取 provider 轻松实现依赖注入。
 class CartViewModel with ViewModel {
   void checkout() {
     // 1. 获取 UserViewModel
-    final userVM = vef.read(userProvider);
+    final userVM = read(userSpec);
     
     // 2. 使用它
     if (userVM.isLoggedIn) {
@@ -50,7 +50,7 @@ ViewModel 可以监听其他 VM 的变化并做出**自动响应**。
 class ChatViewModel with ViewModel {
   ChatViewModel() {
     // 监听 AuthViewModel 的状态变化
-    listenState(authProvider, (previous, next) {
+    listenState(authSpec, (previous, next) {
       if (next.isLoggedOut) {
         clearMessages();
       }
@@ -61,16 +61,16 @@ class ChatViewModel with ViewModel {
 
 ---
 
-## 4️⃣ 初始化任务 (`with Vef`)
+## 4️⃣ 初始化任务 (`with ViewModelBinding`)
 
-对于启动逻辑或不需要成为 ViewModel 的独立任务，使用 `with Vef`。
+对于启动逻辑或不需要成为 ViewModel 的独立任务，使用 `with ViewModelBinding`。
 
 ```dart
-class AppInitializer with Vef {
+class AppInitializer with ViewModelBinding {
   Future<void> init() async {
     // 读取并初始化 ViewModels
-    await vef.read(configProvider).fetch();
-    await vef.read(authProvider).check();
+    await read(configSpec).fetch();
+    await read(authSpec).check();
   }
 }
 
@@ -88,7 +88,7 @@ void main() {
 对于 Auth 或 Settings 这种全局实例，可以让它们永生（永不销毁）。
 
 ```dart
-final authProvider = ViewModelProvider(
+final authSpec = ViewModelSpec(
   builder: () => AuthViewModel(),
   key: 'auth', // 全局 Key
   aliveForever: true, // 永不销毁

@@ -25,10 +25,10 @@ Dart mixins enable composition over inheritance—more flexible and keeps your c
 
 ---
 
-## Step 2️⃣: Register a Provider
+## Step 2️⃣: Register a Spec
 
 ```dart
-final counterProvider = ViewModelProvider<CounterViewModel>(
+final counterSpec = ViewModelSpec<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```
@@ -58,7 +58,7 @@ class _CounterPageState extends State<CounterPage>
 
   @override
   Widget build(BuildContext context) {
-    final vm = vef.watch(counterProvider);  // Automatically listens
+    final vm = viewModelBinding.watch(counterSpec);  // Automatically listens
 
     return Scaffold(
       body: Center(child: Text('${vm.count}')),
@@ -71,21 +71,21 @@ class _CounterPageState extends State<CounterPage>
 }
 ```
 
-## Universal Access with Vef
+## Universal Access with ViewModelBinding
 
-`Vef` = ViewModel Execution Framework. It's a mixin you can add to **any class**, giving it the power to access ViewModels anywhere!
+`ViewModelBinding` = ViewModel Execution Framework. It's a mixin you can add to **any class**, giving it the power to access ViewModels anywhere!
 
 ### In Any Class (Custom Ref)
 
-Need a pure logic manager? Just `with Vef`:
+Need a pure logic manager? Just `with ViewModelBinding`:
 
 ```dart
-class StartupTaskRunner with Vef {
+class StartupTaskRunner with ViewModelBinding {
   Future<void> run() async {
-    final authVM = vef.read(authProvider);
+    final authVM = read(authSpec);
     await authVM.checkAuth();
 
-    final configVM = vef.read(configProvider);
+    final configVM = read(configSpec);
     await configVM.fetchRemoteConfig();
   }
 
@@ -96,17 +96,17 @@ class StartupTaskRunner with Vef {
 }
 ```
 
-## Quick Reference: Vef Methods
+## Quick Reference: ViewModelBinding Methods
 
 | Method | Behavior | Best For |
 | :--- | :--- | :--- |
-| `vef.watch(provider)` | **Reactive** | Inside `build()`—rebuilds on change |
-| `vef.read(provider)` | **Direct access** | Callbacks, event handlers, or other ViewModels |
-| `vef.listen(provider)` | **Side effects** | Navigation, snackbars, etc. |
-| `vef.watchCached(key:)` | **Targeted** | Access specific shared instance by key |
-| `vef.readCached(key:)` | **Targeted** | Read specific shared instance without listening |
-| `vef.listenState(provider)` | **State Listener** | Listen to state changes (previous, current) |
-| `vef.listenStateSelect(provider)` | **Selector** | Listen to specific state property changes |
+| `viewModelBinding.watch(provider)` | **Reactive** | Inside `build()`—rebuilds on change |
+| `viewModelBinding.read(provider)` | **Direct access** | Callbacks, event handlers, or other ViewModels |
+| `viewModelBinding.listen(provider)` | **Side effects** | Navigation, snackbars, etc. |
+| `viewModelBinding.watchCached(key:)` | **Targeted** | Access specific shared instance by key |
+| `viewModelBinding.readCached(key:)` | **Targeted** | Read specific shared instance without listening |
+| `viewModelBinding.listenState(provider)` | **State Listener** | Listen to state changes (previous, current) |
+| `viewModelBinding.listenStateSelect(provider)` | **Selector** | Listen to specific state property changes |
 
 ## Immutable State (StateViewModel)
 
@@ -127,12 +127,12 @@ class UserViewModel extends StateViewModel<UserState> {
 ## Dependency Injection (Arguments)
 
 ```dart
-final userProvider = ViewModelProvider.arg<UserViewModel, int>(
+final userSpec = ViewModelSpec.arg<UserViewModel, int>(
   builder: (int id) => UserViewModel(id),
 );
 
 // Usage:
-final vm = vef.watch(userProvider(42));
+final vm = viewModelBinding.watch(userSpec(42));
 ```
 
 ## Instance Sharing (Keys)
@@ -141,7 +141,7 @@ final vm = vef.watch(userProvider(42));
 - **Shared instances**: Add a `key`, and widgets with the same key share the same instance
 
 ```dart
-final productProvider = ViewModelProvider.arg<ProductViewModel, String>(
+final productSpec = ViewModelSpec.arg<ProductViewModel, String>(
   builder: (id) => ProductViewModel(id),
   key: (id) => 'prod_$id',  // Same ID = shared instance
 );
@@ -156,7 +156,7 @@ final productProvider = ViewModelProvider.arg<ProductViewModel, String>(
 **Need a global singleton?** Add `aliveForever: true`.
 
 ```dart
-final authProvider = ViewModelProvider(
+final authSpec = ViewModelSpec(
   builder: () => AuthViewModel(),
   aliveForever: true,  // Never disposed
 );

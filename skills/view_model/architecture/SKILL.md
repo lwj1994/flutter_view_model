@@ -10,23 +10,23 @@ description: Guidelines for structuring applications using the view_model packag
 
 # Architecture Recommendation
 
-The `view_model` package promotes a simplified architecture where **everything can be a ViewModel**. By leveraging the `ViewModel` and `Vef` mixins, you can eliminate complex layering often found in other architectures.
+The `view_model` package promotes a simplified architecture where **everything can be a ViewModel**. By leveraging the `ViewModel` and `ViewModelBinding` mixins, you can eliminate complex layering often found in other architectures.
 
 ## Core Principles
 
 1.  **Universal Component**: Widgets, Repositories, Services, and Managers can all be `ViewModel`s.
 2.  **No Context Hell**: Access state and logic anywhere without passing `BuildContext`.
-3.  **Composition over Inheritance**: Use mixins (`with ViewModel`, `with Vef`) to add capabilities.
+3.  **Composition over Inheritance**: Use mixins (`with ViewModel`, `with ViewModelBinding`) to add capabilities.
 
 ## 1. Universal Component (`with ViewModel`)
 
-Transform any class into a capable component by mixing in `ViewModel`. This gives it access to `vef` for dependency injection and lifecycle management.
+Transform any class into a capable component by mixing in `ViewModel`. This gives it access to `read/watch` for dependency injection and lifecycle management.
 
 ```dart
 class UserRepository with ViewModel {
   Future<User> fetchUser() async {
-    // Access other ViewModels seamlessly via 'vef'
-    final token = vef.read(authProvider).token;
+    // Access other ViewModels seamlessly
+    final token = read(authSpec).token;
     return api.get(token);
   }
 }
@@ -40,7 +40,7 @@ ViewModels interpret dependencies by simply reading other providers.
 class CartViewModel with ViewModel {
   void checkout() {
     // 1. Get UserViewModel instance
-    final userVM = vef.read(userProvider);
+    final userVM = read(userSpec);
     
     // 2. Use it directly
     if (userVM.isLoggedIn) {
@@ -57,8 +57,8 @@ ViewModels can listen to other ViewModels (`listenState`) and react to changes a
 ```dart
 class ChatViewModel with ViewModel {
   ChatViewModel() {
-    // Automatically react when AuthProvider's state changes
-    listenState(authProvider, (previous, next) {
+    // Automatically react when AuthSpec's state changes
+    listenState(authSpec, (previous, next) {
       if (next.isLoggedOut) {
         clearMessages();
       }
@@ -67,16 +67,16 @@ class ChatViewModel with ViewModel {
 }
 ```
 
-## 4. Initialization & Tasks (`with Vef`)
+## 4. Initialization & Tasks (`with ViewModelBinding`)
 
-For logic that doesn't need to hold state or be a ViewModel (like startup tasks), use `with Vef` to gain access to the provider system.
+For logic that doesn't need to hold state or be a ViewModel (like startup tasks), use `with ViewModelBinding` to gain access to the spec system.
 
 ```dart
-class AppInitializer with Vef {
+class AppInitializer with ViewModelBinding {
   Future<void> init() async {
     // Read and initialize ViewModels sequentially or parallelly
-    await vef.read(configProvider).fetch();
-    await vef.read(authProvider).check();
+    await read(configSpec).fetch();
+    await read(authSpec).check();
   }
 }
 
@@ -92,7 +92,7 @@ void main() {
 For services that must remain alive throughout the app lifecycle (Auth, Settings), use `aliveForever: true`.
 
 ```dart
-final authProvider = ViewModelProvider(
+final authSpec = ViewModelSpec(
   builder: () => AuthViewModel(),
   key: (_) => 'auth_global', // Optional: simpler debugging
   aliveForever: true,        // Prevents auto-disposal
@@ -106,4 +106,4 @@ final authProvider = ViewModelProvider(
 | **Widget** | `ViewModelStateMixin` | UI rendering, binding to ViewModels |
 | **Business Logic** | `ViewModel` | State management, simple logic |
 | **Service/Repo** | `ViewModel` | Data fetching, complex logic, dependencies |
-| **TaskScript** | `Vef` | Scripts, initialization, one-off tasks |
+| **TaskScript** | `ViewModelBinding` | Scripts, initialization, one-off tasks |

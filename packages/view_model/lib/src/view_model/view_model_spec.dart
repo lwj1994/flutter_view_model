@@ -4,15 +4,15 @@ import 'package:view_model/src/view_model/view_model.dart';
 /// Provides builder and optional cache identifiers (`key` and `tag`).
 /// Use [key] to reuse the same instance for
 /// identical `key`+`tag`.
-class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
+class ViewModelSpec<T extends ViewModel> extends ViewModelFactory<T> {
   final T Function() builder;
   late final Object? _key;
   late final Object? _tag;
   final bool isSingleton;
   final bool _aliveForever;
-  ViewModelProvider<T>? _proxy;
+  ViewModelSpec<T>? _proxy;
 
-  ViewModelProvider({
+  ViewModelSpec({
     required this.builder,
     Object? key,
     Object? tag,
@@ -40,8 +40,8 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
   /// Enables test-time override of factory properties.
   /// When set, overrides `builder`, `key`, `tag`, and (deprecated)
   /// `isSingleton`.
-  void setProxy(ViewModelProvider<T> provider) {
-    this._proxy = provider;
+  void setProxy(ViewModelSpec<T> spec) {
+    this._proxy = spec;
   }
 
   /// Clears any proxy overrides and restores original behavior.
@@ -94,10 +94,10 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     return _aliveForever;
   }
 
-  /// Creates an arg-based provider with one argument.
+  /// Creates an arg-based spec with one argument.
   ///
   /// Use this to declare builder and sharing rules derived from `A`.
-  static ViewModelProviderWithArg<VM, A> arg<VM extends ViewModel, A>({
+  static ViewModelSpecWithArg<VM, A> arg<VM extends ViewModel, A>({
     required VM Function(A a) builder,
     Object? Function(A a)? key,
     Object? Function(A a)? tag,
@@ -108,7 +108,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     // defaults to false
     bool Function(A a)? aliveForever,
   }) {
-    return ViewModelProviderWithArg<VM, A>(
+    return ViewModelSpecWithArg<VM, A>(
       builder: builder,
       key: key,
       tag: tag,
@@ -118,8 +118,8 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     );
   }
 
-  /// Creates an arg-based provider with two arguments.
-  static ViewModelProviderWithArg2<VM, A, B> arg2<VM extends ViewModel, A, B>({
+  /// Creates an arg-based spec with two arguments.
+  static ViewModelSpecWithArg2<VM, A, B> arg2<VM extends ViewModel, A, B>({
     required VM Function(A a, B b) builder,
     Object? Function(A a, B b)? key,
     Object? Function(A a, B b)? tag,
@@ -128,7 +128,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     bool Function(A a, B b)? isSingleton,
     bool Function(A a, B b)? aliveForever,
   }) {
-    return ViewModelProviderWithArg2<VM, A, B>(
+    return ViewModelSpecWithArg2<VM, A, B>(
       builder: builder,
       key: key,
       tag: tag,
@@ -138,8 +138,8 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     );
   }
 
-  /// Creates an arg-based provider with three arguments.
-  static ViewModelProviderWithArg3<VM, A, B, C>
+  /// Creates an arg-based spec with three arguments.
+  static ViewModelSpecWithArg3<VM, A, B, C>
       arg3<VM extends ViewModel, A, B, C>({
     required VM Function(A a, B b, C c) builder,
     Object? Function(A a, B b, C c)? key,
@@ -149,7 +149,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     bool Function(A a, B b, C c)? isSingleton,
     bool Function(A a, B b, C c)? aliveForever,
   }) {
-    return ViewModelProviderWithArg3<VM, A, B, C>(
+    return ViewModelSpecWithArg3<VM, A, B, C>(
       builder: builder,
       key: key,
       tag: tag,
@@ -159,8 +159,8 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     );
   }
 
-  /// Creates an arg-based provider with four arguments.
-  static ViewModelProviderWithArg4<VM, A, B, C, D>
+  /// Creates an arg-based spec with four arguments.
+  static ViewModelSpecWithArg4<VM, A, B, C, D>
       arg4<VM extends ViewModel, A, B, C, D>({
     required VM Function(A a, B b, C c, D d) builder,
     Object? Function(A a, B b, C c, D d)? key,
@@ -170,7 +170,7 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
     bool Function(A a, B b, C c, D d)? isSingleton,
     bool Function(A a, B b, C c, D d)? aliveForever,
   }) {
-    return ViewModelProviderWithArg4<VM, A, B, C, D>(
+    return ViewModelSpecWithArg4<VM, A, B, C, D>(
       builder: builder,
       key: key,
       tag: tag,
@@ -184,8 +184,8 @@ class ViewModelProvider<T extends ViewModel> extends ViewModelFactory<T> {
 /// A specification for creating a `ViewModel` from an argument.
 /// The cache identifiers (and deprecated singleton flag) are computed from
 /// the argument.
-class ViewModelProviderWithArg<VM extends ViewModel, A> {
-  ViewModelProviderWithArg({
+class ViewModelSpecWithArg<VM extends ViewModel, A> {
+  ViewModelSpecWithArg({
     required this.builder,
     this.key,
     this.tag,
@@ -216,13 +216,13 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
   /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
-  ViewModelProviderWithArg<VM, A>? _proxy;
+  ViewModelSpecWithArg<VM, A>? _proxy;
 
-  /// Enables test-time override of arg-based provider behavior.
+  /// Enables test-time override of arg-based spec behavior.
   ///
   /// Replaces this spec with values from the provided proxy when calling.
-  void setProxy(ViewModelProviderWithArg<VM, A> provider) {
-    _proxy = provider;
+  void setProxy(ViewModelSpecWithArg<VM, A> spec) {
+    _proxy = spec;
   }
 
   /// Clears any proxy overrides and restores original behavior.
@@ -234,7 +234,7 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
   /// The factory defers building until requested by the binder.
   ViewModelFactory<VM> call(A arg) {
     final spec = _proxy ?? this;
-    return ViewModelProvider<VM>(
+    return ViewModelSpec<VM>(
       builder: () => spec.builder(arg),
       key: spec.key?.call(arg),
       tag: spec.tag?.call(arg),
@@ -245,8 +245,8 @@ class ViewModelProviderWithArg<VM extends ViewModel, A> {
   }
 }
 
-class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
-  ViewModelProviderWithArg2({
+class ViewModelSpecWithArg2<VM extends ViewModel, A, B> {
+  ViewModelSpecWithArg2({
     required this.builder,
     this.key,
     this.tag,
@@ -270,13 +270,13 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
   /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
-  ViewModelProviderWithArg2<VM, A, B>? _proxy;
+  ViewModelSpecWithArg2<VM, A, B>? _proxy;
 
-  /// Enables test-time override of arg-based provider behavior.
+  /// Enables test-time override of arg-based spec behavior.
   ///
   /// Replaces this spec with values from the provided proxy when calling.
-  void setProxy(ViewModelProviderWithArg2<VM, A, B> provider) {
-    _proxy = provider;
+  void setProxy(ViewModelSpecWithArg2<VM, A, B> spec) {
+    _proxy = spec;
   }
 
   /// Clears any proxy overrides and restores original behavior.
@@ -286,7 +286,7 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
 
   ViewModelFactory<VM> call(A a, B b) {
     final spec = _proxy ?? this;
-    return ViewModelProvider<VM>(
+    return ViewModelSpec<VM>(
       builder: () => spec.builder(a, b),
       key: spec.key?.call(a, b),
       tag: spec.tag?.call(a, b),
@@ -297,8 +297,8 @@ class ViewModelProviderWithArg2<VM extends ViewModel, A, B> {
   }
 }
 
-class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
-  ViewModelProviderWithArg3({
+class ViewModelSpecWithArg3<VM extends ViewModel, A, B, C> {
+  ViewModelSpecWithArg3({
     required this.builder,
     this.key,
     this.tag,
@@ -322,13 +322,13 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
   /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
-  ViewModelProviderWithArg3<VM, A, B, C>? _proxy;
+  ViewModelSpecWithArg3<VM, A, B, C>? _proxy;
 
-  /// Enables test-time override of arg-based provider behavior.
+  /// Enables test-time override of arg-based spec behavior.
   ///
   /// Replaces this spec with values from the provided proxy when calling.
-  void setProxy(ViewModelProviderWithArg3<VM, A, B, C> provider) {
-    _proxy = provider;
+  void setProxy(ViewModelSpecWithArg3<VM, A, B, C> spec) {
+    _proxy = spec;
   }
 
   /// Clears any proxy overrides and restores original behavior.
@@ -338,7 +338,7 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
 
   ViewModelFactory<VM> call(A a, B b, C c) {
     final spec = _proxy ?? this;
-    return ViewModelProvider<VM>(
+    return ViewModelSpec<VM>(
       builder: () => spec.builder(a, b, c),
       key: spec.key?.call(a, b, c),
       tag: spec.tag?.call(a, b, c),
@@ -349,8 +349,8 @@ class ViewModelProviderWithArg3<VM extends ViewModel, A, B, C> {
   }
 }
 
-class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
-  ViewModelProviderWithArg4({
+class ViewModelSpecWithArg4<VM extends ViewModel, A, B, C, D> {
+  ViewModelSpecWithArg4({
     required this.builder,
     this.key,
     this.tag,
@@ -374,13 +374,13 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
   /// When set, the proxy overrides `builder`, `key`, `tag`, and
   /// (deprecated) `isSingleton` computations. Use `setProxy` to install and
   /// `clearProxy` to remove.
-  ViewModelProviderWithArg4<VM, A, B, C, D>? _proxy;
+  ViewModelSpecWithArg4<VM, A, B, C, D>? _proxy;
 
-  /// Enables test-time override of arg-based provider behavior.
+  /// Enables test-time override of arg-based spec behavior.
   ///
   /// Replaces this spec with values from the provided proxy when calling.
-  void setProxy(ViewModelProviderWithArg4<VM, A, B, C, D> provider) {
-    _proxy = provider;
+  void setProxy(ViewModelSpecWithArg4<VM, A, B, C, D> spec) {
+    _proxy = spec;
   }
 
   /// Clears any proxy overrides and restores original behavior.
@@ -390,13 +390,102 @@ class ViewModelProviderWithArg4<VM extends ViewModel, A, B, C, D> {
 
   ViewModelFactory<VM> call(A a, B b, C c, D d) {
     final spec = _proxy ?? this;
-    return ViewModelProvider<VM>(
+    return ViewModelSpec<VM>(
       builder: () => spec.builder(a, b, c, d),
       key: spec.key?.call(a, b, c, d),
       tag: spec.tag?.call(a, b, c, d),
       // ignore: deprecated_member_use_from_same_package
       isSingleton: spec.isSingleton?.call(a, b, c, d) ?? false,
       aliveForever: spec.aliveForever?.call(a, b, c, d) ?? false,
+    );
+  }
+}
+
+@Deprecated('Use ViewModelSpec instead.')
+class ViewModelProvider<T extends ViewModel> extends ViewModelSpec<T> {
+  ViewModelProvider({
+    required super.builder,
+    Object? key,
+    Object? tag,
+    @Deprecated('Use key parameter instead. '
+        'Will be removed in v1.0.0 (July 2026). '
+        'Migration: isSingleton: true → key: "YourKey"')
+    super.isSingleton = false,
+    bool aliveForever = false,
+  }) : super(
+          key: key,
+          tag: tag,
+          aliveForever: aliveForever,
+        );
+
+  static ViewModelSpecWithArg<VM, A> arg<VM extends ViewModel, A>({
+    required VM Function(A a) builder,
+    Object? Function(A a)? key,
+    Object? Function(A a)? tag,
+    @Deprecated('Use key parameter instead. '
+        'Will be removed in v1.0.0 (July 2026). '
+        'Migration: isSingleton: (a) => true → key: (a) => "key_\$a"')
+    bool Function(A a)? isSingleton,
+    bool Function(A a)? aliveForever,
+  }) {
+    return ViewModelSpec.arg(
+      builder: builder,
+      key: key,
+      tag: tag,
+      isSingleton: isSingleton,
+      aliveForever: aliveForever,
+    );
+  }
+
+  static ViewModelSpecWithArg2<VM, A, B> arg2<VM extends ViewModel, A, B>({
+    required VM Function(A a, B b) builder,
+    Object? Function(A a, B b)? key,
+    Object? Function(A a, B b)? tag,
+    @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
+    bool Function(A a, B b)? isSingleton,
+    bool Function(A a, B b)? aliveForever,
+  }) {
+    return ViewModelSpec.arg2(
+      builder: builder,
+      key: key,
+      tag: tag,
+      isSingleton: isSingleton,
+      aliveForever: aliveForever,
+    );
+  }
+
+  static ViewModelSpecWithArg3<VM, A, B, C> arg3<VM extends ViewModel, A, B, C>({
+    required VM Function(A a, B b, C c) builder,
+    Object? Function(A a, B b, C c)? key,
+    Object? Function(A a, B b, C c)? tag,
+    @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
+    bool Function(A a, B b, C c)? isSingleton,
+    bool Function(A a, B b, C c)? aliveForever,
+  }) {
+    return ViewModelSpec.arg3(
+      builder: builder,
+      key: key,
+      tag: tag,
+      isSingleton: isSingleton,
+      aliveForever: aliveForever,
+    );
+  }
+
+  static ViewModelSpecWithArg4<VM, A, B, C, D>
+      arg4<VM extends ViewModel, A, B, C, D>({
+    required VM Function(A a, B b, C c, D d) builder,
+    Object? Function(A a, B b, C c, D d)? key,
+    Object? Function(A a, B b, C c, D d)? tag,
+    @Deprecated('Use key instead. Will be removed in v1.0.0 (July 2026).')
+    bool Function(A a, B b, C c, D d)? isSingleton,
+    bool Function(A a, B b, C c, D d)? aliveForever,
+  }) {
+    return ViewModelSpec.arg4(
+      builder: builder,
+      key: key,
+      tag: tag,
+      isSingleton: isSingleton,
+      aliveForever: aliveForever,
     );
   }
 }
