@@ -7,9 +7,9 @@ class ViewModelA extends ViewModel {
   late final ViewModelB viewModelB;
 
   ViewModelA() {
-    // The vef.read<ViewModelB>() call happens here, in the constructor body.
+    // The viewModelBinding.read<ViewModelB>() call happens here, in the constructor body.
     // This is the core scenario we are testing.
-    viewModelB = vef.readCached<ViewModelB>();
+    viewModelB = viewModelBinding.readCached<ViewModelB>();
   }
 }
 
@@ -33,8 +33,8 @@ class ParentProviderWidgetState extends State<ParentProviderWidget>
   @override
   void initState() {
     super.initState();
-    providedViewModelB = vef.watch<ViewModelB>(
-      ViewModelProvider<ViewModelB>(
+    providedViewModelB = viewModelBinding.watch<ViewModelB>(
+      ViewModelSpec<ViewModelB>(
         builder: () => ViewModelB(),
       ),
     );
@@ -62,8 +62,8 @@ class ChildConsumerWidgetState extends State<ChildConsumerWidget>
   @override
   void initState() {
     super.initState();
-    consumingViewModelA = vef.watch<ViewModelA>(
-      ViewModelProvider<ViewModelA>(
+    consumingViewModelA = viewModelBinding.watch<ViewModelA>(
+      ViewModelSpec<ViewModelA>(
         builder: () => ViewModelA(),
       ),
     );
@@ -78,7 +78,7 @@ class ChildConsumerWidgetState extends State<ChildConsumerWidget>
 void main() {
   group('ViewModel Constructor Dependency', () {
     testWidgets(
-        'should correctly resolve dependency from parent when vef.read is called in constructor',
+        'should correctly resolve dependency from parent when viewModelBinding.read is called in constructor',
         (WidgetTester tester) async {
       final parentKey = GlobalKey<ParentProviderWidgetState>();
       final childKey = GlobalKey<ChildConsumerWidgetState>();

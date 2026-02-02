@@ -13,9 +13,9 @@ While this skill provides a high-level overview, the detailed instructions are m
 
 ### 1. [View Model Usage](usage/SKILL.md)
 **Focus**: The core library (`view_model`).
-- How to create ViewModels and Providers.
+- How to create ViewModels and Specs.
 - How to consume them in Flutter Widgets.
-- Using `vef` for dependency injection.
+- Using `viewModelBinding` for dependency injection.
 - Managing State with `StateViewModel`.
 
 ### 2. [Generator Usage](generator/SKILL.md)

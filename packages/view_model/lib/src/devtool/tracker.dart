@@ -51,7 +51,7 @@ class DevToolTracker extends ViewModelLifecycle {
   ///
   /// This allows quick lookup of which ViewModel types are being watched
   /// by a specific widget or watcher.
-  final Map<String, Set<String>> _vefIds = {};
+  final Map<String, Set<String>> _bindingIds = {};
 
   /// Maps ViewModel instance IDs to their detailed information.
   ///
@@ -79,7 +79,7 @@ class DevToolTracker extends ViewModelLifecycle {
   /// The returned data is a snapshot and won't reflect future changes.
   DependencyGraph get dependencyGraph {
     return DependencyGraph(
-      watcherToViewModels: Map.unmodifiable(_vefIds),
+      watcherToViewModels: Map.unmodifiable(_bindingIds),
       viewModelInfos: Map.unmodifiable(_viewModelInfos),
       typeToInstances: Map.unmodifiable(_typeToInstances),
     );
@@ -162,24 +162,24 @@ class DevToolTracker extends ViewModelLifecycle {
   /// Parameters:
   /// - [viewModel]: The ViewModel being watched
   /// - [arg]: The instance arguments for the ViewModel
-  /// - [vefId]: Unique identifier for the new watcher
+  /// - [bindingId]: Unique identifier for the new watcher
   @override
-  void onBind(ViewModel viewModel, InstanceArg arg, String vefId) {
+  void onBind(ViewModel viewModel, InstanceArg arg, String bindingId) {
     final instanceId = _getInstanceId(viewModel, arg);
     final typeName = viewModel.runtimeType.toString();
 
     // Update watcher -> viewModels mapping
-    _vefIds.putIfAbsent(vefId, () => {}).add(typeName);
+    _bindingIds.putIfAbsent(bindingId, () => {}).add(typeName);
 
     // Update watchers in viewModel information
     final info = _viewModelInfos[instanceId];
     if (info != null) {
       _viewModelInfos[instanceId] = info.copyWith(
-        watchers: {...info.watchers, vefId},
+        watchers: {...info.watchers, bindingId},
       );
     }
 
-    viewModelLog("🔗 onBind, vefId: $vefId, $instanceId");
+    viewModelLog("🔗 onBind, bindingId: $bindingId, $instanceId");
 
     _notifyListeners();
   }
@@ -192,18 +192,18 @@ class DevToolTracker extends ViewModelLifecycle {
   /// Parameters:
   /// - [viewModel]: The ViewModel no longer being watched
   /// - [arg]: The instance arguments for the ViewModel
-  /// - [vefId]: Unique identifier for the removed watcher
+  /// - [bindingId]: Unique identifier for the removed watcher
   @override
-  void onUnbind(ViewModel viewModel, InstanceArg arg, String vefId) {
+  void onUnbind(ViewModel viewModel, InstanceArg arg, String bindingId) {
     final instanceId = _getInstanceId(viewModel, arg);
     final typeName = viewModel.runtimeType.toString();
 
     // Remove from watcher -> viewModels mapping
-    final viewModels = _vefIds[vefId];
+    final viewModels = _bindingIds[bindingId];
     if (viewModels != null) {
       viewModels.remove(typeName);
       if (viewModels.isEmpty) {
-        _vefIds.remove(vefId);
+        _bindingIds.remove(bindingId);
       }
     }
 
@@ -211,11 +211,11 @@ class DevToolTracker extends ViewModelLifecycle {
     final info = _viewModelInfos[instanceId];
     if (info != null) {
       final newWatchers = Set<String>.from(info.watchers);
-      newWatchers.remove(vefId);
+      newWatchers.remove(bindingId);
       _viewModelInfos[instanceId] = info.copyWith(watchers: newWatchers);
     }
 
-    viewModelLog('🔌 onUnbind, vefId: $vefId $instanceId');
+    viewModelLog('🔌 onUnbind, bindingId: $bindingId $instanceId');
     _notifyListeners();
   }
 
@@ -246,11 +246,11 @@ class DevToolTracker extends ViewModelLifecycle {
     // Clean up related watcher mappings
     if (info != null) {
       for (final watcherId in info.watchers) {
-        final viewModels = _vefIds[watcherId];
+        final viewModels = _bindingIds[watcherId];
         if (viewModels != null) {
           viewModels.remove(typeName);
           if (viewModels.isEmpty) {
-            _vefIds.remove(watcherId);
+            _bindingIds.remove(watcherId);
           }
         }
       }
@@ -292,7 +292,7 @@ class DevToolTracker extends ViewModelLifecycle {
   ///
   /// Note: This will trigger listener notifications.
   void clear() {
-    _vefIds.clear();
+    _bindingIds.clear();
     _viewModelInfos.clear();
     _typeToInstances.clear();
     _notifyListeners();
@@ -327,7 +327,7 @@ class DevToolTracker extends ViewModelLifecycle {
     final orphanedInstances = allInstances
         .where((info) => !info.isDisposed && info.watchers.isEmpty)
         .length;
-    final totalWatchers = _vefIds.length;
+    final totalWatchers = _bindingIds.length;
 
     return DependencyStats(
       activeInstances: activeInstances,

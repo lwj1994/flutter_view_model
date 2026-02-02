@@ -1,18 +1,18 @@
-# ViewModelProvider Migration Guide
+# ViewModelSpec Migration Guide
 
 ## Overview
 
 This guide helps you migrate from Factory-based APIs to the
-declarative `Provider` family. The goal is simpler, safer, and
+declarative `Spec` family. The goal is simpler, safer, and
 more consistent ViewModel creation and sharing, with fewer boilerplate
 pieces.
 
 ## New Concepts
 
-- ViewModelProvider: Declarative provider for building a ViewModel without
+- ViewModelSpec: Declarative spec for building a ViewModel without
   arguments. Encapsulates builder and sharing rules.
-- ViewModelProvider.arg: provider for building with one argument.
-- ViewModelProvider.arg2/3/4: providers for building with 2/3/4 arguments.
+- ViewModelSpec.arg: spec for building with one argument.
+- ViewModelSpec.arg2/3/4: specs for building with 2/3/4 arguments.
 - Sharing rules: `key`, `tag`, (deprecated) `isSingleton`.
 
 ## Key Semantics
@@ -35,8 +35,8 @@ final vm = watchViewModel<MyVM>(
 After:
 
 ```dart
-final provider = ViewModelProvider<MyVM>(builder: MyVM.new);
-final vm = vef.watch(provider);
+final spec = ViewModelSpec<MyVM>(builder: MyVM.new);
+final vm = viewModelBinding.watch(spec);
 ```
 
 Cached access:
@@ -46,7 +46,7 @@ Cached access:
 final vm = watchCachedViewModel<MyVM>(key: 'k');
 
 // After
-final vm = vef.watchCached<MyVM>(key: 'k');
+final vm = viewModelBinding.watchCached<MyVM>(key: 'k');
 ```
 
 Read (non-listening):
@@ -56,7 +56,7 @@ Read (non-listening):
 final vm = readViewModel<MyVM>(factory: MyVmFactory());
 
 // After
-final vm = vef.read(ViewModelProvider<MyVM>(builder: MyVM.new));
+final vm = viewModelBinding.read(ViewModelSpec<MyVM>(builder: MyVM.new));
 ```
 
 ## Examples
@@ -64,74 +64,74 @@ final vm = vef.read(ViewModelProvider<MyVM>(builder: MyVM.new));
 ### Without Arguments
 
 ```dart
-final provider = ViewModelProvider<CounterViewModel>(
+final spec = ViewModelSpec<CounterViewModel>(
   builder: CounterViewModel.new,
   key: 'counter',
 );
-final vm = vef.watch(provider);
+final vm = viewModelBinding.watch(spec);
 ```
 
 ### With One Argument
 
 ```dart
-final userprovider = ViewModelProvider.arg<UserViewModel, String>(
+final userSpec = ViewModelSpec.arg<UserViewModel, String>(
   builder: (id) => UserViewModel(userId: id),
   key: (id) => 'user-$id',
   tag: (id) => 'user-$id',
 );
-final vm = vef.watch(userprovider('user-123'));
+final vm = viewModelBinding.watch(userSpec('user-123'));
 ```
 
 ### With Two Arguments
 
 ```dart
-final provider2 = ViewModelProvider.arg2<UserVM, String, int>(
+final spec2 = ViewModelSpec.arg2<UserVM, String, int>(
   builder: (id, page) => UserVM(id, page),
   key: (id, page) => 'user-$id:$page',
 );
-final vm = vef.watch(provider2('u42', 1));
+final vm = viewModelBinding.watch(spec2('u42', 1));
 ```
 
 ### With Three Arguments
 
 ```dart
-final provider3 = ViewModelProvider.arg3<ReportVM, String, DateTime, bool>(
+final spec3 = ViewModelSpec.arg3<ReportVM, String, DateTime, bool>(
   builder: (id, date, force) => ReportVM(id, date, force),
 );
-final vm = vef.watch(provider3('rid', DateTime.now(), true));
+final vm = viewModelBinding.watch(spec3('rid', DateTime.now(), true));
 ```
 
 ### With Four Arguments
 
 ```dart
-final provider4 = ViewModelProvider.arg4<TaskVM, String, int, String, bool>(
+final spec4 = ViewModelSpec.arg4<TaskVM, String, int, String, bool>(
   builder: (id, priority, group, silent) => TaskVM(id, priority, group, silent),
 );
-final vm = vef.watch(provider4('t1', 5, 'g1', false));
+final vm = viewModelBinding.watch(spec4('t1', 5, 'g1', false));
 ```
 
 
 ## Legacy APIs
 
-The following legacy methods are still available as convenience wrappers around the `vef` system. While the `vef` namespace is recommended for consistency, you can continue using these if you prefer the explicit method syntax:
+The following legacy methods are still available as convenience wrappers around the `viewModelBinding` system. While the `viewModelBinding` namespace is recommended for consistency, you can continue using these if you prefer the explicit method syntax:
 
-- `watchViewModel(...)` (Equivalent to `vef.watch`)
-- `readViewModel(...)` (Equivalent to `vef.read`)
-- `watchCachedViewModel(...)` (Equivalent to `vef.watchCached`)
-- `readCachedViewModel(...)` (Equivalent to `vef.readCached`)
-- `listenViewModel(...)` (Equivalent to `vef.listen`)
-- `listenViewModelState(...)` (Equivalent to `vef.listenState`)
-- `listenViewModelStateSelect(...)` (Equivalent to `vef.listenStateSelect`)
-- `maybeWatchCachedViewModel(...)` (Equivalent to `vef.maybeWatchCached`)
-- `maybeReadCachedViewModel(...)` (Equivalent to `vef.maybeReadCached`)
-- `recycleViewModel(vm)` (Equivalent to `vef.recycle`)
+- `watchViewModel(...)` (Equivalent to `viewModelBinding.watch`)
+- `readViewModel(...)` (Equivalent to `viewModelBinding.read`)
+- `watchCachedViewModel(...)` (Equivalent to `viewModelBinding.watchCached`)
+- `readCachedViewModel(...)` (Equivalent to `viewModelBinding.readCached`)
+- `listenViewModel(...)` (Equivalent to `viewModelBinding.listen`)
+- `listenViewModelState(...)` (Equivalent to `viewModelBinding.listenState`)
+- `listenViewModelStateSelect(...)` (Equivalent to `viewModelBinding.listenStateSelect`)
+- `maybeWatchCachedViewModel(...)` (Equivalent to `viewModelBinding.maybeWatchCached`)
+- `maybeReadCachedViewModel(...)` (Equivalent to `viewModelBinding.maybeReadCached`)
+- `recycleViewModel(vm)` (Equivalent to `viewModelBinding.recycle`)
 
-These methods are fully compatible with the new `ViewModelProvider` system and will continue to work for the foreseeable future.
+These methods are fully compatible with the new `ViewModelSpec` system and will continue to work for the foreseeable future.
 
 ## Quick Checklist
 
-- Replace Factory instances with `ViewModelProvider` or `ViewModelProvider.arg*`.
-- Swap `watchViewModel/readViewModel` to `watch/read` with providers.
+- Replace Factory instances with `ViewModelSpec` or `ViewModelSpec.arg*`.
+- Swap `watchViewModel/readViewModel` to `watch/read` with specs.
 - Swap cached methods to `watchCached/readCached`.
 - Verify `key/tag/(deprecated) isSingleton` behavior after migration.
-- Update tests and examples to use providers.
+- Update tests and examples to use specs.

@@ -4,7 +4,7 @@ import 'dart:io';
 ///
 /// Combines features of previous scripts:
 /// - Summary table for target files with uncovered lines
-/// - Per-file percentage for `vef.dart` and `view_model.dart`
+/// - Per-file percentage for `view_model_binding.dart` and `view_model.dart`
 /// - Missed line listing for the same files
 void main() {
   final coverageFile = File('coverage/lcov.info');
@@ -19,22 +19,22 @@ void main() {
   tool.printSummaryTable(
     files,
     const [
-      'provider.dart',
+      'view_model_spec.dart',
       'app_lifecycle_observer.dart',
       'state_store.dart',
-      'vef.dart',
+      'view_model_binding.dart',
       'view_model.dart',
     ],
   );
 
   tool.printPerFilePercentages(
     files,
-    const ['vef.dart', 'view_model.dart'],
+    const ['view_model_binding.dart', 'view_model.dart'],
   );
 
   tool.printMissedLinesFor(
     files,
-    const ['vef.dart', 'view_model.dart'],
+    const ['view_model_binding.dart', 'view_model.dart'],
   );
 
   // Print overall coverage summary.

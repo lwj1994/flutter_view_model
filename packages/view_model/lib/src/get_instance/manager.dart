@@ -140,7 +140,7 @@ class InstanceManager {
       throw ViewModelError("T is dynamic");
     }
     if (factory == null || factory.isEmpty()) {
-      final bindedVefId = factory?.arg.vefId;
+      final bindingId = factory?.arg.bindingId;
       final tag = factory?.arg.tag;
       // find newly T instance
       final find = _getStore<T>().findNewlyInstance(
@@ -151,10 +151,10 @@ class InstanceManager {
       }
 
       // if watchId is not null, add watcher
-      if (bindedVefId != null) {
+      if (bindingId != null) {
         final factory = InstanceFactory<T>(
             arg: InstanceArg(
-          vefId: bindedVefId,
+          bindingId: bindingId,
           key: find.arg.key,
           tag: find.arg.tag,
         ));
@@ -228,13 +228,13 @@ class InstanceFactory<T> {
   /// to an existing ViewModel instance without creating a new one.
   ///
   /// Parameters:
-  /// - [vefId]: Unique identifier for the watcher
+  /// - [bindingId]: Unique identifier for the watcher
   ///
   /// Returns a new [InstanceFactory] configured for watching.
-  factory InstanceFactory.vef({required String vefId}) {
+  factory InstanceFactory.binding({required String bindingId}) {
     return InstanceFactory(
       arg: InstanceArg(
-        vefId: vefId,
+        bindingId: bindingId,
       ),
     );
   }

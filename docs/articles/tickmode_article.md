@@ -20,7 +20,7 @@
 
 ## 二、如何监控页面的“不可见”状态？
 
-为了实现智能暂停，首先要能准确地监控到页面的可见性变化。Flutter 提供了多种机制来捕捉这些变化，`view_model` 将它们封装成了不同的 `PauseProvider`。
+为了实现智能暂停，首先要能准确地监控到页面的可见性变化。Flutter 提供了多种机制来捕捉这些变化，`view_model` 将它们封装成了不同的 `ViewModelBindingPauseProvider`。
 
 ### 1. 路由事件 (`PageRoutePauseProvider`)
 
@@ -89,14 +89,14 @@ TickerMode(
 
 `view_model` 的强大之处在于，它不依赖于任何单一的可见性判断，而是将上述所有机制组合在了一起。
 
-`ViewModelStateMixin` 会自动创建一个 `PauseAwareController`，并为其注入多个 `PauseProvider`：
+`ViewModelStateMixin` 会自动创建一个 `PauseAwareController`，并为其注入多个 `ViewModelBindingPauseProvider`：
 
 ```dart
 late final _pauseAwareController = PauseAwareController(
   providers: [
-    _appPauseProvider,         // 应用切后台时暂停
-    _routePauseProvider,       // 路由被覆盖时暂停
-    _TickerModePauseProvider,    // TickerMode = false 时暂停
+    _appPauseProvider,          // 应用切后台时暂停
+    _routePauseProvider,        // 路由被覆盖时暂停
+    _tickerModePauseProvider,   // TickerMode = false 时暂停
   ],
   // ...
 );
@@ -116,18 +116,18 @@ final newPauseState = _providerPauseStates.values.any((isPaused) => isPaused);
 ### 工作流程
 
 1.  **进入暂停**：
-    -   某个 `PauseProvider`（如 `PageRoutePauseProvider`）发出 `true`（暂停）信号。
+    -   某个 `ViewModelBindingPauseProvider`（如 `PageRoutePauseProvider`）发出 `true`（暂停）信号。
     -   `PauseAwareController` 检测到后，将 `ViewModel` 标记为 `isPaused = true`。
     -   此后，即使 `ViewModel` 调用 `notifyListeners()`，`ViewModelAttacher` 也会拦截 `setState()`，并标记 `hasMissedUpdates = true`。UI 不会重建。
 
 2.  **恢复运行**：
-    -   所有 `PauseProvider` 都发出了 `false`（恢复）信号。
+    -   所有 `ViewModelBindingPauseProvider` 都发出了 `false`（恢复）信号。
     -   `PauseAwareController` 检测到后，将 `ViewModel` 标记为 `isPaused = false`，并触发 `onResume` 回调。
     -   `ViewModelAttacher` 在 `onResume` 回调中检查到 `hasMissedUpdates` 为 `true`，于是执行一次 `setState()`，将所有被“暂停”期间的更新一次性应用到 UI 上。
 
-### 自定义 PauseProvider
+### 自定义 ViewModelBindingPauseProvider
 
-`PauseAwareController` 的设计是完全开放的。你可以实现自己的 `VefPauseProvider` 来应对任何特殊的暂停逻辑。
+`PauseAwareController` 的设计是完全开放的。你可以实现自己的 `ViewModelBindingPauseProvider` 来应对任何特殊的暂停逻辑。
 
 例如，你可以创建一个 `ConnectionPauseProvider`，在网络断开时暂停所有依赖网络的 `ViewModel`。
 
@@ -135,24 +135,16 @@ final newPauseState = _providerPauseStates.values.any((isPaused) => isPaused);
 
 1.  **创建自定义 Provider**：
     ```dart
-    class ConnectionPauseProvider extends VefPauseProvider {
-      final _controller = StreamController<bool>.broadcast();
-      
+    class ConnectionPauseProvider with ViewModelBindingPauseProvider {
       ConnectionPauseProvider() {
         Connectivity().onConnectivityChanged.listen((status) {
           if (status == ConnectivityResult.none) {
-            _controller.add(true); // 网络断开，请求暂停
+            pause(); // 网络断开，请求暂停
           } else {
-            _controller.add(false); // 网络恢复，请求恢复
+            resume(); // 网络恢复，请求恢复
           }
         });
       }
-      
-      @override
-      Stream<bool> get onPauseStateChanged => _controller.stream;
-      
-      @override
-      void dispose() => _controller.close();
     }
     ```
 
@@ -181,5 +173,4 @@ final newPauseState = _providerPauseStates.values.any((isPaused) => isPaused);
 ，如果你正在寻找一个能够智能管理 Widget 生命周期、优化性能并保持代码整洁的状态管理框架：
 
 **立即体验**：[pub.dev/packages/view_model](https://pub.dev/packages/view_model) 🚀
-
 

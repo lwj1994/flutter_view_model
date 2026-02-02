@@ -38,8 +38,8 @@
   closures
 * Prefer `factory ClassName.provider(...)` when present
 * Support up to 4 args with `arg`, `arg2`, `arg3`, `arg4`
-* Exclude `super` forwarded parameters from provider arguments
-* Special naming: `PostViewModel` -> `postProvider`
+* Exclude `super` forwarded parameters from spec arguments
+* Special naming: `PostViewModel` -> `postSpec`
 
 
 

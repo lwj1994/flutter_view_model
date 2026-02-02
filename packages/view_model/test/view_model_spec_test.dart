@@ -19,7 +19,7 @@ class UserViewModel extends ViewModel {
 }
 
 // A mock binder to simulate the widget environment.
-class TestBinder with Vef {
+class TestBinder with ViewModelBinding {
   int updates = 0;
 
   void onUpdate() {
@@ -32,14 +32,14 @@ class TestBinder with Vef {
 class AnotherCounterViewModel extends CounterViewModel {}
 
 void main() {
-  group('ViewModelProvider', () {
+  group('ViewModelSpec', () {
     test('creates and watches a ViewModel', () {
       final binder = TestBinder();
-      final spec = ViewModelProvider<CounterViewModel>(
+      final spec = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
       );
 
-      final vm = binder.vef.watch(spec);
+      final vm = binder.viewModelBinding.watch(spec);
       expect(vm, isA<CounterViewModel>());
       expect(vm.count, 0);
 
@@ -50,41 +50,41 @@ void main() {
 
     test('reuses the same instance when watched multiple times', () {
       final binder = TestBinder();
-      final spec = ViewModelProvider<CounterViewModel>(
+      final spec = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
       );
 
-      final vm1 = binder.vef.watch(spec);
-      final vm2 = binder.vef.watch(spec);
+      final vm1 = binder.viewModelBinding.watch(spec);
+      final vm2 = binder.viewModelBinding.watch(spec);
 
       expect(identical(vm1, vm2), isTrue);
     });
 
     test('uses key to cache instance', () {
       final binder = TestBinder();
-      final spec1 = ViewModelProvider<CounterViewModel>(
+      final spec1 = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'counter',
       );
-      final spec2 = ViewModelProvider<CounterViewModel>(
+      final spec2 = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'counter',
       );
-      final spec3 = ViewModelProvider<CounterViewModel>(
+      final spec3 = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'another-counter',
       );
 
-      final vm1 = binder.vef.watch(spec1);
-      final vm2 = binder.vef.watch(spec2);
-      final vm3 = binder.vef.watch(spec3);
+      final vm1 = binder.viewModelBinding.watch(spec1);
+      final vm2 = binder.viewModelBinding.watch(spec2);
+      final vm3 = binder.viewModelBinding.watch(spec3);
 
       expect(identical(vm1, vm2), isTrue);
       expect(identical(vm1, vm3), isFalse);
     });
 
     test('toFactory creates a valid factory', () {
-      final spec = ViewModelProvider<CounterViewModel>(
+      final spec = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'counter',
         isSingleton: true,
@@ -94,69 +94,69 @@ void main() {
       expect(factory, isA<ViewModelFactory<CounterViewModel>>());
 
       final binder = TestBinder();
-      final vm1 = binder.vef.watch(factory);
-      final vm2 = binder.vef.watch(factory);
+      final vm1 = binder.viewModelBinding.watch(factory);
+      final vm2 = binder.viewModelBinding.watch(factory);
 
       expect(identical(vm1, vm2), isTrue);
     });
 
     test('isSingleton provides a default key', () {
       final binder = TestBinder();
-      final spec1 = ViewModelProvider<CounterViewModel>(
+      final spec1 = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         isSingleton: true,
       );
-      final spec2 = ViewModelProvider<CounterViewModel>(
+      final spec2 = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         isSingleton: true,
       );
 
-      final vm1 = binder.vef.watch(spec1);
-      final vm2 = binder.vef.watch(spec2);
+      final vm1 = binder.viewModelBinding.watch(spec1);
+      final vm2 = binder.viewModelBinding.watch(spec2);
 
       expect(identical(vm1, vm2), isTrue);
     });
 
     test('isSingleton provides a different key for different types', () {
       final binder = TestBinder();
-      final spec1 = ViewModelProvider<CounterViewModel>(
+      final spec1 = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         isSingleton: true,
       );
-      final spec2 = ViewModelProvider<AnotherCounterViewModel>(
+      final spec2 = ViewModelSpec<AnotherCounterViewModel>(
         builder: () => AnotherCounterViewModel(),
         isSingleton: true,
       );
 
-      final vm1 = binder.vef.watch(spec1);
-      final vm2 = binder.vef.watch(spec2);
+      final vm1 = binder.viewModelBinding.watch(spec1);
+      final vm2 = binder.viewModelBinding.watch(spec2);
 
       expect(identical(vm1, vm2), isFalse);
     });
   });
 
-  group('ViewModelProviderWithArg', () {
+  group('ViewModelSpecWithArg', () {
     test('creates a ViewModel with an argument', () {
       final binder = TestBinder();
-      final spec = ViewModelProvider.arg<UserViewModel, String>(
+      final spec = ViewModelSpec.arg<UserViewModel, String>(
         builder: (name) => UserViewModel(name: name),
       );
 
-      final vm = binder.vef.watch(spec('Alice'));
+      final vm = binder.viewModelBinding.watch(spec('Alice'));
       expect(vm, isA<UserViewModel>());
       expect(vm.name, 'Alice');
     });
 
     test('caches instances based on argument', () {
       final binder = TestBinder();
-      final spec = ViewModelProvider.arg<UserViewModel, String>(
+      final spec = ViewModelSpec.arg<UserViewModel, String>(
         builder: (name) => UserViewModel(name: name),
         key: (name) => 'user-$name',
       );
 
-      final vm1 = binder.vef.watch(spec('Alice'));
-      final vm2 = binder.vef.watch(spec('Alice'));
-      final vm3 = binder.vef.watch(spec('Bob'));
+      final vm1 = binder.viewModelBinding.watch(spec('Alice'));
+      final vm2 = binder.viewModelBinding.watch(spec('Alice'));
+      final vm3 = binder.viewModelBinding.watch(spec('Bob'));
 
       expect(identical(vm1, vm2), isTrue);
       expect(identical(vm1, vm3), isFalse);
@@ -165,7 +165,7 @@ void main() {
 
     test('caches instances based on complex argument', () {
       final binder = TestBinder();
-      final spec = ViewModelProvider.arg<UserViewModel, ComplexArg>(
+      final spec = ViewModelSpec.arg<UserViewModel, ComplexArg>(
         builder: (arg) => UserViewModel(name: arg.name),
         key: (arg) => 'user-${arg.id}',
       );
@@ -174,9 +174,9 @@ void main() {
       final arg2 = ComplexArg('1', 'Alice');
       final arg3 = ComplexArg('2', 'Bob');
 
-      final vm1 = binder.vef.watch(spec(arg1));
-      final vm2 = binder.vef.watch(spec(arg2));
-      final vm3 = binder.vef.watch(spec(arg3));
+      final vm1 = binder.viewModelBinding.watch(spec(arg1));
+      final vm2 = binder.viewModelBinding.watch(spec(arg2));
+      final vm3 = binder.viewModelBinding.watch(spec(arg3));
 
       expect(identical(vm1, vm2), isTrue);
       expect(identical(vm1, vm3), isFalse);
@@ -184,7 +184,7 @@ void main() {
     });
 
     test('toFactory creates a valid factory with arg', () {
-      final spec = ViewModelProvider.arg<UserViewModel, String>(
+      final spec = ViewModelSpec.arg<UserViewModel, String>(
         builder: (name) => UserViewModel(name: name),
         key: (name) => 'user-$name',
       );
@@ -193,35 +193,35 @@ void main() {
       expect(factory, isA<ViewModelFactory<UserViewModel>>());
 
       final binder = TestBinder();
-      final vm1 = binder.vef.watch(factory);
-      final vm2 = binder.vef.watch(factory);
+      final vm1 = binder.viewModelBinding.watch(factory);
+      final vm2 = binder.viewModelBinding.watch(factory);
 
       expect(identical(vm1, vm2), isTrue);
       expect(vm1.name, 'Alice');
     });
   });
 
-  group('ViewModelProvider Args', () {
+  group('ViewModelSpec Args', () {
     test('arg providers build correct instances', () {
-      final p1 = ViewModelProvider.arg<TestModel, int>(
+      final p1 = ViewModelSpec.arg<TestModel, int>(
         builder: (a) => TestModel(),
       );
       final factory1 = p1(1);
       expect(factory1.build(), isA<TestModel>());
 
-      final p2 = ViewModelProvider.arg2<TestModel, int, String>(
+      final p2 = ViewModelSpec.arg2<TestModel, int, String>(
         builder: (a, b) => TestModel(),
       );
       final factory2 = p2(1, 'a');
       expect(factory2.build(), isA<TestModel>());
 
-      final p3 = ViewModelProvider.arg3<TestModel, int, String, bool>(
+      final p3 = ViewModelSpec.arg3<TestModel, int, String, bool>(
         builder: (a, b, c) => TestModel(),
       );
       final factory3 = p3(1, 'a', true);
       expect(factory3.build(), isA<TestModel>());
 
-      final p4 = ViewModelProvider.arg4<TestModel, int, String, bool, double>(
+      final p4 = ViewModelSpec.arg4<TestModel, int, String, bool, double>(
         builder: (a, b, c, d) => TestModel(),
       );
       final factory4 = p4(1, 'a', true, 1.0);
@@ -229,7 +229,7 @@ void main() {
     });
 
     test('creates correct factory properties', () {
-      final provider = ViewModelProvider(
+      final provider = ViewModelSpec(
         builder: () => TestModel(),
         key: 'key1',
         tag: 'tag1',
@@ -243,7 +243,7 @@ void main() {
     });
 
     test('arg provider creates correct factory properties', () {
-      final argProvider = ViewModelProvider.arg<TestModel, int>(
+      final argProvider = ViewModelSpec.arg<TestModel, int>(
         builder: (i) => TestModel(),
         key: (i) => 'key$i',
         tag: (i) => 'tag$i',
@@ -262,7 +262,7 @@ void main() {
     });
 
     test('arg2 provider creates correct factory properties', () {
-      final argProvider = ViewModelProvider.arg2<TestModel, int, String>(
+      final argProvider = ViewModelSpec.arg2<TestModel, int, String>(
         builder: (i, s) => TestModel(),
         key: (i, s) => 'key$i$s',
         tag: (i, s) => 'tag$i$s',
@@ -281,7 +281,7 @@ void main() {
     });
 
     test('arg3 provider creates correct factory properties', () {
-      final argProvider = ViewModelProvider.arg3<TestModel, int, String, bool>(
+      final argProvider = ViewModelSpec.arg3<TestModel, int, String, bool>(
         builder: (i, s, b) => TestModel(),
         key: (i, s, b) => 'key$i$s$b',
         tag: (i, s, b) => 'tag$i$s$b',
@@ -301,7 +301,7 @@ void main() {
 
     test('arg4 provider creates correct factory properties', () {
       final argProvider =
-          ViewModelProvider.arg4<TestModel, int, String, bool, double>(
+          ViewModelSpec.arg4<TestModel, int, String, bool, double>(
         builder: (i, s, b, d) => TestModel(),
         key: (i, s, b, d) => 'key$i$s$b$d',
         tag: (i, s, b, d) => 'tag$i$s$b$d',

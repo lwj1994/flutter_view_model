@@ -2,7 +2,7 @@ import 'package:view_model/view_model.dart';
 
 import 'counter_state.dart';
 
-final counterSpec = ViewModelProvider<CounterViewModel>(
+final counterSpec = ViewModelSpec<CounterViewModel>(
     key: "shared-counter-viewmodel",
     builder: () => CounterViewModel(
           state: const CounterState(),

@@ -25,7 +25,7 @@ void main() {
       expect(find.text('initState'), findsOneWidget);
 
       (testKey.currentState as TestPageState)
-          .vef
+          .viewModelBinding
           .readCached<TestViewModel>()
           .setState("hi");
       await tester.pumpAndSettle();
@@ -45,12 +45,12 @@ void main() {
       )));
 
       final state = testKey.currentState as TestPageState;
-      final vm1 = state.vef.watch<TestViewModel>(const TestViewModelFactory(
+      final vm1 = state.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState",
         isSingleton: false,
       ));
 
-      final vm2 = state.vef.watch<TestViewModel>(const TestViewModelFactory(
+      final vm2 = state.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState2",
         isSingleton: false,
       ));
@@ -94,12 +94,12 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.vef.watch<TestViewModel>(const TestViewModelFactory(
+      final vm1 = state.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState",
         isSingleton: false,
       ));
 
-      final vm2 = state2.vef.watch<TestViewModel>(const TestViewModelFactory(
+      final vm2 = state2.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState2",
         isSingleton: false,
       ));
@@ -125,7 +125,7 @@ void main() {
       final state = testKey.currentState as TestPageState;
 
       expect(
-        () => state.vef.readCached<TestViewModel>(key: "non_existent"),
+        () => state.viewModelBinding.readCached<TestViewModel>(key: "non_existent"),
         throwsA(isA<ViewModelError>()),
       );
     });
@@ -154,8 +154,8 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.vef.readCached<TestViewModel>(tag: "1");
-      final vm2 = state2.vef.readCached<TestViewModel>();
+      final vm1 = state.viewModelBinding.readCached<TestViewModel>(tag: "1");
+      final vm2 = state2.viewModelBinding.readCached<TestViewModel>();
       final vm3 = ViewModel.readCached<TestViewModel>();
 
       print(vm1.state);
@@ -192,8 +192,8 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.vef.readCached<TestViewModel>();
-      final vm2 = state2.vef.readCached<TestViewModel>();
+      final vm1 = state.viewModelBinding.readCached<TestViewModel>();
+      final vm2 = state2.viewModelBinding.readCached<TestViewModel>();
       final vm3 = ViewModel.readCached<TestViewModel>();
 
       print(vm1.state);
@@ -227,10 +227,10 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.vef.read(fc);
+      final vm1 = state.viewModelBinding.read(fc);
 
-      final vm2 = state2.vef.read(fc);
-      final vm3 = state2.vef.readCached<TestViewModel>();
+      final vm2 = state2.viewModelBinding.read(fc);
+      final vm3 = state2.viewModelBinding.readCached<TestViewModel>();
       print(vm1.state);
       print(vm2.state);
       print(vm3.state);
@@ -251,11 +251,11 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.vef.read(
+      final vm = state.viewModelBinding.read(
         fc,
       );
 
-      final vm2 = state.vef.readCached<TestViewModel>(key: "key");
+      final vm2 = state.viewModelBinding.readCached<TestViewModel>(key: "key");
 
       assert(vm == vm2);
       vm2.setState("2");
@@ -276,9 +276,9 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.vef.read(fc);
+      final vm = state.viewModelBinding.read(fc);
 
-      final vm2 = state.vef.readCached<TestViewModel>();
+      final vm2 = state.viewModelBinding.readCached<TestViewModel>();
 
       assert(vm == vm2);
       vm2.setState("2");
@@ -298,7 +298,7 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.vef.read(fc);
+      final vm = state.viewModelBinding.read(fc);
 
       var c = 0;
       vm.listenState(onChanged: (p, n) {
@@ -327,7 +327,7 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.vef.read(fc);
+      final vm = state.viewModelBinding.read(fc);
 
       var c = 0;
       vm.listenState(onChanged: (p, n) {
@@ -356,10 +356,10 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.vef.read(fc);
+      final vm = state.viewModelBinding.read(fc);
 
-      state.vef.recycle(vm);
-      final vm2 = state.vef.read(fc);
+      state.viewModelBinding.recycle(vm);
+      final vm2 = state.viewModelBinding.read(fc);
       assert(vm != vm2);
     });
 
@@ -376,13 +376,13 @@ void main() {
         ],
       )));
       final state = testKey.currentState as TestPageState;
-      final vm = state.vef.read(
+      final vm = state.viewModelBinding.read(
         fc,
       );
 
-      final vm2 = state.vef.readCached<TestViewModel>();
+      final vm2 = state.viewModelBinding.readCached<TestViewModel>();
       assert(vm == vm2);
-      final TestViewModel vm3 = state.vef.read<TestViewModel>(fc);
+      final TestViewModel vm3 = state.viewModelBinding.read<TestViewModel>(fc);
       assert(vm == vm3);
     });
   });

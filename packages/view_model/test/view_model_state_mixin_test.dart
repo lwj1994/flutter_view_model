@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/view_model.dart';
-import 'package:view_model/src/view_model/vef_zone.dart';
+import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 
 // Test ViewModels
@@ -33,7 +33,7 @@ class UserViewModel extends ViewModel {
 
 // Test Widgets using ViewModelStateMixin
 class CounterWidget extends StatefulWidget {
-  final ViewModelProvider<CounterViewModel>? factory;
+  final ViewModelSpec<CounterViewModel>? factory;
   final String? viewModelKey;
   final Object? tag;
 
@@ -55,9 +55,9 @@ class _CounterWidgetState extends State<CounterWidget>
   @override
   void initState() {
     super.initState();
-    viewModel = vef.watch<CounterViewModel>(
+    viewModel = viewModelBinding.watch<CounterViewModel>(
       widget.factory ??
-          ViewModelProvider<CounterViewModel>(
+          ViewModelSpec<CounterViewModel>(
             builder: () => CounterViewModel(),
           ),
     );
@@ -88,7 +88,7 @@ class _CounterWidgetState extends State<CounterWidget>
 }
 
 class UserWidget extends StatefulWidget {
-  final ViewModelProvider<UserViewModel>? factory;
+  final ViewModelSpec<UserViewModel>? factory;
   final String? viewModelKey;
   final Object? tag;
 
@@ -112,10 +112,10 @@ class _UserWidgetState extends State<UserWidget>
     super.initState();
     if (widget.factory != null) {
       viewModel = widget.factory != null
-          ? vef.watch<UserViewModel>(
+          ? viewModelBinding.watch<UserViewModel>(
               widget.factory!,
             )
-          : vef.watchCached(
+          : viewModelBinding.watchCached(
               key: widget.viewModelKey,
               tag: widget.tag,
             );
@@ -149,23 +149,23 @@ class _MultiViewModelWidgetState extends State<MultiViewModelWidget>
     super.initState();
 
     // Different counters with different keys
-    counter1 = vef.watch<CounterViewModel>(
-      ViewModelProvider<CounterViewModel>(
+    counter1 = viewModelBinding.watch<CounterViewModel>(
+      ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 10),
         key: 'counter1',
       ),
     );
 
-    counter2 = vef.watch<CounterViewModel>(
-      ViewModelProvider<CounterViewModel>(
+    counter2 = viewModelBinding.watch<CounterViewModel>(
+      ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 20),
         key: 'counter2',
       ),
     );
 
     // User with tag
-    user = vef.watch<UserViewModel>(
-      ViewModelProvider<UserViewModel>(
+    user = viewModelBinding.watch<UserViewModel>(
+      ViewModelSpec<UserViewModel>(
         builder: () => UserViewModel(name: 'Alice', age: 25),
         tag: 'primary_user',
       ),
@@ -195,7 +195,7 @@ class _MultiViewModelWidgetState extends State<MultiViewModelWidget>
 }
 
 void main() {
-  group('ViewModelStateMixin with ViewModelProvider', () {
+  group('ViewModelStateMixin with ViewModelSpec', () {
     testWidgets('should create and watch ViewModel correctly', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -216,7 +216,7 @@ void main() {
     });
 
     testWidgets('should handle custom factory correctly', (tester) async {
-      final customFactory = ViewModelProvider<CounterViewModel>(
+      final customFactory = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 100),
       );
 
@@ -238,7 +238,7 @@ void main() {
     testWidgets('should share ViewModel with same key', (tester) async {
       const sharedKey = 'shared_counter';
 
-      final factory = ViewModelProvider<CounterViewModel>(
+      final factory = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 50),
         key: sharedKey,
       );
@@ -278,7 +278,7 @@ void main() {
     });
 
     testWidgets('should handle singleton factory correctly', (tester) async {
-      final singletonFactory = ViewModelProvider<CounterViewModel>(
+      final singletonFactory = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(initialValue: 999),
         isSingleton: true,
       );
@@ -318,7 +318,7 @@ void main() {
 
     testWidgets('should handle tag-based ViewModel lookup', (tester) async {
       const userTag = 'test_user';
-      final userFactory = ViewModelProvider<UserViewModel>(
+      final userFactory = ViewModelSpec<UserViewModel>(
         builder: () => UserViewModel(name: 'Bob', age: 30),
         tag: userTag,
       );
@@ -411,7 +411,7 @@ void main() {
     });
 
     testWidgets('should properly dispose ViewModels', (tester) async {
-      final factory = ViewModelProvider<CounterViewModel>(
+      final factory = ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
       );
 
@@ -441,60 +441,60 @@ void main() {
       await tester.pumpWidget(
         StatefulBuilder(
           builder: (context, setState) {
-            return const VefTestWidget();
+            return const ViewModelBindingTestWidget();
           },
         ),
       );
     });
   });
 
-  group('VefHandler', () {
+  group('ViewModelBindingHandler', () {
     test('manages refs manually', () {
-      final handler = VefHandler();
-      final vef = TestVef();
+      final handler = ViewModelBindingHandler();
+      final viewModelBinding = TestViewModelBinding();
 
-      handler.addRef(vef);
-      expect(handler.vef, vef);
+      handler.addRef(viewModelBinding);
+      expect(handler.binding, viewModelBinding);
 
-      handler.removeRef(vef);
-      expect(() => handler.vef, throwsA(isA<ViewModelError>()));
+      handler.removeRef(viewModelBinding);
+      expect(() => handler.binding, throwsA(isA<ViewModelError>()));
     });
 
-    test('runWithVef sets zone value', () {
-      final vef = TestVef();
-      runWithVef(() {
-        final handler = VefHandler();
+    test('runWithBinding sets zone value', () {
+      final viewModelBinding = TestViewModelBinding();
+      runWithBinding(() {
+        final handler = ViewModelBindingHandler();
         // Should pick up from Zone
-        expect(handler.vef, vef);
-      }, vef);
+        expect(handler.binding, viewModelBinding);
+      }, viewModelBinding);
     });
 
     test('dispose clears refs', () {
-      final handler = VefHandler();
-      final vef = TestVef();
-      handler.addRef(vef);
+      final handler = ViewModelBindingHandler();
+      final viewModelBinding = TestViewModelBinding();
+      handler.addRef(viewModelBinding);
 
       handler.dispose();
-      expect(() => handler.vef, throwsA(isA<ViewModelError>()));
+      expect(() => handler.binding, throwsA(isA<ViewModelError>()));
     });
   });
 
-  group('Vef Mixin', () {
+  group('ViewModelBinding Mixin', () {
     test('isDisposed default false', () {
-      final v = TestVef();
+      final v = TestViewModelBinding();
       expect(v.isDisposed, false);
     });
 
-    test('vef getter returns self', () {
-      final v = TestVef();
-      expect(v.exposedVef, v);
+    test('viewModelBinding getter returns self', () {
+      final v = TestViewModelBinding();
+      expect(v.exposedBinding, v);
     });
   });
 
-  group('Vef Mixin Coverage', () {
+  group('ViewModelBinding Mixin Coverage', () {
     test('performForAllViewModels', () {
-      final v = TestVef();
-      final vm = v.watch(ViewModelProvider(builder: () => CounterViewModel()));
+      final v = TestViewModelBinding();
+      final vm = v.watch(ViewModelSpec(builder: () => CounterViewModel()));
 
       int count = 0;
       v.performForAllViewModels((viewModel) {
@@ -505,9 +505,9 @@ void main() {
       expect(count, 1);
     });
 
-    test('listen / listenState on Vef', () async {
-      final v = TestVef();
-      final factory = ViewModelProvider(builder: () => CounterViewModel());
+    test('listen / listenState on ViewModelBinding', () async {
+      final v = TestViewModelBinding();
+      final factory = ViewModelSpec(builder: () => CounterViewModel());
 
       // Ensure VM is created and we have reference
       final vm = v.read(factory);
@@ -546,19 +546,19 @@ void main() {
     });
 
     test('maybeReadCached returns null on error', () {
-      final v = TestVef();
+      final v = TestViewModelBinding();
       expect(v.maybeReadCached<CounterViewModel>(key: 'missing'), isNull);
     });
 
     test('maybeWatchCached returns null on error', () {
-      final v = TestVef();
+      final v = TestViewModelBinding();
       expect(v.maybeWatchCached<CounterViewModel>(key: 'missing'), isNull);
     });
   });
 }
 
-class TestVef with Vef {
-  Vef get exposedVef => vef;
+class TestViewModelBinding with ViewModelBinding {
+  ViewModelBinding get exposedBinding => viewModelBinding;
 }
 
 // Additional test widgets
@@ -578,8 +578,8 @@ class _CounterReadWidgetState extends State<CounterReadWidget>
   void initState() {
     super.initState();
     // Create ViewModel that won't trigger rebuilds
-    viewModel = vef.read<CounterViewModel>(
-      ViewModelProvider<CounterViewModel>(
+    viewModel = viewModelBinding.read<CounterViewModel>(
+      ViewModelSpec<CounterViewModel>(
         builder: () => CounterViewModel(),
         key: 'read_counter',
       ),
@@ -625,15 +625,15 @@ class _MaybeViewModelWidgetState extends State<MaybeViewModelWidget>
   void initState() {
     super.initState();
     // Try to get ViewModel that doesn't exist
-    viewModel = vef.maybeWatchCached<CounterViewModel>(
+    viewModel = viewModelBinding.maybeWatchCached<CounterViewModel>(
       key: 'non_existent_key',
     );
   }
 
   void createViewModel() {
     setState(() {
-      viewModel = vef.watch<CounterViewModel>(
-        ViewModelProvider<CounterViewModel>(
+      viewModel = viewModelBinding.watch<CounterViewModel>(
+        ViewModelSpec<CounterViewModel>(
           builder: () => CounterViewModel(),
         ),
       );
@@ -659,14 +659,14 @@ class _MaybeViewModelWidgetState extends State<MaybeViewModelWidget>
   }
 }
 
-class VefTestWidget extends StatefulWidget {
-  const VefTestWidget({super.key});
+class ViewModelBindingTestWidget extends StatefulWidget {
+  const ViewModelBindingTestWidget({super.key});
 
   @override
-  _VefTestWidgetState createState() => _VefTestWidgetState();
+  _ViewModelBindingTestWidgetState createState() => _ViewModelBindingTestWidgetState();
 }
 
-class _VefTestWidgetState extends State<VefTestWidget>
+class _ViewModelBindingTestWidgetState extends State<ViewModelBindingTestWidget>
     with ViewModelStateMixin {
   @override
   void initState() {

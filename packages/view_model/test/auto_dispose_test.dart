@@ -4,26 +4,29 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/state_store.dart';
-import 'package:view_model/src/view_model/vef.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 import 'test_widget.dart';
 
-class MockVef with Vef {}
+class MockViewModelBinding with ViewModelBinding {
+  @override
+  String get id => 'mock_binding';
+}
 
 void main() {
   group('AutoDisposeInstanceController', () {
     late AutoDisposeInstanceController controller;
-    late MockVef mockRef;
+    late MockViewModelBinding mockRef;
     bool recreated = false;
 
     setUp(() {
       ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
-      mockRef = MockVef();
+      mockRef = MockViewModelBinding();
       recreated = false;
       controller = AutoDisposeInstanceController(
         onRecreate: () => recreated = true,
-        vef: mockRef,
+        viewModelBinding: mockRef,
       );
     });
 
@@ -40,7 +43,7 @@ void main() {
 
       final handle =
           instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
-      expect(handle.bindedVefIds.any((id) => id == mockRef.id), isTrue);
+      expect(handle.bindingIds.any((id) => id == mockRef.id), isTrue);
     });
 
     test('getInstance with dynamic throws error', () {
@@ -186,7 +189,7 @@ void main() {
         builder: () => TestViewModel(state: 'with_watcher'),
         arg: const InstanceArg(
           key: 'recreate_preserve_watchers',
-          vefId: 'test_watcher_1',
+          bindingId: 'test_watcher_1',
         ),
       );
 
@@ -196,16 +199,16 @@ void main() {
           instanceManager.getNotifier<TestViewModel>(factory: factory);
 
       // Verify initial watcher
-      expect(handle.bindedVefIds, contains('test_watcher_1'));
-      final initialWatcherCount = handle.bindedVefIds.length;
+      expect(handle.bindingIds, contains('test_watcher_1'));
+      final initialWatcherCount = handle.bindingIds.length;
 
       // Recreate instance
       final vm2 = instanceManager.recreate(vm1);
 
       // Verify watchers are preserved after recreate
-      expect(handle.bindedVefIds, contains('test_watcher_1'),
+      expect(handle.bindingIds, contains('test_watcher_1'),
           reason: 'Watchers should be preserved after recreate');
-      expect(handle.bindedVefIds.length, equals(initialWatcherCount),
+      expect(handle.bindingIds.length, equals(initialWatcherCount),
           reason: 'Watcher count should remain the same');
 
       // Verify the handle points to new instance
@@ -240,11 +243,11 @@ void main() {
       final handle =
           instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
       assert(vm == handle.instance);
-      expect(handle.bindedVefIds.any((id) => id == mockRef.id), isTrue);
+      expect(handle.bindingIds.any((id) => id == mockRef.id), isTrue);
 
       controller.unbindInstance(vm);
 
-      expect(handle.bindedVefIds.any((id) => id == mockRef.id), isFalse);
+      expect(handle.bindingIds.any((id) => id == mockRef.id), isFalse);
     });
     group('getInstancesByTag', () {
       test('returns instances with matching tag', () {
@@ -269,7 +272,7 @@ void main() {
         expect(controller.instanceNotifiers.length, 2);
       });
 
-      test('listen: true attaches listeners and binds vef', () {
+      test('listen: true attaches listeners and binds viewModelBinding', () {
         const tag = 'listen_true_tag';
         final factory = InstanceFactory<TestStatelessViewModel>(
           builder: () => TestStatelessViewModel(),
@@ -282,11 +285,11 @@ void main() {
 
         final handle = instanceManager.getNotifier<TestStatelessViewModel>(
             factory: factory);
-        expect(handle.bindedVefIds.contains(mockRef.id), isTrue);
+        expect(handle.bindingIds.contains(mockRef.id), isTrue);
         expect(controller.instanceNotifiers.length, 1);
       });
 
-      test('listen: false does not attach listeners or bind vef', () {
+      test('listen: false does not attach listeners or bind viewModelBinding', () {
         const tag = 'listen_false_tag';
         final factory = InstanceFactory<TestStatelessViewModel>(
           builder: () => TestStatelessViewModel(),
@@ -300,7 +303,7 @@ void main() {
 
         final handle = instanceManager.getNotifier<TestStatelessViewModel>(
             factory: factory);
-        expect(handle.bindedVefIds.contains(mockRef.id), isFalse);
+        expect(handle.bindingIds.contains(mockRef.id), isFalse);
         expect(controller.instanceNotifiers, isEmpty);
       });
     });
@@ -316,11 +319,11 @@ void main() {
 
       // Manually add ref to simulate usage
       vm.refHandler.addRef(mockRef);
-      expect(vm.refHandler.dependencyVefs.contains(mockRef), isTrue);
+      expect(vm.refHandler.dependencyBindings.contains(mockRef), isTrue);
 
       controller.dispose();
 
-      expect(vm.refHandler.dependencyVefs.contains(mockRef), isFalse);
+      expect(vm.refHandler.dependencyBindings.contains(mockRef), isFalse);
     });
   });
 }

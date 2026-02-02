@@ -55,8 +55,8 @@ class _ControlledMountWidgetState extends State<ControlledMountWidget>
   }
 
   void _initializeViewModel() {
-    viewModel = vef.watch<DelayedStateViewModel>(
-      ViewModelProvider<DelayedStateViewModel>(
+    viewModel = viewModelBinding.watch<DelayedStateViewModel>(
+      ViewModelSpec<DelayedStateViewModel>(
         builder: () => DelayedStateViewModel(),
       ),
     );
@@ -126,8 +126,8 @@ class _UnmountingWidgetState extends State<UnmountingWidget>
   @override
   void initState() {
     super.initState();
-    viewModel = vef.watch<DelayedStateViewModel>(
-      ViewModelProvider<DelayedStateViewModel>(
+    viewModel = viewModelBinding.watch<DelayedStateViewModel>(
+      ViewModelSpec<DelayedStateViewModel>(
         builder: () => DelayedStateViewModel(),
       ),
     );

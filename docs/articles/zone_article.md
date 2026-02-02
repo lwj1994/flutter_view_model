@@ -205,7 +205,8 @@ class UserProfileViewModel extends ViewModel {
   UserProfileViewModel() {
     // 构造函数中没有 BuildContext
     // 如何在这里获取 AuthViewModel 的实例？
-    final authVM = readViewModel<AuthViewModel>(); // ❓
+    final authVM =
+        read(ViewModelSpec<AuthViewModel>(builder: AuthViewModel.new)); // ❓
     if (authVM.isLoggedIn) {
       loadUserProfile();
     }
@@ -221,18 +222,18 @@ class UserProfileViewModel extends ViewModel {
 
 #### 步骤 1：在 Widget/State 中发起调用
 
-当你在 Widget 中调用 `watchViewModel()` 或 `readViewModel()` 时，系统会提供一个 `DependencyResolver`。
+当你在 Widget 中调用 `viewModelBinding.watch()` 或 `viewModelBinding.read()` 时，系统会提供一个 `DependencyResolver`。
 
 ```dart
 // 在你的 Widget State 中
-final userProfileVM = watchViewModel<UserProfileViewModel>(
-  factory: () => UserProfileViewModel(),
+final userProfileVM = viewModelBinding.watch(
+  ViewModelSpec<UserProfileViewModel>(builder: UserProfileViewModel.new),
 );
 ```
 
 #### 步骤 2：创建 Zone 并执行构造函数
 
-`watchViewModel` 内部会调用一个名为 `runWithResolver` 的函数。这个函数是整个魔法的核心：
+`viewModelBinding.watch` 内部会调用一个名为 `runWithResolver` 的函数。这个函数是整个魔法的核心：
 
 1.  它创建一个新的 `Zone`。
 2.  它将 `DependencyResolver` 存储到这个 `Zone` 的 `zoneValues` 中，使用一个私有的 `_resolverKey` 作为键。
@@ -250,7 +251,7 @@ final vm = runWithResolver(
 
 现在，当 `UserProfileViewModel` 的构造函数执行时，它正处于那个包含了 `DependencyResolver` 的 `Zone` 内部。
 
-此时，构造函数内部调用的 `readViewModel<AuthViewModel>()` 方法就可以：
+此时，构造函数内部调用的 `read(ViewModelSpec<AuthViewModel>(builder: AuthViewModel.new))` 方法就可以：
 
 1.  通过 `Zone.current[#_resolverKey]` 从当前 `Zone` 中获取到 `DependencyResolver`。
 2.  使用这个 `resolver` 来查找并返回 `AuthViewModel` 的实例。
@@ -270,10 +271,10 @@ T getViewModel<T>() {
 
 ```mermaid
 graph TD
-    A[Widget 调用 watchViewModel] --> B{runWithResolver};
+    A[Widget 调用 viewModelBinding.watch] --> B{runWithResolver};
     B --> C{创建 Zone 并存入 Resolver};
     C --> D[在 Zone 内执行 ViewModel 构造函数];
-    D --> E{ViewModel 内部调用 readViewModel};
+    D --> E{ViewModel 内部调用 read};
     E --> F{从当前 Zone 获取 Resolver};
     F --> G[使用 Resolver 获取依赖];
     G --> H[返回依赖实例];

@@ -4,11 +4,11 @@ import 'package:view_model_generator/src/provider_generator.dart';
 
 /// A builder that generates ViewModel provider code.
 ///
-/// It uses [ViewModelProviderGenerator] to process files and generates part files
+/// It uses [ViewModelSpecGenerator] to process files and generates part files
 /// with the extension `.vm.dart`.
 Builder viewModelProviderBuilder(BuilderOptions options) {
   return PartBuilder(
-    [const ViewModelProviderGenerator()],
+    [const ViewModelSpecGenerator()],
     '.vm.dart',
   );
 }

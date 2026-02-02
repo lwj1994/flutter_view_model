@@ -14,7 +14,9 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage>
     with ViewModelStateMixin<SettingsPage> {
   CounterViewModel get counterVM =>
-      vef.watchCached<CounterViewModel>(key: 'shared-counter-viewmodel');
+      viewModelBinding.watchCached<CounterViewModel>(
+        key: 'shared-counter-viewmodel',
+      );
 
   @override
   Widget build(BuildContext context) {

@@ -1,12 +1,12 @@
 
 ---
 name: View Model Generator Usage
-description: Guide on how to use the view_model_generator package to automate provider creation.
+description: Guide on how to use the view_model_generator package to automate spec creation.
 ---
 
 # View Model Generator Usage
 
-The `view_model_generator` package automates the boilerplate of creating `ViewModelProvider`s.
+The `view_model_generator` package automates the boilerplate of creating `ViewModelSpec`s.
 
 ## Installation
 
@@ -36,11 +36,11 @@ class MyViewModel extends ViewModel {
 }
 ```
 
-This generates a top-level `myProvider` (camelCase name).
+This generates a top-level `mySpec` (camelCase name).
 
 ## 2. Dependency Injection (Arguments)
 
-The generator automatically detects constructor arguments (up to 4) and creates a provider that accepts them.
+The generator automatically detects constructor arguments (up to 4) and creates a spec that accepts them.
 
 ```dart
 @genProvider
@@ -56,8 +56,8 @@ class UserViewModel extends ViewModel {
 **Usage:**
 
 ```dart
-// The generated provider is now a function
-final vm = vef.watch(userProvider(123, repository));
+// The generated spec is now a function
+final vm = viewModelBinding.watch(userSpec(123, repository));
 ```
 
 ## 3. Singleton Mode (Keep Alive)
@@ -110,7 +110,7 @@ class SettingsViewModel extends ViewModel {
 
 | Feature | Code |
 | :--- | :--- |
-| **Basic Provider** | `@genProvider` |
+| **Basic Spec** | `@genProvider` |
 | **With Arguments** | `@genProvider` + Constructor with args |
 | **Singleton** | `@GenProvider(aliveForever: true)` |
 | **Custom Key** | `@GenProvider(key: ...)` |

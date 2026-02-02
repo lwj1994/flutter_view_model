@@ -1,4 +1,5 @@
 import 'package:view_model/view_model.dart';
+import 'package:view_model_annotation/view_model_annotation.dart';
 
 // Run: dart run build_runner build
 // to generate the .vm.dart part file.
@@ -23,7 +24,7 @@ class DemoViewModel extends ViewModel {
 class Repo {}
 
 /// ViewModel with constructor dependency.
-@GenProvider()
+@GenSpec()
 class UserViewModel extends ViewModel {
   final Repo repo;
 

@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/src/view_model/provider.dart';
+import 'package:view_model/src/view_model/view_model_spec.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
@@ -43,22 +43,22 @@ class UserProfileViewModel with ViewModel {
   String get profileData => _profileData;
 
   String get userName {
-    _authViewModel ??= vef.read<AuthViewModel>(
-      ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
+    _authViewModel ??= viewModelBinding.read<AuthViewModel>(
+      ViewModelSpec<AuthViewModel>(builder: () => AuthViewModel()),
     );
     return _authViewModel!.currentUser ?? 'Guest';
   }
 
   bool get isLoggedIn {
-    _authViewModel ??= vef.read<AuthViewModel>(
-      ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
+    _authViewModel ??= viewModelBinding.read<AuthViewModel>(
+      ViewModelSpec<AuthViewModel>(builder: () => AuthViewModel()),
     );
     return _authViewModel!.isAuthenticated;
   }
 
   void updateProfile(String data) {
-    _authViewModel ??= vef.read<AuthViewModel>(
-      ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
+    _authViewModel ??= viewModelBinding.read<AuthViewModel>(
+      ViewModelSpec<AuthViewModel>(builder: () => AuthViewModel()),
     );
     if (_authViewModel!.isAuthenticated) {
       _profileData = data;
@@ -86,11 +86,11 @@ class DashboardViewModel with ViewModel {
   String _status = 'Ready';
 
   String get welcomeMessage {
-    _authViewModel ??= vef.read<AuthViewModel>(
-      ViewModelProvider<AuthViewModel>(builder: () => AuthViewModel()),
+    _authViewModel ??= viewModelBinding.read<AuthViewModel>(
+      ViewModelSpec<AuthViewModel>(builder: () => AuthViewModel()),
     );
-    _settingsViewModel ??= vef.read<SettingsViewModel>(
-      ViewModelProvider<SettingsViewModel>(builder: () => SettingsViewModel()),
+    _settingsViewModel ??= viewModelBinding.read<SettingsViewModel>(
+      ViewModelSpec<SettingsViewModel>(builder: () => SettingsViewModel()),
     );
     final user = _authViewModel!.currentUser ?? 'Guest';
     final theme = _settingsViewModel!.theme;
@@ -110,7 +110,7 @@ class CircularViewModel1 with ViewModel {
   late final CircularViewModel2 _dependency;
 
   void initializeDependencies() {
-    _dependency = vef.readCached<CircularViewModel2>();
+    _dependency = viewModelBinding.readCached<CircularViewModel2>();
   }
 }
 
@@ -119,7 +119,7 @@ class CircularViewModel2 with ViewModel {
   late final CircularViewModel1 _dependency;
 
   void initializeDependencies() {
-    _dependency = vef.readCached<CircularViewModel1>();
+    _dependency = viewModelBinding.readCached<CircularViewModel1>();
   }
 }
 
@@ -141,7 +141,7 @@ void main() {
       final orphanViewModel = SettingsViewModel();
 
       expect(
-        () => orphanViewModel.vef.readCached<AuthViewModel>(),
+        () => orphanViewModel.viewModelBinding.readCached<AuthViewModel>(),
         throwsA(isA<ViewModelError>()),
       );
     });
@@ -150,7 +150,7 @@ void main() {
       final orphanViewModel = SettingsViewModel();
 
       expect(
-        () => orphanViewModel.vef.readCached<AuthViewModel>(),
+        () => orphanViewModel.viewModelBinding.readCached<AuthViewModel>(),
         throwsA(isA<ViewModelError>()),
       );
     });

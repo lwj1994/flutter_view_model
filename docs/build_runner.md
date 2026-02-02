@@ -1,6 +1,6 @@
-# ViewModel Provider Generator
+# ViewModel Spec Generator
 
-Code generator for the `view_model` package. It generates `ViewModelProvider` specs for your `ViewModel` classes.
+Code generator for the `view_model` package. It generates `ViewModelSpec` specs for your `ViewModel` classes.
 
 ## Installation
 
@@ -34,11 +34,11 @@ class MyViewModel extends ViewModel {
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-### 3. Use the Generated Provider
+### 3. Use the Generated Spec
 
 ```dart
-// Generated: myProvider
-final vm = vef.watch(myProvider);
+// Generated: mySpec
+final vm = viewModelBinding.watch(mySpec);
 ```
 
 ## Generated Code Examples
@@ -52,7 +52,7 @@ class CounterViewModel extends ViewModel {
 }
 
 // Generates:
-final counterProvider = ViewModelProvider<CounterViewModel>(
+final counterSpec = ViewModelSpec<CounterViewModel>(
   builder: () => CounterViewModel(),
 );
 ```
@@ -68,8 +68,8 @@ class UserViewModel extends ViewModel {
   UserViewModel(this.userId);
 }
 
-// Generates ViewModelProvider.arg:
-final userViewModelProvider = ViewModelProvider.arg<UserViewModel, String>(
+// Generates ViewModelSpec.arg:
+final userSpec = ViewModelSpec.arg<UserViewModel, String>(
   builder: (String userId) => UserViewModel(userId),
 );
 ```
@@ -86,7 +86,7 @@ class UserViewModel extends ViewModel {
 }
 
 // Generates closures for key/tag:
-final userProvider = ViewModelProvider.arg<UserViewModel, String>(
+final userSpec = ViewModelSpec.arg<UserViewModel, String>(
   builder: (String id) => UserViewModel(id),
   key: (String id) => 'user-$id',
   tag: (String id) => 'user-$id',
@@ -105,7 +105,7 @@ class DataViewModel extends ViewModel {
 }
 
 // Generates expression closures (not string interpolation):
-final dataProvider = ViewModelProvider.arg<DataViewModel, Repository>(
+final dataSpec = ViewModelSpec.arg<DataViewModel, Repository>(
   builder: (Repository repo) => DataViewModel(repo: repo),
   key: (Repository repo) => repo,        // Returns the object itself
   tag: (Repository repo) => repo.id,     // Returns repo.id
@@ -129,7 +129,7 @@ class MyViewModel extends BaseModel {
 }
 
 // Uses factory instead of main constructor:
-final myProvider = ViewModelProvider.arg<MyViewModel, String>(
+final mySpec = ViewModelSpec.arg<MyViewModel, String>(
   builder: (String name) => MyViewModel.provider(name: name),
 );
 ```
@@ -145,8 +145,8 @@ This allows precise control over the generated provider signature.
 
 ## Naming Convention
 
-- Provider name: `lowerCamelCase(ClassName) + 'Provider'`
-- Special: `PostViewModel` → `postProvider` (removes common suffixes)
+- Spec name: `lowerCamelCase(ClassName) + 'Spec'`
+- Special: `PostViewModel` → `postSpec` (removes common suffixes)
 
 ## Limits
 

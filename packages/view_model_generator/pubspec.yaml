@@ -1,5 +1,5 @@
 name: view_model_generator
-description: Automatically generate ViewModelProvider code from @genProvider annotations. Reduces boilerplate for the view_model package.
+description: Automatically generate ViewModelSpec code from @genProvider annotations. Reduces boilerplate for the view_model package.
 version: 0.14.2
 homepage: https://github.com/lwj1994/flutter_view_model/tree/main/packages/view_model_generator
 repository: https://github.com/lwj1994/flutter_view_model/tree/main/packages/view_model_generator

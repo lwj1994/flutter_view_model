@@ -4,9 +4,9 @@
 part of 'example.dart';
 
 // **************************************************************************
-// ViewModelProviderGenerator
+// ViewModelSpecGenerator
 // **************************************************************************
 
-final userProvider = ViewModelProvider.arg<UserViewModel, Repo>(
+final userSpec = ViewModelSpec.arg<UserViewModel, Repo>(
   builder: (Repo repo) => UserViewModel(repo),
 );
