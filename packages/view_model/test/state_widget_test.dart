@@ -18,7 +18,6 @@ void main() {
         key: testKey,
         factory: const TestViewModelFactory(
           initState: "initState",
-          isSingleton: false,
         ),
       )));
 
@@ -40,19 +39,18 @@ void main() {
         key: testKey,
         factory: const TestViewModelFactory(
           initState: "initState",
-          isSingleton: false,
         ),
       )));
 
       final state = testKey.currentState as TestPageState;
-      final vm1 = state.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
+      final vm1 = state.viewModelBinding
+          .watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState",
-        isSingleton: false,
       ));
 
-      final vm2 = state.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
+      final vm2 = state.viewModelBinding
+          .watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState2",
-        isSingleton: false,
       ));
 
       expect(vm2.state, "initState");
@@ -78,14 +76,12 @@ void main() {
             key: testKey,
             factory: const TestViewModelFactory(
               initState: "initState",
-              isSingleton: false,
             ),
           ),
           TestPage(
             key: testKey2,
             factory: const TestViewModelFactory(
               initState: "initState2",
-              isSingleton: false,
             ),
           ),
         ],
@@ -94,14 +90,14 @@ void main() {
       final state = testKey.currentState as TestPageState;
       final state2 = testKey2.currentState as TestPageState;
 
-      final vm1 = state.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
+      final vm1 = state.viewModelBinding
+          .watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState",
-        isSingleton: false,
       ));
 
-      final vm2 = state2.viewModelBinding.watch<TestViewModel>(const TestViewModelFactory(
+      final vm2 = state2.viewModelBinding
+          .watch<TestViewModel>(const TestViewModelFactory(
         initState: "initState2",
-        isSingleton: false,
       ));
 
       expect(vm1, isNot(equals(vm2)));
@@ -125,7 +121,8 @@ void main() {
       final state = testKey.currentState as TestPageState;
 
       expect(
-        () => state.viewModelBinding.readCached<TestViewModel>(key: "non_existent"),
+        () => state.viewModelBinding
+            .readCached<TestViewModel>(key: "non_existent"),
         throwsA(isA<ViewModelError>()),
       );
     });
@@ -204,12 +201,12 @@ void main() {
       assert(vm1 == vm3);
     });
 
-    testWidgets('state share singleton viewModel', (tester) async {
+    testWidgets('state share shared key viewModel', (tester) async {
       final testKey = GlobalKey();
       final testKey2 = GlobalKey();
       const fc = TestViewModelFactory(
         initState: "initState",
-        isSingleton: true,
+        keyV: "shared_key",
       );
       await tester.pumpWidget(MaterialApp(
           home: Column(

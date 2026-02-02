@@ -26,7 +26,6 @@ void main() {
       );
 
       expect(factory.builder, isNotNull);
-      expect(factory.isSingleton, false);
       expect(factory.key(), isNull);
       expect(factory.tag(), isNull);
     });
@@ -57,31 +56,8 @@ void main() {
         key: null,
       );
 
-      // When key is null and not singleton, should return null
+      // When key is null, should return null
       expect(factory.key(), isNull);
-    });
-
-    test('should handle singleton mode correctly', () {
-      final factory = ViewModelSpec<TestViewModel>(
-        builder: () => TestViewModel('test'),
-        isSingleton: true,
-      );
-
-      expect(factory.singleton(), isTrue);
-      expect(factory.key(), isNotNull); // Singleton should have a default key
-    });
-
-    test('should prioritize custom key over singleton default key', () {
-      const customKey = 'priority_key';
-      final factory = ViewModelSpec<TestViewModel>(
-        builder: () => TestViewModel('test'),
-        key: customKey,
-        isSingleton: true,
-      );
-
-      expect(factory.singleton(), isTrue);
-      expect(factory.key(),
-          equals(customKey)); // Custom key should take precedence
     });
 
     test('should handle custom tag correctly', () {
@@ -133,21 +109,19 @@ void main() {
         builder: () => TestViewModel('full_test'),
         key: customKey,
         tag: customTag,
-        isSingleton: true,
       );
 
       expect(factory.key(), equals(customKey));
       expect(factory.tag(), equals(customTag));
-      expect(factory.singleton(), isTrue);
 
       final viewModel = factory.build();
       expect(viewModel.name, equals('full_test'));
     });
 
-    test('should create different instances when not singleton', () {
+    test('should create different instances when factory called multiple times',
+        () {
       final factory = ViewModelSpec<TestViewModel>(
         builder: () => TestViewModel('instance'),
-        isSingleton: false,
       );
 
       final instance1 = factory.build();
@@ -191,7 +165,6 @@ void main() {
         builder: () => TestViewModel('test'),
         key: originalKey,
         tag: originalTag,
-        isSingleton: true,
       );
 
       // Multiple calls should return same values
@@ -199,8 +172,6 @@ void main() {
       expect(factory.key(), equals(originalKey));
       expect(factory.tag(), equals(originalTag));
       expect(factory.tag(), equals(originalTag));
-      expect(factory.singleton(), isTrue);
-      expect(factory.singleton(), isTrue);
     });
   });
 }

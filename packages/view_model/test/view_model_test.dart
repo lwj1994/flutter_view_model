@@ -445,7 +445,9 @@ void main() {
   });
 
   group('Factory Key Change Returns Different ViewModel', () {
-    test('different key returns different ViewModel instance via viewModelBinding.read', () {
+    test(
+        'different key returns different ViewModel instance via viewModelBinding.read',
+        () {
       final viewModelBinding = _CoreRef();
 
       // Create factory with key1
@@ -463,7 +465,8 @@ void main() {
       viewModelBinding.dispose();
     });
 
-    test('same key returns same ViewModel instance via viewModelBinding.read', () {
+    test('same key returns same ViewModel instance via viewModelBinding.read',
+        () {
       final viewModelBinding = _CoreRef();
 
       // Create factory with same key
@@ -598,11 +601,6 @@ void main() {
       expect(vm.previousState, isNull);
       vm.increment();
       expect(vm.previousState, 0);
-    });
-
-    test('ViewModelFactory.singleton default returns false', () {
-      final factory = DefaultSingletonFactory();
-      expect(factory.singleton(), isFalse);
     });
 
     test('ViewModelLifecycle default methods coverage', () async {

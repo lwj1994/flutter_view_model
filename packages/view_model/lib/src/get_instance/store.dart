@@ -144,7 +144,8 @@ class Store<T> {
     // cache
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
-      final newBind = bindingId != null && !notifier.bindingIds.contains(bindingId);
+      final newBind =
+          bindingId != null && !notifier.bindingIds.contains(bindingId);
       if (newBind) {
         notifier.bind(bindingId);
       }

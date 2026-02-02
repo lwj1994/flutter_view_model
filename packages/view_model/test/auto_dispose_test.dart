@@ -289,7 +289,8 @@ void main() {
         expect(controller.instanceNotifiers.length, 1);
       });
 
-      test('listen: false does not attach listeners or bind viewModelBinding', () {
+      test('listen: false does not attach listeners or bind viewModelBinding',
+          () {
         const tag = 'listen_false_tag';
         final factory = InstanceFactory<TestStatelessViewModel>(
           builder: () => TestStatelessViewModel(),

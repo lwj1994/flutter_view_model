@@ -14,7 +14,8 @@ class TestPage extends StatefulWidget {
 }
 
 class TestPageState extends State<TestPage> with ViewModelStateMixin {
-  TestViewModel get _viewModel => viewModelBinding.watch<TestViewModel>(widget.factory);
+  TestViewModel get _viewModel =>
+      viewModelBinding.watch<TestViewModel>(widget.factory);
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +29,6 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
   final String initState;
   final Object? keyV;
   final Object? tagV;
-  final bool isSingleton;
 
   @override
   TestViewModel build() {
@@ -37,7 +37,6 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
 
   @override
   Object? key() {
-    if (keyV == null) return super.key();
     return keyV;
   }
 
@@ -46,17 +45,11 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
     return tagV;
   }
 
-  @override
-  bool singleton() {
-    return isSingleton;
-  }
-
 //<editor-fold desc="Data Methods">
   const TestViewModelFactory({
     this.initState = "initState",
     this.keyV,
     this.tagV,
-    this.isSingleton = false,
   });
 
   @override
@@ -65,28 +58,25 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
       (other is TestViewModelFactory &&
           runtimeType == other.runtimeType &&
           initState == other.initState &&
-          keyV == other.keyV &&
-          isSingleton == other.isSingleton);
+          keyV == other.keyV);
 
   @override
-  int get hashCode => initState.hashCode ^ keyV.hashCode ^ isSingleton.hashCode;
+  int get hashCode => initState.hashCode ^ keyV.hashCode;
 
   @override
   String toString() {
-    return 'TestViewModelFactory{ initState: $initState, keyV: $keyV, isSingleton: $isSingleton,}';
+    return 'TestViewModelFactory{ initState: $initState, keyV: $keyV,}';
   }
 
   TestViewModelFactory copyWith({
     String? initState,
     Object? keyV,
-    bool? isSingleton,
     Object? tagV,
   }) {
     return TestViewModelFactory(
       initState: initState ?? this.initState,
       keyV: keyV ?? this.keyV,
       tagV: tagV ?? this.tagV,
-      isSingleton: isSingleton ?? this.isSingleton,
     );
   }
 
@@ -94,7 +84,6 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
     return {
       'initState': initState,
       'keyV': keyV,
-      'isSingleton': isSingleton,
     };
   }
 
@@ -102,7 +91,6 @@ class TestViewModelFactory with ViewModelFactory<TestViewModel> {
     return TestViewModelFactory(
       initState: map['initState'] as String,
       keyV: map['keyV'] as String,
-      isSingleton: map['isSingleton'] as bool,
     );
   }
 
@@ -138,10 +126,8 @@ class DisposeErrorViewModel extends ViewModel {
 class TestStatelessViewModelFactory
     with ViewModelFactory<TestStatelessViewModel> {
   final Object? keyV;
-  final bool isSingleton;
 
   TestStatelessViewModelFactory({
-    this.isSingleton = false,
     this.keyV,
   });
 
@@ -153,10 +139,5 @@ class TestStatelessViewModelFactory
   @override
   Object? key() {
     return keyV;
-  }
-
-  @override
-  bool singleton() {
-    return isSingleton;
   }
 }

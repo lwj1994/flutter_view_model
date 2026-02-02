@@ -786,23 +786,17 @@ class AutoDisposeController {
 /// }
 /// ```
 abstract mixin class ViewModelFactory<T> {
-  static const _defaultShareId = Object();
-
   /// Returns a unique key for sharing ViewModel instances.
   ///
   /// ViewModels with the same key will be shared across different widgets.
   /// If this returns `null`, a new instance will be created each time.
-  ///
-  /// By default, returns a shared ID if (deprecated) `singleton` is `true`,
-  /// otherwise `null`.
   ///
   /// Example:
   /// ```dart
   /// @override
   /// Object? key() => 'global-counter'; // Share across app
   /// ```
-  // ignore: deprecated_member_use_from_same_package
-  Object? key() => (singleton()) ? _defaultShareId : null;
+  Object? key() => null;
 
   /// Returns a tag to identify or categorize this ViewModel.
   ///
@@ -831,34 +825,6 @@ abstract mixin class ViewModelFactory<T> {
   /// }
   /// ```
   T build();
-
-  /// (Deprecated) Returns `true` if this factory should create singleton
-  /// instances. Use [key] instead.
-  ///
-  /// **DEPRECATED**: Use the `key` parameter instead for more flexibility.
-  ///
-  /// **Deprecation Timeline**:
-  /// - v0.12.0: Soft deprecation (current) - warnings only
-  /// - v0.15.0: Hard deprecation (April 2026) - runtime warnings
-  /// - v1.0.0: **REMOVED** (July 2026) - will cause compilation errors
-  ///
-  /// **Migration**:
-  /// ```dart
-  /// // OLD (deprecated):
-  /// @override
-  /// bool singleton() => true;
-  ///
-  /// // NEW (recommended):
-  /// @override
-  /// Object? key() => 'MyViewModel'; // or use the type: MyViewModel
-  /// ```
-  ///
-  /// See DEPRECATION_PLAN.md for detailed migration guide.
-  @Deprecated('Use key() instead. '
-      'This parameter will be removed in v1.0.0 (July 2026). '
-      'Migration: Change singleton() => true to key() => "YourKey". '
-      'See DEPRECATION_PLAN.md for details.')
-  bool singleton() => false;
 
   /// Returns `true` if the instance should live forever (never be disposed).
   bool aliveForever() => false;

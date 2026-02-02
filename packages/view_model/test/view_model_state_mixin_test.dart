@@ -277,45 +277,6 @@ void main() {
       expect(find.text('Count: 50'), findsNothing);
     });
 
-    testWidgets('should handle singleton factory correctly', (tester) async {
-      final singletonFactory = ViewModelSpec<CounterViewModel>(
-        builder: () => CounterViewModel(initialValue: 999),
-        isSingleton: true,
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Column(
-            children: [
-              Expanded(
-                child: CounterWidget(
-                  key: const Key('singleton1'),
-                  factory: singletonFactory,
-                ),
-              ),
-              Expanded(
-                child: CounterWidget(
-                  key: const Key('singleton2'),
-                  factory: singletonFactory,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-
-      // Both should share singleton instance
-      expect(find.text('Count: 999'), findsNWidgets(2));
-
-      // Increment on first widget
-      final incrementButtons = find.text('Increment');
-      await tester.tap(incrementButtons.first);
-      await tester.pump();
-
-      // Both should update since they share singleton
-      expect(find.text('Count: 1000'), findsNWidgets(2));
-    });
-
     testWidgets('should handle tag-based ViewModel lookup', (tester) async {
       const userTag = 'test_user';
       final userFactory = ViewModelSpec<UserViewModel>(
@@ -663,7 +624,8 @@ class ViewModelBindingTestWidget extends StatefulWidget {
   const ViewModelBindingTestWidget({super.key});
 
   @override
-  _ViewModelBindingTestWidgetState createState() => _ViewModelBindingTestWidgetState();
+  _ViewModelBindingTestWidgetState createState() =>
+      _ViewModelBindingTestWidgetState();
 }
 
 class _ViewModelBindingTestWidgetState extends State<ViewModelBindingTestWidget>

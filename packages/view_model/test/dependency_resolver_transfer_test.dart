@@ -8,16 +8,16 @@ class MyViewModel with ViewModel {
   final String name;
 
   MyViewModel(this.name) {
-    childViewModel1 = viewModelBinding.read<ChildViewModel1>(
-        ViewModelSpec(builder: () => ChildViewModel1()));
+    childViewModel1 = viewModelBinding
+        .read<ChildViewModel1>(ViewModelSpec(builder: () => ChildViewModel1()));
   }
 
   late ChildViewModel2 childViewModel2;
   late ChildViewModel1 childViewModel1;
 
   void doSome() {
-    childViewModel2 = viewModelBinding.read<ChildViewModel2>(
-        ViewModelSpec(builder: () => ChildViewModel2()));
+    childViewModel2 = viewModelBinding
+        .read<ChildViewModel2>(ViewModelSpec(builder: () => ChildViewModel2()));
   }
 }
 
@@ -88,8 +88,10 @@ void main() {
 
     // Initially, the ViewModel's dependency handler should have resolvers from both states.
     expect(dependencyHandler.ownerResolvers.length, 2);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding), isTrue);
-    expect(dependencyHandler.ownerResolvers.contains(stateB.viewModelBinding), isTrue);
+    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding),
+        isTrue);
+    expect(dependencyHandler.ownerResolvers.contains(stateB.viewModelBinding),
+        isTrue);
 
     // Dispose StateA by removing its widget.
     await tester.pumpWidget(
@@ -108,14 +110,15 @@ void main() {
     expect(dependencyHandler.ownerResolvers.length, 1);
     // The remaining resolver should be from StateB.
     expect(dependencyHandler.ownerResolvers.first, stateB.viewModelBinding);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding), isFalse);
+    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding),
+        isFalse);
 
     expect(() => stateB.vm.childViewModel2, throwsA(isA<Error>()));
 
     stateB.vm.doSome();
 
-    expect(
-        stateB.vm.childViewModel2.refHandler.dependencyBindings.length == 1, true);
+    expect(stateB.vm.childViewModel2.refHandler.dependencyBindings.length == 1,
+        true);
     expect(
         stateB.vm.childViewModel2.refHandler.dependencyBindings
             .contains(stateB.viewModelBinding),
