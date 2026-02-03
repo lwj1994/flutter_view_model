@@ -1,6 +1,7 @@
 # view_model
 
-Lightweight Flutter state management that makes it simple.
+A Flutter ViewModel system built around a single idea:
+everything can be a ViewModel.
 
 | Package | Version |
 | :--- | :--- |
@@ -12,26 +13,31 @@ Lightweight Flutter state management that makes it simple.
 
 English | [简体中文](README_ZH.md)
 
-## Why view_model?
+## What It Is
 
-- **Minimal boilerplate** - Just add a mixin, no root wrappers or complex setup
-- **Automatic lifecycle** - Auto cleanup when widgets dispose, prevents memory leaks
-- **Smart performance** - Auto-pause updates for background or hidden pages
-- **Fine-grained reactivity** - Field-level updates, rebuild only what changed
-- **ViewModel dependencies** - ViewModels can directly access and listen to each other
+`view_model` is a ViewModel runtime with lifecycle management,
+dependency resolution, and fine-grained updates.
+It binds ViewModel lifetime to the widget tree while keeping business logic
+independent from widgets.
 
-## Quick Start
+## Why It Feels Different
 
-### Installation
+- A ViewModel is any class with `ViewModel` or `StateViewModel`
+- A widget consumes ViewModels through `ViewModelBinding`
+- Instances are cached, shared, and disposed automatically
+- Updates can be paused when a widget is not visible
+- State selection enables small, targeted rebuilds
+
+## Installation
 
 ```yaml
 dependencies:
-  view_model: ^0.14.2
+  view_model: ^0.15.0-dev.0
 ```
 
-### Three Simple Steps
+## Getting Started
 
-#### 1. Define State Class
+### 1) State
 
 ```dart
 class CounterState {
@@ -45,18 +51,16 @@ class CounterState {
 }
 ```
 
-#### 2. Create ViewModel
+### 2) ViewModel + Spec
 
 ```dart
 import 'package:view_model/view_model.dart';
 
-// Define Spec (global singleton)
 final counterSpec = ViewModelSpec<CounterViewModel>(
-  key: 'counter',  // Use key to share instance
+  key: 'counter',
   builder: () => CounterViewModel(),
 );
 
-// Create ViewModel
 class CounterViewModel extends StateViewModel<CounterState> {
   CounterViewModel() : super(state: const CounterState());
 
@@ -70,7 +74,7 @@ class CounterViewModel extends StateViewModel<CounterState> {
 }
 ```
 
-#### 3. Use in Widget
+### 3) Widget Binding
 
 ```dart
 class CounterPage extends StatefulWidget {
@@ -80,399 +84,201 @@ class CounterPage extends StatefulWidget {
   State<CounterPage> createState() => _CounterPageState();
 }
 
-// Add ViewModelStateMixin
 class _CounterPageState extends State<CounterPage>
     with ViewModelStateMixin<CounterPage> {
+  @override
+  Widget build(BuildContext context) {
+    final counter = viewModelBinding.watch(counterSpec);
+
+    return Text('${counter.state.count}');
+  }
+}
+```
+
+## Binding API
+
+`ViewModelBinding` is the entry point for all access.
+
+| Method | Use | Behavior |
+| :--- | :--- | :--- |
+| `watch(factory)` | build | Rebuild on change |
+| `read(factory)` | callbacks | Read without rebuild |
+| `watchCached({key, tag})` | build | Watch cached instance |
+| `readCached({key, tag})` | callbacks | Read cached instance |
+| `maybeWatchCached({key, tag})` | build | Nullable watch |
+| `maybeReadCached({key, tag})` | callbacks | Nullable read |
+| `listen(factory, onChanged)` | effects | Auto-dispose listener |
+| `listenState(factory, onChanged)` | state | Previous and next |
+| `listenStateSelect(factory, ...)` | state | Selected updates |
+
+## Widget Integration
+
+Choose the integration style that fits your widget:
+
+- `ViewModelStateMixin` for StatefulWidget
+- `ViewModelStatelessMixin` for StatelessWidget
+- `ViewModelBuilder` for a builder-style widget
+
+```dart
+class CounterSection extends StatelessWidget {
+  const CounterSection({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Use viewModelBinding.watch to listen to ViewModel
-    final counter = viewModelBinding.watch(counterSpec);
-
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Count: ${counter.state.count}',
-              style: const TextStyle(fontSize: 48)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: counter.decrement,
-                  child: const Text('-'),
-                ),
-                const SizedBox(width: 20),
-                ElevatedButton(
-                  onPressed: counter.increment,
-                  child: const Text('+'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return ViewModelBuilder<CounterViewModel>(
+      counterSpec,
+      builder: (vm) => Text('${vm.state.count}'),
     );
   }
 }
 ```
 
-### Initialization (Optional)
+## Lifecycle and Sharing
 
 ```dart
-void main() {
-  ViewModel.initialize(
-    config: ViewModelConfig(
-      isLoggingEnabled: true,  // Enable logging
-    ),
-  );
-  runApp(const MyApp());
-}
-```
-
-## Core Concepts
-
-### ViewModelBinding - ViewModel Execution Framework
-
-ViewModelBinding provides four core methods to access ViewModels:
-
-| Method | Usage | Effect |
-|--------|-------|--------|
-| `viewModelBinding.watch(provider)` | In build method | Listen to changes and rebuild widget |
-| `viewModelBinding.read(provider)` | In event callbacks | Read data without listening |
-| `viewModelBinding.watchCached({key})` | Access existing instance | Listen to cached ViewModel |
-| `viewModelBinding.readCached({key})` | Read existing instance | Don't listen to cached ViewModel |
-
-```dart
-// Example: watch vs read
-@override
-Widget build(BuildContext context) {
-  final vm = viewModelBinding.watch(provider);  // ✅ Use watch in build
-  return ElevatedButton(
-    onPressed: () {
-      final vm = viewModelBinding.read(provider);  // ✅ Use read in callbacks
-      vm.doSomething();
-    },
-    child: Text(vm.state.title),
-  );
-}
-```
-
-### Instance Sharing and Lifecycle
-
-#### 1. Auto Cleanup (Default)
-
-Without `key`, each widget has its own instance, auto-disposed when widget unmounts:
-
-```dart
-final provider = ViewModelSpec<MyViewModel>(
+final localSpec = ViewModelSpec<MyViewModel>(
   builder: () => MyViewModel(),
-  // No key, auto cleanup
 );
-```
 
-#### 2. Shared Instance
-
-With `key`, widgets with same key share one instance, disposed when all widgets unmount:
-
-```dart
-final userSpec = ViewModelSpec<UserViewModel>(
-  key: 'current-user',  // All widgets with this key share instance
+final sharedSpec = ViewModelSpec<UserViewModel>(
+  key: 'current-user',
   builder: () => UserViewModel(),
 );
-```
 
-#### 3. Keep Alive Forever
-
-With `aliveForever: true`, instance never disposes:
-
-```dart
-final configSpec = ViewModelSpec<ConfigViewModel>(
+final globalSpec = ViewModelSpec<ConfigViewModel>(
   key: 'app-config',
-  aliveForever: true,  // Never dispose
+  aliveForever: true,
   builder: () => ConfigViewModel(),
 );
 ```
 
-### Smart Pause Mechanism
-
-Built-in auto-pause to save performance:
-
-1. **App Background Pause** - Pause when app goes to background
-2. **Route Overlay Pause** - Pause when route is covered by another route
-3. **TabBar Pause** - Pause invisible tabs in TabBarView
-
-Updates are queued while paused, triggered once when resumed to avoid wasted rebuilds.
-
-#### Enable Route Pause
+## Parameterized Specs
 
 ```dart
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorObservers: [ViewModel.routeObserver],  // Add route observer
-      home: HomePage(),
-    );
-  }
-}
-```
-
-### Parameterized Specs
-
-Create and reuse instances based on parameters:
-
-```dart
-// Define provider with parameter
 final userSpec = ViewModelSpec.arg<UserViewModel, int>(
   builder: (userId) => UserViewModel(userId),
-  key: (userId) => 'user_$userId',  // Different params use different keys
+  key: (userId) => 'user_$userId',
 );
 
-// Usage
-Widget build(BuildContext context) {
-  final user1 = viewModelBinding.watch(userSpec(42));   // Create user_42
-  final user2 = viewModelBinding.watch(userSpec(100));  // Create user_100
-  final user3 = viewModelBinding.watch(userSpec(42));   // Reuse user_42
-}
+final pageSpec = ViewModelSpec.arg2<PageViewModel, String, int>(
+  builder: (tab, page) => PageViewModel(tab, page),
+  tag: (tab, page) => '$tab-$page',
+);
 ```
 
-Supports 1-4 parameters: `arg`, `arg2`, `arg3`, `arg4`
+Supports `arg`, `arg2`, `arg3`, and `arg4`.
 
-### ViewModel Dependencies
-
-ViewModels can directly access other ViewModels:
+## ViewModel to ViewModel
 
 ```dart
 final authSpec = ViewModelSpec<AuthViewModel>(
   builder: () => AuthViewModel(),
 );
 
-class UserProfileViewModel extends StateViewModel<UserState> {
+class ProfileViewModel extends StateViewModel<ProfileState> {
+  ProfileViewModel() : super(state: const ProfileState());
 
-  void loadProfile() {
-    // Read auth ViewModel
-    final auth = viewModelBinding.read(authSpec);
-
+  void load() {
+    final auth = read(authSpec);
     if (auth.isLoggedIn) {
-      // Load user data...
+      fetchProfile();
     }
   }
 
-  // Listen to other ViewModel changes
   @override
   void onCreate(InstanceArg arg) {
     super.onCreate(arg);
-
     listenState(authSpec, (previous, next) {
       if (next.isLoggedOut) {
-        // Clear user data
-        setState(const UserState());
+        setState(const ProfileState());
       }
     });
   }
 }
 ```
 
-### Fine-Grained Reactivity
+## Pause and Resume
 
-#### 1. ValueWatcher - Field-Level Rebuild
+Updates are paused while widgets are not visible and resume in a batch.
 
-Only listen to specific fields in state, reduce unnecessary rebuilds:
+```dart
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      navigatorObservers: [ViewModel.routeObserver],
+      home: const HomePage(),
+    );
+  }
+}
+```
+
+## Fine-Grained Reactivity
 
 ```dart
 StateViewModelValueWatcher<UserViewModel, UserState>(
   stateViewModel: userViewModel,
   selectors: [
-    (state) => state.name,  // Only listen to name
-    (state) => state.age,   // Only listen to age
+    (state) => state.name,
+    (state) => state.age,
   ],
   builder: (state) => Text('${state.name}, ${state.age}'),
 )
 ```
 
-#### 2. ObservableValue - Standalone Reactive Value
-
-Create independent reactive values without ViewModels:
-
 ```dart
-// Create shared reactive value
 final counter = ObservableValue<int>(0, shareKey: 'counter');
 
-// Modify anywhere
-counter.value = 42;
-
-// Listen in widget
 ObserverBuilder<int>(
   observable: counter,
   builder: (value) => Text('$value'),
 )
 ```
 
-### Lifecycle Hooks
-
-```dart
-class MyViewModel extends StateViewModel<MyState> {
-  @override
-  void onCreate(InstanceArg arg) {
-    super.onCreate(arg);
-    // Initialize resources
-    print('ViewModel created');
-  }
-
-  @override
-  void onBindVef(InstanceArg arg, String vefId) {
-    super.onBindVef(arg, vefId);
-    // New widget started listening
-    print('Widget bound');
-  }
-
-  @override
-  void onUnbindVef(InstanceArg arg, String vefId) {
-    super.onUnbindVef(arg, vefId);
-    // Widget stopped listening
-    print('Widget unbound');
-  }
-
-  @override
-  void onDispose(InstanceArg arg) {
-    // Cleanup resources
-    print('ViewModel disposed');
-    super.onDispose(arg);
-  }
-}
-```
-
-## Code Generation
-
-Use `@GenProvider` annotation to auto-generate specs:
-
-### 1. Add Dependencies
-
-```yaml
-dependencies:
-  view_model: ^0.14.2
-  view_model_annotation: ^0.14.2
-
-dev_dependencies:
-  view_model_generator: ^0.14.2
-  build_runner: ^2.4.0
-```
-
-### 2. Use Annotation
-
-```dart
-import 'package:view_model_annotation/view_model_annotation.dart';
-
-part 'user_view_model.vm.dart';  // Generated file
-
-@GenProvider(
-  key: Expression('user_\$userId'),  // Supports string interpolation
-  aliveForever: false,
-)
-class UserViewModel extends StateViewModel<UserState> {
-  factory UserViewModel.provider(int userId) => UserViewModel(userId);
-
-  UserViewModel(this.userId) : super(state: UserState());
-
-  final int userId;
-}
-```
-
-### 3. Run Generation
-
-```bash
-dart run build_runner build
-```
-
-Generated code:
-
-```dart
-// user_view_model.vm.dart
-final userSpec = ViewModelSpec.arg<UserViewModel, int>(
-  builder: (userId) => UserViewModel(userId),
-  key: (userId) => 'user_$userId',
-);
-```
-
-## Advanced Features
-
-### Use in Plain Dart Classes
-
-Not limited to widgets, any Dart class can use it:
+## Use Without Widgets
 
 ```dart
 class StartupTask with ViewModelBinding {
   Future<void> run() async {
     final config = read(configSpec);
     await config.initialize();
-
-    final auth = read(authSpec);
-    await auth.checkLogin();
   }
 }
 
 final configSpec = ViewModelSpec<ConfigViewModel>(
   builder: () => ConfigViewModel(),
 );
-
-final authSpec = ViewModelSpec<AuthViewModel>(
-  builder: () => AuthViewModel(),
-);
-
-// Use in main
-void main() {
-  ViewModel.initialize();
-  StartupTask().run();
-  runApp(MyApp());
-}
 ```
 
-### Repository as ViewModel
+## DevTools
+
+The package includes a DevTools extension for inspecting ViewModels and
+their relationships at runtime.
+
+## Code Generation
+
+`@GenSpec` generates specs automatically.
+See [view_model_generator](../view_model_generator/README.md).
 
 ```dart
-class UserRepository with ViewModel {
+import 'package:view_model_annotation/view_model_annotation.dart';
 
-  Future<User> fetchUser(int id) async {
-    // Can access other ViewModels
-    final token = read(authSpec).token;
-    return await api.getUser(id, token);
-  }
-}
+part 'user_view_model.vm.dart';
 
-final userRepoSpec = ViewModelSpec<UserRepository>(
-  builder: () => UserRepository(),
-);
-```
+@GenSpec(key: r'${userId}')
+class UserViewModel extends StateViewModel<UserState> {
+  UserViewModel(this.userId) : super(state: UserState());
 
-### Global Lifecycle Observation
-
-```dart
-void main() {
-  ViewModel.addLifecycle(MyObserver());
-  runApp(MyApp());
-}
-
-class MyObserver implements ViewModelLifecycle {
-  @override
-  void onCreate<T extends ViewModel>(T vm, InstanceArg arg) {
-    print('Created: ${vm.runtimeType}');
-  }
-
-  @override
-  void onDispose<T extends ViewModel>(T vm, InstanceArg arg) {
-    print('Disposed: ${vm.runtimeType}');
-  }
+  final int userId;
 }
 ```
 
 ## Examples
 
-Check [example](../../example) directory:
-
-- [counter](../../example/counter) - Simple counter showing basic usage
-- [todo_list](../../example/todo_list) - TODO app showing complex state management
+- [counter](../../example/counter)
+- [todo_list](../../example/todo_list)
 
 ## Documentation
 
@@ -483,10 +289,10 @@ Check [example](../../example) directory:
 
 ## License
 
-MIT License - See [LICENSE](../../LICENSE) file
+MIT License - See [LICENSE](../../LICENSE)
 
 ## Contributing
 
-Issues and Pull Requests are welcome!
+Issues and Pull Requests are welcome.
 
 Report issues at: https://github.com/lwj1994/flutter_view_model/issues
