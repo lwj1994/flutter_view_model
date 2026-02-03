@@ -1,126 +1,131 @@
 # view_model_generator
 
-Code generator for the `view_model` package.
+Generate `ViewModelSpec` code from annotations for `view_model`.
 
-## Overview
+## Idea
 
-When using `view_model`, you need to define a `ViewModelSpec` for each ViewModel. **view_model_generator** automates this by generating the spec from a simple annotation.
+You write a ViewModel class, the generator writes the spec for you.
 
-**Before:**
 ```dart
-final mySpec = ViewModelSpec<MyViewModel>(
-  builder: () => MyViewModel(),
+final counterSpec = ViewModelSpec<CounterViewModel>(
+  builder: () => CounterViewModel(),
 );
 ```
 
-**After:**
 ```dart
-@genProvider
-class MyViewModel extends ViewModel {}
+@GenSpec
+class CounterViewModel extends ViewModel {}
 ```
 
 ## Installation
 
-Add `view_model_generator` to your `dev_dependencies`:
-
 ```yaml
 dev_dependencies:
-  view_model_generator: ^latest_version
-  build_runner: ^latest_version
+  view_model_generator: ^0.15.0-dev.0
+  build_runner: ^2.7.1
+
+dependencies:
+  view_model_annotation: ^0.15.0-dev.0
 ```
 
-## Features
-
-### 1. Basic Usage
-
-Add `@genProvider` to your ViewModel class and run `dart run build_runner build`:
+## Basic Flow
 
 ```dart
 import 'package:view_model/view_model.dart';
+import 'package:view_model_annotation/view_model_annotation.dart';
+
 part 'my_view_model.vm.dart';
 
-@genProvider
+@GenSpec
 class MyViewModel extends ViewModel {
   MyViewModel();
 }
 ```
 
-This generates `my_view_model.vm.dart` with a camelCase spec (e.g., `UserViewModel` -> `userSpec`):
-
-```dart
-final mySpec = ViewModelSpec<MyViewModel>(
-  builder: () => MyViewModel(),
-);
+```bash
+dart run build_runner build
 ```
 
-### 2. Dependency Injection
+## Naming
 
-The generator detects constructor parameters and creates a spec that accepts them:
+The spec variable name is derived from the class name:
+
+- `UserViewModel` -> `userSpec`
+- `CartStore` -> `cartStoreSpec`
+
+## Arguments
+
+Required constructor parameters become `arg`, `arg2`, `arg3`, or `arg4`.
 
 ```dart
-@genProvider
+@GenSpec
 class UserViewModel extends ViewModel {
   final int userId;
   final Repository repo;
+
   UserViewModel(this.userId, this.repo);
 }
 ```
-
-**Usage:**
 
 ```dart
 final vm = viewModelBinding.watch(userSpec(123, repository));
 ```
 
-*Supports up to 4 required parameters.*
+Rules:
 
-### 3. Singleton Mode
+- Up to 4 required parameters are supported
+- If `factory provider(...)` exists, it is used instead of the constructor
+- For `provider(...)`, required and optional parameters are included
 
-Keep a ViewModel alive even when no widgets use it (useful for global stores):
+## Keep Alive
 
 ```dart
-@GenProvider(aliveForever: true, key: "AuthViewModel")
+@GenSpec(aliveForever: true, key: 'AuthGlobal')
 class AuthViewModel extends ViewModel {}
 ```
 
-### 4. Custom Keys and Tags
+If the spec has arguments, `aliveForever` is generated as a closure.
 
-Customize `key` and `tag` for debugging or instance identification:
+## Key and Tag
+
+Use raw string templates to emit interpolation:
 
 ```dart
-@GenProvider(key: 'special_vm', tag: 'v1')
-class MyViewModel extends ViewModel {}
+@GenSpec(key: r'${p.id}', tag: r'${p.name}')
+class ProfileViewModel extends ViewModel {
+  final Profile p;
 
-// Dynamic keys using expressions
-@GenProvider(key: Expression('server_id'))
-class ServerViewModel extends ViewModel {
-  final String serverId;
-  ServerViewModel(this.serverId);
+  ProfileViewModel(this.p);
 }
 ```
 
-### 5. Custom Factory
-
-Override default creation logic by defining a `provider` factory:
+Use `Expression` for non-string expressions:
 
 ```dart
-@genProvider
+@GenSpec(key: Expression('repo'), tag: Expression('repo.id'))
+class RepoViewModel extends ViewModel {
+  final Repository repo;
+
+  RepoViewModel(this.repo);
+}
+```
+
+## Custom Factory
+
+```dart
+@GenSpec
 class SettingsViewModel extends ViewModel {
   final bool isDark;
+
   SettingsViewModel({this.isDark = false});
 
-  // Generator uses this instead of the constructor
-  factory SettingsViewModel.provider({required bool isDark}) =>
-      SettingsViewModel(isDark: isDark);
+  factory SettingsViewModel.provider({required bool isDark}) {
+    return SettingsViewModel(isDark: isDark);
+  }
 }
 ```
 
-## Summary
+## Notes
 
-| Feature | Annotation |
-| :--- | :--- |
-| **Basic Spec** | `@genProvider` |
-| **Arguments** | (Automatic based on constructor) |
-| **Keep Alive** | `@GenProvider(aliveForever: true)` |
-| **Custom Key** | `@GenProvider(key: ...)` |
-| **Control Creation** | `factory ClassName.provider(...)` |
+- `@GenProvider` and `@genProvider` are still accepted but deprecated
+- Classes without an unnamed constructor or provider factory are skipped

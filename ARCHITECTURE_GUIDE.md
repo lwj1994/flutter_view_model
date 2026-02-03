@@ -1,1 +1,0 @@
-packages/view_model/ARCHITECTURE_GUIDE.md
