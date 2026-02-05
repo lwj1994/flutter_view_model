@@ -1,105 +1,46 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../services/view_model_service.dart';
 
-class ViewModelList extends StatelessWidget {
+class ViewModelGraph extends StatelessWidget {
   final List<ViewModelInfo> viewModels;
+  final DependencyGraphResult graph;
   final String filter;
 
-  const ViewModelList({
+  const ViewModelGraph({
     super.key,
     required this.viewModels,
+    required this.graph,
     required this.filter,
   });
 
-  double _calculateCardWidth(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    const minCardWidth = 300.0;
-    const maxCardWidth = 400.0;
-    const padding = 16.0; // Total horizontal padding
-
-    // Calculate how many cards can fit in one row
-    final availableWidth = screenWidth - padding;
-    final cardsPerRow = (availableWidth / minCardWidth).floor().clamp(1, 4);
-
-    // Calculate actual card width
-    final cardWidth = (availableWidth - (cardsPerRow - 1) * 8.0) / cardsPerRow;
-
-    return cardWidth.clamp(minCardWidth, maxCardWidth);
-  }
-
-  List<ViewModelInfo> get filteredViewModels {
-    List<ViewModelInfo> filtered;
-    switch (filter) {
-      case 'active':
-        filtered = viewModels.where((vm) => vm.status == 'active').toList();
-        break;
-      case 'disposed':
-        filtered = viewModels.where((vm) => vm.status == 'disposed').toList();
-        break;
-      default:
-        filtered = viewModels;
-    }
-
-    // Sort by appropriate time based on status
-    filtered.sort((a, b) {
-      if (a.status == 'disposed' && b.status == 'disposed') {
-        // For disposed ViewModels, sort by dispose time (newest first)
-        final aDisposeTime = a.properties['disposeTime'] as String?;
-        final bDisposeTime = b.properties['disposeTime'] as String?;
-        if (aDisposeTime != null && bDisposeTime != null) {
-          final aTime = DateTime.parse(aDisposeTime);
-          final bTime = DateTime.parse(bDisposeTime);
-          return bTime.compareTo(aTime);
-        }
-        // Fallback to creation time if dispose time is not available
-        return b.createdAt.compareTo(a.createdAt);
-      } else if (a.status == 'active' && b.status == 'active') {
-        // For active ViewModels, sort by creation time (newest first)
-        return b.createdAt.compareTo(a.createdAt);
-      } else {
-        // Mixed status: compare disposed time with creation time
-        DateTime aTime, bTime;
-        if (a.status == 'disposed') {
-          final aDisposeTime = a.properties['disposeTime'] as String?;
-          aTime =
-              aDisposeTime != null ? DateTime.parse(aDisposeTime) : a.createdAt;
-        } else {
-          aTime = a.createdAt;
-        }
-
-        if (b.status == 'disposed') {
-          final bDisposeTime = b.properties['disposeTime'] as String?;
-          bTime =
-              bDisposeTime != null ? DateTime.parse(bDisposeTime) : b.createdAt;
-        } else {
-          bTime = b.createdAt;
-        }
-
-        return bTime.compareTo(aTime);
-      }
-    });
-    return filtered;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filtered = filteredViewModels;
+    final filteredViewModels = _filterViewModels();
+    final vmMap = {for (final vm in filteredViewModels) vm.id: vm};
+    final edges = graph.edges.where((edge) {
+      return vmMap.containsKey(edge.to);
+    }).toList();
+    final bindingIds = edges.map((edge) => edge.from).toSet().toList()
+      ..sort();
+    final vmIds = filteredViewModels.map((vm) => vm.id).toList();
 
-    if (filtered.isEmpty) {
+    if (filteredViewModels.isEmpty && bindingIds.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.search_off, size: 64, color: Colors.grey),
+            const Icon(Icons.device_hub, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              'No ViewModels Found',
+              'No Graph Data',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Try adjusting your filter or make sure your app is using ViewModels.',
+              'Try refreshing or ensure your app has bindings.',
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -108,205 +49,378 @@ class ViewModelList extends StatelessWidget {
       );
     }
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: filtered.map((viewModel) {
-            return SizedBox(
-              width: _calculateCardWidth(context),
-              child: ViewModelTile(viewModel: viewModel),
-            );
-          }).toList(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const canvasMinWidth = 1200.0;
+        const padding = 24.0;
+        const bindingSize = Size(220, 44);
+        const vmSize = Size(280, 64);
+        const gap = 16.0;
+
+        final maxNodes = max(bindingIds.length, vmIds.length);
+        final canvasHeight = max(
+          constraints.maxHeight,
+          padding * 2 + maxNodes * (vmSize.height + gap),
+        );
+        final canvasWidth = max(constraints.maxWidth, canvasMinWidth);
+
+        final bindingRects = _layoutNodes(
+          ids: bindingIds,
+          nodeSize: bindingSize,
+          x: padding,
+          canvasHeight: canvasHeight,
+          padding: padding,
+          gap: gap,
+        );
+        final vmRects = _layoutNodes(
+          ids: vmIds,
+          nodeSize: vmSize,
+          x: canvasWidth - padding - vmSize.width,
+          canvasHeight: canvasHeight,
+          padding: padding,
+          gap: gap,
+        );
+
+        return InteractiveViewer(
+          constrained: false,
+          minScale: 0.6,
+          maxScale: 2.5,
+          child: SizedBox(
+            width: canvasWidth,
+            height: canvasHeight,
+            child: Stack(
+              children: [
+                CustomPaint(
+                  size: Size(canvasWidth, canvasHeight),
+                  painter: _GraphPainter(
+                    edges: edges,
+                    bindingRects: bindingRects,
+                    vmRects: vmRects,
+                    vmMap: vmMap,
+                    theme: Theme.of(context),
+                  ),
+                ),
+                ...bindingIds.map((id) {
+                  final rect = bindingRects[id]!;
+                  return Positioned(
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    child: _BindingNode(
+                      bindingId: id,
+                      viewModels: _bindingViewModels(id, edges, vmMap),
+                    ),
+                  );
+                }),
+                ...vmIds.map((id) {
+                  final rect = vmRects[id]!;
+                  final vm = vmMap[id]!;
+                  return Positioned(
+                    left: rect.left,
+                    top: rect.top,
+                    width: rect.width,
+                    height: rect.height,
+                    child: _ViewModelNode(viewModel: vm),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<ViewModelInfo> _filterViewModels() {
+    switch (filter) {
+      case 'active':
+        return viewModels.where((vm) => vm.status == 'active').toList();
+      case 'disposed':
+        return viewModels.where((vm) => vm.status == 'disposed').toList();
+      default:
+        return List<ViewModelInfo>.from(viewModels);
+    }
+  }
+
+  Map<String, Rect> _layoutNodes({
+    required List<String> ids,
+    required Size nodeSize,
+    required double x,
+    required double canvasHeight,
+    required double padding,
+    required double gap,
+  }) {
+    final rects = <String, Rect>{};
+    if (ids.isEmpty) return rects;
+
+    final totalHeight =
+        ids.length * nodeSize.height + (ids.length - 1) * gap;
+    final startY = max(padding, (canvasHeight - totalHeight) / 2);
+
+    for (var i = 0; i < ids.length; i++) {
+      final y = startY + i * (nodeSize.height + gap);
+      rects[ids[i]] = Rect.fromLTWH(x, y, nodeSize.width, nodeSize.height);
+    }
+    return rects;
+  }
+
+  List<ViewModelInfo> _bindingViewModels(
+    String bindingId,
+    List<DependencyEdge> edges,
+    Map<String, ViewModelInfo> vmMap,
+  ) {
+    final ids = edges
+        .where((edge) => edge.from == bindingId)
+        .map((edge) => edge.to)
+        .toSet();
+    return ids
+        .map((id) => vmMap[id])
+        .whereType<ViewModelInfo>()
+        .toList();
+  }
+}
+
+class _BindingNode extends StatelessWidget {
+  final String bindingId;
+  final List<ViewModelInfo> viewModels;
+
+  const _BindingNode({
+    required this.bindingId,
+    required this.viewModels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final count = viewModels.length;
+
+    return InkWell(
+      onTap: () => _showBindingDetails(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.secondaryContainer.withAlpha(160),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.colorScheme.secondary.withAlpha(130),
+          ),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 10,
+              color: Colors.black.withAlpha(12),
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: theme.colorScheme.secondary.withAlpha(40),
+              child: Icon(
+                Icons.link,
+                size: 16,
+                color: theme.colorScheme.secondary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    bindingId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '$count ViewModels',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.secondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  void _showBindingDetails(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return BindingDetailsDialog(
+          bindingId: bindingId,
+          viewModels: viewModels,
+        );
+      },
+    );
+  }
 }
 
-class ViewModelTile extends StatelessWidget {
+class _ViewModelNode extends StatelessWidget {
   final ViewModelInfo viewModel;
 
-  const ViewModelTile({super.key, required this.viewModel});
+  const _ViewModelNode({required this.viewModel});
 
   @override
   Widget build(BuildContext context) {
     final isActive = viewModel.status == 'active';
     final statusColor = isActive ? Colors.green : Colors.orange;
+    final keyValue = viewModel.properties['key']?.toString();
+    final tagValue = viewModel.properties['tag']?.toString();
+    final subtitle = [
+      if (keyValue != null && keyValue.isNotEmpty) 'key: $keyValue',
+      if (tagValue != null && tagValue.isNotEmpty) 'tag: $tagValue',
+    ].join(' • ');
 
-    return GestureDetector(
+    final theme = Theme.of(context);
+    return InkWell(
       onTap: () => _showViewModelDetails(context),
-      child: Card(
-        margin: const EdgeInsets.all(4.0),
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: statusColor.withAlpha(140)),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 10,
+              color: Colors.black.withAlpha(14),
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        color: Colors.black45,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header section
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: statusColor.withAlpha(51),
-                    child: Icon(
-                      isActive
-                          ? Icons.play_circle_filled
-                          : Icons.delete_outline,
-                      color: statusColor,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          viewModel.type,
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'ID: ${viewModel.id}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${viewModel.status} • ${_formatDateTime(viewModel.createdAt)}',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: statusColor,
-                                  ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: statusColor.withAlpha(38),
+              child: Icon(
+                isActive ? Icons.play_circle_fill : Icons.delete_outline,
+                color: statusColor,
+                size: 18,
               ),
-              const SizedBox(height: 8),
-              // Properties section (compact)
-              if (viewModel.properties.isNotEmpty &&
-                  viewModel.properties.entries
-                      .where((e) => e.key != 'watchers')
-                      .isNotEmpty) ...[
-                Text(
-                  'Properties (${viewModel.properties.entries.where((e) => e.key != 'watchers').length})',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[600],
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest
-                        .withAlpha(76),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Column(
-                    children: viewModel.properties.entries
-                        .where((entry) => entry.key != 'watchers')
-                        .take(3) // Limit to 3 properties for compact view
-                        .map(
-                          (entry) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 1),
-                            child: Row(
-                              children: [
-                                Text(
-                                  '${entry.key}:',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    entry.value.toString(),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          fontFamily: 'monospace',
-                                        ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              // Watchers section (compact)
-              Row(
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.visibility, size: 14, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
                   Text(
-                    'Watchers: ${_getWatchersCount(viewModel)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    viewModel.type,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey[600],
                         ),
                   ),
+                  Text(
+                    viewModel.id,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withAlpha(150),
+                        ),
+                  ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                            color:
+                                theme.colorScheme.onSurface.withAlpha(170),
+                          ),
+                    ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  List<String> _getWatchers(ViewModelInfo viewModel) {
-    final watchers = viewModel.properties['watchers'] as List<dynamic>? ?? [];
-    return watchers.map((w) => w.toString()).toList();
-  }
-
-  int _getWatchersCount(ViewModelInfo viewModel) {
-    return _getWatchers(viewModel).length;
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:'
-        '${dateTime.minute.toString().padLeft(2, '0')}:'
-        '${dateTime.second.toString().padLeft(2, '0')}';
-  }
-
   void _showViewModelDetails(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return ViewModelDetailsDialog(viewModel: viewModel);
       },
     );
+  }
+}
+
+class _GraphPainter extends CustomPainter {
+  final List<DependencyEdge> edges;
+  final Map<String, Rect> bindingRects;
+  final Map<String, Rect> vmRects;
+  final Map<String, ViewModelInfo> vmMap;
+  final ThemeData theme;
+
+  _GraphPainter({
+    required this.edges,
+    required this.bindingRects,
+    required this.vmRects,
+    required this.vmMap,
+    required this.theme,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = theme.dividerColor.withAlpha(60);
+    const gridSize = 64.0;
+    for (double x = 0; x <= size.width; x += gridSize) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y <= size.height; y += gridSize) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    final basePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..color = theme.colorScheme.primary.withAlpha(120);
+
+    for (final edge in edges) {
+      final fromRect = bindingRects[edge.from];
+      final toRect = vmRects[edge.to];
+      if (fromRect == null || toRect == null) continue;
+
+      final start = Offset(fromRect.right, fromRect.center.dy);
+      final end = Offset(toRect.left, toRect.center.dy);
+      final midX = (start.dx + end.dx) / 2;
+
+      final path = Path()
+        ..moveTo(start.dx, start.dy)
+        ..cubicTo(midX, start.dy, midX, end.dy, end.dx, end.dy);
+
+      final vm = vmMap[edge.to];
+      final isActive = vm?.status == 'active';
+      final color = isActive ? Colors.green : Colors.orange;
+      canvas.drawPath(path, basePaint..color = color.withAlpha(140));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GraphPainter oldDelegate) {
+    return oldDelegate.edges != edges ||
+        oldDelegate.bindingRects != bindingRects ||
+        oldDelegate.vmRects != vmRects ||
+        oldDelegate.vmMap != vmMap;
   }
 }
 
@@ -329,7 +443,6 @@ class ViewModelDetailsDialog extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
                 CircleAvatar(
@@ -369,7 +482,6 @@ class ViewModelDetailsDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            // Status and Time Info
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -408,7 +520,6 @@ class ViewModelDetailsDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // Content
             Expanded(
               child: DefaultTabController(
                 length: 2,
@@ -423,9 +534,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
                     Expanded(
                       child: TabBarView(
                         children: [
-                          // Properties Tab
                           _buildPropertiesTab(context),
-                          // Watchers Tab
                           _buildWatchersTab(context, watchers),
                         ],
                       ),
@@ -546,7 +655,101 @@ class ViewModelDetailsDialog extends StatelessWidget {
   }
 
   String _formatFullDateTime(DateTime dateTime) {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
-        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-'
+        '${dateTime.day.toString().padLeft(2, '0')} '
+        '${dateTime.hour.toString().padLeft(2, '0')}:'
+        '${dateTime.minute.toString().padLeft(2, '0')}:'
+        '${dateTime.second.toString().padLeft(2, '0')}';
+  }
+}
+
+class BindingDetailsDialog extends StatelessWidget {
+  final String bindingId;
+  final List<ViewModelInfo> viewModels;
+
+  const BindingDetailsDialog({
+    super.key,
+    required this.bindingId,
+    required this.viewModels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: 520,
+        height: 420,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primary.withAlpha(38),
+                  child: Icon(
+                    Icons.link,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    bindingId,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Connected ViewModels (${viewModels.length})',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: viewModels.isEmpty
+                  ? const Center(child: Text('No connected ViewModels'))
+                  : ListView.builder(
+                      itemCount: viewModels.length,
+                      itemBuilder: (context, index) {
+                        final vm = viewModels[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            title: Text(vm.type),
+                            subtitle: Text(
+                              vm.id,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: Text(
+                              vm.status,
+                              style: TextStyle(
+                                color: vm.status == 'active'
+                                    ? Colors.green
+                                    : Colors.orange,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

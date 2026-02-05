@@ -18,63 +18,48 @@ class FilterControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 1,
-          ),
-        ),
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          // Filter dropdown
-          SizedBox(
-            width: 150,
-            child: DropdownButtonFormField<String>(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
               initialValue: filter,
               decoration: const InputDecoration(
                 labelText: 'Filter',
-                isDense: true,
                 border: OutlineInputBorder(),
               ),
               items: const [
                 DropdownMenuItem(value: 'all', child: Text('All ViewModels')),
                 DropdownMenuItem(value: 'active', child: Text('Active Only')),
-                DropdownMenuItem(
-                    value: 'disposed', child: Text('Disposed Only')),
+                DropdownMenuItem(value: 'disposed', child: Text('Disposed')),
               ],
               onChanged: (value) {
                 if (value != null) onFilterChanged(value);
               },
             ),
-          ),
-          const SizedBox(width: 16),
-
-          // Real-time update toggle
-          Row(
-            children: [
-              Switch(
-                value: realTimeUpdate,
-                onChanged: (_) => onRealTimeToggle(),
-              ),
-              const SizedBox(width: 8),
-              const Text('Real-time'),
-            ],
-          ),
-
-          const Spacer(),
-
-          // Refresh button
-          IconButton(
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Data',
-          ),
-        ],
+            const SizedBox(height: 12),
+            SwitchListTile(
+              value: realTimeUpdate,
+              onChanged: (_) => onRealTimeToggle(),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Real-time Update'),
+              dense: true,
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh'),
+            ),
+          ],
+        ),
       ),
     );
   }
