@@ -9,51 +9,50 @@ class StatsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 1,
-          ),
-        ),
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _StatItem(
-            label: 'Total',
-            value: stats.totalViewModels.toString(),
-            icon: Icons.view_module,
-            color: Colors.blue,
-          ),
-          _StatItem(
-            label: 'Active',
-            value: stats.activeViewModels.toString(),
-            icon: Icons.play_circle_filled,
-            color: Colors.green,
-          ),
-          _StatItem(
-            label: 'Disposed',
-            value: stats.disposedViewModels.toString(),
-            icon: Icons.delete_outline,
-            color: Colors.orange,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            _StatRow(
+              label: 'Total',
+              value: stats.totalViewModels.toString(),
+              icon: Icons.view_module,
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 8),
+            _StatRow(
+              label: 'Active',
+              value: stats.activeViewModels.toString(),
+              icon: Icons.play_circle_filled,
+              color: Colors.green,
+            ),
+            const SizedBox(height: 8),
+            _StatRow(
+              label: 'Disposed',
+              value: stats.disposedViewModels.toString(),
+              icon: Icons.delete_outline,
+              color: Colors.orange,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _StatItem extends StatelessWidget {
+class _StatRow extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color color;
 
-  const _StatItem({
+  const _StatRow({
     required this.label,
     required this.value,
     required this.icon,
@@ -62,21 +61,30 @@ class _StatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Row(
       children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 4),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withAlpha(30),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
         Text(
           value,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );

@@ -219,7 +219,7 @@ packages:
       path: "../../packages/view_model"
       relative: true
     source: path
-    version: "0.13.0"
+    version: "0.15.0-dev.0"
   view_model_annotation:
     dependency: transitive
     description:
