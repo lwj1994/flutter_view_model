@@ -61,7 +61,8 @@ class StackPathLocator {
         final line = relevantFrame.line;
         final member = relevantFrame.member ?? '';
         // The member might be 'ClassName.methodName' or just 'functionName'.
-        // We'll take the part before the first dot to get the class/widget name.
+        // We'll take the part before the first dot to get the
+        // class/widget name.
         final className = member.split('.').first;
         _cachedObjectPath = '$path:$line $className';
       } else {

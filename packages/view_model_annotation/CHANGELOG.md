@@ -1,3 +1,6 @@
+## 0.15.0-dev.1
+- Version bump for 0.15.0-dev.1
+
 ## 0.15.0-dev.0
 - Refactor: Rename `@GenProvider` and `genProvider` to `@GenSpec` and `genSpec`
 - Deprecate usage of `@GenProvider` and `genProvider`
@@ -17,9 +20,6 @@
 
 ## 0.13.0
 - Support `aliveForever`
-
-## 0.2.2
-- Support `isSingleton`
 
 ## 0.2.1
 - Rename `Expr` to `Expression`

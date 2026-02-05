@@ -1,3 +1,6 @@
+## 0.15.0-dev.1
+- Version bump for 0.15.0-dev.1
+
 ## 0.15.0-dev.0
 - Refactor: Generate `ViewModelSpec` (xxxSpec) instead of `ViewModelProvider` (xxxProvider)
 - Support both `@GenSpec` and `@GenProvider` (deprecated) annotations
@@ -29,9 +32,6 @@
 
 ## 0.2.3
 - fix bugs
-
-## 0.2.2
-- Support `isSingleton`
 
 ## 0.2.1
 - fix bugs

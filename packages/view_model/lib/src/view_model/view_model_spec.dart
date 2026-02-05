@@ -26,7 +26,7 @@ class ViewModelSpec<T extends ViewModel> extends ViewModelFactory<T> {
   /// Enables test-time override of factory properties.
   /// When set, overrides `builder`, `key`, and `tag`.
   void setProxy(ViewModelSpec<T> spec) {
-    this._proxy = spec;
+    _proxy = spec;
   }
 
   /// Clears any proxy overrides and restores original behavior.
