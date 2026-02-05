@@ -128,8 +128,8 @@ class DevToolsService {
   /// Retrieves comprehensive ViewModel data for DevTools display.
   ///
   /// This method collects all ViewModel instances from the dependency tracker
-  /// and formats them for consumption by DevTools. The data includes instance
-  /// metadata, lifecycle information, and current watcher relationships.
+  /// and formats them for DevTools consumption. The data includes instance
+  /// metadata, lifecycle information, and current binding relationships.
   ///
   /// Returns a map containing:
   /// - `viewModels`: List of ViewModel instance data
@@ -139,7 +139,7 @@ class DevToolsService {
   /// - Instance ID, type name, key, and tag
   /// - Lifecycle state (active/disposed)
   /// - Creation and disposal timestamps
-  /// - List of current watchers
+  /// - List of current bindings
   Map<String, dynamic> _getViewModelData() {
     final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;
@@ -154,7 +154,7 @@ class DevToolsService {
               'isDisposed': vm.isDisposed,
               'createdAt': vm.createTime.toIso8601String(),
               'disposeTime': vm.disposeTime?.toIso8601String(),
-              'watchers': vm.watchers.toList(),
+              'bindings': vm.watchers.toList(),
             })
         .toList();
 
@@ -170,7 +170,7 @@ class DevToolsService {
   ///
   /// This method constructs a graph representation of ViewModel dependencies
   /// suitable for visualization in DevTools. The graph shows relationships
-  /// between watchers and ViewModel instances.
+  /// between bindings and ViewModel instances.
   ///
   /// Returns a map containing:
   /// - `nodes`: List of ViewModel instances as graph nodes
@@ -180,8 +180,8 @@ class DevToolsService {
   /// - Unique ID, type name, and display label
   /// - Activity status for visual styling
   ///
-  /// Each edge represents a "watches" relationship from a
-  /// watcher to a ViewModel.
+  /// Each edge represents a binding relationship from a
+  /// binding to a ViewModel.
   Map<String, dynamic> _getDependencyGraph() {
     final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;
@@ -189,11 +189,11 @@ class DevToolsService {
     final dependencies = <Map<String, dynamic>>[];
 
     for (final vm in graph.viewModelInfos.values) {
-      for (final watcher in vm.watchers) {
+      for (final bindingId in vm.watchers) {
         dependencies.add({
-          'from': watcher,
+          'from': bindingId,
           'to': vm.instanceId,
-          'type': 'watches',
+          'type': 'binding',
         });
       }
     }
@@ -220,7 +220,7 @@ class DevToolsService {
   /// Returns a map with statistical counters:
   /// - Total, active, and disposed instance counts
   /// - Shared and orphaned instance counts
-  /// - Total watcher and type counts
+  /// - Total binding and type counts
   Map<String, int> _getStatsFromTracker() {
     final stats = DevToolTracker.instance.getStats();
 

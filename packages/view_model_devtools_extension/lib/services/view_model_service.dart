@@ -178,7 +178,7 @@ class ViewModelInfo {
       properties: {
         'key': json['key'],
         'tag': json['tag'],
-        'watchers': json['watchers'] as List<dynamic>? ?? [],
+        'bindings': json['bindings'] as List<dynamic>? ?? [],
         if (isDisposed && json['disposeTime'] != null)
           'disposeTime': json['disposeTime'],
       },

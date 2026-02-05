@@ -1,3 +1,8 @@
+## 0.15.0-dev.1
+- DevTools: improve data loading resilience
+- DevTools: align binding naming in service payloads
+- Internal: tidy spec proxy setter
+
 ## 0.15.0-dev.0
 - Refactor: Rename `Vef` to `ViewModelBinding` and `ViewModelProvider` to `ViewModelSpec`
 - Deprecate usage of `Vef` and `ViewModelProvider` while maintaining backward compatibility
@@ -38,7 +43,7 @@
 
 - Add: test-time proxy overrides for specs
   - `ViewModelSpecWithArg/Arg2/Arg3/Arg4` now support `setProxy` and
-    `clearProxy` to override `builder`, `key`, `tag`, `isSingleton` during tests.
+    `clearProxy` to override `builder`, `key`, `tag` during tests.
   - Mirrors existing no-arg `ViewModelSpec` proxy behavior for consistency.
 
 ## 0.10.0

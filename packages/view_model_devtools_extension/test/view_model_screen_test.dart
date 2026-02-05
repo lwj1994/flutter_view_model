@@ -8,7 +8,7 @@ class ViewModelInfo {
   final String? tag;
   final bool isActive;
   final DateTime createdAt;
-  final List<String> watchers;
+  final List<String> bindings;
 
   ViewModelInfo({
     required this.id,
@@ -17,7 +17,7 @@ class ViewModelInfo {
     this.tag,
     required this.isActive,
     required this.createdAt,
-    required this.watchers,
+    required this.bindings,
   });
 }
 
@@ -47,7 +47,7 @@ class MockViewModelData {
         tag: 'main_screen',
         isActive: true,
         createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
-        watchers: ['Widget_1', 'Widget_2'],
+        bindings: ['Widget_1', 'Widget_2'],
       ),
       ViewModelInfo(
         id: 'vm_2',
@@ -56,7 +56,7 @@ class MockViewModelData {
         tag: 'profile',
         isActive: true,
         createdAt: DateTime.now().subtract(const Duration(minutes: 2)),
-        watchers: ['ProfileWidget'],
+        bindings: ['ProfileWidget'],
       ),
       ViewModelInfo(
         id: 'vm_3',
@@ -65,7 +65,7 @@ class MockViewModelData {
         tag: null,
         isActive: false,
         createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
-        watchers: [],
+        bindings: [],
       ),
     ];
   }
@@ -74,8 +74,8 @@ class MockViewModelData {
     return DependencyStats(
       totalInstances: viewModels.length,
       activeInstances: viewModels.where((vm) => vm.isActive).length,
-      sharedInstances: viewModels.where((vm) => vm.watchers.length > 1).length,
-      orphanedInstances: viewModels.where((vm) => vm.watchers.isEmpty).length,
+      sharedInstances: viewModels.where((vm) => vm.bindings.length > 1).length,
+      orphanedInstances: viewModels.where((vm) => vm.bindings.isEmpty).length,
     );
   }
 }
@@ -86,8 +86,8 @@ void main() {
       final mockData = MockViewModelData.getMockViewModels();
       expect(mockData.length, 3);
       expect(mockData[0].type, 'CounterViewModel');
-      expect(mockData[0].watchers.length, 2);
-      expect(mockData[2].watchers.isEmpty, true);
+      expect(mockData[0].bindings.length, 2);
+      expect(mockData[2].bindings.isEmpty, true);
     });
 
     test('Mock stats should calculate correctly', () {

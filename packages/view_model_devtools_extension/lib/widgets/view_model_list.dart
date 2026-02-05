@@ -433,7 +433,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final isActive = viewModel.status == 'active';
     final statusColor = isActive ? Colors.green : Colors.orange;
-    final watchers = _getWatchers(viewModel);
+    final bindings = _getBindings(viewModel);
 
     return Dialog(
       child: Container(
@@ -528,14 +528,14 @@ class ViewModelDetailsDialog extends StatelessWidget {
                     const TabBar(
                       tabs: [
                         Tab(text: 'Properties'),
-                        Tab(text: 'Watchers'),
+                        Tab(text: 'Bindings'),
                       ],
                     ),
                     Expanded(
                       child: TabBarView(
                         children: [
                           _buildPropertiesTab(context),
-                          _buildWatchersTab(context, watchers),
+                          _buildBindingsTab(context, bindings),
                         ],
                       ),
                     ),
@@ -551,7 +551,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
 
   Widget _buildPropertiesTab(BuildContext context) {
     final properties = viewModel.properties.entries
-        .where((entry) => entry.key != 'watchers')
+        .where((entry) => entry.key != 'bindings')
         .toList();
 
     if (properties.isEmpty) {
@@ -604,15 +604,15 @@ class ViewModelDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildWatchersTab(BuildContext context, List<String> watchers) {
-    if (watchers.isEmpty) {
+  Widget _buildBindingsTab(BuildContext context, List<String> bindings) {
+    if (bindings.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.visibility_off, size: 48, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No watchers'),
+            Text('No bindings'),
           ],
         ),
       );
@@ -620,7 +620,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: watchers.length,
+      itemCount: bindings.length,
       itemBuilder: (context, index) {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
@@ -638,7 +638,7 @@ class ViewModelDetailsDialog extends StatelessWidget {
               ),
             ),
             title: SelectableText(
-              watchers[index],
+              bindings[index],
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontFamily: 'monospace',
                   ),
@@ -649,9 +649,9 @@ class ViewModelDetailsDialog extends StatelessWidget {
     );
   }
 
-  List<String> _getWatchers(ViewModelInfo viewModel) {
-    final watchers = viewModel.properties['watchers'] as List<dynamic>? ?? [];
-    return watchers.map((w) => w.toString()).toList();
+  List<String> _getBindings(ViewModelInfo viewModel) {
+    final bindings = viewModel.properties['bindings'] as List<dynamic>? ?? [];
+    return bindings.map((binding) => binding.toString()).toList();
   }
 
   String _formatFullDateTime(DateTime dateTime) {
