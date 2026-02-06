@@ -37,7 +37,7 @@ final counterSpec = ViewModelSpec<CounterViewModel>(
 
 ```dart
 // Part of file: counter_view_model.vm.dart
-@genProvider
+@genSpec
 class CounterViewModel with ViewModel { ... }
 ```
 

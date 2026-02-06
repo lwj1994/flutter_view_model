@@ -32,3 +32,6 @@ build/
 
 # FVM Version Cache
 .fvm/
+
+.trae
+.agent

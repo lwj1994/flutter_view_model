@@ -1,3 +1,0 @@
-- 注释所在行的长度不允许超过 80 个字符宽，超过的话就换行
-- 写 test 之前先阅读文档 README.md，确保理解了测试的目的和行为
-- 不要给我 import dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart  这种奇怪的东西。
