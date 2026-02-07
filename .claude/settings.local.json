@@ -8,7 +8,8 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: Rewrite READMEs for simplicity and clarity\n\n- Simplified introduction to be more direct and practical\n- Removed verbose descriptions and marketing language\n- Reorganized content with clearer structure and examples\n- Added comprehensive quick start guide with three simple steps\n- Improved code examples for better understanding\n- Added comparison table with other state management solutions\n- Enhanced documentation with practical use cases\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: Remove library comparison section from READMEs\n\n- Removed comparison table with other state management libraries\n- Keep documentation focused on features rather than competitive analysis\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: Remove library comparison section from READMEs\n\n- Removed comparison table with other state management libraries\n- Keep documentation focused on features rather than competitive analysis\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
     ]
   }
 }
