@@ -1,3 +1,8 @@
+## 0.15.0-dev.2
+- Fix: Unify notification timing between ViewModel and StateViewModel (now both use synchronous notifications)
+- Fix: Add per-ViewModel state equality configuration via constructor parameter
+- Test: Add comprehensive tests for notification timing and equality configuration
+
 ## 0.15.0-dev.1
 - DevTools: improve data loading resilience
 - DevTools: align binding naming in service payloads

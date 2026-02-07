@@ -1,3 +1,6 @@
+## 0.15.0-dev.2
+- Version bump for consistency
+
 ## 0.15.0-dev.1
 - Version bump for 0.15.0-dev.1
 
