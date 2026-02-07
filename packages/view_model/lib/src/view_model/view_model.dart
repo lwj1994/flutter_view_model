@@ -589,42 +589,70 @@ abstract class StateViewModel<T> with ViewModel {
   }
 
   late final T initState;
-  late final StreamSubscription _streamSubscription;
 
-  StateViewModel({required T state}) {
+  /// Creates a new StateViewModel with the given initial state.
+  ///
+  /// Parameters:
+  /// - [state]: The initial state value
+  /// - [equals]: Optional per-instance equality function to determine if
+  ///   states are equal. If not provided, falls back to global config or
+  ///   identity comparison.
+  ///
+  /// Example with custom equality:
+  /// ```dart
+  /// class UserViewModel extends StateViewModel<User> {
+  ///   UserViewModel() : super(
+  ///     state: User(id: 1),
+  ///     equals: (prev, curr) => prev.id == curr.id, // Compare by ID only
+  ///   );
+  /// }
+  /// ```
+  StateViewModel({
+    required T state,
+    bool Function(T previous, T current)? equals,
+  }) {
     initState = state;
     _store = ViewModelStateStore(
       initialState: state,
+      equals: equals,
+      onStateChanged: _handleStateChanged,
     );
+  }
 
-    _streamSubscription = _store.stateStream.listen((event) async {
-      if (_isDisposed) return;
-      for (final element in _stateListeners) {
-        try {
-          element.call(event.previousState, event.currentState);
-        } catch (e, stack) {
-          final handler = ViewModel.config.onListenerError;
-          if (handler != null) {
-            handler(e, stack, 'stateListener');
-          } else {
-            viewModelLog("error on stateListener: $e\n$stack");
-          }
+  /// Handles state changes synchronously.
+  ///
+  /// This method is called immediately when state changes, ensuring
+  /// synchronous notification consistent with ViewModel behavior.
+  void _handleStateChanged(DiffState<T> event) {
+    if (_isDisposed) return;
+
+    // Phase 1: Notify state listeners with previous and current state
+    for (final element in _stateListeners) {
+      try {
+        element.call(event.previousState, event.currentState);
+      } catch (e, stack) {
+        final handler = ViewModel.config.onListenerError;
+        if (handler != null) {
+          handler(e, stack, 'stateListener');
+        } else {
+          viewModelLog("error on stateListener: $e\n$stack");
         }
       }
+    }
 
-      for (final element in _listeners) {
-        try {
-          element.call();
-        } catch (e, stack) {
-          final handler = ViewModel.config.onListenerError;
-          if (handler != null) {
-            handler(e, stack, 'notifyListeners');
-          } else {
-            viewModelLog("error on notifyListeners: $e\n$stack");
-          }
+    // Phase 2: Notify general listeners
+    for (final element in _listeners) {
+      try {
+        element.call();
+      } catch (e, stack) {
+        final handler = ViewModel.config.onListenerError;
+        if (handler != null) {
+          handler(e, stack, 'notifyListeners');
+        } else {
+          viewModelLog("error on notifyListeners: $e\n$stack");
         }
       }
-    });
+    }
   }
 
   /// Removes a state-specific listener.
@@ -655,12 +683,12 @@ abstract class StateViewModel<T> with ViewModel {
   /// Note: This method is protected and should only be called from within
   /// the ViewModel implementation.
   ///
-  /// This method internally uses the `isSameState` function from
-  /// [ViewModelConfig] to determine if the new state is the same as the
-  /// current state. If they are considered the same, no update will
-  /// be triggered.
-  /// By default, this comparison is done by checking the memory addresses
-  /// of the state objects using `identical()`.
+  /// This method uses an equality function to determine if the new state is
+  /// the same as the current state. If they are considered the same, no update
+  /// will be triggered. The equality check follows this priority:
+  /// 1. Instance-level `equals` (if provided in constructor)
+  /// 2. Global `ViewModelConfig.equals` (if configured)
+  /// 3. Identity comparison using `identical()`
   ///
   /// Example:
   /// ```dart
@@ -712,10 +740,6 @@ abstract class StateViewModel<T> with ViewModel {
   @mustCallSuper
   @override
   void dispose() {
-    // Cancel subscription first to prevent any new events from being processed
-    // during the disposal process. This is critical to avoid race conditions
-    // where events might arrive while we're cleaning up listeners.
-    _streamSubscription.cancel();
     _store.dispose();
     _listeners.clear();
     _stateListeners.clear();

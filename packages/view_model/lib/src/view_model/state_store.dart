@@ -48,13 +48,31 @@ class ViewModelStateStore<S> implements StateStore<S> {
   /// The initial state provided when the store was created.
   final S initialState;
 
+  /// Optional per-instance equality comparison function.
+  ///
+  /// If provided, this function is used instead of the global
+  /// [ViewModel.config.equals] to determine if two states are equal.
+  ///
+  /// Priority: instance-level > global config > default (identical)
+  final bool Function(S previous, S current)? equals;
+
+  /// Optional callback invoked synchronously when state changes.
+  ///
+  /// This is called immediately when setState is called, before the
+  /// stream event is emitted, ensuring synchronous notification.
+  void Function(DiffState<S>)? _onStateChanged;
+
   /// Creates a new state store with the given initial state.
   ///
   /// Parameters:
   /// - [initialState]: The initial state value
+  /// - [equals]: Optional per-instance equality function
+  /// - [onStateChanged]: Optional synchronous callback for state changes
   ViewModelStateStore({
     required this.initialState,
-  });
+    this.equals,
+    void Function(DiffState<S>)? onStateChanged,
+  }) : _onStateChanged = onStateChanged;
 
   late S _state = initialState;
   S? _previousState;
@@ -75,6 +93,7 @@ class ViewModelStateStore<S> implements StateStore<S> {
   /// This method should be called when the store is no longer needed
   /// to prevent memory leaks.
   void dispose() {
+    _onStateChanged = null;
     _stateStreamController.close();
   }
 
@@ -103,8 +122,10 @@ class ViewModelStateStore<S> implements StateStore<S> {
 
   /// Checks if two states are considered equal.
   ///
-  /// Uses the configured state equality function from [ViewModel.config]
-  /// if available, otherwise falls back to identity comparison.
+  /// Uses the equality function with the following priority:
+  /// 1. Instance-level [equals] (if provided)
+  /// 2. Global [ViewModel.config.equals] (if configured)
+  /// 3. Identity comparison (identical)
   ///
   /// Parameters:
   /// - [current]: Current state
@@ -112,7 +133,9 @@ class ViewModelStateStore<S> implements StateStore<S> {
   ///
   /// Returns `true` if the states are considered equal.
   bool _isSameState(S current, S newState) {
-    if (ViewModel.config.equals != null) {
+    if (equals != null) {
+      return equals!(current, newState);
+    } else if (ViewModel.config.equals != null) {
       return ViewModel.config.equals!(current, newState);
     } else {
       return identical(current, newState);
@@ -123,9 +146,19 @@ class ViewModelStateStore<S> implements StateStore<S> {
   ///
   /// This method can be used to trigger a refresh when the state object
   /// itself hasn't changed but its internal properties might have.
+  ///
+  /// The notification happens in two phases:
+  /// 1. Synchronously calls [_onStateChanged] callback if set
+  /// 2. Asynchronously emits event to [stateStream]
   void notifyListeners() {
     if (_stateStreamController.isClosed) return;
-    _stateStreamController.add(DiffState(_previousState, _state));
+    final diff = DiffState(_previousState, _state);
+
+    // Phase 1: Synchronous notification
+    _onStateChanged?.call(diff);
+
+    // Phase 2: Asynchronous stream notification
+    _stateStreamController.add(diff);
   }
 
   /// Sets a new state and notifies listeners.
