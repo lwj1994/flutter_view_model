@@ -1,3 +1,13 @@
+## 15.0.0-dev.3
+- Breaking Change: Removed deprecated `GenProvider` and `@genProvider` annotations.
+- Breaking Change: Removed deprecated `ViewModelProvider` class. Use `ViewModelSpec` instead.
+- Breaking Change: Removed deprecated `vef` getter. Use `viewModelBinding` instead.
+- Breaking Change: Removed deprecated `Vef` typedef. Use `ViewModelBinding` instead.
+- Generator: Rename `provider_generator.dart` to `spec_generator.dart`.
+- Generator: Prioritize `spec` factory over unnamed constructor.
+- Refactor: Internal renaming of `binding.dart` to `view_model_binding.dart`.
+- Docs: Update READMEs and examples to use `ViewModelBinding` and `ViewModelSpec`.
+
 ## 0.15.0-dev.2
 - Fix: Unify notification timing between ViewModel and StateViewModel (now both use synchronous notifications)
 - Fix: Add per-ViewModel state equality configuration via constructor parameter

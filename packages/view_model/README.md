@@ -6,7 +6,7 @@ A Flutter state management library built on a type-keyed instance registry with 
 
 ```yaml
 dependencies:
-  view_model: ^0.15.0
+  view_model: ^15.0.0-dev.3
 ```
 
 ---
@@ -870,7 +870,7 @@ dev_dependencies:
 ```dart
 part 'counter_view_model.vm.dart';
 
-@genProvider
+@GenSpec
 class CounterViewModel with ViewModel {
   int count = 0;
   void increment() => update(() => count++);

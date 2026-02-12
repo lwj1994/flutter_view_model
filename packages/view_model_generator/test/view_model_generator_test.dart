@@ -1,6 +1,6 @@
 import 'package:source_gen_test/source_gen_test.dart';
 import 'package:view_model_annotation/view_model_annotation.dart';
-import 'package:view_model_generator/src/provider_generator.dart';
+import 'package:view_model_generator/src/spec_generator.dart';
 
 // 1. Test no-args constructor
 @ShouldGenerate(r'''
@@ -106,15 +106,15 @@ class FeedState {
   static FeedState fromArgs(Repository repo, int page) => FeedState();
 }
 
-// 8. Prefer factory named 'provider' when it matches main ctor (excluding super)
+// 8. Prefer factory named 'spec' when it matches main ctor (excluding super)
 @ShouldGenerate(r'''
-final aSpec = ViewModelSpec.arg<A, P>(builder: (P p) => A.provider(p: p));
+final aSpec = ViewModelSpec.arg<A, P>(builder: (P p) => A.spec(p: p));
 ''')
 @genSpec
 class A extends Base {
   final P p;
   A({required super.s, required this.p});
-  factory A.provider({required P p}) => A(s: 0, p: p);
+  factory A.spec({required P p}) => A(s: 0, p: p);
 }
 
 class Base {
@@ -231,7 +231,7 @@ class D {
   D({required this.p});
 }
 
-// 14. no-arg provider with constant key/tag
+// 14. no-arg spec with constant key/tag
 @ShouldGenerate(r'''
 final eSpec = ViewModelSpec<E>(
   builder: () => E(),
@@ -244,7 +244,7 @@ class E {
   E();
 }
 
-// 15. arg2 provider, constant tag
+// 15. arg2 spec, constant tag
 @ShouldGenerate(r'''
 final fSpec = ViewModelSpec.arg2<F, P, int>(
   builder: (P p, int n) => F(p, n),
@@ -378,17 +378,17 @@ class SingletonArgVM {
   SingletonArgVM(this.id);
 }
 
-// 25. factory with no args (provider) should be used if present
+// 25. factory with no args (spec) should be used if present
 @ShouldGenerate(r'''
 final islandSpec = ViewModelSpec<IslandViewModel>(
-  builder: () => IslandViewModel.provider(),
+  builder: () => IslandViewModel.spec(),
 );
 ''')
 @GenSpec()
 class IslandViewModel extends StateViewModel<IslandViewModelState> {
   IslandViewModel({required IslandViewModelState state}) : super(state);
 
-  factory IslandViewModel.provider() {
+  factory IslandViewModel.spec() {
     return IslandViewModel(state: IslandViewModelState());
   }
 }
@@ -410,14 +410,14 @@ class NullArg {
 @ShouldGenerate(r'''
 final nullArg2Spec = ViewModelSpec.arg3<NullArg2, int?, String?, int>(
   builder: (int? id, String? name, int age) =>
-      NullArg2.provider(id: id, name: name, age: age),
+      NullArg2.spec(id: id, name: name, age: age),
 );
 ''')
 @genSpec
 class NullArg2 {
   final int? id;
   NullArg2({this.id});
-  factory NullArg2.provider({int? id, String? name, required int age}) =>
+  factory NullArg2.spec({int? id, String? name, required int age}) =>
       NullArg2(id: id);
 }
 

@@ -40,7 +40,7 @@
 ///
 /// ## The `viewModelBinding` Accessor
 ///
-/// `viewModelBinding` (ViewModel Execution Framework) is your gateway to ViewModels:
+/// `viewModelBinding` is your gateway to ViewModels:
 ///
 /// | Method | Description |
 /// |--------|-------------|
@@ -70,7 +70,7 @@ export "package:view_model/src/get_instance/store.dart" show InstanceArg;
 export "package:view_model/src/view_model/view_model_binding.dart";
 export "package:view_model/src/view_model/builder.dart";
 export "package:view_model/src/view_model/config.dart";
-export "package:view_model/src/view_model/view_model_spec.dart";
+export "package:view_model/src/view_model/spec.dart";
 export "package:view_model/src/view_model/pause_provider.dart";
 
 export "package:view_model/src/view_model/value_observer.dart";
