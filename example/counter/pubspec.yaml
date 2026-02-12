@@ -14,7 +14,7 @@ dependencies:
   intl: ^0.20.2
   cupertino_icons: ^1.0.2
   view_model:
-    path: ../../packages/view_model
+    path: ../..
 
 dev_dependencies:
   flutter_test:

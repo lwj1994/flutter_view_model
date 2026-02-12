@@ -428,10 +428,10 @@ packages:
     dependency: "direct main"
     description:
       name: view_model_annotation
-      sha256: "349c1324a5e7ad7327436a95e40413dffb5e8e9bfef37be89f359ef60105af7f"
+      sha256: "558d9e5597c075b58eb4c6fe7ab1e60864664b1ef8b21c02e4c571fe21300439"
       url: "https://pub.dev"
     source: hosted
-    version: "15.0.0-dev.3"
+    version: "15.0.0-dev.4"
   vm_service:
     dependency: transitive
     description:

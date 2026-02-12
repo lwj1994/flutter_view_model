@@ -1,3 +1,6 @@
+## 15.0.0-dev.4
+- Fix: DevTool _getViewModelData error: Converting object to an encodable object failed (Object keys now correctly converted to String).
+
 ## 15.0.0-dev.3
 - Breaking Change: Removed deprecated `GenProvider` and `@genProvider` annotations.
 - Breaking Change: Removed deprecated `ViewModelProvider` class. Use `ViewModelSpec` instead.
