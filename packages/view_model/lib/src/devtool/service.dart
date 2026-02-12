@@ -148,7 +148,7 @@ class DevToolsService {
         .map((vm) => {
               'id': vm.instanceId,
               'type': vm.typeName,
-              'key': vm.key,
+              'key': vm.key?.toString(),
               'tag': vm.tag,
               'isActive': !vm.isDisposed,
               'isDisposed': vm.isDisposed,
