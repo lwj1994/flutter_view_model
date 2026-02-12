@@ -18,11 +18,6 @@ class GenSpec {
   const GenSpec({this.key, this.tag, this.aliveForever = false});
 }
 
-/// Shorthand annotation for [GenSpec] specifically for providers.
-class GenProvider extends GenSpec {
-  const GenProvider({super.key, super.tag, super.aliveForever});
-}
-
 /// Shorthand constant for `GenSpec`.
 const GenSpec genSpec = GenSpec();
 

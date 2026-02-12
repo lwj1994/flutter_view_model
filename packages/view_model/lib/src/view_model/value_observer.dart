@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/get_instance/manager.dart';
-import 'package:view_model/view_model.dart';
+import 'package:view_model/src/get_instance/store.dart';
+import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 
 /// A class that holds a value and can be observed by an [ObserverBuilder].
 ///

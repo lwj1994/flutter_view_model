@@ -21,11 +21,11 @@ class CounterViewModel extends ViewModel {}
 
 ```yaml
 dev_dependencies:
-  view_model_generator: ^0.15.0-dev.0
+  view_model_generator: ^15.0.0-dev.3
   build_runner: ^2.7.1
 
 dependencies:
-  view_model_annotation: ^0.15.0-dev.0
+  view_model_annotation: ^15.0.0-dev.3
 ```
 
 ## Basic Flow
@@ -74,8 +74,8 @@ final vm = viewModelBinding.watch(userSpec(123, repository));
 Rules:
 
 - Up to 4 required parameters are supported
-- If `factory provider(...)` exists, it is used instead of the constructor
-- For `provider(...)`, required and optional parameters are included
+- If `factory spec(...)` exists, it is used instead of the constructor
+- For `spec(...)`, required and optional parameters are included
 
 ## Keep Alive
 
@@ -119,7 +119,7 @@ class SettingsViewModel extends ViewModel {
 
   SettingsViewModel({this.isDark = false});
 
-  factory SettingsViewModel.provider({required bool isDark}) {
+  factory SettingsViewModel.spec({required bool isDark}) {
     return SettingsViewModel(isDark: isDark);
   }
 }
@@ -127,5 +127,5 @@ class SettingsViewModel extends ViewModel {
 
 ## Notes
 
-- `@GenProvider` and `@genProvider` are still accepted but deprecated
-- Classes without an unnamed constructor or provider factory are skipped
+
+- Classes without an unnamed constructor or spec factory are skipped

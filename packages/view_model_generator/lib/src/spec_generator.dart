@@ -6,10 +6,10 @@ import 'package:view_model_annotation/view_model_annotation.dart';
 class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
   const ViewModelSpecGenerator();
 
-  /// Generate provider code for the annotated class.
+  /// Generate spec code for the annotated class.
   ///
   /// Rules (in order of priority):
-  /// 1) Prefer a factory whose required args count and types match.
+  /// 1) Prefer a factory named 'spec'.
   /// 2) Otherwise use the main (unnamed) constructor.
   /// 3) No special handling for `StateViewModel`; use constructors as-is.
   @override
@@ -78,16 +78,16 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     }
 
     final ConstructorElement? mainCtor = element.unnamedConstructor;
-    final matchingFactory = _findProviderFactory(element);
+    final matchingFactory = _findSpecFactory(element);
 
     if (mainCtor == null && matchingFactory == null) {
-      return '// Skipped: No unnamed constructor or provider factory for $className';
+      return '// Skipped: No unnamed constructor or spec factory for $className';
     }
 
     // Collect class-owned params.
-    // Priority: factory 'provider' (all params), then main constructor
+    // Priority: factory 'spec' (all params), then main constructor
     // (required only).
-    // Factory provider collects ALL params (including optional) to give full
+    // Factory spec collects ALL params (including optional) to give full
     // control. Main constructor only collects REQUIRED params for simplicity.
     final effectiveParams = matchingFactory != null
         ? _ownParams(matchingFactory)
@@ -303,7 +303,7 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
 
   /// Collect all class-owned params (exclude super-forwarded params).
   ///
-  /// Used for factory provider to include both required and optional
+  /// Used for factory spec to include both required and optional
   /// parameters.
   List _ownParams(ExecutableElement exec) {
     return exec.formalParameters
@@ -323,10 +323,10 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
         .toList();
   }
 
-  /// Find factory named 'provider' if present; otherwise null.
-  ConstructorElement? _findProviderFactory(ClassElement el) {
+  /// Find factory named 'spec' if present; otherwise null.
+  ConstructorElement? _findSpecFactory(ClassElement el) {
     for (final c in el.constructors) {
-      if (c.isFactory && c.name == 'provider') return c;
+      if (c.isFactory && c.name == 'spec') return c;
     }
     return null;
   }

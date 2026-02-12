@@ -34,9 +34,6 @@ mixin ViewModelStatelessMixin on StatelessWidget {
   @protected
   WidgetViewModelBinding get viewModelBinding => _viewModelElement._binding;
 
-  @Deprecated('Use viewModelBinding instead.')
-  WidgetViewModelBinding get vef => viewModelBinding;
-
   /// Creates the custom Element that bridges ViewModel updates.
   ///
   /// The Element owns `WidgetViewModelBinding` and connects its refresh to

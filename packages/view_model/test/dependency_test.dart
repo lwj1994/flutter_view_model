@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/src/view_model/view_model_spec.dart';
+import 'package:view_model/src/view_model/spec.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 

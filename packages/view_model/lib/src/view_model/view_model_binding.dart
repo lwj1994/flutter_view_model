@@ -195,8 +195,6 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   // ignore: avoid_returning_this
   ViewModelBinding get viewModelBinding => this;
 
-  @Deprecated('Use viewModelBinding instead.')
-  ViewModelBinding get vef => this;
   bool _dispose = false;
   final _stackPathLocator = StackPathLocator();
 
@@ -709,9 +707,6 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     }
   }
 }
-
-@Deprecated('Use ViewModelBinding instead.')
-typedef Vef = ViewModelBinding;
 
 extension StateViewModelBindingExtension on ViewModelStateMixin {
   VM watchViewModel<VM extends ViewModel>(
