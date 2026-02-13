@@ -479,7 +479,7 @@ packages:
       path: "../view_model_annotation"
       relative: true
     source: path
-    version: "15.0.0-dev.4"
+    version: "15.0.0-dev.5"
   vm_service:
     dependency: transitive
     description:
