@@ -1,23 +1,22 @@
-## 15.0.0
-- Refactor: Rename `Vef` to `ViewModelBinding` and `ViewModelProvider` to `ViewModelSpec`.
-- Deprecate usage of `Vef` and `ViewModelProvider` while maintaining backward compatibility.
-- Use `typedef Vef = ViewModelBinding` to support `with Vef` mixin syntax.
-- DevTools: improve data loading resilience.
-- DevTools: align binding naming in service payloads.
-- Internal: tidy spec proxy setter.
-- Fix: Unify notification timing between ViewModel and StateViewModel (now both use synchronous notifications).
-- Fix: Add per-ViewModel state equality configuration via constructor parameter.
-- Test: Add comprehensive tests for notification timing and equality configuration.
-- Breaking Change: Removed deprecated `GenProvider` and `@genProvider` annotations.
-- Breaking Change: Removed deprecated `vef` getter. Use `viewModelBinding` instead.
-- Compatibility: restore deprecated typed `ViewModelProvider` as a wrapper of `ViewModelSpec`.
-- Compatibility: restore deprecated `typedef Vef = ViewModelBinding`.
+## 15.0.0-dev.5
+- Version bump for consistency
+
+## 15.0.0-dev.4
+- Breaking: Rename `Vef` to `ViewModelBinding` and `ViewModelProvider` to `ViewModelSpec`.
+- Breaking: Remove deprecated `vef` getter. Use `viewModelBinding` instead.
+- Breaking: Remove deprecated `GenProvider` / `@genProvider`. Use `GenSpec` / `@genSpec`.
 - Generator: Rename `provider_generator.dart` to `spec_generator.dart`.
 - Generator: Prioritize `spec` factory over unnamed constructor.
-- Refactor: Internal renaming of `binding.dart` to `view_model_binding.dart`.
+- Compatibility: Restore deprecated `typedef Vef = ViewModelBinding`.
+- Compatibility: Restore deprecated typed `ViewModelProvider` wrapper (delegates to `ViewModelSpec`).
+- Compatibility: Restore deprecated `ViewModelFactory.singleton()` fallback so `key()` can still default to a shared `const Object()` key during migration.
+- Fix: Unify notification timing between `ViewModel` and `StateViewModel` (both synchronous).
+- Fix: Add per-ViewModel state equality configuration.
+- Fix: DevTools data loading resilience improvements and naming alignment (`watchers` -> `bindings`).
+- Fix: DevTools `_getViewModelData` object-key encoding.
+- Refactor: Internal rename `binding.dart` -> `view_model_binding.dart`.
 - Docs: Update READMEs and examples to use `ViewModelBinding` and `ViewModelSpec`.
-- Fix: DevTool _getViewModelData error: Converting object to an encodable object failed (Object keys now correctly converted to String).
-- Compatibility: restore deprecated `ViewModelFactory.singleton()` fallback so `key()` can still default to a shared `const Object()` key during migration.
+- Test: Add/adjust coverage for notification timing and equality configuration.
 
 ## 0.14.2
 - Docs: Polish README and README_ZH for better clarity and conciseness
