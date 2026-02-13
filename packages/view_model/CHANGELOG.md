@@ -1,30 +1,23 @@
-## 15.0.0-dev.4
-- Fix: DevTool _getViewModelData error: Converting object to an encodable object failed (Object keys now correctly converted to String).
-
-## 15.0.0-dev.3
+## 15.0.0
+- Refactor: Rename `Vef` to `ViewModelBinding` and `ViewModelProvider` to `ViewModelSpec`.
+- Deprecate usage of `Vef` and `ViewModelProvider` while maintaining backward compatibility.
+- Use `typedef Vef = ViewModelBinding` to support `with Vef` mixin syntax.
+- DevTools: improve data loading resilience.
+- DevTools: align binding naming in service payloads.
+- Internal: tidy spec proxy setter.
+- Fix: Unify notification timing between ViewModel and StateViewModel (now both use synchronous notifications).
+- Fix: Add per-ViewModel state equality configuration via constructor parameter.
+- Test: Add comprehensive tests for notification timing and equality configuration.
 - Breaking Change: Removed deprecated `GenProvider` and `@genProvider` annotations.
-- Breaking Change: Removed deprecated `ViewModelProvider` class. Use `ViewModelSpec` instead.
 - Breaking Change: Removed deprecated `vef` getter. Use `viewModelBinding` instead.
-- Breaking Change: Removed deprecated `Vef` typedef. Use `ViewModelBinding` instead.
+- Compatibility: restore deprecated typed `ViewModelProvider` as a wrapper of `ViewModelSpec`.
+- Compatibility: restore deprecated `typedef Vef = ViewModelBinding`.
 - Generator: Rename `provider_generator.dart` to `spec_generator.dart`.
 - Generator: Prioritize `spec` factory over unnamed constructor.
 - Refactor: Internal renaming of `binding.dart` to `view_model_binding.dart`.
 - Docs: Update READMEs and examples to use `ViewModelBinding` and `ViewModelSpec`.
-
-## 0.15.0-dev.2
-- Fix: Unify notification timing between ViewModel and StateViewModel (now both use synchronous notifications)
-- Fix: Add per-ViewModel state equality configuration via constructor parameter
-- Test: Add comprehensive tests for notification timing and equality configuration
-
-## 0.15.0-dev.1
-- DevTools: improve data loading resilience
-- DevTools: align binding naming in service payloads
-- Internal: tidy spec proxy setter
-
-## 0.15.0-dev.0
-- Refactor: Rename `Vef` to `ViewModelBinding` and `ViewModelProvider` to `ViewModelSpec`
-- Deprecate usage of `Vef` and `ViewModelProvider` while maintaining backward compatibility
-- Use `typedef Vef = ViewModelBinding` to support `with Vef` mixin syntax
+- Fix: DevTool _getViewModelData error: Converting object to an encodable object failed (Object keys now correctly converted to String).
+- Compatibility: restore deprecated `ViewModelFactory.singleton()` fallback so `key()` can still default to a shared `const Object()` key during migration.
 
 ## 0.14.2
 - Docs: Polish README and README_ZH for better clarity and conciseness

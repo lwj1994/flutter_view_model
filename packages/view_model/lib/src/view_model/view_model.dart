@@ -810,17 +810,23 @@ class AutoDisposeController {
 /// }
 /// ```
 abstract mixin class ViewModelFactory<T> {
+  static const _defaultShareId = Object();
+
   /// Returns a unique key for sharing ViewModel instances.
   ///
   /// ViewModels with the same key will be shared across different widgets.
   /// If this returns `null`, a new instance will be created each time.
+  ///
+  /// By default, this returns a shared key when deprecated singleton switches
+  /// are enabled, otherwise `null`.
   ///
   /// Example:
   /// ```dart
   /// @override
   /// Object? key() => 'global-counter'; // Share across app
   /// ```
-  Object? key() => null;
+  // ignore: deprecated_member_use_from_same_package
+  Object? key() => singleton() ? _defaultShareId : null;
 
   /// Returns a tag to identify or categorize this ViewModel.
   ///
@@ -849,6 +855,15 @@ abstract mixin class ViewModelFactory<T> {
   /// }
   /// ```
   T build();
+
+  /// (Deprecated) Returns `true` if this factory should create singleton
+  /// instances. Use [key] instead.
+  ///
+  /// Kept for migration safety: removing this API can cause a silent behavior
+  /// change in older factories that forgot `@override`.
+  @Deprecated('Use key() instead. '
+      'singleton() will be removed in a future major release.')
+  bool singleton() => false;
 
   /// Returns `true` if the instance should live forever (never be disposed).
   bool aliveForever() => false;
