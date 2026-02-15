@@ -427,11 +427,10 @@ packages:
   view_model_annotation:
     dependency: "direct main"
     description:
-      name: view_model_annotation
-      sha256: c64e3878237aecbc16da27f9dda78dfc014f77e8aff1eb313e5fa84c814f032c
-      url: "https://pub.dev"
-    source: hosted
-    version: "15.0.0-dev.5"
+      path: "../view_model_annotation"
+      relative: true
+    source: path
+    version: "1.0.0"
   vm_service:
     dependency: transitive
     description:

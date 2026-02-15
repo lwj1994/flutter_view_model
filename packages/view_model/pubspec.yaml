@@ -26,12 +26,16 @@ environment:
   sdk: ^3.5.0
   flutter: ">=3.24.0"
 
+dependency_overrides:
+  view_model_annotation:
+    path: ../view_model_annotation
+
 dependencies:
   flutter:
     sdk: flutter
-  meta: 
+  meta: ^1.16.0
   view_model_annotation: ^1.0.0
-  stack_trace: 
+  stack_trace: ^1.11.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
