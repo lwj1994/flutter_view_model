@@ -10,7 +10,7 @@
 
 ```yaml
 dependencies:
-  view_model: ^15.0.0-dev.5
+  view_model: ^1.0.0
 ```
 
 ---

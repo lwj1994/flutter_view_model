@@ -8,13 +8,11 @@ Add to your project:
 
 ```yaml
 dependencies:
-  view_model_annotation:
-    path: ../view_model_annotation
+  view_model_annotation: ^1.0.0
 
 dev_dependencies:
   build_runner: ^2.4.0
-  view_model_generator:
-    path: ../view_model_generator
+  view_model_generator: ^1.0.0
 ```
 
 ## Usage
