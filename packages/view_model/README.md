@@ -8,7 +8,7 @@ A Flutter state management library built on a type-keyed instance registry with 
 
 ```yaml
 dependencies:
-  view_model: ^15.0.0-dev.3
+  view_model: ^1.0.0
 ```
 
 ---
