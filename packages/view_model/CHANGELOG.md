@@ -1,22 +1,27 @@
-## 15.0.0-dev.5
-- Version bump for consistency
+## 1.0.0
+- **Breaking: API Standardization:**
+  - Renamed `Vef` to `ViewModelBinding` for clarity. (Deprecated `typedef Vef = ViewModelBinding` remains for compatibility).
+  - Renamed `ViewModelProvider` to `ViewModelSpec`. (Deprecated `ViewModelProvider` wrapper remains).
+  - Renamed `vef` getter to `viewModelBinding`. (Deprecated `vef` getter remains).
+  - Renamed annotations `@GenProvider` / `@genProvider` to `@GenSpec` / `@genSpec`.
+- **Breaking: Notification System Refactoring:**
+  - Standardized all notifications to be synchronous.
+  - Performance optimization: notifications are now delivered in two phases (direct state listeners first, then binding updates).
+- **Feat: DevTools Evolution:**
+  - Deep redesign of the UI with a professional layout and high-performance scrolling.
+  - Added **Dependency Graph Visualization** to see real-time connections between widgets and ViewModels.
+  - Enhanced data loading resilience and refined object serialization for the dev console.
+- **Feat: Advanced State Management:**
+  - Added support for per-ViewModel state equality configuration via instance-level `equals` function.
+  - Priority logic: instance `equals` > global `ViewModelConfig.equals` > `identical()`.
+- **Compatibility:**
+  - Restored support for deprecated `ViewModelFactory.singleton()` callback to ease migration of legacy sharing logic to the `key` system.
+  - Full backward compatibility for `vef` variable mapping to `viewModelBinding` across all mixins.
+- **Generator:**
+  - Prioritizes the `spec` factory method (e.g., `MyViewModel.spec()`) over unnamed constructors for more flexible DI.
+- **Docs:**
+  - New localized Chinese README (`README_ZH.md`) and comprehensive architecture guides.
 
-## 15.0.0-dev.4
-- Breaking: Rename `Vef` to `ViewModelBinding` and `ViewModelProvider` to `ViewModelSpec`.
-- Breaking: Remove deprecated `vef` getter. Use `viewModelBinding` instead.
-- Breaking: Remove deprecated `GenProvider` / `@genProvider`. Use `GenSpec` / `@genSpec`.
-- Generator: Rename `provider_generator.dart` to `spec_generator.dart`.
-- Generator: Prioritize `spec` factory over unnamed constructor.
-- Compatibility: Restore deprecated `typedef Vef = ViewModelBinding`.
-- Compatibility: Restore deprecated typed `ViewModelProvider` wrapper (delegates to `ViewModelSpec`).
-- Compatibility: Restore deprecated `ViewModelFactory.singleton()` fallback so `key()` can still default to a shared `const Object()` key during migration.
-- Fix: Unify notification timing between `ViewModel` and `StateViewModel` (both synchronous).
-- Fix: Add per-ViewModel state equality configuration.
-- Fix: DevTools data loading resilience improvements and naming alignment (`watchers` -> `bindings`).
-- Fix: DevTools `_getViewModelData` object-key encoding.
-- Refactor: Internal rename `binding.dart` -> `view_model_binding.dart`.
-- Docs: Update READMEs and examples to use `ViewModelBinding` and `ViewModelSpec`.
-- Test: Add/adjust coverage for notification timing and equality configuration.
 
 ## 0.14.2
 - Docs: Polish README and README_ZH for better clarity and conciseness

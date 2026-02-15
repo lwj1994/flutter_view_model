@@ -87,6 +87,11 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   @protected
   ViewModelBindingInterface get viewModelBinding => refHandler.binding;
 
+  /// (Deprecated) Use [viewModelBinding] instead.
+  @Deprecated('Use viewModelBinding instead.')
+  @protected
+  ViewModelBindingInterface get vef => viewModelBinding;
+
   late InstanceArg _instanceArg;
   static final RouteObserver<PageRoute> routeObserver =
       RouteObserver<PageRoute>();

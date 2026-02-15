@@ -316,3 +316,14 @@ class ViewModelSpecWithArg4<VM extends ViewModel, A, B, C, D> {
     );
   }
 }
+
+/// (Deprecated) Use [ViewModelSpec] instead.
+@Deprecated('Use ViewModelSpec instead.')
+class ViewModelProvider<T extends ViewModel> extends ViewModelSpec<T> {
+  ViewModelProvider({
+    required super.builder,
+    super.key,
+    super.tag,
+    super.aliveForever,
+  });
+}

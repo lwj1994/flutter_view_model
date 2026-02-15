@@ -45,6 +45,11 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
     refreshWidget: _rebuildState,
   );
 
+  /// (Deprecated) Use [viewModelBinding] instead.
+  @Deprecated('Use viewModelBinding instead.')
+  @protected
+  WidgetViewModelBinding get vef => viewModelBinding;
+
   late final _routePauseProvider = PageRoutePauseProvider();
   late final TickerModePauseProvider _tickerModePauseProvider =
       TickerModePauseProvider();

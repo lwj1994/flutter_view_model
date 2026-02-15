@@ -1,22 +1,6 @@
-## 15.0.0-dev.5
-- Version bump for consistency
+## 1.0.0
+- Final release supporting the new `@GenSpec` annotation and `ViewModelSpec` generation patterns.
 
-## 15.0.0-dev.4
-- Version bump for consistency
-
-## 15.0.0-dev.3
-- Version bump for consistency
-
-## 0.15.0-dev.2
-- Version bump for consistency
-
-## 0.15.0-dev.1
-- Version bump for 0.15.0-dev.1
-
-## 0.15.0-dev.0
-- Refactor: Generate `ViewModelSpec` (xxxSpec) instead of `ViewModelProvider` (xxxProvider)
-- Support both `@GenSpec` and `@GenProvider` (deprecated) annotations
-- Update internal logic to use `ViewModelBinding` and `ViewModelSpec` naming
 
 ## 0.14.2
 - Update version for consistency
