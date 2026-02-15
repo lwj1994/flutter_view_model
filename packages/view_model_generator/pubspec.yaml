@@ -9,9 +9,6 @@ issue_tracker: https://github.com/lwj1994/flutter_view_model/issues
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
-dependency_overrides:
-  view_model_annotation:
-    path: ../view_model_annotation
 dependencies:
   analyzer: ^8.1.1
   source_gen: ^4.0.0
