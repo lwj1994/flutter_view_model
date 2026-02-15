@@ -1,22 +1,6 @@
-## 15.0.0-dev.5
-- Version bump for consistency
+## 1.0.0
+- Final release following API standardization and naming refinement.
 
-## 15.0.0-dev.4
-- Version bump for consistency
-
-## 15.0.0-dev.3
-- Version bump for consistency
-
-## 0.15.0-dev.2
-- Version bump for consistency
-
-## 0.15.0-dev.1
-- Version bump for 0.15.0-dev.1
-
-## 0.15.0-dev.0
-- Refactor: Rename `@GenProvider` and `genProvider` to `@GenSpec` and `genSpec`
-- Deprecate usage of `@GenProvider` and `genProvider`
-- Enhance naming: focus on "Spec" definitions for ViewModels
 
 ## 0.14.2
 - Update version for consistency

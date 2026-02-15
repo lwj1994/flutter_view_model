@@ -195,6 +195,11 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   // ignore: avoid_returning_this
   ViewModelBinding get viewModelBinding => this;
 
+  /// (Deprecated) Use [viewModelBinding] instead.
+  @Deprecated('Use viewModelBinding instead.')
+  @protected
+  ViewModelBinding get vef => viewModelBinding;
+
   bool _dispose = false;
   final _stackPathLocator = StackPathLocator();
 
@@ -983,3 +988,7 @@ extension ViewModelBindingExtension on ViewModel {
     );
   }
 }
+
+/// (Deprecated) Use [ViewModelBinding] instead.
+@Deprecated('Use ViewModelBinding instead.')
+class Vef with ViewModelBinding {}

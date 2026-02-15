@@ -2,6 +2,8 @@
 
 [![pub package](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model)
 
+[简体中文](./README_ZH.md)
+
 A Flutter state management library built on a type-keyed instance registry with automatic reference-counted lifecycle.
 
 ```yaml
