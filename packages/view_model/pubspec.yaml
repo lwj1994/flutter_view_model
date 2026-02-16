@@ -28,7 +28,7 @@ environment:
 
 dependencies:
   flutter:
-    sdk: fluttery
+    sdk: flutter
   meta: ^1.16.0
   view_model_annotation: ^1.0.0
   stack_trace: ^1.11.1
