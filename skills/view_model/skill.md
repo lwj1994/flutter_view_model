@@ -1,5 +1,5 @@
 ---
-name: flutter-view-model
+name: view_model
 description: Guide for building and using ViewModels with reference-counted lifecycle and reactive binding in Flutter.
 mintlify-proj: flutter-view-model
 ---
