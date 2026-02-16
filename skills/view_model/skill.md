@@ -1,6 +1,7 @@
 ---
 name: flutter-view-model
 description: Guide for building and using ViewModels with reference-counted lifecycle and reactive binding in Flutter.
+mintlify-proj: flutter-view-model
 ---
 
 # view_model Skill
@@ -9,7 +10,7 @@ This skill provides comprehensive instructions for using the `view_model` state 
 
 ## 核心设计哲学 (Core Philosophy)
 
-`view_model` 是一个基于 **类型键 (Type-keyed)** 和 **引用计数 (Reference Counting)** 的状态管理系统。
+`view_model` 是一个基于 **类型键 (Type-keyed)** 和 **引用计数 (Reference Counting)** 的状态管理系统.
 - **自动生命周期**: ViewModel 的存活取决于是否有活跃的 Binding。
 - **跨 Context 自由**: 在任何混入了 `ViewModelBinding` 的类中都可以访问 ViewModel，无需 `BuildContext`。
 - **高性能**: 自动处理 暂停/恢复 逻辑，不可见时不刷新。
