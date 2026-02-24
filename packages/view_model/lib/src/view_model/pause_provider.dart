@@ -60,6 +60,22 @@ class AppPauseProvider with ViewModelBindingPauseProvider {
 /// paused.
 class TickerModePauseProvider with ViewModelBindingPauseProvider {
   ValueListenable<bool>? _notifier;
+
+  /// Updates pause state from a ticker-enabled boolean.
+  ///
+  /// Use this with `TickerMode.of(context)` in `didChangeDependencies`
+  /// to avoid relying on deprecated ticker notifiers.
+  void updateEnabled(bool enabled) {
+    if (enabled) {
+      resume();
+    } else {
+      pause();
+    }
+  }
+
+  /// Subscribes to a ticker-enabled notifier.
+  ///
+  /// Kept for backward compatibility with legacy usage patterns.
   void subscribe(ValueListenable<bool> notifier) {
     if (_notifier == notifier) return;
     _notifier?.removeListener(_onChange);
@@ -71,11 +87,7 @@ class TickerModePauseProvider with ViewModelBindingPauseProvider {
   void _onChange() {
     final v = _notifier?.value;
     if (v == null) return;
-    if (v) {
-      resume();
-    } else {
-      pause();
-    }
+    updateEnabled(v);
   }
 
   @override

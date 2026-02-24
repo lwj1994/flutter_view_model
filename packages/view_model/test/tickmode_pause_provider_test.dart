@@ -67,10 +67,6 @@ class _SubStatefulWidgetState extends State<SubStatefulWidget>
   @override
   void initState() {
     super.initState();
-    final notifier = TickerMode.getNotifier(context);
-    notifier.addListener(() {
-      print("_SubWidgetState TickerMode = ${notifier.value}");
-    });
     viewModel =
         viewModelBinding.watch(ViewModelSpec(builder: () => TestViewModel()));
   }
@@ -100,7 +96,7 @@ class StatelessTestWidget extends StatelessWidget with ViewModelStatelessMixin {
   @override
   Widget build(BuildContext context) {
     print("StatelessTestWidget TickerMode = ${TickerMode.of(context)}");
-    _tickerModeProvider.subscribe(TickerMode.getNotifier(context));
+    _tickerModeProvider.updateEnabled(TickerMode.of(context));
     viewModelBinding.addPauseProvider(_tickerModeProvider);
     final viewModel = viewModelBinding
         .watch<TestViewModel>(ViewModelSpec(builder: () => TestViewModel()));

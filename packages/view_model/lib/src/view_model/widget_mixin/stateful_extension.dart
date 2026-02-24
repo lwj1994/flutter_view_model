@@ -58,7 +58,7 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _tickerModePauseProvider.subscribe(TickerMode.getNotifier(context));
+    _tickerModePauseProvider.updateEnabled(TickerMode.of(context));
     final route = ModalRoute.of(context);
     if (route is PageRoute) {
       _routePauseProvider.subscribe(route);
