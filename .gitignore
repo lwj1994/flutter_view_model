@@ -26,6 +26,7 @@ migrate_working_dir/
 /pubspec.lock
 **/doc/api/
 .dart_tool/
+.flutter-plugins-dependencies
 build/
 # Allow devtools extension build files to be tracked
 !packages/view_model/extension/devtools/build/
