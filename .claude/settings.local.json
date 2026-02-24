@@ -10,7 +10,9 @@
       "Bash(git push:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: Remove library comparison section from READMEs\n\n- Removed comparison table with other state management libraries\n- Keep documentation focused on features rather than competitive analysis\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "Bash(fd pub:*)"
+      "Bash(fd pub:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

@@ -1,6 +1,7 @@
 ## 1.0.1
 - Fix: DevToolsService not clearing singleton `_instance` on dispose
 - Fix: typo "suucess" → "success" in DevToolsService log
+- Fix: replace deprecated `TickerMode.getNotifier` with `TickerMode.of` in `ViewModelStateMixin`
 - Docs: add "view_model vs riverpod" comparison section (EN & ZH)
 - Style: code formatting for 80-char line width compliance
 - Fix: add `const` constructors in devtools extension widgets

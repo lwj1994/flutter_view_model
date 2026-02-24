@@ -143,10 +143,11 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     final callArgs = <String>[];
 
     for (final p in effectiveParams) {
-      final typeStr = p.type.getDisplayString(withNullability: true);
+      final typeStr = p.type.getDisplayString();
+      final paramName = p.name ?? '_arg${callArgs.length}';
       typeArgs.add(typeStr);
-      builderArgs.add('$typeStr ${p.name}');
-      callArgs.add(p.isNamed ? '${p.name}: ${p.name}' : p.name);
+      builderArgs.add('$typeStr $paramName');
+      callArgs.add(p.isNamed ? '$paramName: $paramName' : paramName);
     }
 
     // Build the provider line with correct suffix: arg for 1, argN for N>=2
@@ -305,21 +306,21 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
   ///
   /// Used for factory spec to include both required and optional
   /// parameters.
-  List _ownParams(ExecutableElement exec) {
+  List<FormalParameterElement> _ownParams(ExecutableElement exec) {
     return exec.formalParameters
         .where((p) => p is! SuperFormalParameterElement)
+        .cast<FormalParameterElement>()
         .toList();
   }
 
   /// Collect only required class-owned params (exclude super-forwarded).
   ///
   /// Used for main constructor to only include required parameters.
-  List _requiredOwnParams(ExecutableElement exec) {
+  List<FormalParameterElement> _requiredOwnParams(ExecutableElement exec) {
     return exec.formalParameters
-        .where((p) =>
-            (p as dynamic).isRequiredPositional ||
-            (p as dynamic).isRequiredNamed)
+        .where((p) => p.isRequiredPositional || p.isRequiredNamed)
         .where((p) => p is! SuperFormalParameterElement)
+        .cast<FormalParameterElement>()
         .toList();
   }
 
