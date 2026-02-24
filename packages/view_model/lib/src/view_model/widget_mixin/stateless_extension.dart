@@ -28,7 +28,8 @@ mixin ViewModelStatelessMixin on StatelessWidget {
   /// Returns true if the widget is currently considered paused.
   ///
   /// This state is determined by the [PauseAwareController] and its registered
-  /// [ViewModelBindingPauseProvider]s. When paused, ViewModel updates are suppressed.
+  /// [ViewModelBindingPauseProvider]s. When paused,
+  /// ViewModel updates are suppressed.
   bool get isPaused => _viewModelElement._binding.isPaused;
 
   @protected

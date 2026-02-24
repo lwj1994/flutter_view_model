@@ -8,7 +8,8 @@ import 'package:view_model/src/view_model/pause_provider.dart';
 /// This class is designed to be flexible and can work with any source of
 /// lifecycle events, such as route navigation or application state changes. For
 /// Flutter's default behavior, use the provided default providers. For custom
-/// or mixed-stack environments, implement your own [ViewModelBindingPauseProvider] and
+/// or mixed-stack environments, implement your own
+/// [ViewModelBindingPauseProvider] and
 /// pass them to the constructor.
 class PauseAwareController {
   // A callback triggered when the view model should pause.

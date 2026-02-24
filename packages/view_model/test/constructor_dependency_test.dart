@@ -7,7 +7,8 @@ class ViewModelA extends ViewModel {
   late final ViewModelB viewModelB;
 
   ViewModelA() {
-    // The viewModelBinding.read<ViewModelB>() call happens here, in the constructor body.
+    // The viewModelBinding.read<ViewModelB>() call happens here, in the
+    // constructor body.
     // This is the core scenario we are testing.
     viewModelB = viewModelBinding.readCached<ViewModelB>();
   }
@@ -56,7 +57,8 @@ class ChildConsumerWidget extends StatefulWidget {
 
 class ChildConsumerWidgetState extends State<ChildConsumerWidget>
     with ViewModelStateMixin<ChildConsumerWidget> {
-  // This will create ViewModelA. Its constructor will attempt to read ViewModelB.
+  // This will create ViewModelA. Its constructor will attempt to read
+  // ViewModelB.
   late final ViewModelA consumingViewModelA;
 
   @override
@@ -78,7 +80,8 @@ class ChildConsumerWidgetState extends State<ChildConsumerWidget>
 void main() {
   group('ViewModel Constructor Dependency', () {
     testWidgets(
-        'should correctly resolve dependency from parent when viewModelBinding.read is called in constructor',
+        'should correctly resolve dependency from parent when '
+        'viewModelBinding.read is called in constructor',
         (WidgetTester tester) async {
       final parentKey = GlobalKey<ParentProviderWidgetState>();
       final childKey = GlobalKey<ChildConsumerWidgetState>();
@@ -98,10 +101,12 @@ void main() {
       final childState = childKey.currentState;
 
       // --- The Assertion ---
-      // We verify that the viewModelB instance inside viewModelA (created by the child)
+      // We verify that the viewModelB instance inside viewModelA (created by
+      // the child)
       // is the exact same instance that was provided by the parent widget.
       // This proves that the dependency was correctly resolved via the context
-      // (thanks to the Zone mechanism) and not from a wrong global cache or fallback.
+      // (thanks to the Zone mechanism) and not from a wrong global cache or
+      // fallback.
       expect(parentState, isNotNull);
       expect(childState, isNotNull);
       expect(childState!.consumingViewModelA, isNotNull);

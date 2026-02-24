@@ -272,7 +272,8 @@ void main() {
       await tester.tap(incrementButtons.first);
       await tester.pump();
 
-      // Both widgets should show the updated value since they share the same ViewModel
+      // Both widgets should show the updated value since they share the same
+      // ViewModel.
       expect(find.text('Count: 51'), findsNWidgets(2));
       expect(find.text('Count: 50'), findsNothing);
     });

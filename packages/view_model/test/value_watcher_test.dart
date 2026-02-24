@@ -95,7 +95,8 @@ void main() {
       viewModel.increment();
       await tester.pump(const Duration(seconds: 1));
 
-      // The builder should not be called again because the 'name' did not change.
+      // The builder should not be called again because the 'name' did not
+      // change.
       expect(buildCount, 1);
       expect(find.text('Name: Initial'), findsOneWidget);
     });

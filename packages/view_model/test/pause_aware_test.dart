@@ -114,7 +114,8 @@ void main() {
     });
 
     test(
-      'handles chaotic, interleaved pause and resume signals from multiple providers',
+      'handles chaotic, interleaved pause and resume signals from multiple '
+      'providers',
       () async {
         // 1. First provider pauses, triggers onPause.
         provider1.pause();
@@ -129,12 +130,13 @@ void main() {
         expect(pauseCount, 1,
             reason: 'onPause should not be called again when already paused');
 
-        // 3. First provider resumes, but second is still paused, so no onResume.
+        // 3. First provider resumes, but second is still paused, so no
+        // onResume.
         provider1.resume();
         await Future.microtask(() {});
         expect(resumeCount, 0,
-            reason:
-                'onResume should not be called while other providers are still paused');
+            reason: 'onResume should not be called while other providers are '
+                'still paused');
 
         // 4. Third provider pauses, onPause should not be called again.
         provider3.pause();
@@ -145,8 +147,8 @@ void main() {
         provider2.resume();
         await Future.microtask(() {});
         expect(resumeCount, 0,
-            reason:
-                'onResume should not be called while other providers are still paused');
+            reason: 'onResume should not be called while other providers are '
+                'still paused');
 
         // 6. First provider pauses again, no change.
         provider1.pause();
@@ -157,8 +159,8 @@ void main() {
         provider3.resume();
         await Future.microtask(() {});
         expect(resumeCount, 0,
-            reason:
-                'onResume should not be called while other providers are still paused');
+            reason: 'onResume should not be called while other providers are '
+                'still paused');
 
         // 8. First provider resumes. Now all are resumed, onResume is called.
         provider1.resume();
@@ -178,7 +180,8 @@ void main() {
 
   group('PageRouteAwareController Widget Integration Tests', () {
     testWidgets(
-      'Widget does not rebuild when paused by route change and rebuilds on resume',
+      'Widget does not rebuild when paused by route change and rebuilds on '
+      'resume',
       (WidgetTester tester) async {
         final routeObserver = ViewModel.routeObserver;
         await tester.pumpWidget(MaterialApp(

@@ -87,7 +87,8 @@ class ParentViewModel extends ViewModel {
   late TestViewModel childVM;
 
   void init(ViewModelSpec<TestViewModel> provider) {
-    // Test watchViewModel extension (although unusual for VM to watch, it registers dependency)
+    // Test watchViewModel extension (although unusual for VM to watch, it
+    // registers dependency).
     childVM = watchViewModel(factory: provider);
   }
 
@@ -312,8 +313,9 @@ void main() {
       // Test recycleViewModel (ViewModel extension)
       final oldChild = capturedParent!.childVM;
       capturedParent!.recycleViewModel(oldChild);
-      // Since ParentViewModel watches childProvider, it should have a new instance now if it was in build,
-      // but here it was in init(). In real use, watch is usually in build or reactive.
+      // Since ParentViewModel watches childProvider, it should have a new
+      // instance now if it was in build, but here it was in init(). In real
+      // use, watch is usually in build or reactive.
     });
 
     testWidgets('Extensions listen and recycle coverage', (tester) async {
@@ -403,7 +405,8 @@ void main() {
       ));
       await tester.pump();
 
-      // 2. StatelessWidgetViewModelBindingExtension: listenViewModelState, listenViewModelStateSelect, recycleViewModel
+      // 2. StatelessWidgetViewModelBindingExtension: listenViewModelState,
+      // listenViewModelStateSelect, recycleViewModel.
       await tester.pumpWidget(MaterialApp(
         home: TestStatelessMixinWidget<TestViewModel>(
           provider: provider,
@@ -424,7 +427,8 @@ void main() {
       ));
       await tester.pump();
 
-      // 3. ViewModelViewModelBindingExtension: listenViewModel, listenViewModelState, listenViewModelStateSelect
+      // 3. ViewModelViewModelBindingExtension: listenViewModel,
+      // listenViewModelState, listenViewModelStateSelect.
       final parentProvider = ViewModelSpec(builder: () => ParentViewModel());
 
       await tester.pumpWidget(MaterialApp(

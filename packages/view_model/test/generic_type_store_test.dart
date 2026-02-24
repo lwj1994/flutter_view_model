@@ -15,8 +15,8 @@ void main() {
     assert(GenericVM<String> != GenericVM<dynamic>);
     assert(GenericVM<String> != GenericVM<String?>);
     testWidgets(
-        'Cached reads for GenericVM<String> and GenericVM<dynamic> are isolated',
-        (tester) async {
+        'Cached reads for GenericVM<String> and GenericVM<dynamic> are '
+        'isolated', (tester) async {
       // Define two factories to create ViewModels with different generic types
       final stringFactory = ViewModelSpec<GenericVM<String>>(
         builder: () => GenericVM<String>(state: 'string_state'),

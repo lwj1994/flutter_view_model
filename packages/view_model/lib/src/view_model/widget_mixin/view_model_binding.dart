@@ -2,7 +2,8 @@ import 'package:view_model/src/view_model/view_model_binding.dart';
 
 /// A specialized ViewModelBinding implementation for Flutter Widgets.
 ///
-/// This class extends the base [ViewModelBinding] functionality to integrate with
+/// This class extends the base [ViewModelBinding]
+/// functionality to integrate with
 /// Flutter's widget lifecycle. It bridges ViewModel state changes to widget
 /// rebuilds by calling the provided [refreshWidget] callback.
 ///

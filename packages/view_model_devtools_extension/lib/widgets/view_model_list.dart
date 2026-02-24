@@ -23,8 +23,7 @@ class ViewModelGraph extends StatelessWidget {
     final edges = graph.edges.where((edge) {
       return vmMap.containsKey(edge.to);
     }).toList();
-    final bindingIds = edges.map((edge) => edge.from).toSet().toList()
-      ..sort();
+    final bindingIds = edges.map((edge) => edge.from).toSet().toList()..sort();
     final vmIds = filteredViewModels.map((vm) => vm.id).toList();
 
     if (filteredViewModels.isEmpty && bindingIds.isEmpty) {
@@ -154,8 +153,7 @@ class ViewModelGraph extends StatelessWidget {
     final rects = <String, Rect>{};
     if (ids.isEmpty) return rects;
 
-    final totalHeight =
-        ids.length * nodeSize.height + (ids.length - 1) * gap;
+    final totalHeight = ids.length * nodeSize.height + (ids.length - 1) * gap;
     final startY = max(padding, (canvasHeight - totalHeight) / 2);
 
     for (var i = 0; i < ids.length; i++) {
@@ -174,10 +172,7 @@ class ViewModelGraph extends StatelessWidget {
         .where((edge) => edge.from == bindingId)
         .map((edge) => edge.to)
         .toSet();
-    return ids
-        .map((id) => vmMap[id])
-        .whereType<ViewModelInfo>()
-        .toList();
+    return ids.map((id) => vmMap[id]).whereType<ViewModelInfo>().toList();
   }
 }
 
@@ -321,16 +316,16 @@ class _ViewModelNode extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     viewModel.id,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withAlpha(150),
-                        ),
+                      color: theme.colorScheme.onSurface.withAlpha(150),
+                    ),
                   ),
                   if (subtitle.isNotEmpty)
                     Text(
@@ -338,9 +333,8 @@ class _ViewModelNode extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                            color:
-                                theme.colorScheme.onSurface.withAlpha(170),
-                          ),
+                        color: theme.colorScheme.onSurface.withAlpha(170),
+                      ),
                     ),
                 ],
               ),
@@ -513,7 +507,11 @@ class ViewModelDetailsDialog extends StatelessWidget {
                   if (viewModel.status == 'disposed' &&
                       viewModel.properties['disposeTime'] != null)
                     Text(
-                      'Disposed: ${_formatFullDateTime(DateTime.parse(viewModel.properties['disposeTime'] as String))}',
+                      'Disposed: ${_formatFullDateTime(
+                        DateTime.parse(
+                          viewModel.properties['disposeTime'] as String,
+                        ),
+                      )}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                 ],
