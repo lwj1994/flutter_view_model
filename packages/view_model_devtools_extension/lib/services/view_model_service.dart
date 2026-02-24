@@ -8,7 +8,9 @@ class ViewModelService {
     if (serviceManager == null ||
         !serviceManager.connectedState.value.connected) {
       throw Exception(
-          'DevTools VM Service connection not available. Please ensure your Flutter app is running in debug mode and connected to DevTools.');
+        'DevTools VM Service connection not available. Please ensure your '
+        'Flutter app is running in debug mode and connected to DevTools.',
+      );
     }
 
     try {
@@ -46,7 +48,9 @@ class ViewModelService {
     if (serviceManager == null ||
         !serviceManager.connectedState.value.connected) {
       throw Exception(
-          'DevTools VM Service connection not available. Please ensure your Flutter app is running in debug mode and connected to DevTools.');
+        'DevTools VM Service connection not available. Please ensure your '
+        'Flutter app is running in debug mode and connected to DevTools.',
+      );
     }
 
     try {

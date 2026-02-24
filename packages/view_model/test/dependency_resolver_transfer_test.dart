@@ -86,7 +86,8 @@ void main() {
     // Access the internal dependency handler for testing.
     final dependencyHandler = vm.refHandler;
 
-    // Initially, the ViewModel's dependency handler should have resolvers from both states.
+    // Initially, the ViewModel's dependency handler should have resolvers
+    // from both states.
     expect(dependencyHandler.ownerResolvers.length, 2);
     expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding),
         isTrue);

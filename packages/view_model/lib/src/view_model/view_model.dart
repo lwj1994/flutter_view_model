@@ -82,7 +82,9 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {}
 mixin class ViewModel implements InstanceLifeCycle, Listenable {
   /// Returns the [ViewModelBinding] interface for accessing other ViewModels.
   ///
-  /// This property allows you to use `viewModelBinding.watch` and `viewModelBinding.read` syntax,
+  /// This property allows you to use
+  /// `viewModelBinding.watch` and
+  /// `viewModelBinding.read` syntax,
   /// consistent with the "Universal Binding" pattern.
   @protected
   ViewModelBindingInterface get viewModelBinding => refHandler.binding;

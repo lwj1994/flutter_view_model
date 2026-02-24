@@ -19,8 +19,7 @@ class ViewModelInspector extends StatefulWidget {
 class _ViewModelInspectorState extends State<ViewModelInspector> {
   List<ViewModelInfo> _viewModels = [];
   DependencyStats _stats = DependencyStats.empty();
-  DependencyGraphResult _graph =
-      DependencyGraphResult(nodes: [], edges: []);
+  DependencyGraphResult _graph = DependencyGraphResult(nodes: [], edges: []);
   Timer? _refreshTimer;
   String _filter = 'all';
   bool _realTimeUpdate = true;
@@ -174,7 +173,7 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _SectionTitle(title: 'Controls'),
+                    const _SectionTitle(title: 'Controls'),
                     const SizedBox(height: 8),
                     FilterControls(
                       filter: _filter,
@@ -185,11 +184,11 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
                       onRefresh: _loadViewModelData,
                     ),
                     const SizedBox(height: 24),
-                    _SectionTitle(title: 'Stats'),
+                    const _SectionTitle(title: 'Stats'),
                     const SizedBox(height: 8),
                     StatsPanel(stats: _stats),
                     const SizedBox(height: 24),
-                    _SectionTitle(title: 'Canvas'),
+                    const _SectionTitle(title: 'Canvas'),
                     const SizedBox(height: 8),
                     _InfoTile(
                       title: 'Bindings',

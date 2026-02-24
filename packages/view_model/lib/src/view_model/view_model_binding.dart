@@ -13,6 +13,7 @@ import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
+// ignore: lines_longer_than_80_chars
 import 'package:view_model/src/view_model/widget_mixin/stateless_extension.dart';
 
 import 'state_store.dart';
@@ -100,7 +101,8 @@ abstract interface class ViewModelBindingInterface {
 /// Core abstraction for managing ViewModel lifecycle and dependency
 /// injection.
 ///
-/// [ViewModelBinding] is the foundation of the `view_model` library. It provides a
+/// [ViewModelBinding] is the foundation of the
+/// `view_model` library. It provides a
 /// generic mechanism for hosting and managing ViewModels independent of
 /// Flutter widgets. It can be mixed into any Dart class to gain ViewModel
 /// management capabilities.
@@ -119,7 +121,8 @@ abstract interface class ViewModelBindingInterface {
 /// ## Key Concepts
 ///
 /// - **ViewModelBinding**: Generic ViewModel manager usable in any Dart class
-/// - **WidgetViewModelBinding**: Specialized subclass for Flutter widgets that bridges
+/// - **WidgetViewModelBinding**: Specialized subclass
+///   for Flutter widgets that bridges
 ///   [onUpdate] to `setState`
 /// - **Reference Counting**: ViewModels stay alive while at least one binder
 ///   watches them
@@ -622,7 +625,9 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   ///
   /// Example:
   /// ```dart
-  /// final vm = viewModelBinding.maybeWatchCached<MyViewModel>(key: 'optional-key');
+  /// final vm = viewModelBinding.maybeWatchCached<MyViewModel>(
+  ///   key: 'optional-key',
+  /// );
   /// if (vm != null) {
   ///   // Use the ViewModel
   /// }

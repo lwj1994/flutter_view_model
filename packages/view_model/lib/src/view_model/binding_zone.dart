@@ -90,7 +90,8 @@ class ViewModelBindingHandler {
         (Zone.current[_bindingKey] as ViewModelBinding?));
     if (r == null) {
       throw ViewModelError(
-        'No binding available. ViewModel must be used within a ViewModelBinding context',
+        'No binding available. ViewModel must be '
+        'used within a ViewModelBinding context',
       );
     }
     return r;

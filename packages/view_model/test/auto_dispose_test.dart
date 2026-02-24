@@ -67,7 +67,8 @@ void main() {
           instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
       // Should be removed from binders, and since it was the only one, it might be disposed/recycled.
       // However, getNotifier might recreate it if recycled?
-      // If recycled, instanceManager might return a new handle with new instance if called again with factory?
+      // If recycled, instanceManager might return a new handle with new
+      // instance if called again with factory?
       // Or if we check existing handle state?
 
       // If we check the handle retrieved BEFORE dispose:

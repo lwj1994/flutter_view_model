@@ -22,7 +22,8 @@ void main() {
       observable.value = 10; // Set same value
 
       // This is a conceptual test. In a real app with listeners,
-      // no rebuild would be triggered. Here we just assert the value is unchanged.
+      // no rebuild would be triggered. Here we just assert the value is
+      // unchanged.
       expect(observable.value, initialValue);
     });
   });
@@ -160,7 +161,8 @@ void main() {
         (WidgetTester tester) async {
       final shareKey = Object();
       final observable1 = ObservableValue<int>(10, shareKey: shareKey);
-      // observable2 will now be managed by the same ViewModel due to the shared key.
+      // observable2 will now be managed by the same ViewModel due to the
+      // shared key.
       final observable2 = ObservableValue<int>(10, shareKey: shareKey);
 
       await tester.pumpWidget(
@@ -183,11 +185,13 @@ void main() {
       expect(find.text('Builder1: 10'), findsOneWidget);
       expect(find.text('Builder2: 10'), findsOneWidget);
 
-      // When observable1's value is updated, the underlying ViewModel is updated.
+      // When observable1's value is updated, the underlying ViewModel is
+      // updated.
       observable1.value = 20;
       await tester.pump(const Duration(seconds: 1));
 
-      // Both builders should reflect the new value because they share the same ViewModel.
+      // Both builders should reflect the new value because they share the same
+      // ViewModel.
       // And observable2.value should also be updated internally.
       expect(observable2.value, 20);
       expect(find.text('Builder1: 20'), findsOneWidget);

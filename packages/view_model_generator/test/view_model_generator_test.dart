@@ -37,7 +37,8 @@ class NamedArg {
   NamedArg({required this.id});
 }
 
-// 4. Test ignoring named constructors, only take main constructor (verify unnamedConstructor fix)
+// 4. Test ignoring named constructors, only take main constructor
+// (verify unnamedConstructor fix).
 @ShouldGenerate(r'''
 final mainCtorSpec = ViewModelSpec<MainCtor>(builder: () => MainCtor());
 ''')

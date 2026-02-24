@@ -57,7 +57,8 @@ void main() {
       expect(
           ViewModel.readCached<ErrorThrowingViewModel>(key: key), equals(vm));
 
-      // Dispose manually (simulating a state where it's disposed but still cached)
+      // Dispose manually (simulating a state where it is disposed but still
+      // cached).
       vm.simulateDispose();
 
       // Should verify vm.isDisposed is true
@@ -137,7 +138,8 @@ void main() {
       await Future.delayed(Duration.zero);
 
       expect(errorCaught, isTrue);
-      // Depending on implementation, context might be notifyListeners or stateListener?
+      // Depending on implementation, context might be notifyListeners or
+      // stateListener.
       // StateViewModel logic calls _listeners inside the stream listener check.
       // Lines 634-636 use 'notifyListeners'.
       // So checks context.

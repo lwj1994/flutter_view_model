@@ -1,3 +1,10 @@
+## 1.0.1
+- Fix: DevToolsService not clearing singleton `_instance` on dispose
+- Fix: typo "suucess" → "success" in DevToolsService log
+- Docs: add "view_model vs riverpod" comparison section (EN & ZH)
+- Style: code formatting for 80-char line width compliance
+- Fix: add `const` constructors in devtools extension widgets
+
 ## 1.0.0
 - **Breaking: API Standardization:**
   - Renamed `Vef` to `ViewModelBinding` for clarity. (Deprecated `typedef Vef = ViewModelBinding` remains for compatibility).

@@ -32,15 +32,18 @@ void main() {
     });
 
     test('dispose closes stream', () async {
-      // Note: AppLifecycleObserver is a singleton. Disposing it might affect other tests
-      // if not careful. Since this is the last test, it should be fine for this file.
-      // In a real app, it shouldn't be disposed unless the app is terminating or in specific isolated scenarios.
+      // Note: AppLifecycleObserver is a singleton. Disposing it might affect
+      // other tests if not careful. Since this is the last test, it should be
+      // fine for this file.
+      // In a real app, it should not be disposed unless the app is terminating
+      // or in specific isolated scenarios.
       final observer = AppLifecycleObserver();
       observer.dispose();
 
       // Verifying dispose logic
-      // Since _streamController is private, we can't check isClosed directly easily without reflection or observing behavior.
-      // But we can try to listen and see if it's done, or try to add event and expect error.
+      // Since _streamController is private, we cannot check isClosed directly
+      // without reflection or behavior observation.
+      // We can call didChangeAppLifecycleState and expect an error.
 
       expect(
           () => observer.didChangeAppLifecycleState(AppLifecycleState.resumed),

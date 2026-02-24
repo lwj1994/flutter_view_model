@@ -9,7 +9,7 @@ class ExtensionToolbar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       titleSpacing: 16,
-      title: _ToolbarTitle(iconBgAlpha: _iconBgAlpha),
+      title: const _ToolbarTitle(iconBgAlpha: _iconBgAlpha),
       backgroundColor: Theme.of(context).colorScheme.surface,
       elevation: 0,
     );

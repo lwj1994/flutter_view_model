@@ -120,7 +120,8 @@ void main() {
       keyVM.setState('key_updated');
       tagVM.setState('tag_updated');
 
-      // Test readCached with both key and tag - should return the key-based ViewModel
+      // Test readCached with both key and tag - should return the key-based
+      // ViewModel.
       final cachedVM = ViewModel.readCached<TestViewModel>(
         key: testKey,
         tag: testTag,
@@ -163,7 +164,8 @@ void main() {
       final vm2 = state2.viewModelBinding.read(factory2);
       vm2.setState('latest_vm_state');
 
-      // Test readCached without key or tag - should return the latest created ViewModel
+      // Test readCached without key or tag - should return the latest created
+      // ViewModel.
       final cachedVM = ViewModel.readCached<TestViewModel>();
 
       expect(cachedVM, equals(vm2));
@@ -194,7 +196,8 @@ void main() {
       expect(cachedBeforeDispose, equals(vm));
       expect(cachedBeforeDispose.isDisposed, isFalse);
 
-      // Remove the widget to trigger proper disposal through the instance manager
+      // Remove the widget to trigger proper disposal through the instance
+      // manager.
       await tester.pumpWidget(const MaterialApp(
         home: Scaffold(body: Text('Empty')),
       ));

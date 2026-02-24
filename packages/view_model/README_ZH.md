@@ -18,6 +18,7 @@ dependencies:
 ## 📖 核心目录
 
 - [🌟 为什么选择 view_model？](#-为什么选择-view_model)
+- [view_model vs riverpod](#view_model-vs-riverpod)
 - [🏗️ 三层架构设计](#️-三层架构设计)
 - [🧩 核心武器：两大 Mixin](#-核心武器两大-mixin)
 - [🚀 3 分钟快速上手](#-3-分钟快速上手)
@@ -46,6 +47,82 @@ dependencies:
 *   **跨越 BuildContext 的自由**：不仅仅在 Widget 里，在后台服务、启动逻辑、纯 Dart 类中都能享用同样的 ViewModel 管理逻辑。
 *   **自带“防卡顿”光环**：当页面进入后台或被上层路由覆盖时，系统会自动暂停通知，仅在页面恢复时触发一次追赶式刷新。
 *   **极致的代码生成**：配合 `@GenSpec` 注解，样板代码归零。
+
+---
+
+## view_model vs riverpod
+
+两者底层都基于“中央注册表 + 依赖注入”的思想，但设计哲学、API 风格、实例管理机制不同。以下对比基于默认配置与常见用法（如单根 `ProviderScope`），仅讨论状态管理核心：状态建模、依赖派生、实例作用域与生命周期，不将 `Mutations` / `Automatic retry` / `Offline persistence` 作为主要评价项。
+
+### 1. 核心设计哲学
+
+- **Riverpod**：Everything is Provider。更偏声明式数据流与响应式缓存，强调组合能力与可组合性。
+- **view_model**：Everything is ViewModel。更偏 MVVM 业务对象建模，强调 ViewModel 作为逻辑载体，与页面生命周期自然对齐。
+
+### 2. 代码风格与实现方式
+
+| 维度 | Riverpod 3.x | view_model 1.0.0 |
+| :--- | :--- | :--- |
+| **类实现方式** | 继承/codegen 为主（`Notifier`/`AsyncNotifier`/`@riverpod`） | **纯 mixin 方式**（`class X with ViewModel`） |
+| **优点** | Provider 组合与响应式派生能力强 | 零侵入、可多 mixin 叠加、任意类可直接成为 ViewModel |
+| **watch/read 位置** | 在 `Consumer` 的 `build` 中常用 `ref.watch(...)`；在 Provider/Notifier 的 `build` 中也可 `ref.watch(...)`；在 Widget 中若需在 `build` 外监听，可用 `WidgetRef.listenManual(...)` | 可直接声明为类字段（如 `late final vm = viewModelBinding.watch(...)`），不强制写在 `build` 内 |
+
+**view_model 示例（字段声明）**：
+
+```dart
+class _MyPageState extends State<MyPage> with ViewModelStateMixin {
+  late final counterVM = viewModelBinding.watch(counterSpec); // 只初始化一次
+  late final userVM = viewModelBinding.watch(userSpec);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('${counterVM.count}'); // 自动响应式
+  }
+}
+```
+
+### 3. 实例获取与作用域（核心差异）
+
+- **Riverpod**：实例按 `ProviderContainer` 隔离。常见项目只有一个根 `ProviderScope`，因此同一 Provider 在整个 App 内通常共享一份状态；需要隔离时通过局部 `ProviderScope`/override/family 控制。
+- **view_model**：默认 **per-binding 单例**。同一 `ViewModelBinding` 内多次 `watch/read` 共享同实例；不同页面（不同 binding）默认隔离。需要全局共享时显式声明 key：
+
+```dart
+final globalAuthSpec = ViewModelSpec<AuthViewModel>(
+  builder: () => AuthViewModel(),
+  key: 'global-auth',
+  aliveForever: true, // 可选：常驻
+);
+```
+
+### 4. 生命周期与内存管理
+
+- **Riverpod**：通过 provider 生命周期（如 `autoDispose`、`keepAlive`）管理缓存。`codegen` 模式默认启用自动销毁（可 `keepAlive: true` 关闭）；非 `codegen` 需要显式 `isAutoDispose: true`。此外 3.x 里不可见 Widget 的监听会进入 pause。
+- **view_model**：通过 Binding 引用计数自动回收；Binding 销毁后，未被其他 Binding 持有的实例会自动 `dispose`。默认策略是“页面隔离 + 按引用释放”。
+
+### 5. 状态派生与响应式组合
+
+- **Riverpod**：核心优势是 Provider 间声明式派生（`ref.watch`、`select`、`family`/scope 组合）。
+- **view_model**：核心优势是将页面逻辑聚合在 ViewModel 对象中，通过方法驱动状态更新，配合 `StateViewModel`、`listenStateSelect` 做字段级监听。
+
+### 6. 测试与工程体验
+
+- **Riverpod**：`ProviderContainer` 测试模型成熟，配套 lint/codegen 生态完整。
+- **view_model**：可直接用 `ViewModelBinding` 构建测试环境，不依赖 `BuildContext`；引用计数生命周期对页面级测试更直接。
+
+### 7. 适用场景建议
+
+**更适合 view_model 的场景**：
+- 偏好 MVVM 思维与“一个页面对应一组 ViewModel”
+- 重视默认隔离，避免无意间形成全局共享状态
+- 希望减少模板代码，且不希望 watch 逻辑挤在 `build` 中
+- 对生命周期自动回收、暂停/恢复有明确要求
+
+**更适合 Riverpod 的场景**：
+- 需要高度声明式的 Provider 组合与派生
+- 跨模块状态依赖关系复杂
+- 希望充分利用 Riverpod 社区生态（lint、codegen、插件）
+
+结论：`view_model 1.0.0` 在 **mixin 灵活性、watch 书写位置、默认 per-binding 实例隔离** 上更贴近 MVVM；`Riverpod 3.x` 在 **Provider 派生/组合能力、跨模块复用** 上更有优势。根据团队习惯与项目复杂度选择，通常比“绝对性能”差异更关键。
 
 ---
 
