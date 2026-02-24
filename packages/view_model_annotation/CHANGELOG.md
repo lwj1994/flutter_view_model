@@ -1,3 +1,6 @@
+## 1.0.1
+- Version bump for consistency
+
 ## 1.0.0
 - Final release following API standardization and naming refinement.
 

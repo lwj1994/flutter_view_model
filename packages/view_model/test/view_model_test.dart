@@ -209,7 +209,8 @@ void main() {
       // Wait, addDispose is protected in ViewModel mixin.
       // We can't call it directly from outside unless we subclass.
       // But TestStatelessViewModel is a ViewModel.
-      // We can't modify TestStatelessViewModel here easily as it is in another file.
+      // We can't modify TestStatelessViewModel here easily as it is in another
+      // file.
       // Let's define a local VM for this test.
     });
 
@@ -446,8 +447,8 @@ void main() {
 
   group('Factory Key Change Returns Different ViewModel', () {
     test(
-        'different key returns different ViewModel instance via viewModelBinding.read',
-        () {
+        'different key returns different ViewModel instance via '
+        'viewModelBinding.read', () {
       final viewModelBinding = _CoreRef();
 
       // Create factory with key1
@@ -534,7 +535,8 @@ void main() {
       ref.recycle(vm);
 
       // vm is disposed. The manager might have removed it.
-      // If we manually try to access it via readCached, it might return a new instance or not found?
+      // If we manually try to access it via readCached, it might return a new
+      // instance or not found?
       // But we want to hit the "isDisposed" check inside readCached.
       // This happens if the manager returns a disposed instance.
       // Generally, manager removes it.
@@ -542,7 +544,8 @@ void main() {
       // However, let's try to mock or force it if possible.
       // Actually, if we keep a strong ref to it, and manager keeps it?
       // Manager removes it on recycle.
-      // So readCached will either create new or fail if key not found (and tag not found).
+      // So readCached will either create new or fail if key not found (and
+      // tag not found).
       // To hit "nm.isDisposed", "vm" must be satisfied.
       // This implies "vm" was found in cache but "isDisposed" is true.
       // This is a safety check.
@@ -578,7 +581,8 @@ void main() {
     });
 
     test('onError is called when setState fails', () {
-      // To make setState fail without being disposed, we need _store.setState to throw.
+      // To make setState fail without being disposed, we need _store.setState
+      // to throw.
       // _store is private.
       // We can use a mocked store if we could inject it, but we can't easily.
       // However, we can use the fact that if we pass an invalid state?
@@ -587,8 +591,10 @@ void main() {
       // We already did super.onError(e) in CoverageStateVM.
       // Let's call it manually to cover the line.
       final vm = CoverageStateVM();
-      // call via exposed method if we had one, or just assume the previous test might cover it?
-      // No, we need to cover the line `viewModelLog("error :$e");` inside `onError`.
+      // call via exposed method if we had one, or just assume the previous
+      // test might cover it?
+      // No, we need to cover the line `viewModelLog("error :$e");` inside
+      // `onError`.
       // CoverageStateVM calls `super.onError(e)`.
       // We can expose a method to trigger it.
       vm.triggerError("Manual Error");
@@ -632,9 +638,11 @@ void main() {
         equals: (a, b) => throw Exception("Config Error"),
       ));
 
-      // Trigger setState -> calls _store.setState -> calls isSameState -> calls config.equals -> throws
+      // Trigger setState -> calls _store.setState -> calls isSameState ->
+      // calls config.equals -> throws.
       // Should be caught and calls onError
-      // We can verify onError effectively suppressed the crash (test doesn't fail).
+      // We can verify onError effectively suppressed the crash (test does not
+      // fail).
       vm.forceSetState(999);
 
       // Restore default

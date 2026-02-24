@@ -17,8 +17,7 @@ class _SearchPageState extends State<SearchPage>
   final _searchController = TextEditingController();
   String? _selectedCategory;
 
-  TodoViewModel get todoVM =>
-      viewModelBinding.watchCached<TodoViewModel>(
+  TodoViewModel get todoVM => viewModelBinding.watchCached<TodoViewModel>(
         key: 'shared-todo-viewmodel',
       );
 

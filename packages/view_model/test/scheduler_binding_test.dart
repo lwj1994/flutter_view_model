@@ -257,8 +257,8 @@ void main() {
     });
 
     testWidgets(
-        'should use SchedulerBinding.addPostFrameCallback when context not mounted',
-        (tester) async {
+        'should use SchedulerBinding.addPostFrameCallback when context not '
+        'mounted', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: ControlledMountWidget(shouldMount: false),

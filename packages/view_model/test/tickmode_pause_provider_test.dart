@@ -40,8 +40,8 @@ class _TestTickerWidgetState extends State<TestTickerWidget>
           TextButton(
             key: const Key('Toggle Ticker'),
             onPressed: () {
-              print(
-                  "_TestTickerWidgetState onPressed tickerEnabled = ${!tickerEnabled}");
+              print("_TestTickerWidgetState onPressed tickerEnabled = "
+                  "${!tickerEnabled}");
               setState(() => tickerEnabled = !tickerEnabled);
             },
             child: const Text('Toggle Ticker'),

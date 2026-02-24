@@ -46,9 +46,9 @@
 /// |--------|-------------|
 /// | `viewModelBinding.watch(spec)` | Get VM and rebuild on changes |
 /// | `viewModelBinding.read(spec)` | Get VM without rebuilding |
-/// | `viewModelBinding.watchCached<T>(key:)` | Get cached VM by key with rebuilds |
-/// | `viewModelBinding.readCached<T>(key:)` | Get cached VM by key, no rebuilds |
-/// | `viewModelBinding.listen(spec, onChanged:)` | Side effects, auto-disposed |
+/// | `viewModelBinding.watchCached<T>(key:)` | Cached VM with rebuilds |
+/// | `viewModelBinding.readCached<T>(key:)` | Cached VM, no rebuilds |
+/// | `viewModelBinding.listen(spec, onChanged:)` | Side effects, auto-dispose |
 ///
 /// ## Core Features
 ///
@@ -77,5 +77,6 @@ export "package:view_model/src/view_model/value_observer.dart";
 export "package:view_model/src/view_model/value_watcher.dart";
 export "package:view_model/src/view_model/view_model.dart";
 export "package:view_model/src/view_model/widget_mixin/stateful_extension.dart";
+// ignore: lines_longer_than_80_chars
 export "package:view_model/src/view_model/widget_mixin/stateless_extension.dart";
 export "package:view_model_annotation/view_model_annotation.dart";

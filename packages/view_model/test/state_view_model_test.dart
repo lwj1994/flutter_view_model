@@ -116,7 +116,8 @@ void main() {
       expect(capturedCurrent, "2");
     });
 
-    test('both state listeners and regular listeners are called synchronously', () {
+    test('both state listeners and regular listeners are called synchronously',
+        () {
       final vm = TestViewModel(state: "0");
       final callOrder = <String>[];
 

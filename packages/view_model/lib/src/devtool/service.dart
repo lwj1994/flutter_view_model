@@ -80,6 +80,7 @@ class DevToolsService {
     _messageSubscription?.cancel();
     _messageSubscription = null;
     _isInitialized = false;
+    _instance = null;
   }
 
   /// Registers service extensions for DevTools communication.
@@ -98,7 +99,7 @@ class DevToolsService {
       try {
         final data = _getViewModelData();
         final res = jsonEncode(data);
-        viewModelLog("DevTool _getViewModelData suucess: $res");
+        viewModelLog("DevTool _getViewModelData success: $res");
         return developer.ServiceExtensionResponse.result(res);
       } catch (e) {
         viewModelLog("DevTool _getViewModelData error: $e");

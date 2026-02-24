@@ -29,7 +29,8 @@ class _TestPageState extends State<TestPage>
   @override
   void initState() {
     super.initState();
-    // viewModelBinding.watch will internally trigger the binder name generation.
+    // viewModelBinding.watch will internally trigger the binder name
+    // generation.
     viewModel = viewModelBinding.watch<TestViewModel>(TestViewModelFactory());
   }
 
@@ -66,7 +67,8 @@ class _TestPageState2 extends _BasePageState<TestPage2> {
   @override
   void initState() {
     super.initState();
-    // viewModelBinding.watch will internally trigger the binder name generation.
+    // viewModelBinding.watch will internally trigger the binder name
+    // generation.
     viewModel = viewModelBinding.watch<TestViewModel>(TestViewModelFactory());
   }
 
@@ -99,15 +101,16 @@ void main() {
     final name = state.viewModelBinding.getName();
     print(name);
 
-    // Assert: Check if the binder name correctly identifies the state class and file.
+    // Assert: Check if the binder name correctly identifies the state class
+    // and file.
     expect(name, isNotNull);
     expect(name, contains('state_mixin_binder_test.dart'));
     expect(name, contains('_TestPageState'));
   });
 
   testWidgets(
-      'ViewModelStateMixin correctly generates binder name for a subclassed State',
-      (tester) async {
+      'ViewModelStateMixin correctly generates binder name for a subclassed '
+      'State', (tester) async {
     // Arrange: Pump our test widget for the subclass.
     await tester.pumpWidget(const MaterialApp(home: TestPage2()));
 
@@ -118,13 +121,14 @@ void main() {
     // Assert: Check if the binder name correctly identifies the SUBCLASS.
     expect(name, isNotNull);
     expect(name, contains('state_mixin_binder_test.dart'));
-    // This is the key assertion: it must identify the runtime type `_TestPageState2`.
+    // This is the key assertion: it must identify the runtime type
+    // `_TestPageState2`.
     expect(name, contains('_TestPageState2'));
   });
 
   testWidgets(
-      'ViewModelStatelessMixin correctly generates binder name for a StatelessWidget',
-      (tester) async {
+      'ViewModelStatelessMixin correctly generates binder name for a '
+      'StatelessWidget', (tester) async {
     // Arrange: Pump our stateless test widget.
     await tester.pumpWidget(MaterialApp(home: StatelessTestPage()),
         duration: const Duration(seconds: 1));

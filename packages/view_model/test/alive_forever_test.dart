@@ -41,8 +41,8 @@ void main() {
     });
 
     test(
-        'aliveForever=true: ViewModel does NOT dispose when watchers drop to zero',
-        () async {
+        'aliveForever=true: ViewModel does NOT dispose when watchers drop '
+        'to zero', () async {
       final ref = TestRef();
       final factory = AliveForeverFactory(
         builder: () => TestModel(),
@@ -66,7 +66,8 @@ void main() {
       expect(identical(cachedVm, vm), isTrue);
 
       // Clean up manually for test isolation if needed,
-      // but strictly speaking it lives forever until app restart or explicit manager clear.
+      // but strictly speaking it lives forever until app restart or explicit
+      // manager clear.
 
       ref.dispose();
     });

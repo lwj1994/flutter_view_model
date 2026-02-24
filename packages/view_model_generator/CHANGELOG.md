@@ -1,3 +1,6 @@
+## 1.0.1
+- Version bump for consistency
+
 ## 1.0.0
 - Final release supporting the new `@GenSpec` annotation and `ViewModelSpec` generation patterns.
 

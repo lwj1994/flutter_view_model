@@ -86,8 +86,9 @@ class TickerModePauseProvider with ViewModelBindingPauseProvider {
   }
 }
 
-/// A [ViewModelBindingPauseProvider] that uses [RouteAware] to determine pause state
-/// based on route navigation events (push, pop).
+/// A [ViewModelBindingPauseProvider] that uses [RouteAware]
+/// to determine pause state based on route navigation
+/// events (push, pop).
 class PageRoutePauseProvider with ViewModelBindingPauseProvider, RouteAware {
   final List<PageRoute> _subscribedRoutes = [];
   final RouteObserver<PageRoute> _observer = ViewModel.routeObserver;

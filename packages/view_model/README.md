@@ -51,6 +51,7 @@ dependencies:
 - [Testing](#testing)
 - [Code Generation](#code-generation)
 - [DevTools Extension](#devtools-extension)
+- [view_model vs riverpod](#view_model-vs-riverpod)
 
 ---
 
@@ -913,3 +914,79 @@ extensions:
 ## License
 
 See [LICENSE](LICENSE).
+
+---
+
+## view_model vs riverpod
+
+Both are built on a central registry + dependency injection model, but they differ in API style, instance scope defaults, and lifecycle ergonomics. This comparison assumes common defaults (for example, a single root `ProviderScope`) and focuses on core state-management concerns: state modeling, reactive derivation, instance scope, and lifecycle. It does not treat `Mutations` / `Automatic retry` / `Offline persistence` as primary evaluation criteria.
+
+### 1. Core Philosophy
+
+- **Riverpod**: Everything is Provider. It emphasizes declarative composition and reactive caching.
+- **view_model**: Everything is ViewModel. It emphasizes MVVM-style business objects and lifecycle alignment with Flutter pages.
+
+### 2. Coding Style and Implementation
+
+| Dimension | Riverpod 3.x | view_model 1.0.0 |
+| :--- | :--- | :--- |
+| **Class model** | Inheritance/codegen-based (`Notifier`, `AsyncNotifier`, `@riverpod`) | **Mixin-based** (`class X with ViewModel`) |
+| **Strengths** | Strong provider composition and reactive derivation patterns | Low-intrusion style, multi-mixin flexibility, any Dart class can become a ViewModel |
+| **watch/read location** | In `Consumer` widgets, `ref.watch(...)` is commonly used in `build`; it is also used inside provider/notifier `build`. For listeners outside `build` in widgets, `WidgetRef.listenManual(...)` is available | Can be declared as class fields (`late final vm = viewModelBinding.watch(...)`), not forced into `build` |
+
+**view_model example (field declaration):**
+
+```dart
+class _MyPageState extends State<MyPage> with ViewModelStateMixin {
+  late final counterVM = viewModelBinding.watch(counterSpec); // initialized once
+  late final userVM = viewModelBinding.watch(userSpec);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('${counterVM.count}'); // reactive updates
+  }
+}
+```
+
+### 3. Instance Scope (Most Important Difference)
+
+- **Riverpod**: instances are scoped by `ProviderContainer`. In most apps, a single root `ProviderScope` means one shared provider instance app-wide. Isolation is explicit via nested `ProviderScope`, overrides, or families.
+- **view_model**: default is **per-binding singleton**. Repeated `watch/read` calls inside the same `ViewModelBinding` share one instance; different pages/bindings are isolated by default. Global sharing is explicit via key:
+
+```dart
+final globalAuthSpec = ViewModelSpec<AuthViewModel>(
+  builder: () => AuthViewModel(),
+  key: 'global-auth',
+  aliveForever: true, // optional: keep alive
+);
+```
+
+### 4. Lifecycle and Memory Management
+
+- **Riverpod**: lifecycle is provider-driven (`autoDispose`, keep-alive controls). With code generation, automatic disposal is enabled by default (opt out with `keepAlive: true`); without code generation, opt in via `isAutoDispose: true`. In 3.x, listeners in non-visible widgets are paused.
+- **view_model**: lifecycle is binding reference-count driven. When a binding is disposed, unreferenced instances auto-dispose. Default behavior favors page-level isolation and automatic cleanup.
+
+### 5. State Derivation and Reactive Composition
+
+- **Riverpod**: core strength is declarative derivation between providers (`ref.watch`, `select`, `family`/scope composition).
+- **view_model**: core strength is aggregating page logic in ViewModel objects, with method-driven state updates plus `StateViewModel`/`listenStateSelect` for field-level reactions.
+
+### 6. Testing and Engineering Experience
+
+- **Riverpod**: mature `ProviderContainer` testing model with strong lint/codegen support.
+- **view_model**: widget-free tests are straightforward with `ViewModelBinding`, and reference-counted lifecycle behavior is easy to verify in page-level tests.
+
+### 7. When to Choose Which
+
+**view_model is often a better fit when you:**
+- Prefer MVVM with page-scoped state objects
+- Want isolated state by default to reduce accidental global coupling
+- Prefer field-level `watch/read` usage outside `build`-centric patterns
+- Care about automatic lifecycle cleanup and pause/resume integration
+
+**Riverpod is often a better fit when you:**
+- Need highly declarative provider composition and derivation
+- Have complex cross-feature state dependencies
+- Want to fully leverage Riverpod ecosystem tooling
+
+Conclusion: `view_model` is stronger in **mixin flexibility, watch placement freedom, and default per-binding isolation**; `Riverpod 3.x` is stronger in **provider derivation/composition and cross-feature reuse patterns**. In practice, team mental model and architecture style are usually more important than small runtime differences.
