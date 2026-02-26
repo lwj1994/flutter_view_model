@@ -127,7 +127,7 @@ void main() {
       );
     });
 
-    testWidgets('state share exiting viewModel by tag', (tester) async {
+    testWidgets('state share existing viewModel by tag', (tester) async {
       final testKey = GlobalKey();
       final testKey2 = GlobalKey();
       const fc = TestViewModelFactory(initState: "initState", tagV: "1");
@@ -163,7 +163,7 @@ void main() {
       assert(vm1 == vm3);
     });
 
-    testWidgets('state share exiting viewModel', (tester) async {
+    testWidgets('state share existing viewModel', (tester) async {
       final testKey = GlobalKey();
       final testKey2 = GlobalKey();
       const fc = TestViewModelFactory(

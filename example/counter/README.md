@@ -32,8 +32,9 @@ lib/
 ## 运行方式
 
 1. 确保已安装 Flutter SDK
-2. 在项目根目录执行：
+2. 在仓库根目录执行：
    ```bash
+   cd example/counter
    flutter pub get
    flutter run
    ```

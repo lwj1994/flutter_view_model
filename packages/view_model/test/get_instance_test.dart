@@ -130,7 +130,7 @@ void main() {
       assert(newT == a1);
     });
 
-    test('get exiting instance', () {
+    test('get existing instance', () {
       final factory = InstanceFactory<TestModel>(
         builder: () => TestModel(),
       );
@@ -140,7 +140,7 @@ void main() {
       assert(c == b);
     });
 
-    test('get exiting instance by tag', () {
+    test('get existing instance by tag', () {
       final factory = InstanceFactory<TestModel>(
           builder: () => TestModel(), arg: const InstanceArg(tag: "tag"));
       final factory2 = InstanceFactory<TestModel>(
@@ -172,7 +172,7 @@ void main() {
       assert(find3.arg.tag == "tag3");
     });
 
-    test('get exiting instance with watchId', () async {
+    test('get existing instance with watchId', () async {
       final factory = InstanceFactory<TestModel>(
         builder: () => TestModel(),
       );
@@ -191,7 +191,7 @@ void main() {
       assert(c.bindingIds.isEmpty);
     });
 
-    test('find exiting', () async {
+    test('find existing', () async {
       final factory = InstanceFactory<TestModel>(
         builder: () => TestModel(),
       );

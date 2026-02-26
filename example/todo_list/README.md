@@ -1,16 +1,29 @@
-# todo_list
+# Todo List Example
 
-A new Flutter project.
+这是一个使用 `view_model` 的待办示例，演示以下能力：
 
-## Getting Started
+1. `StateViewModel` 的列表状态管理
+2. 跨页面共享同一个 ViewModel 实例（列表、搜索、统计页面）
+3. 增删改查 + 分类 + 搜索 + 统计
 
-This project is a starting point for a Flutter application.
+## 项目结构
 
-A few resources to get you started if this is your first Flutter project:
+```text
+lib/
+  main.dart
+  todo_view_model.dart
+  todo_state.dart
+  todo_page.dart
+  search_page.dart
+  stats_page.dart
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 运行方式
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+在仓库根目录执行：
+
+```bash
+cd example/todo_list
+flutter pub get
+flutter run
+```

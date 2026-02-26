@@ -15,3 +15,7 @@ dev_dependencies:
   build_runner: ^2.4.0
   view_model_generator:
     path: ../../view_model_generator
+
+dependency_overrides:
+  view_model_annotation:
+    path: ../

@@ -1,5 +1,5 @@
 name: todo_list
-description: "A new Flutter project."
+description: A todo list example for view_model package.
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -15,7 +15,7 @@ dependencies:
   intl: any
   cupertino_icons: ^1.0.8
   view_model:
-    path: ../..
+    path: ../../packages/view_model
 
 dev_dependencies:
   flutter_test:
