@@ -26,6 +26,7 @@ If examples conflict with README, follow README.
 - For Chinese responses or terminology checks, also read `references/README_FULL_ZH.md`.
 - For trivial requests (single API clarification), you may use this SKILL summary first, then open full reference only if uncertain.
 - If embedded reference and upstream README diverge, treat upstream as latest truth and sync the embedded reference.
+- Keep `references/README_FULL_*.md` as real files inside the skill package; do not replace them with symlinks to outside paths.
 
 ## Trigger phrases
 
