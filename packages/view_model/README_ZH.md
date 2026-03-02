@@ -13,6 +13,12 @@ dependencies:
   view_model: ^1.0.0
 ```
 
+## 🤖 Skill 安装
+
+```bash
+npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
+```
+
 ---
 
 ## 📖 核心目录
