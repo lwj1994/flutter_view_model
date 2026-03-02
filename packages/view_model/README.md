@@ -11,10 +11,15 @@ dependencies:
   view_model: ^1.0.0
 ```
 
+## Install Skill
+
+```bash
+npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
+```
+
 ---
 
 ## Table of Contents
-
 - [Architecture Overview](#architecture-overview)
 - [Two Core Mixins](#two-core-mixins)
 - [Getting Started](#getting-started)

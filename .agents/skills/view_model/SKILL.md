@@ -1,149 +1,141 @@
 ---
 name: view_model
-description: Guide for building and using ViewModels with reference-counted lifecycle and reactive binding in Flutter.
+description: Build or refactor Flutter state management with the view_model package, including ViewModel/ViewModelBinding mixins, ViewModelSpec sharing, watch/read semantics, lifecycle, pause-resume, testing, and code generation.
 mintlify-proj: flutter-view-model
 ---
 
 # view_model Skill
 
-This skill provides comprehensive instructions for using the `view_model` state management library in Flutter. It focuses on architecture, reactivity, and lifecycle management.
+Use this skill when tasks involve Flutter `view_model` architecture, migration, bug fixing, performance tuning, or feature implementation.
 
-## 核心设计哲学 (Core Philosophy)
+## Source of truth
 
-`view_model` 是一个基于 **类型键 (Type-keyed)** 和 **引用计数 (Reference Counting)** 的状态管理系统.
-- **自动生命周期**: ViewModel 的存活取决于是否有活跃的 Binding。
-- **跨 Context 自由**: 在任何混入了 `ViewModelBinding` 的类中都可以访问 ViewModel，无需 `BuildContext`。
-- **高性能**: 自动处理 暂停/恢复 逻辑，不可见时不刷新。
+- Full reference (embedded in this skill):
+  - `references/README_FULL_EN.md`
+  - `references/README_FULL_ZH.md`
+- Upstream source in repo:
+  - `packages/view_model/README.md`
+  - `packages/view_model/README_ZH.md`
+- Skill-local examples: `examples/counter_example.dart`, `examples/state_view_model_example.dart`, `examples/sharing_example.dart`
 
-## 1. 核心 Mixins
+If examples conflict with README, follow README.
 
-### `with ViewModel`
-用于定义受管实例。
-- 提供 `onCreate`, `onBind`, `onUnbind`, `onDispose` 钩子。
-- 使用 `notifyListeners()` 或 `update(() => ...)` 触发通知。
-- 可通过 `viewModelBinding` 访问其他依赖。
-- 使用 `addDispose(callback)` 注册清理逻辑。
+## Full-reference loading policy
 
-### `with ViewModelBinding`
-用于访问 ViewModels (Binding Host)。
-- 在 Widget 中通常使用 `ViewModelStateMixin` 或 `ViewModelStatelessMixin`。
-- 提供 `viewModelBinding.watch()` (响应式) 和 `viewModelBinding.read()` (非响应式)。
+- For implementation/refactor/debug tasks, read `references/README_FULL_EN.md` first.
+- For Chinese responses or terminology checks, also read `references/README_FULL_ZH.md`.
+- For trivial requests (single API clarification), you may use this SKILL summary first, then open full reference only if uncertain.
+- If embedded reference and upstream README diverge, treat upstream as latest truth and sync the embedded reference.
 
-## 2. 定义 ViewModelSpec
+## Trigger phrases
 
-`ViewModelSpec` 是 ViewModel 的工厂定义。
+Use this skill for requests like:
+- "用 view_model 写/改状态管理"
+- "watch/read 有什么区别"
+- "ViewModelSpec 怎么做共享/单例"
+- "StateViewModel / listenStateSelect / ValueWatcher"
+- "生命周期、自动销毁、pause/resume"
+- "`@GenSpec` 或 view_model_generator"
 
-```dart
-// 1. 无参数，单例共享
-final authSpec = ViewModelSpec<AuthViewModel>(
-  builder: () => AuthViewModel(),
-  key: 'global_auth',
-  aliveForever: true, // 全局常驻
-);
+## Core model (must stay accurate)
 
-// 2. 带参数，按需创建
-final userSpec = ViewModelSpec.arg<UserViewModel, String>(
-  builder: (id) => UserViewModel(id),
-  key: (id) => 'user-$id', // 相同 ID 共享同一实例
-);
-```
+- Architecture is type-keyed instance registry + binding-based reference counting.
+- Two base mixins:
+  - `with ViewModel`: managed instance (lifecycle + notify + DI access).
+  - `with ViewModelBinding`: binding host (watch/read/listen/recycle APIs).
+- Widget mixins are wrappers over `ViewModelBinding`:
+  - `ViewModelStateMixin` (recommended default for widgets).
+  - `ViewModelStatelessMixin` (lightweight, but has multi-mount caveat).
 
-## 3. Widget 集成
+## Implementation workflow
 
-### 在 StatefulWidget 中
-```dart
-class MyPage extends StatefulWidget { ... }
+1. Choose ViewModel style
+- `with ViewModel`: mutable fields + `update`/`notifyListeners`.
+- `StateViewModel<T>`: immutable state + `setState`, supports state diff/selective listeners.
+- `ChangeNotifierViewModel`: only when extending `ChangeNotifier` behavior is required.
 
-class _MyPageState extends State<MyPage> with ViewModelStateMixin {
-  late final vm = viewModelBinding.watch(counterSpec);
+2. Define `ViewModelSpec`
+- `ViewModelSpec<T>(builder: ...)` for no args.
+- `ViewModelSpec.arg/arg2/arg3/arg4` for parameterized construction.
+- Use `key` for shared instance identity.
+- Use `tag` for grouped lookup.
+- Use `aliveForever: true` only for real process-lifetime singletons.
 
-  @override
-  Widget build(BuildContext context) {
-    return Text(vm.count.toString());
-  }
-}
-```
+3. Integrate with host
+- Widget page: `State<T> with ViewModelStateMixin`.
+- Simple widget case: `StatelessWidget with ViewModelStatelessMixin`.
+- No-custom-state option: `ViewModelBuilder<T>(spec, builder: ...)`.
+- Cached-only builder option: `CachedViewModelBuilder<T>(shareKey: ... | tag: ..., builder: ...)`.
+- Non-widget classes (bootstrap/service/test): `with ViewModelBinding` and call `dispose()` manually when done.
 
-### 在 StatelessWidget 中
-```dart
-class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
-  late final vm = viewModelBinding.watch(counterSpec);
-  
-  @override
-  Widget build(BuildContext context) => Text(vm.count.toString());
-}
-```
+4. Choose access API correctly
+- `watch(spec)`: create/get + bind + listen (reactive rebuild/`onUpdate`).
+- `read(spec)`: create/get + bind, no listener.
+- `watchCached/readCached`: lookup existing instance only (no creation).
+- `maybeWatchCached/maybeReadCached`: null-safe cached lookup.
+- `watchCachesByTag/readCachesByTag`: batch tag lookup.
+- `listen/listenState/listenStateSelect`: side-effect listeners, auto-cleaned on binding dispose.
+- `recycle(vm)`: force unbind all and dispose; next `watch/read` gets fresh instance.
 
-## 4. viewModelBinding 常用接口
+5. Handle dependencies and sharing
+- In a ViewModel, `viewModelBinding` is available via Zone from parent binding.
+- ViewModel-to-ViewModel calls (`read/watch/listen`) are part of the same binding lifecycle chain.
+- Without `key`: per-binding isolated instance.
+- With same `key`: cross-binding shared instance.
+- Static lookup (`ViewModel.readCached`, `ViewModel.maybeReadCached`) is lookup-only (no bind, no create).
 
-| 方法 | 说明 |
-| :--- | :--- |
-| `watch(spec)` | 创建/获取并监听。UI 随通知刷新。 |
-| `read(spec)` | 创建/获取但不监听。常用于事件回调。 |
-| `watchCached<T>(key: ...)` | 寻找已存在的实例并监听。若无则报错。 |
-| `readCached<T>(key: ...)` | 寻找已存在的实例但不监听。 |
-| `listenState(spec, onChanged: ...)` | 监听 StateViewModel 的完整状态变化。 |
-| `listenStateSelect(spec, selector: ..., onChanged: ...)` | 针对性地监听某个字段。 |
-| `recycle(vm)` | 强制销毁实例，解绑所有连接。 |
+6. Lifecycle and cleanup
+- Lifecycle hooks: `onCreate`, `onBind`, `onUnbind`, `onDispose`.
+- Prefer `addDispose(() { ... })` for subscriptions/controllers/stream cleanup.
+- Auto-dispose occurs when handle `bindingIds` becomes empty and `aliveForever` is false.
 
-## 5. 状态管理进阶
+7. Performance and visibility
+- For route-based pause/resume, register:
+  - `MaterialApp(navigatorObservers: [ViewModel.routeObserver])`
+- Built-in pause providers: route cover, ticker mode, app lifecycle.
+- Use `StateViewModelValueWatcher` for selector-level rebuilds (usually pair with `read`, not `watch`).
+- `ObservableValue` + `ObserverBuilder(1/2/3)` for lightweight reactive values; same `shareKey` means shared underlying state.
 
-### `StateViewModel<T>`
-用于不可变状态。
-```dart
-class CounterViewModel extends StateViewModel<CounterState> {
-  CounterViewModel() : super(state: const CounterState());
-  
-  void inc() => setState(state.copyWith(count: state.count + 1));
-}
-```
+8. App-level setup
+- Call `ViewModel.initialize(...)` once at app startup (subsequent calls are ignored).
+- Configure `ViewModelConfig` when needed:
+  - `isLoggingEnabled`
+  - `equals` (state equality strategy)
+  - `onListenerError`
+  - `onDisposeError`
+- If using `equals: (a, b) => a == b`, ensure state classes implement `==` and `hashCode`.
 
-### 细粒度更新
-使用 `StateViewModelValueWatcher` 只在特定字段变化时 rebuild。
+9. Testing and mocking
+- Prefer pure Dart unit tests with `ViewModelBinding()` (no `testWidgets` required for many cases).
+- Always `binding.dispose()` in teardown.
+- For spec override: `spec.setProxy(...)` and `spec.clearProxy()`.
 
-## 6. 暂停/恢复 (Pause / Resume)
+10. Code generation (optional)
+- Annotate with `@GenSpec`, add `part '*.vm.dart'`, then run `dart run build_runner build`.
+- Generator creates `xxxViewModelSpec` and supports up to 4 constructor args.
 
-为了让自动暂停生效，必须在 `MaterialApp` 中注册 `ViewModel.routeObserver`。
+## Do/Don't checklist
 
-```dart
-MaterialApp(
-  navigatorObservers: [ViewModel.routeObserver],
-  ...
-)
-```
+Do:
+- Keep `watch` for reactive UI, `read` for imperative actions.
+- Set explicit `key` whenever instance sharing is a requirement.
+- Dispose non-widget bindings explicitly.
+- Use `listenStateSelect` for side effects on selected state fields.
 
-## 7. 自动测试 (Testing)
+Don't:
+- Claim `read` is "non-binding" (it still binds and affects lifecycle).
+- Use cached APIs expecting auto-create behavior.
+- Overuse `aliveForever` for page-scoped state.
+- Forget `ViewModel.routeObserver` when relying on route pause behavior.
 
-`view_model` 使单元测试变得非常简单，因为它不强依赖于 `BuildContext`。
+## Response pattern for implementation requests
 
-```dart
-test('counter increments', () {
-  final binding = ViewModelBinding(); // 创建测试用的 Binding
-  final vm = binding.watch(counterSpec);
-
-  expect(vm.count, 0);
-  vm.increment();
-  expect(vm.count, 1);
-
-  binding.dispose(); // 销毁并解绑
-});
-```
-
-## 8. 代码生成 (Code Generation)
-
-使用 `@GenSpec` 可以自动生成 `ViewModelSpec` 代码，减少样板代码。
-
-```dart
-@GenSpec()
-class CounterViewModel with ViewModel { ... }
-```
-
-生成的文件将包含 `counterViewModelSpec`。
-
-## 9. 最佳实践
-
-1. **依赖注入**: 在 ViewModel 内部直接使用 `viewModelBinding.read(otherSpec)` 获取依赖。
-2. **清理**: 永远优先使用 `addDispose()` 注册清理回调，而非手动覆写 `dispose()`。
-3. **单例**: 对全局状态（如 Auth, Config）使用 `aliveForever: true`。
-4. **性能**: 在 `ListView` 的 Item 中，如果只是为了获取数据而不期望整个 Item 随全局状态刷新，优先使用 `read`。
-5. **代码生成**: 配合 `view_model_annotation` 和 `view_model_generator` 使用 `@GenSpec` 减少样板代码。
+When generating code for users:
+- Prefer complete, runnable snippets with:
+  - imports
+  - ViewModel class
+  - Spec declaration
+  - widget/binding usage
+  - disposal/setup notes
+- State why `watch` or `read` was chosen.
+- If introducing sharing, show explicit `key` and lifecycle implications.
