@@ -45,10 +45,9 @@ class AppPauseProvider with ViewModelBindingPauseProvider {
 
   @override
   void dispose() {
-    super.dispose();
     _subscription?.cancel();
     _subscription = null;
-    _controller.close();
+    super.dispose();
   }
 }
 
@@ -80,9 +79,9 @@ class TickerModePauseProvider with ViewModelBindingPauseProvider {
 
   @override
   void dispose() {
-    super.dispose();
     _notifier?.removeListener(_onChange);
     _notifier = null;
+    super.dispose();
   }
 }
 
@@ -120,8 +119,8 @@ class PageRoutePauseProvider with ViewModelBindingPauseProvider, RouteAware {
 
   @override
   void dispose() {
-    super.dispose();
     unsubscribe(_observer);
+    super.dispose();
   }
 
   @override

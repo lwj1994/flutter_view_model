@@ -205,7 +205,7 @@ class DevToolsService {
                 'id': vm.instanceId,
                 'type': vm.typeName,
                 'label': '${vm.typeName}\n${vm.key ?? vm.instanceId}',
-                'isActive': true,
+                'isActive': !vm.isDisposed,
               })
           .toList(),
       'edges': dependencies,

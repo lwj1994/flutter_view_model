@@ -184,6 +184,28 @@ void main() {
       expect(vm2, isNot(equals(vm1)));
     });
 
+    test('recreate keeps old instance when builder throws', () {
+      final factory = InstanceFactory<TestViewModel>(
+        builder: () => TestViewModel(state: 'initial'),
+        arg: const InstanceArg(key: 'recreate_builder_throw'),
+      );
+
+      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
+      final handle =
+          instanceManager.getNotifier<TestViewModel>(factory: factory);
+
+      expect(
+        () => instanceManager.recreate<TestViewModel>(vm1, builder: () {
+          throw StateError('recreate failure');
+        }),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(identical(handle.instance, vm1), isTrue);
+      expect(vm1.isDisposed, isFalse);
+      expect(handle.action, isNull);
+    });
+
     test('recreate preserves watchers and bindings', () {
       // Test that recreate preserves watcher relationships
       final factory = InstanceFactory<TestViewModel>(

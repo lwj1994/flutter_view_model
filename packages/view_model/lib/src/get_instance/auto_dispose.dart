@@ -162,7 +162,7 @@ class AutoDisposeInstanceController {
   /// the given action to each ViewModel instance.
   void performForAllInstances(void Function(ViewModel viewModel) action) {
     for (final notifier in _instanceNotifiers) {
-      if (notifier.instance is ViewModel) {
+      if (!notifier.isDisposed && notifier.instance is ViewModel) {
         action(notifier.instance as ViewModel);
       }
     }
@@ -184,7 +184,11 @@ class AutoDisposeInstanceController {
   /// ```
   void recycle(Object instance) {
     _instanceNotifiers.removeWhere((e) {
-      if (e.instance == instance) {
+      if (!e.isDisposed && e.instance == instance) {
+        final listener = _notifierListeners.remove(e);
+        if (listener != null) {
+          e.removeListener(listener);
+        }
         e.unbindAll();
         return true;
       } else {
@@ -199,7 +203,7 @@ class AutoDisposeInstanceController {
   /// binders remain, the instance can be recycled automatically.
   void unbindInstance(Object instance) {
     for (final e in _instanceNotifiers) {
-      if (e.instance == instance) {
+      if (!e.isDisposed && e.instance == instance) {
         e.unbind(viewModelBinding.id);
         break;
       }

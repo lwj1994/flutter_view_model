@@ -12,9 +12,6 @@ import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/src/view_model/view_model.dart';
-import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
-// ignore: lines_longer_than_80_chars
-import 'package:view_model/src/view_model/widget_mixin/stateless_extension.dart';
 
 import 'state_store.dart';
 
@@ -96,6 +93,14 @@ abstract interface class ViewModelBindingInterface {
   });
 
   void recycle<VM extends ViewModel>(VM viewModel);
+}
+
+/// Common host interface for types exposing a [viewModelBinding] accessor.
+///
+/// This enables shared extension methods across different host types, such as
+/// [ViewModel], [ViewModelStateMixin], and [ViewModelStatelessMixin].
+abstract interface class ViewModelBindingHost {
+  ViewModelBindingInterface get viewModelBinding;
 }
 
 /// Core abstraction for managing ViewModel lifecycle and dependency
@@ -641,7 +646,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
         key: key,
         tag: tag,
       );
-    } catch (e) {
+    } on ViewModelError {
       return null;
     }
   }
@@ -711,17 +716,16 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) {
     try {
       return readCached(key: key, tag: tag);
-    } catch (e) {
+    } on ViewModelError {
       //
       return null;
     }
   }
 }
 
-extension StateViewModelBindingExtension on ViewModelStateMixin {
+extension ViewModelBindingHostExtension on ViewModelBindingHost {
   VM watchViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
-    // ignore: invalid_use_of_protected_member
     return viewModelBinding.watch<VM>(factory);
   }
 
@@ -729,7 +733,6 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
     required ViewModelFactory<VM> factory,
     required VoidCallback onChanged,
   }) {
-    // ignore: invalid_use_of_protected_member
     viewModelBinding.listen<VM>(factory, onChanged: onChanged);
   }
 
@@ -737,7 +740,6 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
     required ViewModelFactory<VM> factory,
     required Function(S? previous, S state) onChanged,
   }) {
-    // ignore: invalid_use_of_protected_member
     viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
   }
 
@@ -746,7 +748,6 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
     required R Function(S state) selector,
     required Function(R? previous, R current) onChanged,
   }) {
-    // ignore: invalid_use_of_protected_member
     viewModelBinding.listenStateSelect<VM, S, R>(
       factory,
       selector: selector,
@@ -755,13 +756,11 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
   }
 
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
-    // ignore: invalid_use_of_protected_member
     viewModelBinding.recycle<VM>(viewModel);
   }
 
   VM readViewModel<VM extends ViewModel>(
       {required ViewModelFactory<VM> factory}) {
-    // ignore: invalid_use_of_protected_member
     return viewModelBinding.read<VM>(factory);
   }
 
@@ -769,7 +768,6 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
     Object? key,
     Object? tag,
   }) {
-    // ignore: invalid_use_of_protected_member
     return viewModelBinding.readCached<VM>(
       key: key,
       tag: tag,
@@ -780,7 +778,6 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
     Object? key,
     Object? tag,
   }) {
-    // ignore: invalid_use_of_protected_member
     return viewModelBinding.watchCached<VM>(
       key: key,
       tag: tag,
@@ -791,7 +788,6 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
     Object? key,
     Object? tag,
   }) {
-    // ignore: invalid_use_of_protected_member
     return viewModelBinding.maybeWatchCached<VM>(
       key: key,
       tag: tag,
@@ -802,191 +798,6 @@ extension StateViewModelBindingExtension on ViewModelStateMixin {
     Object? key,
     Object? tag,
   }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.maybeReadCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-}
-
-extension StatelessWidgetViewModelBindingExtension on ViewModelStatelessMixin {
-  VM watchViewModel<VM extends ViewModel>(
-      {required ViewModelFactory<VM> factory}) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.watch<VM>(factory);
-  }
-
-  void listenViewModel<VM extends ViewModel>({
-    required ViewModelFactory<VM> factory,
-    required VoidCallback onChanged,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.listen<VM>(factory, onChanged: onChanged);
-  }
-
-  void listenViewModelState<VM extends StateViewModel<S>, S>({
-    required ViewModelFactory<VM> factory,
-    required Function(S? previous, S state) onChanged,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
-  }
-
-  void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
-    required ViewModelFactory<VM> factory,
-    required R Function(S state) selector,
-    required Function(R? previous, R current) onChanged,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.listenStateSelect<VM, S, R>(
-      factory,
-      selector: selector,
-      onChanged: onChanged,
-    );
-  }
-
-  void recycleViewModel<VM extends ViewModel>(VM viewModel) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.recycle<VM>(viewModel);
-  }
-
-  VM readViewModel<VM extends ViewModel>(
-      {required ViewModelFactory<VM> factory}) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.read<VM>(factory);
-  }
-
-  VM readCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.readCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  VM watchCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.watchCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.maybeWatchCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  VM? maybeReadCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.maybeReadCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-}
-
-extension ViewModelBindingExtension on ViewModel {
-  VM watchViewModel<VM extends ViewModel>(
-      {required ViewModelFactory<VM> factory}) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.watch<VM>(factory);
-  }
-
-  void listenViewModel<VM extends ViewModel>({
-    required ViewModelFactory<VM> factory,
-    required VoidCallback onChanged,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.listen<VM>(factory, onChanged: onChanged);
-  }
-
-  void listenViewModelState<VM extends StateViewModel<S>, S>({
-    required ViewModelFactory<VM> factory,
-    required Function(S? previous, S state) onChanged,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
-  }
-
-  void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
-    required ViewModelFactory<VM> factory,
-    required R Function(S state) selector,
-    required Function(R? previous, R current) onChanged,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.listenStateSelect<VM, S, R>(
-      factory,
-      selector: selector,
-      onChanged: onChanged,
-    );
-  }
-
-  void recycleViewModel<VM extends ViewModel>(VM viewModel) {
-    // ignore: invalid_use_of_protected_member
-    viewModelBinding.recycle<VM>(viewModel);
-  }
-
-  VM readViewModel<VM extends ViewModel>(
-      {required ViewModelFactory<VM> factory}) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.read<VM>(factory);
-  }
-
-  VM readCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.readCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  VM watchCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.watchCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  VM? maybeWatchCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
-    return viewModelBinding.maybeWatchCached<VM>(
-      key: key,
-      tag: tag,
-    );
-  }
-
-  VM? maybeReadCachedViewModel<VM extends ViewModel>({
-    Object? key,
-    Object? tag,
-  }) {
-    // ignore: invalid_use_of_protected_member
     return viewModelBinding.maybeReadCached<VM>(
       key: key,
       tag: tag,

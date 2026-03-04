@@ -2,6 +2,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart';
 import 'package:view_model/src/view_model/widget_mixin/view_model_binding.dart';
 
 /// Stateless integration for ViewModel access from widgets.
@@ -17,7 +18,8 @@ import 'package:view_model/src/view_model/widget_mixin/view_model_binding.dart';
 /// > each widget instance creates exactly one Element. If the same widget
 /// > instance is mounted multiple times (e.g., via GlobalKey migration),
 /// > behavior may be unexpected. For complex use cases, use StatefulWidget.
-mixin ViewModelStatelessMixin on StatelessWidget {
+mixin ViewModelStatelessMixin on StatelessWidget
+    implements ViewModelBindingHost {
   /// The cached element for this widget.
   ///
   /// Using late final ensures consistent element-to-widget binding.

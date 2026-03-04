@@ -1,3 +1,6 @@
+## 1.0.2
+- Improve generator error reporting with explicit source errors.
+
 ## 1.0.1
 - Version bump for consistency
 

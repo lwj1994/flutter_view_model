@@ -1,3 +1,10 @@
+## 1.0.2
+- Fix listener mutation safety during notification dispatch.
+- Fix recreate failure handling to keep previous instance valid.
+- Fix disposal cleanup in instance manager and pause providers.
+- Improve cached access error handling and DevTools active state reporting.
+- Internal cleanup: remove duplicated binding extension implementations.
+
 ## 1.0.1
 - Fix: DevToolsService not clearing singleton `_instance` on dispose
 - Fix: typo "suucess" → "success" in DevToolsService log

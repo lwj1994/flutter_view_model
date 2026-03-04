@@ -36,11 +36,18 @@ class _Undefined {
 /// The store maintains a map of instances keyed by their unique identifiers
 /// and automatically handles cleanup when instances are no longer needed.
 class Store<T> {
+  Store({void Function()? onStoreEmpty}) : _onStoreEmpty = onStoreEmpty;
+
+  final void Function()? _onStoreEmpty;
+
   /// Stream controller for broadcasting instance creation events.
   final _streamController = StreamController<InstanceHandle<T>>.broadcast();
 
   /// Map of cached instances keyed by their unique identifiers.
   final Map<Object, InstanceHandle<T>> _instances = {};
+  bool _disposed = false;
+
+  bool get isEmpty => _instances.isEmpty;
 
   /// Finds the most recently created instance, optionally filtered by tag.
   ///
@@ -106,6 +113,9 @@ class Store<T> {
         case InstanceAction.dispose:
           _instances.remove(notifier.arg.key);
           notifier.removeListener(onNotify);
+          if (_instances.isEmpty) {
+            _onStoreEmpty?.call();
+          }
           break;
         case InstanceAction.recreate:
           break;
@@ -136,6 +146,9 @@ class Store<T> {
   /// Throws [ViewModelError] if no cached instance exists and no
   /// builder is provided.
   InstanceHandle<T> getNotifier({required InstanceFactory<T> factory}) {
+    if (_disposed) {
+      throw ViewModelError("Store<$T> has been disposed.");
+    }
     final realKey = factory.arg.key ?? Object();
     final bindingId = factory.arg.bindingId;
     final arg = factory.arg.copyWith(
@@ -199,6 +212,13 @@ class Store<T> {
     );
     return find.recreate(builder: builder);
   }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _instances.clear();
+    _streamController.close();
+  }
 }
 
 /// Handle for managing a ViewModel instance and its lifecycle.
@@ -235,6 +255,7 @@ class InstanceHandle<T> with ChangeNotifier {
 
   /// The actual ViewModel instance (null when disposed).
   late T? _instance;
+  bool _disposed = false;
 
   bool get isDisposed => _instance == null;
 
@@ -334,8 +355,14 @@ class InstanceHandle<T> with ChangeNotifier {
   T recreate({
     T Function()? builder,
   }) {
-    onDispose();
-    _instance = (builder?.call()) ?? factory.call();
+    final previous = _instance;
+    if (previous == null) {
+      throw ViewModelError(
+          "Cannot recreate $T instance. Instance is disposed.");
+    }
+    final recreated = (builder?.call()) ?? factory.call();
+    _tryCallInstanceDispose(previous);
+    _instance = recreated;
     onCreate(arg);
     _action = InstanceAction.recreate;
     notifyListeners();
@@ -367,12 +394,12 @@ class InstanceHandle<T> with ChangeNotifier {
   /// This method attempts to call the onDispose lifecycle method if the
   /// instance implements [InstanceLifeCycle]. Errors are logged but don't
   /// prevent the disposal process.
-  void _tryCallInstanceDispose() {
-    if (_instance is InstanceLifeCycle) {
+  void _tryCallInstanceDispose(Object? target) {
+    if (target is InstanceLifeCycle) {
       try {
-        (_instance as InstanceLifeCycle).onDispose(arg);
+        target.onDispose(arg);
       } catch (e) {
-        viewModelLog("${_instance.runtimeType} onDispose error $e");
+        viewModelLog("${target.runtimeType} onDispose error $e");
       }
     }
   }
@@ -382,8 +409,11 @@ class InstanceHandle<T> with ChangeNotifier {
   /// This method calls the instance's disposal lifecycle method,
   /// clears all watchers, and nullifies the instance reference.
   void onDispose() {
-    _tryCallInstanceDispose();
+    if (_disposed) return;
+    _disposed = true;
+    _tryCallInstanceDispose(_instance);
     _instance = null;
+    super.dispose();
   }
 }
 

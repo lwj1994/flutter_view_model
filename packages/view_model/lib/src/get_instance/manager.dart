@@ -8,6 +8,7 @@
 /// @author luwenjie on 2025/3/25 12:23:33
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 
 import 'store.dart';
@@ -52,7 +53,11 @@ class InstanceManager {
     T t, {
     T Function()? builder,
   }) {
-    final Store<T> s = _stores[T];
+    final store = _stores[T];
+    if (store is! Store<T>) {
+      throw ViewModelError("Cannot recreate $T instance. Store not found.");
+    }
+    final Store<T> s = store;
     return s.recreate(
       t,
       builder: builder,
@@ -78,10 +83,22 @@ class InstanceManager {
   ///
   /// Returns the [Store] instance for type [T].
   Store<T> _getStore<T>() {
-    Store<T>? s = _stores[T];
-    s ??= Store<T>();
-    _stores[T] = s;
-    return s;
+    final cached = _stores[T];
+    if (cached is Store<T>) {
+      return cached;
+    }
+
+    late final Store<T> created;
+    created = Store<T>(
+      onStoreEmpty: () {
+        final current = _stores[T];
+        if (!identical(current, created) || !created.isEmpty) return;
+        _stores.remove(T);
+        created.dispose();
+      },
+    );
+    _stores[T] = created;
+    return created;
   }
 
   /// Gets a ViewModel instance directly.
@@ -175,6 +192,12 @@ class InstanceManager {
     }
     return _getStore<T>().getInstancesByTag(tag);
   }
+
+  @visibleForTesting
+  int get debugStoreCount => _stores.length;
+
+  @visibleForTesting
+  bool debugHasStoreFor<T>() => _stores[T] != null;
 }
 
 /// Factory configuration for ViewModel instance creation and retrieval.
