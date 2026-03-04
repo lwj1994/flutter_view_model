@@ -1,3 +1,6 @@
+## 1.0.2
+- Improve release consistency for annotation package.
+
 ## 1.0.1
 - Version bump for consistency
 

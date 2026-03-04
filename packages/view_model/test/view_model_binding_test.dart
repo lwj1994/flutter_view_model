@@ -14,6 +14,16 @@ class SimpleStateVM extends StateViewModel<SimpleState> {
   SimpleStateVM({required SimpleState initial}) : super(state: initial);
 }
 
+class ThrowingHashKey {
+  const ThrowingHashKey();
+
+  @override
+  int get hashCode => throw StateError('hashCode failure');
+
+  @override
+  bool operator ==(Object other) => identical(this, other);
+}
+
 class TestRef with ViewModelBinding {}
 
 class TestRefWithCounter with ViewModelBinding {
@@ -33,6 +43,16 @@ void main() {
       final ref = TestRef();
       final vm = ref.maybeWatchCached<SimpleVM>(key: 'missing');
       expect(vm, isNull);
+      ref.dispose();
+    });
+
+    test('maybeWatchCached rethrows non-ViewModelError', () {
+      final ref = TestRef();
+      const key = ThrowingHashKey();
+      expect(
+        () => ref.maybeWatchCached<SimpleVM>(key: key),
+        throwsA(isA<StateError>()),
+      );
       ref.dispose();
     });
 
@@ -66,6 +86,16 @@ void main() {
     test('maybeReadCached returns null when not found', () {
       final res = ViewModel.maybeReadCached<SimpleVM>(key: 'missing');
       expect(res, isNull);
+    });
+
+    test('maybeReadCached rethrows non-ViewModelError', () {
+      final ref = TestRef();
+      const key = ThrowingHashKey();
+      expect(
+        () => ref.maybeReadCached<SimpleVM>(key: key),
+        throwsA(isA<StateError>()),
+      );
+      ref.dispose();
     });
 
     test('readCached throws when missing', () {

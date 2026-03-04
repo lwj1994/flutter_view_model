@@ -57,6 +57,10 @@ class ErrorDisposeModel implements InstanceLifeCycle {
 
 class UnusedModel {}
 
+class AutoCleanupModel {}
+
+class AutoCleanupModelB {}
+
 void main() {
   group('get_instance', () {
     setUp(() {
@@ -416,6 +420,49 @@ void main() {
       expect(list[2], h1);
       expect(list[0].index > list[1].index, isTrue);
       expect(list[1].index > list[2].index, isTrue);
+    });
+
+    test('removes store when last instance is disposed', () async {
+      final baseline = instanceManager.debugStoreCount;
+      final handle = instanceManager.getNotifier<AutoCleanupModel>(
+        factory: InstanceFactory<AutoCleanupModel>(
+          builder: () => AutoCleanupModel(),
+          arg: const InstanceArg(key: 'auto_cleanup_store_remove'),
+        ),
+      );
+
+      expect(instanceManager.debugHasStoreFor<AutoCleanupModel>(), isTrue);
+
+      handle.unbindAll();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(instanceManager.debugHasStoreFor<AutoCleanupModel>(), isFalse);
+      expect(instanceManager.debugStoreCount, baseline);
+    });
+
+    test('keeps store while there are still alive instances', () async {
+      final handle1 = instanceManager.getNotifier<AutoCleanupModelB>(
+        factory: InstanceFactory<AutoCleanupModelB>(
+          builder: () => AutoCleanupModelB(),
+          arg: const InstanceArg(key: 'auto_cleanup_store_keep_1'),
+        ),
+      );
+      final handle2 = instanceManager.getNotifier<AutoCleanupModelB>(
+        factory: InstanceFactory<AutoCleanupModelB>(
+          builder: () => AutoCleanupModelB(),
+          arg: const InstanceArg(key: 'auto_cleanup_store_keep_2'),
+        ),
+      );
+
+      expect(instanceManager.debugHasStoreFor<AutoCleanupModelB>(), isTrue);
+
+      handle1.unbindAll();
+      await Future<void>.delayed(Duration.zero);
+      expect(instanceManager.debugHasStoreFor<AutoCleanupModelB>(), isTrue);
+
+      handle2.unbindAll();
+      await Future<void>.delayed(Duration.zero);
+      expect(instanceManager.debugHasStoreFor<AutoCleanupModelB>(), isFalse);
     });
   });
 }

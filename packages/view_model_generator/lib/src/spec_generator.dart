@@ -18,11 +18,19 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     ConstantReader annotation,
     BuildStep buildStep,
   ) {
-    if (element is! ClassElement) return '';
+    if (element is! ClassElement) {
+      throw InvalidGenerationSourceError(
+        '@GenSpec can only be applied to classes.',
+        element: element,
+      );
+    }
 
     final className = element.name;
     if (className == null || className.isEmpty) {
-      return '// Error: Class name is empty';
+      throw InvalidGenerationSourceError(
+        'Class name is empty.',
+        element: element,
+      );
     }
 
     final specName = _specVarName(className);
@@ -81,7 +89,11 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     final matchingFactory = _findSpecFactory(element);
 
     if (mainCtor == null && matchingFactory == null) {
-      return '// Skipped: No unnamed constructor or spec factory for $className';
+      throw InvalidGenerationSourceError(
+        '$className must have an unnamed constructor or a factory named '
+        '`spec`.',
+        element: element,
+      );
     }
 
     // Collect class-owned params.
@@ -134,7 +146,10 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     }
 
     if (argCount > 4) {
-      return '// Skipped: constructor with > 4 required parameters';
+      throw InvalidGenerationSourceError(
+        '$className has $argCount parameters, but only up to 4 are supported.',
+        element: element,
+      );
     }
 
     // Prepare builder signature
