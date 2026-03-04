@@ -43,6 +43,24 @@ class MyViewModelLifecycle extends ViewModelLifecycle {
   }
 }
 
+class ThrowingHashKey {
+  const ThrowingHashKey();
+
+  @override
+  int get hashCode => throw StateError('hashCode failure');
+
+  @override
+  bool operator ==(Object other) => identical(this, other);
+}
+
+class ReentrantStateVM extends StateViewModel<int> {
+  ReentrantStateVM() : super(state: 0);
+
+  void increment() {
+    setState(state + 1);
+  }
+}
+
 void main() {
   group('view_model lifecycle and features', () {
     late MyViewModelLifecycle lifecycleObserver;
@@ -170,6 +188,14 @@ void main() {
       );
     });
 
+    test('maybeReadCached only swallows ViewModelError', () {
+      const key = ThrowingHashKey();
+      expect(
+        () => ViewModel.maybeReadCached<TestStatelessViewModel>(key: key),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test("readCached by tag", () {
       final factory = InstanceFactory<TestStatelessViewModel>(
         builder: () => TestStatelessViewModel(),
@@ -198,6 +224,43 @@ void main() {
       });
 
       expect(updated, isTrue);
+    });
+
+    test('notifyListeners supports removing listeners during iteration', () {
+      final vm = TestStatelessViewModel();
+      int callbackCount = 0;
+      late Function() removeSelf;
+      removeSelf = vm.listen(onChanged: () {
+        callbackCount++;
+        removeSelf();
+      });
+
+      expect(vm.notifyListeners, returnsNormally);
+      expect(callbackCount, 1);
+      expect(vm.hasListeners, isFalse);
+    });
+
+    test('state listeners support removing listeners during iteration', () {
+      final vm = ReentrantStateVM();
+      int stateCallbacks = 0;
+      int normalCallbacks = 0;
+
+      late Function() removeStateListener;
+      removeStateListener = vm.listenState(onChanged: (_, __) {
+        stateCallbacks++;
+        removeStateListener();
+      });
+
+      late Function() removeListener;
+      removeListener = vm.listen(onChanged: () {
+        normalCallbacks++;
+        removeListener();
+      });
+
+      expect(vm.increment, returnsNormally);
+      expect(stateCallbacks, 1);
+      expect(normalCallbacks, 1);
+      expect(vm.hasListeners, isFalse);
     });
 
     test("addDispose", () async {

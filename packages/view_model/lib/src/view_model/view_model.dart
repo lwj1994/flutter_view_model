@@ -79,7 +79,8 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {}
 ///   }
 /// }
 /// ```
-mixin class ViewModel implements InstanceLifeCycle, Listenable {
+mixin class ViewModel
+    implements InstanceLifeCycle, Listenable, ViewModelBindingHost {
   /// Returns the [ViewModelBinding] interface for accessing other ViewModels.
   ///
   /// This property allows you to use
@@ -135,7 +136,7 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   static T? maybeReadCached<T extends ViewModel>({Object? key, Object? tag}) {
     try {
       return readCached<T>(key: key, tag: tag);
-    } catch (e) {
+    } on ViewModelError {
       return null;
     }
   }
@@ -376,7 +377,9 @@ mixin class ViewModel implements InstanceLifeCycle, Listenable {
   /// is provided, errors are logged. This prevents one listener from
   /// affecting others.
   void notifyListeners() {
-    for (final element in _listeners) {
+    final listeners = List<VoidCallback>.of(_listeners);
+    for (final element in listeners) {
+      if (!_listeners.contains(element)) continue;
       try {
         element.call();
       } catch (e, stack) {
@@ -634,7 +637,10 @@ abstract class StateViewModel<T> with ViewModel {
     if (_isDisposed) return;
 
     // Phase 1: Notify state listeners with previous and current state
-    for (final element in _stateListeners) {
+    final stateListeners =
+        List<Function(T? previous, T state)>.of(_stateListeners);
+    for (final element in stateListeners) {
+      if (!_stateListeners.contains(element)) continue;
       try {
         element.call(event.previousState, event.currentState);
       } catch (e, stack) {
@@ -648,7 +654,9 @@ abstract class StateViewModel<T> with ViewModel {
     }
 
     // Phase 2: Notify general listeners
-    for (final element in _listeners) {
+    final listeners = List<VoidCallback>.of(_listeners);
+    for (final element in listeners) {
+      if (!_listeners.contains(element)) continue;
       try {
         element.call();
       } catch (e, stack) {
