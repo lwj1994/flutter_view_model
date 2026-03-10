@@ -231,10 +231,12 @@ class AutoDisposeInstanceController {
       if (!e.isDisposed && e.instance is ViewModel) {
         (e.instance as ViewModel).refHandler.removeRef(viewModelBinding);
       }
-      e.unbind(viewModelBinding.id);
+      // Remove listener before unbind, because unbind may trigger _recycle()
+      // which disposes the ChangeNotifier, making removeListener fail.
       if (_notifierListeners.containsKey(e)) {
         e.removeListener(_notifierListeners[e]!);
       }
+      e.unbind(viewModelBinding.id);
     }
     _notifierListeners.clear();
     _instanceNotifiers.clear();

@@ -80,11 +80,11 @@ mixin ViewModelStateMixin<T extends StatefulWidget> on State<T>
 
   @override
   void dispose() {
-    super.dispose();
     viewModelBinding.dispose();
     _appPauseProvider.dispose();
     _routePauseProvider.dispose();
     _tickerModePauseProvider.dispose();
+    super.dispose();
   }
 
   void _rebuildState() {
