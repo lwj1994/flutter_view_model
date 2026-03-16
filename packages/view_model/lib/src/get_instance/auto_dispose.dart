@@ -108,6 +108,9 @@ class AutoDisposeInstanceController {
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
       factory: factory,
     );
+    if (notifier.instance is ViewModel) {
+      (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
+    }
     if (!_notifierListeners.containsKey(notifier)) {
       _instanceNotifiers.add(notifier);
       final listener = () {
@@ -117,6 +120,11 @@ class AutoDisposeInstanceController {
           case InstanceAction.dispose:
             break;
           case InstanceAction.recreate:
+            if (!notifier.isDisposed && notifier.instance is ViewModel) {
+              (notifier.instance as ViewModel).refHandler.addRef(
+                    viewModelBinding,
+                  );
+            }
             onRecreate.call();
             break;
         }
@@ -141,12 +149,20 @@ class AutoDisposeInstanceController {
               case InstanceAction.dispose:
                 break;
               case InstanceAction.recreate:
+                if (!notifier.isDisposed && notifier.instance is ViewModel) {
+                  (notifier.instance as ViewModel).refHandler.addRef(
+                        viewModelBinding,
+                      );
+                }
                 onRecreate.call();
                 break;
             }
           };
           _notifierListeners[notifier] = listener;
           notifier.addListener(listener);
+        }
+        if (notifier.instance is ViewModel) {
+          (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
         }
         // bind viewModelBinding
         notifier.bind(viewModelBinding.id);

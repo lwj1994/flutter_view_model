@@ -21,11 +21,11 @@ class CounterViewModel extends ViewModel {}
 
 ```yaml
 dev_dependencies:
-  view_model_generator: ^15.0.0-dev.3
+  view_model_generator: ^1.0.2
   build_runner: ^2.7.1
 
 dependencies:
-  view_model_annotation: ^15.0.0-dev.3
+  view_model_annotation: ^1.0.2
 ```
 
 ## Basic Flow

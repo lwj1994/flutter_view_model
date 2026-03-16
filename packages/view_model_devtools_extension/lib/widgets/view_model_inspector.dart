@@ -27,13 +27,16 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
   String? _connectionError;
 
   late final ViewModelService _viewModelService;
+  ServiceManager? _serviceManager;
+  VoidCallback? _connectionListener;
+  int _loadRequestId = 0;
 
   @override
   void initState() {
     super.initState();
     _viewModelService = ViewModelService();
     _setupConnectionListener();
-    _loadViewModelData();
+    unawaited(_loadViewModelData());
     if (_realTimeUpdate) {
       _startRealTimeUpdate();
     }
@@ -42,25 +45,31 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    if (_connectionListener != null) {
+      _serviceManager?.connectedState.removeListener(_connectionListener!);
+    }
     super.dispose();
   }
 
   void _setupConnectionListener() {
-    final serviceManager = globals[ServiceManager] as ServiceManager?;
-    serviceManager?.connectedState.addListener(() {
+    _serviceManager = globals[ServiceManager] as ServiceManager?;
+    final serviceManager = _serviceManager;
+    if (serviceManager == null) return;
+
+    _connectionListener = () {
       final connected = serviceManager.connectedState.value.connected;
-      if (connected) {
-        setState(() {
-          _connectionError = null;
-        });
-        _loadViewModelData();
-      }
-    });
+      if (!mounted || !connected) return;
+      setState(() {
+        _connectionError = null;
+      });
+      unawaited(_loadViewModelData());
+    };
+    serviceManager.connectedState.addListener(_connectionListener!);
   }
 
   void _startRealTimeUpdate() {
     _refreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _loadViewModelData();
+      unawaited(_loadViewModelData());
     });
   }
 
@@ -70,6 +79,8 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
   }
 
   Future<void> _loadViewModelData() async {
+    if (!mounted) return;
+    final requestId = ++_loadRequestId;
     setState(() {
       _isLoading = true;
     });
@@ -90,6 +101,7 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
       graphResult = DependencyGraphResult(nodes: [], edges: []);
     }
 
+    if (!mounted || requestId != _loadRequestId) return;
     setState(() {
       if (viewModelResult != null) {
         _viewModels = viewModelResult.viewModels;

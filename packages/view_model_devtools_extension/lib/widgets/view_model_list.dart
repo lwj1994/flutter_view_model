@@ -193,7 +193,7 @@ class _BindingNode extends StatelessWidget {
     return InkWell(
       onTap: () => _showBindingDetails(context),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: theme.colorScheme.secondaryContainer.withAlpha(160),
           borderRadius: BorderRadius.circular(12),
@@ -229,14 +229,18 @@ class _BindingNode extends StatelessWidget {
                     bindingId,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
+                      height: 1,
                     ),
                   ),
                   Text(
                     '$count ViewModels',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.secondary,
+                      fontSize: 11,
+                      height: 1,
                     ),
                   ),
                 ],
@@ -281,7 +285,7 @@ class _ViewModelNode extends StatelessWidget {
     return InkWell(
       onTap: () => _showViewModelDetails(context),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
@@ -315,8 +319,10 @@ class _ViewModelNode extends StatelessWidget {
                     viewModel.type,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
+                      height: 1,
                     ),
                   ),
                   Text(
@@ -325,6 +331,8 @@ class _ViewModelNode extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface.withAlpha(150),
+                      fontSize: 10.5,
+                      height: 1,
                     ),
                   ),
                   if (subtitle.isNotEmpty)
@@ -334,6 +342,8 @@ class _ViewModelNode extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withAlpha(170),
+                        fontSize: 10.5,
+                        height: 1,
                       ),
                     ),
                 ],

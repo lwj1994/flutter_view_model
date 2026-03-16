@@ -14,18 +14,43 @@ class MockViewModelBinding with ViewModelBinding {
   String get id => 'mock_binding';
 }
 
+class MutableHashBinding with ViewModelBinding {
+  int salt = 1;
+
+  @override
+  int get hashCode => salt;
+
+  @override
+  bool operator ==(Object other) => identical(this, other);
+}
+
+class LifecycleAwareViewModel with ViewModel {
+  int onCreateCalls = 0;
+  final List<String> boundIds = <String>[];
+
+  @override
+  void onCreate(InstanceArg arg) {
+    super.onCreate(arg);
+    onCreateCalls++;
+  }
+
+  @override
+  void onBind(InstanceArg arg, String bindingId) {
+    super.onBind(arg, bindingId);
+    boundIds.add(bindingId);
+  }
+}
+
 void main() {
   group('AutoDisposeInstanceController', () {
     late AutoDisposeInstanceController controller;
     late MockViewModelBinding mockRef;
-    bool recreated = false;
 
     setUp(() {
       ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
       mockRef = MockViewModelBinding();
-      recreated = false;
       controller = AutoDisposeInstanceController(
-        onRecreate: () => recreated = true,
+        onRecreate: () {},
         viewModelBinding: mockRef,
       );
     });
@@ -238,6 +263,25 @@ void main() {
       expect(handle.instance, equals(vm2));
     });
 
+    test('recreate replays lifecycle binds onto the new instance', () {
+      final factory = InstanceFactory<LifecycleAwareViewModel>(
+        builder: () => LifecycleAwareViewModel(),
+        arg: const InstanceArg(
+          key: 'recreate_replay_bindings',
+        ),
+      );
+
+      final vm1 =
+          controller.getInstance<LifecycleAwareViewModel>(factory: factory);
+      expect(vm1.onCreateCalls, 1);
+      expect(vm1.boundIds, [mockRef.id]);
+
+      final vm2 = instanceManager.recreate(vm1);
+
+      expect(vm2.onCreateCalls, 1);
+      expect(vm2.boundIds, [mockRef.id]);
+    });
+
     test('performForAllInstances', () {
       final factory = InstanceFactory<TestStatelessViewModel>(
         builder: () => TestStatelessViewModel(),
@@ -341,13 +385,51 @@ void main() {
       final vm =
           controller.getInstance<TestStatelessViewModel>(factory: factory);
 
-      // Manually add ref to simulate usage
-      vm.refHandler.addRef(mockRef);
       expect(vm.refHandler.dependencyBindings.contains(mockRef), isTrue);
 
       controller.dispose();
 
       expect(vm.refHandler.dependencyBindings.contains(mockRef), isFalse);
+    });
+
+    test('dispose still unbinds when host hashCode changes', () {
+      final flakyBinding = MutableHashBinding();
+      final flakyController = AutoDisposeInstanceController(
+        onRecreate: () {},
+        viewModelBinding: flakyBinding,
+      );
+      final factory = InstanceFactory<TestStatelessViewModel>(
+        builder: () => TestStatelessViewModel(),
+        arg: const InstanceArg(key: 'stable_binding_id_test'),
+      );
+
+      final vm =
+          flakyController.getInstance<TestStatelessViewModel>(factory: factory);
+
+      flakyBinding.salt = 99;
+      flakyController.dispose();
+
+      expect(vm.isDisposed, isTrue);
+    });
+
+    test('getInstancesByTag replays refs onto recreated instances', () {
+      const tag = 'recreate_tag_refs';
+      final factory = InstanceFactory<LifecycleAwareViewModel>(
+        builder: () => LifecycleAwareViewModel(),
+        arg: const InstanceArg(key: 'tagged_vm', tag: tag),
+      );
+
+      instanceManager.getNotifier<LifecycleAwareViewModel>(factory: factory);
+
+      final vm1 =
+          controller.getInstancesByTag<LifecycleAwareViewModel>(tag).single;
+      expect(vm1.boundIds, [mockRef.id]);
+      expect(vm1.refHandler.dependencyBindings.contains(mockRef), isTrue);
+
+      final vm2 = instanceManager.recreate(vm1);
+
+      expect(vm2.boundIds, [mockRef.id]);
+      expect(vm2.refHandler.dependencyBindings.contains(mockRef), isTrue);
     });
   });
 }
