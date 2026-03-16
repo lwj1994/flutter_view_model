@@ -285,9 +285,7 @@ class InstanceHandle<T> with ChangeNotifier {
   void bind(String? id) {
     if (bindingIds.contains(id) || id == null) return;
     bindingIds.add(id);
-    if (_instance is InstanceLifeCycle) {
-      (_instance as InstanceLifeCycle).onBind(arg, id);
-    }
+    _notifyBind(id);
   }
 
   /// Removes a watcher from this instance.
@@ -360,10 +358,14 @@ class InstanceHandle<T> with ChangeNotifier {
       throw ViewModelError(
           "Cannot recreate $T instance. Instance is disposed.");
     }
+    final activeBindingIds = List<String>.of(bindingIds);
     final recreated = (builder?.call()) ?? factory.call();
     _tryCallInstanceDispose(previous);
     _instance = recreated;
-    onCreate(arg);
+    _notifyCreate(arg);
+    for (final bindingId in activeBindingIds) {
+      _notifyBind(bindingId);
+    }
     _action = InstanceAction.recreate;
     notifyListeners();
     return instance;
@@ -383,10 +385,20 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Parameters:
   /// - [arg]: Instance arguments containing initial watcher ID
   void onCreate(InstanceArg arg) {
+    _notifyCreate(arg);
+    bind(arg.bindingId);
+  }
+
+  void _notifyBind(String bindingId) {
+    if (_instance is InstanceLifeCycle) {
+      (_instance as InstanceLifeCycle).onBind(arg, bindingId);
+    }
+  }
+
+  void _notifyCreate(InstanceArg arg) {
     if (_instance is InstanceLifeCycle) {
       (_instance as InstanceLifeCycle).onCreate(arg);
     }
-    bind(arg.bindingId);
   }
 
   /// Safely calls the instance's disposal method.

@@ -75,7 +75,8 @@ abstract interface class ViewModelBindingInterface {
 
   /// Listens to a `VM` built by the given factory.
   ///
-  /// Returns a disposer to stop listening.
+  /// The listener is automatically cleaned up when this binding is disposed.
+  /// For a manual disposer, call `ViewModel.listen(...)` on the instance.
   void listen<VM extends ViewModel>(
     ViewModelFactory<VM> factory, {
     required VoidCallback onChanged,
@@ -195,9 +196,9 @@ abstract interface class ViewModelBindingHost {
 /// - [ViewModelStateMixin]: Mixin that uses ViewModelBinding for StatefulWidget
 /// - [ViewModelBindingPauseProvider]: Interface for pause/resume providers
 mixin class ViewModelBinding implements ViewModelBindingInterface {
-  String get id {
-    return "${getName()}#$hashCode";
-  }
+  late final String _id = "${getName()}#${identityHashCode(this)}";
+
+  String get id => _id;
 
   @protected
   // ignore: avoid_returning_this
@@ -491,7 +492,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   List<VM> readCachesByTag<VM extends ViewModel>(Object tag) {
-    return _instanceController.getInstancesByTag<VM>(tag, listen: false);
+    return _instanceController.getInstancesByTag<VM>(tag, listen: true);
   }
 
   VM _getViewModel<VM extends ViewModel>({

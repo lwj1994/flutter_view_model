@@ -8,37 +8,71 @@ on:
 
 jobs:
   codecov-upload:
-    runs-on: self-hosted  # Specify job runs on self-hosted runner
-    defaults:
-      run:
-        working-directory: packages/view_model
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: 👷 Install Dependencies
-        timeout-minutes: 1
-        run: |
-          puro dart --version
-          puro dart pub get
-
-      - name: 🔎 Check format
-        timeout-minutes: 1
-        run: puro dart format --set-exit-if-changed -l 80 -o none lib/
-
-      - name: 📈 Check analyzer
-        timeout-minutes: 1
-        run: puro dart analyze --fatal-infos --fatal-warnings lib/
-
-      #- name: 🌐 Setup Chrome
-      #  uses: browser-actions/setup-chrome@latest
-
-      - name: 🧪 Run tests
+      - name: Verify toolchain
         timeout-minutes: 2
         run: |
+          puro dart --version
+          puro flutter --version
+
+      - name: Check view_model
+        timeout-minutes: 5
+        working-directory: packages/view_model
+        run: |
+          puro flutter pub get
+          puro dart format --set-exit-if-changed -l 80 -o none lib test
+          puro dart analyze --fatal-infos --fatal-warnings lib
           puro flutter test --coverage test
 
-      - name: 📥 Upload coverage to Codecov
+      - name: Check view_model_annotation
+        timeout-minutes: 3
+        working-directory: packages/view_model_annotation
+        run: |
+          puro dart pub get
+          puro dart format --set-exit-if-changed -l 80 -o none lib
+          puro dart analyze --fatal-infos --fatal-warnings lib
+
+      - name: Check view_model_generator
+        timeout-minutes: 5
+        working-directory: packages/view_model_generator
+        run: |
+          puro dart pub get
+          puro dart format --set-exit-if-changed -l 80 -o none lib test
+          puro dart analyze --fatal-infos --fatal-warnings lib test
+          puro dart test
+
+      - name: Check view_model_devtools_extension
+        timeout-minutes: 5
+        working-directory: packages/view_model_devtools_extension
+        run: |
+          puro flutter pub get
+          puro dart format --set-exit-if-changed -l 80 -o none lib test
+          puro dart analyze --fatal-infos --fatal-warnings lib test
+          puro flutter test
+
+      - name: Check example counter
+        timeout-minutes: 4
+        working-directory: example/counter
+        run: |
+          puro flutter pub get
+          puro dart format --set-exit-if-changed -l 80 -o none lib test
+          puro dart analyze --fatal-infos --fatal-warnings lib test
+          puro flutter test
+
+      - name: Check example todo_list
+        timeout-minutes: 4
+        working-directory: example/todo_list
+        run: |
+          puro flutter pub get
+          puro dart format --set-exit-if-changed -l 80 -o none lib test
+          puro dart analyze --fatal-infos --fatal-warnings lib test
+          puro flutter test
+
+      - name: Upload coverage to Codecov
         timeout-minutes: 1
         uses: codecov/codecov-action@v5
         with:

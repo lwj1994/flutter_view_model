@@ -31,6 +31,7 @@ class FilterControls extends StatelessWidget {
           children: [
             DropdownButtonFormField<String>(
               initialValue: filter,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Filter',
                 border: OutlineInputBorder(),

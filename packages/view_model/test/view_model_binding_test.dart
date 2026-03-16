@@ -255,16 +255,17 @@ void main() {
     });
 
     test('readCachesByTag returns all instances without listening', () {
+      final creator = TestRef();
       final ref = TestRefWithCounter();
       const tag = 'group-2';
 
       // Create instances
-      final vm1 = ref.read(ViewModelSpec(
+      final vm1 = creator.read(ViewModelSpec(
         builder: () => SimpleVM(),
         tag: tag,
         key: 'k3',
       ));
-      final vm2 = ref.read(ViewModelSpec(
+      final vm2 = creator.read(ViewModelSpec(
         builder: () => SimpleVM(),
         tag: tag,
         key: 'k4',
@@ -278,6 +279,8 @@ void main() {
       expect(list.length, 2);
       expect(list.contains(vm1), isTrue);
       expect(list.contains(vm2), isTrue);
+      expect(vm1.refHandler.dependencyBindings.contains(ref), isTrue);
+      expect(vm2.refHandler.dependencyBindings.contains(ref), isTrue);
 
       // Verify NO updates
       vm1.notifyListeners();
@@ -286,6 +289,7 @@ void main() {
       vm2.notifyListeners();
       expect(ref.updates, 0);
 
+      creator.dispose();
       ref.dispose();
     });
 
