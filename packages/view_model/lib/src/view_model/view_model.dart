@@ -490,7 +490,12 @@ mixin class ViewModel
       try {
         element.onUnbind(this, arg, bindingId);
       } catch (e, stack) {
-        viewModelLog("Lifecycle observer onUnbind error: $e\n$stack");
+        final handler = config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog("Lifecycle observer onUnbind error: $e\n$stack");
+        }
       }
     }
   }
@@ -503,24 +508,44 @@ mixin class ViewModel
     try {
       _autoDisposeController.dispose();
     } catch (e, stack) {
-      viewModelLog(
-          "$runtimeType _autoDisposeController dispose error: $e\n$stack");
+      final handler = config.onDisposeError;
+      if (handler != null) {
+        handler(e, stack);
+      } else {
+        viewModelLog(
+            "$runtimeType _autoDisposeController dispose error: $e\n$stack");
+      }
     }
     try {
       refHandler.dispose();
     } catch (e, stack) {
-      viewModelLog("$runtimeType refHandler dispose error: $e\n$stack");
+      final handler = config.onDisposeError;
+      if (handler != null) {
+        handler(e, stack);
+      } else {
+        viewModelLog("$runtimeType refHandler dispose error: $e\n$stack");
+      }
     }
     try {
       dispose();
     } catch (e, stack) {
-      viewModelLog("$runtimeType dispose() error: $e\n$stack");
+      final handler = config.onDisposeError;
+      if (handler != null) {
+        handler(e, stack);
+      } else {
+        viewModelLog("$runtimeType dispose() error: $e\n$stack");
+      }
     }
     for (final element in _viewModelLifecycles) {
       try {
         element.onDispose(this, arg);
       } catch (e, stack) {
-        viewModelLog("Lifecycle observer onDispose error: $e\n$stack");
+        final handler = config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog("Lifecycle observer onDispose error: $e\n$stack");
+        }
       }
     }
   }

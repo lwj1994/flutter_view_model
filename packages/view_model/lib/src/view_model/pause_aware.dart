@@ -146,7 +146,13 @@ class PauseAwareController {
       try {
         provider.dispose();
       } catch (e, stack) {
-        viewModelLog("PauseAwareController provider dispose error: $e\n$stack");
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog(
+              "PauseAwareController provider dispose error: $e\n$stack");
+        }
       }
     }
     _providerPauseStates.clear();

@@ -687,14 +687,24 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       try {
         e.call();
       } catch (e, stack) {
-        viewModelLog("ViewModelBinding dispose listener error: $e\n$stack");
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog("ViewModelBinding dispose listener error: $e\n$stack");
+        }
       }
     }
     try {
       _pauseAwareController.dispose();
     } catch (e, stack) {
-      viewModelLog(
-          "ViewModelBinding pauseController dispose error: $e\n$stack");
+      final handler = ViewModel.config.onDisposeError;
+      if (handler != null) {
+        handler(e, stack);
+      } else {
+        viewModelLog(
+            "ViewModelBinding pauseController dispose error: $e\n$stack");
+      }
     }
     _instanceController.dispose();
   }
