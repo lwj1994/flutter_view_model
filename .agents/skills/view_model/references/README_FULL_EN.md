@@ -800,15 +800,9 @@ void main() {
       // Used by StateViewModel.setState and listenStateSelect
       equals: (a, b) => a == b,
 
-      // Global error handler for listener errors
-      onListenerError: (error, stackTrace, context) {
-        // context is 'notifyListeners' or 'stateListener'
+      // Global error handler for listener and disposal errors
+      onError: (error, stackTrace, type) {
         crashReporter.report(error, stackTrace);
-      },
-
-      // Global error handler for disposal errors
-      onDisposeError: (error, stackTrace) {
-        debugPrint('Disposal error: $error');
       },
     ),
     lifecycles: [DebugLifecycle()],

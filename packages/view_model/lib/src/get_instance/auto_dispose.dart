@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model_binding.dart';
+import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 import 'manager.dart';
@@ -264,9 +265,9 @@ class AutoDisposeInstanceController {
         }
         e.unbind(viewModelBinding.id);
       } catch (err, stack) {
-        final handler = ViewModel.config.onDisposeError;
+        final handler = ViewModel.config.onError;
         if (handler != null) {
-          handler(err, stack);
+          handler(err, stack, ErrorType.dispose);
         } else {
           viewModelLog(
               "AutoDisposeInstanceController dispose error: $err\n$stack");

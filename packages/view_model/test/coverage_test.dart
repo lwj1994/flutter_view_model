@@ -78,13 +78,13 @@ void main() {
       vm1.testDependencyNotify(vm2);
     });
 
-    test('onListenerError config works for regular ViewModel', () {
+    test('onError config works for regular ViewModel listener', () {
       bool errorCaught = false;
       ViewModel.initialize(
         config: ViewModelConfig(
-          onListenerError: (e, stack, context) {
+          onError: (e, stack, type) {
             errorCaught = true;
-            expect(context, 'notifyListeners');
+            expect(type, ErrorType.listener);
             expect(e, 'Listener Error');
           },
         ),
@@ -99,15 +99,15 @@ void main() {
       expect(errorCaught, isTrue);
     });
 
-    test('onListenerError config works for StateViewModel', () async {
+    test('onError config works for StateViewModel listener', () async {
       bool errorCaught = false;
-      String? errorContext;
+      ErrorType? errorType;
 
       ViewModel.initialize(
         config: ViewModelConfig(
-          onListenerError: (e, stack, context) {
+          onError: (e, stack, type) {
             errorCaught = true;
-            errorContext = context;
+            errorType = type;
           },
         ),
       );
@@ -124,7 +124,7 @@ void main() {
       // Wait for stream
       await Future.delayed(Duration.zero);
       expect(errorCaught, isTrue);
-      expect(errorContext, 'stateListener');
+      expect(errorType, ErrorType.listener);
 
       // Reset
       errorCaught = false;
@@ -138,19 +138,15 @@ void main() {
       await Future.delayed(Duration.zero);
 
       expect(errorCaught, isTrue);
-      // Depending on implementation, context might be notifyListeners or
-      // stateListener.
-      // StateViewModel logic calls _listeners inside the stream listener check.
-      // Lines 634-636 use 'notifyListeners'.
-      // So checks context.
     });
 
-    test('onDisposeError config works', () async {
+    test('onError config works for dispose', () async {
       bool errorCaught = false;
       ViewModel.initialize(
         config: ViewModelConfig(
-          onDisposeError: (e, stack) {
+          onError: (e, stack, type) {
             errorCaught = true;
+            expect(type, ErrorType.dispose);
           },
         ),
       );

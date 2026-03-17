@@ -3,6 +3,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
+import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 
@@ -73,10 +74,9 @@ class _CachedViewModelState<T extends ViewModel>
         throw ViewModelError(msg);
       }());
       // Always report in release mode so crash-reporting services are notified.
-      final handler = ViewModel.config.onListenerError;
+      final handler = ViewModel.config.onError;
       if (handler != null) {
-        handler(ViewModelError(msg), StackTrace.current,
-            'CachedViewModelBuilder.build');
+        handler(ViewModelError(msg), StackTrace.current, ErrorType.listener);
       } else {
         viewModelLog(msg);
       }
