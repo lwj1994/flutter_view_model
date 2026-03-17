@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+const _noCategoryUpdate = Object();
+
 @immutable
 class TodoItem {
   final String id;
@@ -18,13 +20,15 @@ class TodoItem {
     String? id,
     String? title,
     bool? completed,
-    String? category,
+    Object? category = _noCategoryUpdate,
   }) {
     return TodoItem(
       id: id ?? this.id,
       title: title ?? this.title,
       completed: completed ?? this.completed,
-      category: category ?? this.category,
+      category: identical(category, _noCategoryUpdate)
+          ? this.category
+          : category as String?,
     );
   }
 

@@ -54,8 +54,8 @@ void main() {
       final vm = ref.watch(factory);
       final vmHash = vm.hashCode;
 
-      // Unwatch (recycle)
-      ref.recycle(vm);
+      // Drop the last watcher naturally.
+      ref.dispose();
       await Future.delayed(const Duration(milliseconds: 20));
 
       // Should NOT be disposed, should exist in cache
@@ -65,11 +65,7 @@ void main() {
       expect(cachedVm.hashCode, vmHash);
       expect(identical(cachedVm, vm), isTrue);
 
-      // Clean up manually for test isolation if needed,
-      // but strictly speaking it lives forever until app restart or explicit
-      // manager clear.
-
-      ref.dispose();
+      // Clean up is intentionally omitted: aliveForever keeps this cached.
     });
 
     test('Arg-based provider supports aliveForever', () {
@@ -81,11 +77,29 @@ void main() {
       );
 
       final vm = ref.watch(provider(1));
-      ref.recycle(vm);
+      ref.dispose();
 
       final cached = ViewModel.readCached<TestModel>(key: 'arg_forever_1');
       expect(cached, isNotNull);
       expect(identical(cached, vm), isTrue);
+    });
+
+    test('recycle force-disposes aliveForever instances', () async {
+      final ref = TestRef();
+      final factory = AliveForeverFactory(
+        builder: () => TestModel(),
+        key: 'forever_recycle',
+        aliveForever: true,
+      );
+
+      final vm = ref.watch(factory);
+      ref.recycle(vm);
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(
+        () => ViewModel.readCached<TestModel>(key: 'forever_recycle'),
+        throwsA(isA<ViewModelError>()),
+      );
 
       ref.dispose();
     });

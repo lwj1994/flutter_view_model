@@ -492,7 +492,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   List<VM> readCachesByTag<VM extends ViewModel>(Object tag) {
-    return _instanceController.getInstancesByTag<VM>(tag, listen: false);
+    return _instanceController.getInstancesByTag<VM>(tag, listen: true);
   }
 
   VM _getViewModel<VM extends ViewModel>({

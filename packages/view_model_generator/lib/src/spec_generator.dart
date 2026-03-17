@@ -35,10 +35,18 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
 
     final specName = _specVarName(className);
     final annotationArgs = _readAnnotationArgs(element);
+    final classTypeParams = element.typeParameters.toList();
+    final classTypeParamDecls =
+        _typeParameterDeclarationClause(classTypeParams);
+    final classTypeParamRefs = _typeParameterReferenceClause(classTypeParams);
+    final instantiatedClassName = classTypeParamRefs.isEmpty
+        ? className
+        : '$className$classTypeParamRefs';
 
     // Read key/tag from annotation: prefer typed Expr, fallback to raw source.
     const exprChecker = TypeChecker.fromUrl(
-        'package:view_model_annotation/src/annotation.dart#Expression');
+      'package:view_model_annotation/src/annotation.dart#Expression',
+    );
 
     String? keyExpr;
     String? tagExpr;
@@ -77,7 +85,7 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
       tagFromReaderString = true;
     }
 
-    // Fallback: parse raw annotation source when not using Expr
+    // Fallback: parse raw annotation source when not using Expr.
     if (keyExpr == null || tagExpr == null) {
       if (keyExpr == null) {
         keyExpr = annotationArgs['key'];
@@ -115,50 +123,6 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
 
     final argCount = effectiveParams.length;
 
-    // Variant selection
-    if (argCount == 0) {
-      // No-args provider
-      final buffer = StringBuffer();
-      buffer.writeln('final $specName = ViewModelSpec<$className>(');
-
-      if (matchingFactory != null) {
-        buffer
-            .writeln('  builder: () => $className.${matchingFactory.name}(),');
-      } else {
-        buffer.writeln('  builder: () => $className(),');
-      }
-      if (keyExpr != null) {
-        final k = keyExpr.trim();
-        final expr = keyIsString
-            ? (keyFromReaderString
-                ? _quoteString(
-                    k,
-                    allowInterpolation: keyAllowsInterpolation,
-                  )
-                : _normalizeStringLiteral(k))
-            : (_unwrapExpr(k) ?? k);
-        buffer.writeln('  key: $expr,');
-      }
-      if (tagExpr != null) {
-        final t = tagExpr.trim();
-        final expr = tagIsString
-            ? (tagFromReaderString
-                ? _quoteString(
-                    t,
-                    allowInterpolation: tagAllowsInterpolation,
-                  )
-                : _normalizeStringLiteral(t))
-            : (_unwrapExpr(t) ?? t);
-        buffer.writeln('  tag: $expr,');
-      }
-
-      if (aliveForever) {
-        buffer.writeln('  aliveForever: true,');
-      }
-      buffer.writeln(');');
-      return buffer.toString();
-    }
-
     if (argCount > 4) {
       throw InvalidGenerationSourceError(
         '$className has $argCount parameters, but only up to 4 are supported.',
@@ -166,73 +130,222 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
       );
     }
 
-    // Prepare builder signature
+    if (argCount == 0) {
+      final buffer = StringBuffer();
+      final isGenericClass = classTypeParams.isNotEmpty;
+      final indent = isGenericClass ? '  ' : '';
+
+      if (isGenericClass) {
+        buffer.writeln(
+          'ViewModelSpec<$instantiatedClassName> '
+          '$specName$classTypeParamDecls() {',
+        );
+        buffer.writeln('  return ViewModelSpec<$instantiatedClassName>(');
+      } else {
+        buffer.writeln(
+            'final $specName = ViewModelSpec<$instantiatedClassName>(');
+      }
+
+      if (matchingFactory != null) {
+        buffer.writeln(
+          '${indent}  builder: () => '
+          '$instantiatedClassName.${matchingFactory.name}(),',
+        );
+      } else {
+        buffer.writeln(
+          '${indent}  builder: () => $instantiatedClassName(),',
+        );
+      }
+
+      if (keyExpr != null) {
+        final expr = _formatGeneratedExpression(
+          rawExpression: keyExpr,
+          isString: keyIsString,
+          fromReaderString: keyFromReaderString,
+          allowInterpolation: keyAllowsInterpolation,
+        );
+        buffer.writeln('${indent}  key: $expr,');
+      }
+
+      if (tagExpr != null) {
+        final expr = _formatGeneratedExpression(
+          rawExpression: tagExpr,
+          isString: tagIsString,
+          fromReaderString: tagFromReaderString,
+          allowInterpolation: tagAllowsInterpolation,
+        );
+        buffer.writeln('${indent}  tag: $expr,');
+      }
+
+      if (aliveForever) {
+        buffer.writeln('${indent}  aliveForever: true,');
+      }
+
+      if (isGenericClass) {
+        buffer.writeln('  );');
+        buffer.writeln('}');
+      } else {
+        buffer.writeln(');');
+      }
+
+      return buffer.toString();
+    }
+
     final builderArgs = <String>[];
-    final typeArgs = <String>[className];
+    final parameterTypes = <String>[];
+    final typeArgs = <String>[instantiatedClassName];
     final callArgs = <String>[];
 
     for (final p in effectiveParams) {
       final typeStr = p.type.getDisplayString();
       final paramName = p.name ?? '_arg${callArgs.length}';
+      parameterTypes.add(typeStr);
       typeArgs.add(typeStr);
       builderArgs.add('$typeStr $paramName');
       callArgs.add(p.isNamed ? '$paramName: $paramName' : paramName);
     }
 
-    // Build the provider line with correct suffix: arg for 1, argN for N>=2
     final suffix = argCount == 1 ? '' : argCount.toString();
     final buffer = StringBuffer();
-    buffer.writeln(
-        'final $specName = ViewModelSpec.arg$suffix<${typeArgs.join(', ')}>(');
-    buffer.writeln('  builder: (${builderArgs.join(', ')}) => ');
+    final isGenericClass = classTypeParams.isNotEmpty;
+    final indent = isGenericClass ? '  ' : '';
 
-    // Builder expression
-    if (matchingFactory != null) {
-      final name = matchingFactory.name;
-      buffer.writeln('      $className.$name(${callArgs.join(', ')}),');
+    if (isGenericClass) {
+      buffer.writeln(
+        '${_argSpecReturnType(
+          instantiatedClassName: instantiatedClassName,
+          parameterTypes: parameterTypes,
+        )} $specName$classTypeParamDecls() {',
+      );
+      buffer.writeln(
+        '  return ViewModelSpec.arg$suffix<${typeArgs.join(', ')}>(',
+      );
     } else {
-      buffer.writeln('      $className(${callArgs.join(', ')}),');
+      buffer.writeln(
+        'final $specName = ViewModelSpec.arg$suffix<${typeArgs.join(', ')}>(',
+      );
     }
 
-    // Optional key/tag: for arg providers, always closures to match builder.
+    buffer.writeln('${indent}  builder: (${builderArgs.join(', ')}) => ');
+
+    if (matchingFactory != null) {
+      buffer.writeln(
+        '${indent}      $instantiatedClassName.${matchingFactory.name}'
+        '(${callArgs.join(', ')}),',
+      );
+    } else {
+      buffer.writeln(
+        '${indent}      $instantiatedClassName(${callArgs.join(', ')}),',
+      );
+    }
+
     if (keyExpr != null) {
-      final k = keyExpr.trim();
-      final expr = keyIsString
-          ? (keyFromReaderString
-              ? _quoteString(
-                  k,
-                  allowInterpolation: keyAllowsInterpolation,
-                )
-              : _normalizeStringLiteral(k))
-          : (_unwrapExpr(k) ??
-              (_isStringLiteral(k) ? _normalizeStringLiteral(k) : k));
-      buffer.writeln('  key: (${builderArgs.join(', ')}) => $expr,');
-    }
-    if (tagExpr != null) {
-      final t = tagExpr.trim();
-      final expr = tagIsString
-          ? (tagFromReaderString
-              ? _quoteString(
-                  t,
-                  allowInterpolation: tagAllowsInterpolation,
-                )
-              : _normalizeStringLiteral(t))
-          : (_unwrapExpr(t) ??
-              (_isStringLiteral(t) ? _normalizeStringLiteral(t) : t));
-      buffer.writeln('  tag: (${builderArgs.join(', ')}) => $expr,');
-    }
-    if (aliveForever) {
-      buffer.writeln('  aliveForever: (${builderArgs.join(', ')}) => true,');
+      final expr = _formatGeneratedExpression(
+        rawExpression: keyExpr,
+        isString: keyIsString,
+        fromReaderString: keyFromReaderString,
+        allowInterpolation: keyAllowsInterpolation,
+      );
+      buffer.writeln(
+        '${indent}  key: (${builderArgs.join(', ')}) => $expr,',
+      );
     }
 
-    buffer.writeln(');');
+    if (tagExpr != null) {
+      final expr = _formatGeneratedExpression(
+        rawExpression: tagExpr,
+        isString: tagIsString,
+        fromReaderString: tagFromReaderString,
+        allowInterpolation: tagAllowsInterpolation,
+      );
+      buffer.writeln(
+        '${indent}  tag: (${builderArgs.join(', ')}) => $expr,',
+      );
+    }
+
+    if (aliveForever) {
+      buffer.writeln(
+        '${indent}  aliveForever: (${builderArgs.join(', ')}) => true,',
+      );
+    }
+
+    if (isGenericClass) {
+      buffer.writeln('  );');
+      buffer.writeln('}');
+    } else {
+      buffer.writeln(');');
+    }
+
     return buffer.toString();
+  }
+
+  String _formatGeneratedExpression({
+    required String rawExpression,
+    required bool isString,
+    required bool fromReaderString,
+    required bool allowInterpolation,
+  }) {
+    final expression = rawExpression.trim();
+    if (!isString) {
+      return _unwrapExpr(expression) ??
+          (_isStringLiteral(expression)
+              ? _normalizeStringLiteral(expression)
+              : expression);
+    }
+
+    if (fromReaderString) {
+      return _quoteString(
+        expression,
+        allowInterpolation: allowInterpolation,
+      );
+    }
+
+    return _normalizeStringLiteral(expression);
   }
 
   String _toLowerCamel(String name) {
     if (name.isEmpty) return name;
     final first = name[0].toLowerCase();
     return '$first${name.substring(1)}';
+  }
+
+  String _typeParameterDeclarationClause(
+    List<TypeParameterElement> parameters,
+  ) {
+    if (parameters.isEmpty) return '';
+    final formatted =
+        parameters.map(_formatTypeParameterDeclaration).join(', ');
+    return '<$formatted>';
+  }
+
+  String _typeParameterReferenceClause(
+    List<TypeParameterElement> parameters,
+  ) {
+    if (parameters.isEmpty) return '';
+    final formatted = parameters
+        .map((parameter) => parameter.name ?? '')
+        .where((name) => name.isNotEmpty)
+        .join(', ');
+    return '<$formatted>';
+  }
+
+  String _formatTypeParameterDeclaration(TypeParameterElement parameter) {
+    final name = parameter.name ?? '';
+    final bound = parameter.bound?.getDisplayString();
+    if (bound == null || bound == 'dynamic') {
+      return name;
+    }
+    return '$name extends $bound';
+  }
+
+  String _argSpecReturnType({
+    required String instantiatedClassName,
+    required List<String> parameterTypes,
+  }) {
+    final suffix =
+        parameterTypes.length == 1 ? '' : parameterTypes.length.toString();
+    return 'ViewModelSpecWithArg$suffix<$instantiatedClassName, '
+        '${parameterTypes.join(', ')}>';
   }
 
   /// Read annotation argument source texts for key/tag.
@@ -242,45 +355,121 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
         : ((el.metadata as dynamic).annotations as Iterable);
     for (final meta in metadata) {
       final src = (meta as dynamic).toSource() as String;
-      if (src.startsWith('@GenSpec') || src.startsWith('@genSpec')) {
+      if (_isGenSpecAnnotationSource(src)) {
         final key = _extractArg(src, 'key');
         final tag = _extractArg(src, 'tag');
-
         final aliveForever = _extractArg(src, 'aliveForever');
         return {'key': key, 'tag': tag, 'aliveForever': aliveForever};
       }
     }
-    return {'key': null, 'tag': null};
+    return {'key': null, 'tag': null, 'aliveForever': null};
   }
 
   String? _extractArg(String src, String name) {
     final startMatch = RegExp(name + r"\s*:").firstMatch(src);
     if (startMatch == null) return null;
     var i = startMatch.end;
-    // Skip whitespace
-    while (i < src.length && (src[i] == ' ' || src[i] == '\n')) {
+
+    while (i < src.length && _isWhitespace(src[i])) {
       i++;
     }
+
     final sb = StringBuffer();
-    int depth = 0;
+    final delimiters = <String>[];
+    String? stringQuote;
+    bool isRawString = false;
+
     while (i < src.length) {
       final ch = src[i];
-      if (ch == '(') {
-        depth++;
-      } else if (ch == ')') {
-        if (depth == 0) {
-          // End at top-level ')'
-          break;
+
+      if (stringQuote != null) {
+        sb.write(ch);
+        if (ch == stringQuote &&
+            (isRawString || !_isEscapedStringCharacter(src, i))) {
+          stringQuote = null;
+          isRawString = false;
         }
-        depth--;
-      } else if (ch == ',' && depth == 0) {
+        i++;
+        continue;
+      }
+
+      if (ch == '\'' || ch == '"') {
+        stringQuote = ch;
+        isRawString = _isRawStringStart(src, i);
+        sb.write(ch);
+        i++;
+        continue;
+      }
+
+      if (_isOpeningDelimiter(ch)) {
+        delimiters.add(ch);
+      } else if (_isClosingDelimiter(ch)) {
+        if (delimiters.isEmpty) {
+          if (ch == ')') {
+            break;
+          }
+        } else if (_matchesDelimiter(delimiters.last, ch)) {
+          delimiters.removeLast();
+        }
+      } else if (ch == ',' && delimiters.isEmpty) {
         break;
       }
+
       sb.write(ch);
       i++;
     }
+
     final expr = sb.toString().trim();
     return expr.isEmpty ? null : expr;
+  }
+
+  bool _isGenSpecAnnotationSource(String source) {
+    return RegExp(r'^@(?:\w+\.)?(?:GenSpec|genSpec)\b').hasMatch(source.trim());
+  }
+
+  bool _isWhitespace(String ch) {
+    return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
+  }
+
+  bool _isOpeningDelimiter(String ch) {
+    return ch == '(' || ch == '[' || ch == '{' || ch == '<';
+  }
+
+  bool _isClosingDelimiter(String ch) {
+    return ch == ')' || ch == ']' || ch == '}' || ch == '>';
+  }
+
+  bool _matchesDelimiter(String opening, String closing) {
+    return (opening == '(' && closing == ')') ||
+        (opening == '[' && closing == ']') ||
+        (opening == '{' && closing == '}') ||
+        (opening == '<' && closing == '>');
+  }
+
+  bool _isEscapedStringCharacter(String source, int index) {
+    var backslashCount = 0;
+    for (var i = index - 1; i >= 0 && source[i] == r'\'; i--) {
+      backslashCount++;
+    }
+    return backslashCount.isOdd;
+  }
+
+  bool _isRawStringStart(String source, int quoteIndex) {
+    if (quoteIndex == 0 || source[quoteIndex - 1] != 'r') {
+      return false;
+    }
+    if (quoteIndex >= 2 && _isIdentifierPart(source[quoteIndex - 2])) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _isIdentifierPart(String ch) {
+    final code = ch.codeUnitAt(0);
+    return (code >= 48 && code <= 57) ||
+        (code >= 65 && code <= 90) ||
+        (code >= 97 && code <= 122) ||
+        code == 95;
   }
 
   bool _isStringLiteral(String s) {
@@ -420,13 +609,11 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
   String? _unwrapExpr(String s) {
     if (!s.startsWith('Expression(')) return null;
     var i = 'Expression('.length;
-    // Skip spaces
-    while (i < s.length && (s[i] == ' ' || s[i] == '\n' || s[i] == '\t')) {
+    while (i < s.length && _isWhitespace(s[i])) {
       i++;
     }
-    // Optional raw prefix
     if (i < s.length && s[i] == 'r') i++;
-    while (i < s.length && (s[i] == ' ' || s[i] == '\n' || s[i] == '\t')) {
+    while (i < s.length && _isWhitespace(s[i])) {
       i++;
     }
     if (i >= s.length) return null;

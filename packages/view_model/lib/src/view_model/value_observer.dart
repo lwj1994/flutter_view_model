@@ -22,15 +22,15 @@ class ObservableValue<T> {
   /// shared StateViewModel. The value is sourced from the
   /// shared instance identified by `shareKey`.
   T get value {
-    return _vm.state;
+    return _ensureViewModel().state;
   }
 
-  late _ObserveDataViewModel<T> _vm;
+  _ObserveDataViewModel<T>? _vm;
 
   /// Updates the underlying shared StateViewModel state and notifies observers.
   set value(T newValue) {
     // ignore: invalid_use_of_protected_member
-    _vm.setState(newValue);
+    _ensureViewModel().setState(newValue);
   }
 
   /// Creates an observable value.
@@ -39,15 +39,28 @@ class ObservableValue<T> {
   /// Otherwise, a unique key is automatically created, making this value local.
   ObservableValue(this.initialValue, {Object? shareKey})
       : this.shareKey = shareKey ?? Object() {
-    _vm = instanceManager.get<_ObserveDataViewModel<T>>(
-        factory: InstanceFactory(
-            builder: () {
-              return _ObserveDataViewModelFactory<T>(
-                data: initialValue,
-                shareKey: this.shareKey,
-              ).build();
-            },
-            arg: InstanceArg(key: this.shareKey)));
+    _ensureViewModel();
+  }
+
+  _ObserveDataViewModel<T> _ensureViewModel() {
+    final cached = _vm;
+    if (cached != null && !cached.isDisposed) {
+      return cached;
+    }
+
+    final created = instanceManager.get<_ObserveDataViewModel<T>>(
+      factory: InstanceFactory(
+        builder: () {
+          return _ObserveDataViewModelFactory<T>(
+            data: initialValue,
+            shareKey: shareKey,
+          ).build();
+        },
+        arg: InstanceArg(key: shareKey),
+      ),
+    );
+    _vm = created;
+    return created;
   }
 }
 
@@ -103,6 +116,7 @@ class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
   /// `builder` as `data`.
   @override
   Widget build(BuildContext context) {
+    widget.observable._ensureViewModel();
     // Rebuilds when the view model's state changes; latest value
     // is provided to `builder`.
     return widget.builder(
@@ -146,6 +160,8 @@ class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
   /// and `value2`.
   @override
   Widget build(BuildContext context) {
+    widget.observable1._ensureViewModel();
+    widget.observable2._ensureViewModel();
     // Rebuilds when any view model's state changes; latest values
     // are passed to `builder`.
     return widget.builder(
@@ -196,6 +212,9 @@ class _ObserverBuilder3State<T1, T2, T3>
   /// to `builder` as `value1`, `value2`, and `value3`.
   @override
   Widget build(BuildContext context) {
+    widget.observable1._ensureViewModel();
+    widget.observable2._ensureViewModel();
+    widget.observable3._ensureViewModel();
     // Rebuilds when any view model's state changes; latest values
     // are passed to `builder`.
     return widget.builder(
