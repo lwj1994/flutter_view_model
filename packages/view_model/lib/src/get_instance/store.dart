@@ -230,12 +230,8 @@ class Store<T> {
       try {
         handle.onDispose();
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.dispose);
-        } else {
-          viewModelLog("Store<$T> handle dispose error: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.dispose, 'Store<$T> handle dispose error');
       }
     }
     _instances.clear();
@@ -340,12 +336,8 @@ class InstanceHandle<T> with ChangeNotifier {
           (_instance as InstanceLifeCycle).onUnbind(arg, id);
         }
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.dispose);
-        } else {
-          viewModelLog("${_instance.runtimeType} onUnbind error: $e\n$stack");
-        }
+        reportViewModelError(e, stack, ErrorType.lifecycle,
+            '${_instance.runtimeType} onUnbind error');
       }
       if (_bindingIds.isEmpty) {
         _recycle();
@@ -392,12 +384,8 @@ class InstanceHandle<T> with ChangeNotifier {
           (_instance as InstanceLifeCycle).onUnbind(arg, _bindingIds[i]);
         }
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.dispose);
-        } else {
-          viewModelLog("${_instance.runtimeType} onUnbind error: $e\n$stack");
-        }
+        reportViewModelError(e, stack, ErrorType.lifecycle,
+            '${_instance.runtimeType} onUnbind error');
       }
     }
     _bindingIds.clear();
@@ -463,12 +451,8 @@ class InstanceHandle<T> with ChangeNotifier {
       try {
         (_instance as InstanceLifeCycle).onBind(arg, bindingId);
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.listener);
-        } else {
-          viewModelLog("${_instance.runtimeType} onBind error: $e\n$stack");
-        }
+        reportViewModelError(e, stack, ErrorType.lifecycle,
+            '${_instance.runtimeType} onBind error');
       }
     }
   }
@@ -478,12 +462,8 @@ class InstanceHandle<T> with ChangeNotifier {
       try {
         (_instance as InstanceLifeCycle).onCreate(arg);
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.listener);
-        } else {
-          viewModelLog("${_instance.runtimeType} onCreate error: $e\n$stack");
-        }
+        reportViewModelError(e, stack, ErrorType.lifecycle,
+            '${_instance.runtimeType} onCreate error');
       }
     }
   }
@@ -498,12 +478,8 @@ class InstanceHandle<T> with ChangeNotifier {
       try {
         target.onDispose(arg);
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.dispose);
-        } else {
-          viewModelLog("${target.runtimeType} onDispose error: $e\n$stack");
-        }
+        reportViewModelError(e, stack, ErrorType.dispose,
+            '${target.runtimeType} onDispose error');
       }
     }
   }

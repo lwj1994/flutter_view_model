@@ -91,8 +91,8 @@ class AutoDisposeInstanceController {
             break;
         }
       } catch (e, stack) {
-        viewModelLog(
-            "AutoDisposeInstanceController recreate listener error: $e\n$stack");
+        reportViewModelError(e, stack, ErrorType.listener,
+            'AutoDisposeInstanceController recreate listener error');
       }
     };
     _notifierListeners[notifier] = listener;
@@ -265,13 +265,8 @@ class AutoDisposeInstanceController {
         }
         e.unbind(viewModelBinding.id);
       } catch (err, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(err, stack, ErrorType.dispose);
-        } else {
-          viewModelLog(
-              "AutoDisposeInstanceController dispose error: $err\n$stack");
-        }
+        reportViewModelError(err, stack, ErrorType.dispose,
+            'AutoDisposeInstanceController dispose error');
       }
     }
     _notifierListeners.clear();

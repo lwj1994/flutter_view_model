@@ -8,12 +8,19 @@ library;
 /// The type of error reported by [ViewModelConfig.onError].
 enum ErrorType {
   /// An error thrown during listener notification
-  /// (e.g., `notifyListeners()`, state listeners, lifecycle callbacks).
+  /// (e.g., `notifyListeners()`, state listeners).
   listener,
 
+  /// An error thrown during a lifecycle callback
+  /// (e.g., `onCreate`, `onBind`, `onUnbind`).
+  lifecycle,
+
   /// An error thrown during resource disposal
-  /// (e.g., `dispose()`, `unbind()`, cleanup).
+  /// (e.g., `dispose()`, `onDispose()`, cleanup).
   dispose,
+
+  /// An error thrown during pause/resume state changes.
+  pauseResume,
 }
 
 /// Global configuration for ViewModel behavior.
@@ -73,8 +80,7 @@ class ViewModelConfig {
   /// Parameters:
   /// - [error]: The error object that was thrown
   /// - [stackTrace]: The stack trace of the error (may be null)
-  /// - [type]: The category of the error ([ErrorType.listener] or
-  ///   [ErrorType.dispose])
+  /// - [type]: The category of the error (see [ErrorType])
   ///
   /// Example:
   /// ```dart
