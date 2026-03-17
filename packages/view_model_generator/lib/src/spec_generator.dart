@@ -34,6 +34,7 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     }
 
     final specName = _specVarName(className);
+    final annotationArgs = _readAnnotationArgs(element);
 
     // Read key/tag from annotation: prefer typed Expr, fallback to raw source.
     const exprChecker = TypeChecker.fromUrl(
@@ -45,9 +46,17 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     bool tagIsString = false;
     bool keyFromReaderString = false;
     bool tagFromReaderString = false;
-
     final keyReader = annotation.peek('key');
     final tagReader = annotation.peek('tag');
+    final keyAllowsInterpolation = _shouldAllowStringInterpolation(
+      keyReader,
+      annotationArgs['key']?.trim() ?? '',
+    );
+    final tagAllowsInterpolation = _shouldAllowStringInterpolation(
+      tagReader,
+      annotationArgs['tag']?.trim() ?? '',
+    );
+
     final aliveForeverReader = annotation.peek('aliveForever');
     bool aliveForever = aliveForeverReader?.boolValue ?? false;
 
@@ -70,17 +79,16 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
 
     // Fallback: parse raw annotation source when not using Expr
     if (keyExpr == null || tagExpr == null) {
-      final anno = _readAnnotationArgs(element);
       if (keyExpr == null) {
-        keyExpr = anno['key'];
+        keyExpr = annotationArgs['key'];
         if (keyExpr != null) keyIsString = _isStringLiteral(keyExpr.trim());
       }
       if (tagExpr == null) {
-        tagExpr = anno['tag'];
+        tagExpr = annotationArgs['tag'];
         if (tagExpr != null) tagIsString = _isStringLiteral(tagExpr.trim());
       }
       if (!aliveForever) {
-        final af = anno['aliveForever'];
+        final af = annotationArgs['aliveForever'];
         if (af == 'true') aliveForever = true;
       }
     }
@@ -123,7 +131,10 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
         final k = keyExpr.trim();
         final expr = keyIsString
             ? (keyFromReaderString
-                ? _quoteString(k)
+                ? _quoteString(
+                    k,
+                    allowInterpolation: keyAllowsInterpolation,
+                  )
                 : _normalizeStringLiteral(k))
             : (_unwrapExpr(k) ?? k);
         buffer.writeln('  key: $expr,');
@@ -132,7 +143,10 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
         final t = tagExpr.trim();
         final expr = tagIsString
             ? (tagFromReaderString
-                ? _quoteString(t)
+                ? _quoteString(
+                    t,
+                    allowInterpolation: tagAllowsInterpolation,
+                  )
                 : _normalizeStringLiteral(t))
             : (_unwrapExpr(t) ?? t);
         buffer.writeln('  tag: $expr,');
@@ -184,7 +198,12 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     if (keyExpr != null) {
       final k = keyExpr.trim();
       final expr = keyIsString
-          ? (keyFromReaderString ? _quoteString(k) : _normalizeStringLiteral(k))
+          ? (keyFromReaderString
+              ? _quoteString(
+                  k,
+                  allowInterpolation: keyAllowsInterpolation,
+                )
+              : _normalizeStringLiteral(k))
           : (_unwrapExpr(k) ??
               (_isStringLiteral(k) ? _normalizeStringLiteral(k) : k));
       buffer.writeln('  key: (${builderArgs.join(', ')}) => $expr,');
@@ -192,7 +211,12 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     if (tagExpr != null) {
       final t = tagExpr.trim();
       final expr = tagIsString
-          ? (tagFromReaderString ? _quoteString(t) : _normalizeStringLiteral(t))
+          ? (tagFromReaderString
+              ? _quoteString(
+                  t,
+                  allowInterpolation: tagAllowsInterpolation,
+                )
+              : _normalizeStringLiteral(t))
           : (_unwrapExpr(t) ??
               (_isStringLiteral(t) ? _normalizeStringLiteral(t) : t));
       buffer.writeln('  tag: (${builderArgs.join(', ')}) => $expr,');
@@ -266,15 +290,130 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
         s.startsWith('r"');
   }
 
+  bool _isRawStringLiteral(String s) {
+    return s.startsWith("r'") || s.startsWith('r"');
+  }
+
+  bool _shouldAllowStringInterpolation(ConstantReader? reader, String source) {
+    if (source.isEmpty) return false;
+    if (_isRawStringLiteral(source)) return true;
+    if (_isStringLiteral(source)) return false;
+
+    final variable = reader?.objectValue.variable;
+    if (variable == null) return false;
+    return _isRawStringVariable(variable, <int>{});
+  }
+
+  bool _isRawStringVariable(VariableElement variable, Set<int> visited) {
+    if (!visited.add(variable.id)) return false;
+
+    final initializer = variable.constantInitializer?.toSource();
+    if (initializer == null) return false;
+
+    final source = initializer.trim();
+    if (_isRawStringLiteral(source)) return true;
+    if (_isStringLiteral(source)) return false;
+
+    final library = variable.library;
+    if (library == null) return false;
+
+    final referenced = _resolveSimpleVariableReference(library, source);
+    if (referenced == null) return false;
+    return _isRawStringVariable(referenced, visited);
+  }
+
+  VariableElement? _resolveSimpleVariableReference(
+    LibraryElement library,
+    String source,
+  ) {
+    final identifier = source.trim();
+    if (!RegExp(r'^[A-Za-z_]\w*$').hasMatch(identifier)) {
+      return null;
+    }
+
+    for (final element in library.topLevelVariables) {
+      if (element.name == identifier) {
+        return element;
+      }
+    }
+    return null;
+  }
+
   String _normalizeStringLiteral(String s) {
     if (s.startsWith("r'")) return "'${s.substring(2)}";
     if (s.startsWith('r"')) return '"${s.substring(2)}';
     return s;
   }
 
-  String _quoteString(String s) {
-    final escaped = s.replaceAll("'", "\\'");
-    return "'${escaped}'";
+  String _quoteString(String s, {bool allowInterpolation = false}) {
+    final buffer = StringBuffer("'");
+    for (var i = 0; i < s.length; i++) {
+      final ch = s[i];
+      switch (ch) {
+        case r'\':
+          buffer.write(r'\\');
+          break;
+        case "'":
+          buffer.write(r"\'");
+          break;
+        case '\n':
+          buffer.write(r'\n');
+          break;
+        case '\r':
+          buffer.write(r'\r');
+          break;
+        case '\t':
+          buffer.write(r'\t');
+          break;
+        case '\b':
+          buffer.write(r'\b');
+          break;
+        case '\f':
+          buffer.write(r'\f');
+          break;
+        case r'$':
+          if (_shouldInterpolateDollar(
+            s,
+            i,
+            allowInterpolation: allowInterpolation,
+          )) {
+            buffer.write(r'$');
+          } else {
+            buffer.write(r'\$');
+          }
+          break;
+        default:
+          buffer.write(ch);
+      }
+    }
+    buffer.write("'");
+    return buffer.toString();
+  }
+
+  bool _shouldInterpolateDollar(
+    String value,
+    int index, {
+    required bool allowInterpolation,
+  }) {
+    if (!allowInterpolation || index + 1 >= value.length) {
+      return false;
+    }
+    final next = value[index + 1];
+    if (next != '{' && !_isIdentifierStart(next)) {
+      return false;
+    }
+    var backslashCount = 0;
+    for (var i = index - 1; i >= 0 && value[i] == r'\'; i--) {
+      backslashCount++;
+    }
+    return backslashCount.isEven;
+  }
+
+  bool _isIdentifierStart(String ch) {
+    final code = ch.codeUnitAt(0);
+    return (code >= 65 && code <= 90) ||
+        (code >= 97 && code <= 122) ||
+        code == 95;
   }
 
   /// If the source is `Expression('code')`, unwrap to `code`.
