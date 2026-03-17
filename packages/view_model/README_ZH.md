@@ -136,6 +136,10 @@ class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
 ### StateViewModel（强状态版）
 如果你追求不可变状态（配合 `Freezed` 简直完美），它是你的不二之选。它能记录 `previousState`，并支持字段级的差异化监听（`listenStateSelect`）。
 
+做字段级更新时，建议用 `read` 读取 ViewModel，再交给
+`listenStateSelect` / `StateViewModelValueWatcher` 驱动更新；不要再对同一
+个 ViewModel 额外使用 `watch`，否则会把整份 ViewModel 的宽范围监听也挂上。
+
 ```dart
 class UserViewModel extends StateViewModel<UserState> {
   UserViewModel() : super(state: const UserState());
@@ -167,8 +171,16 @@ StreamViewModel() {
 | **`watch(spec)`** | 在 Widget 的 `build` 或逻辑中 | **响应式**：VM 变化会触发 UI 刷新。若 VM 不存在则创建。 |
 | **`read(spec)`** | 事件回调、只需调用方法时 | **非响应式**：仅读取，不监听。若 VM 不存在则创建。 |
 | **`watchCached(key/tag)`** | 寻找现有的单例或共享 VM | 如果缓存里没找到，它会抛出异常。 |
+| **`readCached(key/tag)`** | 读取现有缓存但不触发刷新 | 只查找已有实例，不创建；会参与 binding 生命周期，但不响应 `notifyListeners()`。 |
+| **`watchCachesByTag(tag)`** | 按 tag 批量响应式获取 VM | 批量版 `watch`：会 `bind`、响应 `notifyListeners()`，也会感知 recreate/dispose。 |
+| **`readCachesByTag(tag)`** | 按 tag 批量读取已有 VM | 批量版 `read`：会 `bind`、感知 recreate/dispose，并参与 dispose 清理，但不响应 `notifyListeners()`。 |
 | **`listenStateSelect(...)`**| 针对性监听某个字段 | 例如：只有 `user.age` 变了才弹窗，别的字段变了不理。 |
 | **`recycle(vm)`** | 强制销毁重来 | 比如：退出登录时，一键回收所有用户相关的 VM。 |
+
+补充说明：
+
+- `watch*` 和 `read*` 都会建立 binding，都会影响实例生命周期；差别主要在于是否监听 ViewModel 自身的变化。
+- 做字段级更新时，优先用 `read` 拿到 ViewModel，再交给 `listenStateSelect` 或 `StateViewModelValueWatcher` 驱动更新；不要再对同一个 ViewModel 额外 `watch`。
 
 ---
 

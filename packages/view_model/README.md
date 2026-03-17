@@ -388,6 +388,12 @@ List<MyVM> vms = viewModelBinding.watchCachesByTag<MyVM>('group-a');
 List<MyVM> vms = viewModelBinding.readCachesByTag<MyVM>('group-a');
 ```
 
+`watchCachesByTag` behaves like batch `watch`: it binds each matched instance
+and listens for ViewModel changes. `readCachesByTag` behaves like batch `read`:
+it still binds each matched instance, participates in binding cleanup on
+dispose, and reacts to recreate/dispose events, but it does not react to
+`notifyListeners()`.
+
 ### listen / listenState / listenStateSelect
 
 Fire-and-forget listeners that are automatically cleaned up when the binding disposes. These use `read` internally (bind without triggering widget rebuild) and then attach custom callbacks:
@@ -412,6 +418,10 @@ viewModelBinding.listenStateSelect(
   },
 );
 ```
+
+For field-level updates, prefer `read` plus selector-based listeners. Avoid
+pairing `listenStateSelect` with `watch` on the same ViewModel, or you'll keep
+the broad ViewModel listener and lose the point of selective updates.
 
 ### recycle
 
@@ -588,7 +598,8 @@ Only rebuilds when the selected properties of a `StateViewModel` change:
 
 ```dart
 class _MyPageState extends State<MyPage> with ViewModelStateMixin {
-  // Use read — the ValueWatcher handles its own subscriptions internally
+  // Use read — the ValueWatcher handles its own subscriptions internally.
+  // Avoid watch here, or the whole ViewModel will still trigger rebuilds.
   late final vm = viewModelBinding.read(userSpec);
 
   @override
@@ -602,7 +613,11 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin {
 }
 ```
 
-Internally, each selector is wrapped into a `listenStateSelect` call on the ViewModel. The widget only rebuilds when at least one selector's output differs from its previous value (compared using `ViewModelConfig.equals` or `==` by default).
+Internally, each selector is wrapped into a `listenStateSelect` call on the
+ViewModel. The widget only rebuilds when at least one selector's output differs
+from its previous value (compared using `ViewModelConfig.equals` or `==` by
+default). To keep updates truly fine-grained, read the ViewModel with `read`
+and let the selector mechanism drive rebuilds instead of also using `watch`.
 
 ### ObservableValue & ObserverBuilder
 

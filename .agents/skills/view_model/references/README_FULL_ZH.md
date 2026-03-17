@@ -167,8 +167,17 @@ StreamViewModel() {
 | **`watch(spec)`** | 在 Widget 的 `build` 或逻辑中 | **响应式**：VM 变化会触发 UI 刷新。若 VM 不存在则创建。 |
 | **`read(spec)`** | 事件回调、只需调用方法时 | **非响应式**：仅读取，不监听。若 VM 不存在则创建。 |
 | **`watchCached(key/tag)`** | 寻找现有的单例或共享 VM | 如果缓存里没找到，它会抛出异常。 |
+| **`readCached(key/tag)`** | 读取现有缓存但不触发刷新 | 只查找已有实例，不创建；会参与 binding 生命周期，但不响应 `notifyListeners()`。 |
+| **`watchCachesByTag(tag)`** | 按 tag 批量响应式获取 VM | 批量版 `watch`：会 `bind`，也会监听变化。 |
+| **`readCachesByTag(tag)`** | 按 tag 批量读取已有 VM | 批量版 `read`：会 `bind`、参与 dispose 清理，并感知 recreate/dispose，但不响应 `notifyListeners()`。 |
 | **`listenStateSelect(...)`**| 针对性监听某个字段 | 例如：只有 `user.age` 变了才弹窗，别的字段变了不理。 |
 | **`recycle(vm)`** | 强制销毁重来 | 比如：退出登录时，一键回收所有用户相关的 VM。 |
+
+补充说明：
+
+- `watch*` 和 `read*` 都会建立 binding，都会影响实例生命周期；差别主要在于是否监听 ViewModel 自身的变化。
+- `readCachesByTag(tag)` 不会响应 `notifyListeners()`，但会注册 recreate listener；它不是纯静态查询，binding dispose 时仍会自动 `unbind/removeRef`。
+- 做字段级更新时，优先用 `read` 拿到 ViewModel，再交给 `listenStateSelect` 或 `StateViewModelValueWatcher` 驱动更新；不要再对同一个 ViewModel 额外 `watch`。
 
 ---
 
