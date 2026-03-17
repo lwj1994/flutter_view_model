@@ -8,69 +8,74 @@ on:
 
 jobs:
   codecov-upload:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
 
       - name: Verify toolchain
         timeout-minutes: 2
         run: |
-          puro dart --version
-          puro flutter --version
+          dart --version
+          flutter --version
 
       - name: Check view_model
         timeout-minutes: 5
         working-directory: packages/view_model
         run: |
-          puro flutter pub get
-          puro dart format --set-exit-if-changed -l 80 -o none lib test
-          puro dart analyze --fatal-infos --fatal-warnings lib
-          puro flutter test --coverage test
+          flutter pub get
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib
+          flutter test --coverage test
 
       - name: Check view_model_annotation
         timeout-minutes: 3
         working-directory: packages/view_model_annotation
         run: |
-          puro dart pub get
-          puro dart format --set-exit-if-changed -l 80 -o none lib
-          puro dart analyze --fatal-infos --fatal-warnings lib
+          dart pub get
+          dart format --set-exit-if-changed -l 80 -o none lib
+          dart analyze --fatal-infos --fatal-warnings lib
 
       - name: Check view_model_generator
         timeout-minutes: 5
         working-directory: packages/view_model_generator
         run: |
-          puro dart pub get
-          puro dart format --set-exit-if-changed -l 80 -o none lib test
-          puro dart analyze --fatal-infos --fatal-warnings lib test
-          puro dart test
+          dart pub get
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib test
+          dart test
 
       - name: Check view_model_devtools_extension
         timeout-minutes: 5
         working-directory: packages/view_model_devtools_extension
         run: |
-          puro flutter pub get
-          puro dart format --set-exit-if-changed -l 80 -o none lib test
-          puro dart analyze --fatal-infos --fatal-warnings lib test
-          puro flutter test
+          flutter pub get
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib test
+          flutter test
 
       - name: Check example counter
         timeout-minutes: 4
         working-directory: example/counter
         run: |
-          puro flutter pub get
-          puro dart format --set-exit-if-changed -l 80 -o none lib test
-          puro dart analyze --fatal-infos --fatal-warnings lib test
-          puro flutter test
+          flutter pub get
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib test
+          flutter test
 
       - name: Check example todo_list
         timeout-minutes: 4
         working-directory: example/todo_list
         run: |
-          puro flutter pub get
-          puro dart format --set-exit-if-changed -l 80 -o none lib test
-          puro dart analyze --fatal-infos --fatal-warnings lib test
-          puro flutter test
+          flutter pub get
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib test
+          flutter test
 
       - name: Upload coverage to Codecov
         timeout-minutes: 1
