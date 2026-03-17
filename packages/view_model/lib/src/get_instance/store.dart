@@ -356,9 +356,14 @@ class InstanceHandle<T> with ChangeNotifier {
   InstanceAction? _action;
   InstanceAction? _lastAction;
 
-  /// Gets the current action being performed on this instance.
+  /// Gets the current or most recent action on this instance.
   ///
-  /// Returns the current [InstanceAction] or null if no action is in progress.
+  /// During a [notifyListeners] callback, returns the in-progress action
+  /// (e.g. [InstanceAction.dispose] or [InstanceAction.recreate]).
+  /// After the callback completes, [_action] is cleared to `null`.
+  /// Once the handle is disposed, falls back to [_lastAction] so that
+  /// late readers (e.g. Store's dispose listener) can still observe what
+  /// happened.
   InstanceAction? get action => _action ?? (_disposed ? _lastAction : null);
 
   /// Disposes this instance and triggers cleanup.

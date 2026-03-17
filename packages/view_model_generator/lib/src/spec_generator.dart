@@ -431,6 +431,9 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
   }
 
+  // NOTE: `<`/`>` are treated as paired delimiters to support generic type
+  // arguments in annotation values (e.g. `const <String>['a']`). This is safe
+  // because comparison operators should not appear in const annotation args.
   bool _isOpeningDelimiter(String ch) {
     return ch == '(' || ch == '[' || ch == '{' || ch == '<';
   }

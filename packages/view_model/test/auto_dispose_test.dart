@@ -356,8 +356,7 @@ void main() {
         expect(controller.instanceNotifiers.length, 1);
       });
 
-      test('listen: false does not attach listeners or bind viewModelBinding',
-          () {
+      test('listen: false binds but does not attach recreate listener', () {
         const tag = 'listen_false_tag';
         final factory = InstanceFactory<TestStatelessViewModel>(
           builder: () => TestStatelessViewModel(),
@@ -371,8 +370,10 @@ void main() {
 
         final handle = instanceManager.getNotifier<TestStatelessViewModel>(
             factory: factory);
-        expect(handle.bindingIds.contains(mockRef.id), isFalse);
-        expect(controller.instanceNotifiers, isEmpty);
+        // listen: false still binds for lifecycle tracking.
+        expect(handle.bindingIds.contains(mockRef.id), isTrue);
+        // Tracked in instanceNotifiers for cleanup on dispose.
+        expect(controller.instanceNotifiers.length, 1);
       });
     });
 

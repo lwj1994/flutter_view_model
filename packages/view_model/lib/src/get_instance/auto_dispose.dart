@@ -70,7 +70,9 @@ class AutoDisposeInstanceController {
   /// Attaches a recreate listener to the notifier if not already attached.
   void _attachRecreateListener(InstanceHandle notifier) {
     if (_disposed || _notifierListeners.containsKey(notifier)) return;
-    _instanceNotifiers.add(notifier);
+    if (!_instanceNotifiers.contains(notifier)) {
+      _instanceNotifiers.add(notifier);
+    }
     final listener = () {
       try {
         switch (notifier.action) {
@@ -138,6 +140,8 @@ class AutoDisposeInstanceController {
         bindingId: viewModelBinding.id,
       ),
     );
+    // getNotifier calls bind(bindingId) internally via the factory arg.
+    // Order: bind (via getNotifier) → addRef → attachListener.
     final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
       factory: factory,
     );
@@ -152,12 +156,23 @@ class AutoDisposeInstanceController {
     final notifiers = instanceManager.getNotifiersByTag<T>(tag);
     final List<T> result = [];
     for (final notifier in notifiers) {
+      // Always bind + addRef to establish the binding relationship and keep
+      // the instance alive. This matches read() semantics (bind without
+      // listener).
+      notifier.bind(viewModelBinding.id);
+      if (notifier.instance is ViewModel) {
+        (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
+      }
       if (listen) {
-        notifier.bind(viewModelBinding.id);
-        if (notifier.instance is ViewModel) {
-          (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
-        }
+        // Register recreate listener for watch (listen: true) — rebuild on recreate.
         _attachRecreateListener(notifier);
+      } else {
+        // Track for cleanup (removeRef + unbind on dispose) without a recreate
+        // listener. Without this, dispose() would skip these notifiers entirely.
+        if (!_notifierListeners.containsKey(notifier) &&
+            !_instanceNotifiers.contains(notifier)) {
+          _instanceNotifiers.add(notifier);
+        }
       }
       result.add(notifier.instance);
     }
