@@ -74,12 +74,8 @@ class _CachedViewModelState<T extends ViewModel>
         throw ViewModelError(msg);
       }());
       // Always report in release mode so crash-reporting services are notified.
-      final handler = ViewModel.config.onError;
-      if (handler != null) {
-        handler(ViewModelError(msg), StackTrace.current, ErrorType.listener);
-      } else {
-        viewModelLog(msg);
-      }
+      reportViewModelError(ViewModelError(msg), StackTrace.current,
+          ErrorType.listener, 'CachedViewModelBuilder not found');
       return const SizedBox.shrink();
     }
     return widget.builder.call(

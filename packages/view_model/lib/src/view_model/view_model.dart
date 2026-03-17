@@ -387,12 +387,8 @@ mixin class ViewModel
       try {
         element.call();
       } catch (e, stack) {
-        final handler = config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.listener);
-        } else {
-          viewModelLog("error on notifyListeners: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.listener, 'error on notifyListeners');
       }
     }
   }
@@ -464,12 +460,8 @@ mixin class ViewModel
       try {
         element.onCreate(this, arg);
       } catch (e, stack) {
-        final handler = config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.listener);
-        } else {
-          viewModelLog("Lifecycle observer onCreate error: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.lifecycle, 'Lifecycle observer onCreate error');
       }
     }
   }
@@ -482,12 +474,8 @@ mixin class ViewModel
       try {
         element.onBind(this, arg, bindingId);
       } catch (e, stack) {
-        final handler = config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.listener);
-        } else {
-          viewModelLog("Lifecycle observer onBind error: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.lifecycle, 'Lifecycle observer onBind error');
       }
     }
   }
@@ -500,12 +488,8 @@ mixin class ViewModel
       try {
         element.onUnbind(this, arg, bindingId);
       } catch (e, stack) {
-        final handler = config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.dispose);
-        } else {
-          viewModelLog("Lifecycle observer onUnbind error: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.lifecycle, 'Lifecycle observer onUnbind error');
       }
     }
   }
@@ -518,44 +502,27 @@ mixin class ViewModel
     try {
       _autoDisposeController.dispose();
     } catch (e, stack) {
-      final handler = config.onError;
-      if (handler != null) {
-        handler(e, stack, ErrorType.dispose);
-      } else {
-        viewModelLog(
-            "$runtimeType _autoDisposeController dispose error: $e\n$stack");
-      }
+      reportViewModelError(e, stack, ErrorType.dispose,
+          '$runtimeType _autoDisposeController dispose error');
     }
     try {
       refHandler.dispose();
     } catch (e, stack) {
-      final handler = config.onError;
-      if (handler != null) {
-        handler(e, stack, ErrorType.dispose);
-      } else {
-        viewModelLog("$runtimeType refHandler dispose error: $e\n$stack");
-      }
+      reportViewModelError(
+          e, stack, ErrorType.dispose, '$runtimeType refHandler dispose error');
     }
     try {
       dispose();
     } catch (e, stack) {
-      final handler = config.onError;
-      if (handler != null) {
-        handler(e, stack, ErrorType.dispose);
-      } else {
-        viewModelLog("$runtimeType dispose() error: $e\n$stack");
-      }
+      reportViewModelError(
+          e, stack, ErrorType.dispose, '$runtimeType dispose() error');
     }
     for (final element in _viewModelLifecycles) {
       try {
         element.onDispose(this, arg);
       } catch (e, stack) {
-        final handler = config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.dispose);
-        } else {
-          viewModelLog("Lifecycle observer onDispose error: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.dispose, 'Lifecycle observer onDispose error');
       }
     }
   }
@@ -712,12 +679,8 @@ abstract class StateViewModel<T> with ViewModel {
       try {
         element.call(event.previousState, event.currentState);
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.listener);
-        } else {
-          viewModelLog("error on stateListener: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.listener, 'error on stateListener');
       }
     }
 
@@ -790,12 +753,8 @@ abstract class StateViewModel<T> with ViewModel {
   /// - [stack]: The stack trace of the error
   @protected
   void onError(Object error, [StackTrace? stack]) {
-    final handler = ViewModel.config.onError;
-    if (handler != null) {
-      handler(error, stack, ErrorType.listener);
-    } else {
-      viewModelLog("$runtimeType setState error: $error\n${stack ?? ''}");
-    }
+    reportViewModelError(
+        error, stack, ErrorType.listener, '$runtimeType setState error');
   }
 
   /// Gets the previous state before the last [setState] call.
@@ -851,12 +810,8 @@ class AutoDisposeController {
       try {
         element.call();
       } catch (e, stack) {
-        final handler = ViewModel.config.onError;
-        if (handler != null) {
-          handler(e, stack, ErrorType.dispose);
-        } else {
-          viewModelLog("AutoDisposeMixin error: $e\n$stack");
-        }
+        reportViewModelError(
+            e, stack, ErrorType.dispose, 'AutoDisposeMixin error');
       }
     }
   }
