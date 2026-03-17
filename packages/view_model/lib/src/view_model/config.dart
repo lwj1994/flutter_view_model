@@ -5,6 +5,17 @@
 /// state comparison logic.
 library;
 
+/// The type of error reported by [ViewModelConfig.onError].
+enum ErrorType {
+  /// An error thrown during listener notification
+  /// (e.g., `notifyListeners()`, state listeners, lifecycle callbacks).
+  listener,
+
+  /// An error thrown during resource disposal
+  /// (e.g., `dispose()`, `unbind()`, cleanup).
+  dispose,
+}
+
 /// Global configuration for ViewModel behavior.
 ///
 /// This class allows customization of ViewModel system behavior including
@@ -52,51 +63,29 @@ class ViewModelConfig {
   /// Returns `true` if the values should be considered equal.
   final bool Function(dynamic previous, dynamic current)? equals;
 
-  /// Global error handler for listener errors.
+  /// Global error handler for ViewModel errors.
   ///
-  /// This callback is invoked when an error occurs during listener notification
-  /// in `notifyListeners()` or state listeners in `StateViewModel`. By default,
-  /// errors are only logged. Provide a custom handler to implement different
-  /// error handling strategies (e.g., reporting to crash analytics).
+  /// This callback is invoked when an error occurs during listener
+  /// notification or resource disposal. By default, errors are only logged.
+  /// Provide a custom handler to implement different error handling
+  /// strategies (e.g., reporting to crash analytics).
   ///
   /// Parameters:
   /// - [error]: The error object that was thrown
   /// - [stackTrace]: The stack trace of the error (may be null)
-  /// - [context]: A string describing where the error occurred
-  ///   (e.g., "notifyListeners", "stateListener")
+  /// - [type]: The category of the error ([ErrorType.listener] or
+  ///   [ErrorType.dispose])
   ///
   /// Example:
   /// ```dart
   /// ViewModelConfig(
-  ///   onListenerError: (error, stack, context) {
-  ///     // Report to crash analytics
+  ///   onError: (error, stack, type) {
   ///     FirebaseCrashlytics.instance.recordError(error, stack);
-  ///     // Or rethrow in debug mode
-  ///     if (kDebugMode) rethrow;
   ///   },
   /// )
   /// ```
-  final void Function(Object error, StackTrace? stackTrace, String context)?
-      onListenerError;
-
-  /// Global error handler for disposal errors.
-  ///
-  /// This callback is invoked when an error occurs during resource disposal
-  /// in `AutoDisposeController`. By default, errors are only logged.
-  ///
-  /// Parameters:
-  /// - [error]: The error object that was thrown
-  /// - [stackTrace]: The stack trace of the error (may be null)
-  ///
-  /// Example:
-  /// ```dart
-  /// ViewModelConfig(
-  ///   onDisposeError: (error, stack) {
-  ///     print('Disposal error: $error');
-  ///   },
-  /// )
-  /// ```
-  final void Function(Object error, StackTrace? stackTrace)? onDisposeError;
+  final void Function(Object error, StackTrace? stackTrace, ErrorType type)?
+      onError;
 
   /// Creates a new ViewModel configuration.
   ///
@@ -104,12 +93,10 @@ class ViewModelConfig {
   /// - [isLoggingEnabled]: Whether to enable debug logging
   ///   (defaults to `false`)
   /// - [equals]: Custom state equality function (optional)
-  /// - [onListenerError]: Custom listener error handler (optional)
-  /// - [onDisposeError]: Custom disposal error handler (optional)
+  /// - [onError]: Custom error handler (optional)
   ViewModelConfig({
     this.isLoggingEnabled = false,
     this.equals,
-    this.onListenerError,
-    this.onDisposeError,
+    this.onError,
   });
 }

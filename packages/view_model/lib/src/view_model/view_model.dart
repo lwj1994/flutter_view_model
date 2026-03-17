@@ -377,7 +377,7 @@ mixin class ViewModel
   /// and listeners need to be updated (e.g., to rebuild widgets).
   ///
   /// Any exceptions thrown by listeners are caught and handled via the
-  /// global [ViewModelConfig.onListenerError] callback. If no custom handler
+  /// global [ViewModelConfig.onError] callback. If no custom handler
   /// is provided, errors are logged. This prevents one listener from
   /// affecting others.
   void notifyListeners() {
@@ -387,9 +387,9 @@ mixin class ViewModel
       try {
         element.call();
       } catch (e, stack) {
-        final handler = config.onListenerError;
+        final handler = config.onError;
         if (handler != null) {
-          handler(e, stack, 'notifyListeners');
+          handler(e, stack, ErrorType.listener);
         } else {
           viewModelLog("error on notifyListeners: $e\n$stack");
         }
@@ -464,7 +464,12 @@ mixin class ViewModel
       try {
         element.onCreate(this, arg);
       } catch (e, stack) {
-        viewModelLog("Lifecycle observer onCreate error: $e\n$stack");
+        final handler = config.onError;
+        if (handler != null) {
+          handler(e, stack, ErrorType.listener);
+        } else {
+          viewModelLog("Lifecycle observer onCreate error: $e\n$stack");
+        }
       }
     }
   }
@@ -477,7 +482,12 @@ mixin class ViewModel
       try {
         element.onBind(this, arg, bindingId);
       } catch (e, stack) {
-        viewModelLog("Lifecycle observer onBind error: $e\n$stack");
+        final handler = config.onError;
+        if (handler != null) {
+          handler(e, stack, ErrorType.listener);
+        } else {
+          viewModelLog("Lifecycle observer onBind error: $e\n$stack");
+        }
       }
     }
   }
@@ -490,9 +500,9 @@ mixin class ViewModel
       try {
         element.onUnbind(this, arg, bindingId);
       } catch (e, stack) {
-        final handler = config.onDisposeError;
+        final handler = config.onError;
         if (handler != null) {
-          handler(e, stack);
+          handler(e, stack, ErrorType.dispose);
         } else {
           viewModelLog("Lifecycle observer onUnbind error: $e\n$stack");
         }
@@ -508,9 +518,9 @@ mixin class ViewModel
     try {
       _autoDisposeController.dispose();
     } catch (e, stack) {
-      final handler = config.onDisposeError;
+      final handler = config.onError;
       if (handler != null) {
-        handler(e, stack);
+        handler(e, stack, ErrorType.dispose);
       } else {
         viewModelLog(
             "$runtimeType _autoDisposeController dispose error: $e\n$stack");
@@ -519,9 +529,9 @@ mixin class ViewModel
     try {
       refHandler.dispose();
     } catch (e, stack) {
-      final handler = config.onDisposeError;
+      final handler = config.onError;
       if (handler != null) {
-        handler(e, stack);
+        handler(e, stack, ErrorType.dispose);
       } else {
         viewModelLog("$runtimeType refHandler dispose error: $e\n$stack");
       }
@@ -529,9 +539,9 @@ mixin class ViewModel
     try {
       dispose();
     } catch (e, stack) {
-      final handler = config.onDisposeError;
+      final handler = config.onError;
       if (handler != null) {
-        handler(e, stack);
+        handler(e, stack, ErrorType.dispose);
       } else {
         viewModelLog("$runtimeType dispose() error: $e\n$stack");
       }
@@ -540,9 +550,9 @@ mixin class ViewModel
       try {
         element.onDispose(this, arg);
       } catch (e, stack) {
-        final handler = config.onDisposeError;
+        final handler = config.onError;
         if (handler != null) {
-          handler(e, stack);
+          handler(e, stack, ErrorType.dispose);
         } else {
           viewModelLog("Lifecycle observer onDispose error: $e\n$stack");
         }
@@ -702,9 +712,9 @@ abstract class StateViewModel<T> with ViewModel {
       try {
         element.call(event.previousState, event.currentState);
       } catch (e, stack) {
-        final handler = ViewModel.config.onListenerError;
+        final handler = ViewModel.config.onError;
         if (handler != null) {
-          handler(e, stack, 'stateListener');
+          handler(e, stack, ErrorType.listener);
         } else {
           viewModelLog("error on stateListener: $e\n$stack");
         }
@@ -772,7 +782,7 @@ abstract class StateViewModel<T> with ViewModel {
   /// Called when an error occurs during state operations.
   ///
   /// Override this method to provide custom error handling.
-  /// By default, errors are reported via [ViewModelConfig.onListenerError]
+  /// By default, errors are reported via [ViewModelConfig.onError]
   /// or logged using [viewModelLog].
   ///
   /// Parameters:
@@ -780,9 +790,9 @@ abstract class StateViewModel<T> with ViewModel {
   /// - [stack]: The stack trace of the error
   @protected
   void onError(Object error, [StackTrace? stack]) {
-    final handler = ViewModel.config.onListenerError;
+    final handler = ViewModel.config.onError;
     if (handler != null) {
-      handler(error, stack, 'setState');
+      handler(error, stack, ErrorType.listener);
     } else {
       viewModelLog("$runtimeType setState error: $error\n${stack ?? ''}");
     }
@@ -833,7 +843,7 @@ class AutoDisposeController {
   /// Executes all registered disposal callbacks.
   ///
   /// Any exceptions thrown by disposal callbacks are caught and handled via
-  /// the global [ViewModelConfig.onDisposeError] callback. If no custom
+  /// the global [ViewModelConfig.onError] callback. If no custom
   /// handler is provided, errors are logged. This prevents one callback from
   /// affecting others.
   void dispose() {
@@ -841,9 +851,9 @@ class AutoDisposeController {
       try {
         element.call();
       } catch (e, stack) {
-        final handler = ViewModel.config.onDisposeError;
+        final handler = ViewModel.config.onError;
         if (handler != null) {
-          handler(e, stack);
+          handler(e, stack, ErrorType.dispose);
         } else {
           viewModelLog("AutoDisposeMixin error: $e\n$stack");
         }

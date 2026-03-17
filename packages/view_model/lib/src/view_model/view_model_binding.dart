@@ -11,6 +11,7 @@ import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
+import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 import 'state_store.dart';
@@ -687,9 +688,9 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       try {
         e.call();
       } catch (e, stack) {
-        final handler = ViewModel.config.onDisposeError;
+        final handler = ViewModel.config.onError;
         if (handler != null) {
-          handler(e, stack);
+          handler(e, stack, ErrorType.dispose);
         } else {
           viewModelLog("ViewModelBinding dispose listener error: $e\n$stack");
         }
@@ -698,9 +699,9 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     try {
       _pauseAwareController.dispose();
     } catch (e, stack) {
-      final handler = ViewModel.config.onDisposeError;
+      final handler = ViewModel.config.onError;
       if (handler != null) {
-        handler(e, stack);
+        handler(e, stack, ErrorType.dispose);
       } else {
         viewModelLog(
             "ViewModelBinding pauseController dispose error: $e\n$stack");

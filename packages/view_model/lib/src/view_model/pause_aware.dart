@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 /// A controller that manages pause/resume lifecycle for a ViewModel, based on a
@@ -125,9 +126,9 @@ class PauseAwareController {
         onWidgetResume();
       }
     } catch (e, stack) {
-      final handler = ViewModel.config.onListenerError;
+      final handler = ViewModel.config.onError;
       if (handler != null) {
-        handler(e, stack, 'PauseAwareController._updatePauseState');
+        handler(e, stack, ErrorType.listener);
       } else {
         viewModelLog("PauseAwareController callback error: $e\n$stack");
       }
@@ -146,9 +147,9 @@ class PauseAwareController {
       try {
         provider.dispose();
       } catch (e, stack) {
-        final handler = ViewModel.config.onDisposeError;
+        final handler = ViewModel.config.onError;
         if (handler != null) {
-          handler(e, stack);
+          handler(e, stack, ErrorType.dispose);
         } else {
           viewModelLog(
               "PauseAwareController provider dispose error: $e\n$stack");
