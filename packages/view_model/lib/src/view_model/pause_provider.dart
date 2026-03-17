@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:view_model/src/view_model/app_lifecycle_observer.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
-/// BinderVisibleListener controls manual pause/resume for a page/state.
+/// ViewModelBindingPauseProvider controls manual pause/resume for a page/state.
 ///
 /// - Call [onPause] to mark the page as paused (e.g., covered by another
 ///   route).
@@ -33,15 +33,12 @@ class AppPauseProvider with ViewModelBindingPauseProvider {
   AppPauseProvider() {
     _subscription = AppLifecycleObserver().stream.listen((state) {
       if (state == AppLifecycleState.hidden) {
-        _controller.add(true); // Should pause
+        pause();
       } else if (state == AppLifecycleState.resumed) {
-        _controller.add(false); // Can resume
+        resume();
       }
     });
   }
-
-  @override
-  Stream<bool> get onPauseStateChanged => _controller.stream;
 
   @override
   void dispose() {
@@ -113,9 +110,6 @@ class PageRoutePauseProvider with ViewModelBindingPauseProvider, RouteAware {
     observer.unsubscribe(this);
     _subscribedRoutes.clear();
   }
-
-  @override
-  Stream<bool> get onPauseStateChanged => _controller.stream;
 
   @override
   void dispose() {

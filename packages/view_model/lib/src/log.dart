@@ -27,17 +27,11 @@ import 'package:view_model/view_model.dart';
 /// Example:
 /// ```dart
 /// // Enable logging in configuration
-/// ViewModel.config = ViewModelConfig(isLoggingEnabled: true);
+/// ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
 ///
 /// // Log messages will now appear
 /// viewModelLog('ViewModel created: MyViewModel');
 /// viewModelLog('State updated: ${newState}');
-///
-/// // Disable logging
-/// ViewModel.config = ViewModelConfig(isLoggingEnabled: false);
-///
-/// // This message will not appear
-/// viewModelLog('This will not be logged');
 /// ```
 void viewModelLog(String s) {
   if (!ViewModel.config.isLoggingEnabled) return;

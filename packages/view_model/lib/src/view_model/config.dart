@@ -21,7 +21,7 @@ library;
 /// );
 ///
 /// // Apply configuration globally
-/// ViewModel.config = config;
+/// ViewModel.initialize(config: config);
 /// ```
 class ViewModelConfig {
   /// Whether to enable logging for ViewModel operations.

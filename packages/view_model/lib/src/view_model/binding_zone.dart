@@ -32,12 +32,10 @@ R runWithBinding<R>(R Function() body, ViewModelBinding binding) {
 /// Example usage:
 /// ```dart
 /// class MyViewModel with ViewModel {
-///   late final DependencyHandler _dependencyHandler;
-///
 ///   @override
-///   void onInit() {
-///     _dependencyHandler = DependencyHandler();
-///     final userService = _dependencyHandler.readViewModel<UserService>();
+///   void onCreate(InstanceArg arg) {
+///     super.onCreate(arg);
+///     final userService = viewModelBinding.read(UserServiceSpec());
 ///   }
 /// }
 /// ```

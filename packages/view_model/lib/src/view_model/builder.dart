@@ -1,6 +1,7 @@
 // @author luwenjie on 2025/10/27 14:17:50
 
 import 'package:flutter/widgets.dart';
+import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
@@ -66,12 +67,19 @@ class _CachedViewModelState<T extends ViewModel>
       tag: widget.tag,
     );
     if (vm == null) {
+      final msg = "${T} not found in CachedViewModelBuilder. "
+          "key: ${widget.shareKey}, tag: ${widget.tag}";
       assert(() {
-        throw ViewModelError(
-          "${T} not found in CachedViewModelBuilder. "
-          "key: ${widget.shareKey}, tag: ${widget.tag}",
-        );
+        throw ViewModelError(msg);
       }());
+      // Always report in release mode so crash-reporting services are notified.
+      final handler = ViewModel.config.onListenerError;
+      if (handler != null) {
+        handler(ViewModelError(msg), StackTrace.current,
+            'CachedViewModelBuilder.build');
+      } else {
+        viewModelLog(msg);
+      }
       return const SizedBox.shrink();
     }
     return widget.builder.call(

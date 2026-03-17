@@ -8,7 +8,7 @@ class StackPathLocator {
   String? _cachedObjectPath;
 
   bool get ready =>
-      _cachedObjectPath != null && _cachedObjectPath?.isNotEmpty == true;
+      _cachedObjectPath != null && _cachedObjectPath!.isNotEmpty;
 
   /// Gets the file path and line number where this mixin is being used.
   ///
@@ -71,8 +71,13 @@ class StackPathLocator {
       }
 
       return _cachedObjectPath!;
-    } catch (e) {
-      //
+    } catch (e, stack) {
+      _cachedObjectPath = "";
+      assert(() {
+        debugPrint(
+            "StackPathLocator: failed to resolve object path: $e\n$stack");
+        return true;
+      }());
       return "";
     }
   }

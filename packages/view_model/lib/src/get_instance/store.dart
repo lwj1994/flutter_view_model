@@ -1,7 +1,7 @@
 /// Instance storage and lifecycle management for ViewModels.
 ///
 /// This file provides the core storage mechanism for ViewModel instances,
-/// including caching, lifecycle management, watcher tracking, and automatic
+/// including caching, lifecycle management, binding tracking, and automatic
 /// disposal. It ensures efficient resource usage and proper cleanup.
 ///
 /// @author luwenjie on 2025/3/25 12:14:48
@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
+import 'package:view_model/src/view_model/view_model.dart';
 
 import 'manager.dart';
 
@@ -29,7 +30,7 @@ class _Undefined {
 ///
 /// Key features:
 /// - Instance caching by key
-/// - Automatic disposal when no watchers remain
+/// - Automatic disposal when no bindings remain
 /// - Creation time tracking for instance discovery
 /// - Stream-based instance creation notifications
 ///
@@ -46,6 +47,9 @@ class Store<T> {
   /// Map of cached instances keyed by their unique identifiers.
   final Map<Object, InstanceHandle<T>> _instances = {};
   bool _disposed = false;
+
+  /// Monotonically increasing counter for instance creation ordering.
+  int _nextIndex = 0;
 
   bool get isEmpty => _instances.isEmpty;
 
@@ -72,6 +76,9 @@ class Store<T> {
   InstanceHandle<T>? findNewlyInstance({
     Object? tag,
   }) {
+    if (_disposed) {
+      throw ViewModelError("Store<$T> has been disposed.");
+    }
     if (_instances.isEmpty) return null;
     final l = _instances.values.toList();
     l.sort((InstanceHandle<T> a, InstanceHandle<T> b) {
@@ -86,6 +93,9 @@ class Store<T> {
   }
 
   List<InstanceHandle<T>> getInstancesByTag(Object tag) {
+    if (_disposed) {
+      throw ViewModelError("Store<$T> has been disposed.");
+    }
     if (_instances.isEmpty) return [];
     final List<InstanceHandle<T>> result = [];
     for (final handle in _instances.values) {
@@ -129,12 +139,12 @@ class Store<T> {
   ///
   /// This is the core method for instance management. It handles both retrieval
   /// of existing cached instances and creation of new ones. The method also
-  /// manages watcher registration for lifecycle tracking.
+  /// manages binding registration for lifecycle tracking.
   ///
   /// Process:
   /// 1. Generate or use provided key for instance identification
   /// 2. Check cache for existing instance with the key
-  /// 3. If found, optionally add new watcher and return cached instance
+  /// 3. If found, optionally add new binding and return cached instance
   /// 4. If not found, create new instance using factory builder
   /// 5. Cache the new instance and set up disposal monitoring
   ///
@@ -158,7 +168,7 @@ class Store<T> {
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
       final newBind =
-          bindingId != null && !notifier.bindingIds.contains(bindingId);
+          bindingId != null && !notifier.containsBinding(bindingId);
       if (newBind) {
         notifier.bind(bindingId);
       }
@@ -172,17 +182,11 @@ class Store<T> {
     // create new instance
     final instance = factory.builder!();
 
-    int maxIndex = -1;
-    for (final e in _instances.values) {
-      if (e.index > maxIndex) {
-        maxIndex = e.index;
-      }
-    }
     final create = InstanceHandle<T>(
       instance: instance,
       arg: arg,
       factory: factory.builder!,
-      index: maxIndex + 1,
+      index: _nextIndex++,
     );
     _instances[realKey] = create;
     _streamController.add(create);
@@ -194,7 +198,7 @@ class Store<T> {
   ///
   /// This method finds the instance handle for the given instance and
   /// triggers its recreation. The new instance will replace the old one
-  /// while maintaining the same handle and watcher relationships.
+  /// while maintaining the same handle and binding relationships.
   ///
   /// Parameters:
   /// - [t]: The existing instance to recreate
@@ -205,6 +209,9 @@ class Store<T> {
     T t, {
     T Function()? builder,
   }) {
+    if (_disposed) {
+      throw ViewModelError("Store<$T> has been disposed.");
+    }
     final find = _instances.values.firstWhere(
       (e) => e.instance == t,
       orElse: () => throw ViewModelError(
@@ -216,6 +223,21 @@ class Store<T> {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    // Dispose remaining handles to ensure lifecycle callbacks are called.
+    // Each handle is wrapped in try-catch so one failure doesn't skip others.
+    final handles = List<InstanceHandle<T>>.of(_instances.values);
+    for (final handle in handles) {
+      try {
+        handle.onDispose();
+      } catch (e, stack) {
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog("Store<$T> handle dispose error: $e\n$stack");
+        }
+      }
+    }
     _instances.clear();
     _streamController.close();
   }
@@ -224,13 +246,13 @@ class Store<T> {
 /// Handle for managing a ViewModel instance and its lifecycle.
 ///
 /// This class wraps a ViewModel instance and provides lifecycle management,
-/// watcher tracking, and recreation capabilities. It acts as a proxy between
+/// binding tracking, and recreation capabilities. It acts as a proxy between
 /// the store and the actual ViewModel instance.
 ///
 /// Key responsibilities:
 /// - Instance lifecycle management (creation, disposal, recreation)
-/// - Watcher registration and removal
-/// - Automatic disposal when no watchers remain
+/// - Binding registration and removal
+/// - Automatic disposal when no bindings remain
 /// - Notification of lifecycle events
 ///
 /// The handle uses [ChangeNotifier] to notify listeners of important events
@@ -239,8 +261,17 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Arguments used for instance creation and identification.
   final InstanceArg arg;
 
-  /// List of watcher IDs currently watching this instance.
-  final List<String> bindingIds = List.empty(growable: true);
+  /// List of binding IDs currently bound to this instance.
+  final List<String> _bindingIds = List.empty(growable: true);
+
+  /// Unmodifiable view of active binding IDs.
+  List<String> get bindingIds => List.unmodifiable(_bindingIds);
+
+  /// Returns true if [id] is in the active binding list.
+  ///
+  /// Prefer this over `bindingIds.contains(id)` to avoid allocating
+  /// an unmodifiable list wrapper on every call.
+  bool containsBinding(String id) => _bindingIds.contains(id);
 
   /// Factory function for creating new instances of this type.
   final T Function() factory;
@@ -250,14 +281,19 @@ class InstanceHandle<T> with ChangeNotifier {
 
   /// Gets the current ViewModel instance.
   ///
-  /// Throws if the instance has been disposed.
-  T get instance => _instance!;
+  /// Throws [ViewModelError] if the instance has been disposed.
+  T get instance {
+    if (_instance == null) {
+      throw ViewModelError("Cannot access $T instance after disposal.");
+    }
+    return _instance!;
+  }
 
   /// The actual ViewModel instance (null when disposed).
   late T? _instance;
   bool _disposed = false;
 
-  bool get isDisposed => _instance == null;
+  bool get isDisposed => _disposed;
 
   /// Creates a new instance handle.
   ///
@@ -275,37 +311,44 @@ class InstanceHandle<T> with ChangeNotifier {
     onCreate(arg);
   }
 
-  /// Adds a watcher to this instance.
+  /// Adds a binding to this instance.
   ///
-  /// This method registers a new watcher ID and notifies the instance
+  /// This method registers a new binding ID and notifies the instance
   /// if it implements [InstanceLifeCycle]. Duplicate or null IDs are ignored.
   ///
   /// Parameters:
-  /// - [id]: The watcher ID to add (ignored if null or already exists)
+  /// - [id]: The binding ID to add (ignored if null or already exists)
   void bind(String? id) {
-    if (bindingIds.contains(id) || id == null) return;
-    bindingIds.add(id);
+    if (_disposed || _bindingIds.contains(id) || id == null) return;
+    _bindingIds.add(id);
     _notifyBind(id);
   }
 
-  /// Removes a watcher from this instance.
+  /// Removes a binding from this instance.
   ///
-  /// This method unregisters a watcher ID and notifies the instance
-  /// if it implements [InstanceLifeCycle]. If no watchers remain after
+  /// This method unregisters a binding ID and notifies the instance
+  /// if it implements [InstanceLifeCycle]. If no bindings remain after
   /// removal, the instance is automatically recycled.
   ///
   /// Parameters:
-  /// - [id]: The watcher ID to remove
+  /// - [id]: The binding ID to remove
   void unbind(String id) {
-    if (bindingIds.remove(id)) {
+    if (_disposed) return;
+    if (_bindingIds.remove(id)) {
       try {
         if (_instance is InstanceLifeCycle) {
           (_instance as InstanceLifeCycle).onUnbind(arg, id);
         }
-      } finally {
-        if (bindingIds.isEmpty) {
-          _recycle();
+      } catch (e, stack) {
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog("${_instance.runtimeType} onUnbind error: $e\n$stack");
         }
+      }
+      if (_bindingIds.isEmpty) {
+        _recycle();
       }
     }
   }
@@ -327,16 +370,31 @@ class InstanceHandle<T> with ChangeNotifier {
     if (arg.aliveForever) return;
     _action = InstanceAction.dispose;
     notifyListeners();
+    _action = null;
     onDispose();
   }
 
   void unbindAll() {
-    for (int i = 0; i < bindingIds.length; i++) {
-      if (_instance is InstanceLifeCycle) {
-        (_instance as InstanceLifeCycle).onUnbind(arg, bindingIds[i]);
+    if (_disposed) return;
+    // Skip onUnbind callbacks and cleanup for aliveForever instances,
+    // as they should retain their bindings.
+    if (arg.aliveForever) return;
+    for (int i = 0; i < _bindingIds.length; i++) {
+      try {
+        if (_instance is InstanceLifeCycle) {
+          (_instance as InstanceLifeCycle).onUnbind(arg, _bindingIds[i]);
+        }
+      } catch (e, stack) {
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog(
+              "${_instance.runtimeType} onUnbind error: $e\n$stack");
+        }
       }
     }
-    bindingIds.clear();
+    _bindingIds.clear();
     _recycle();
   }
 
@@ -344,7 +402,7 @@ class InstanceHandle<T> with ChangeNotifier {
   ///
   /// This method disposes the current instance and creates a new one,
   /// either using the provided builder or the original factory function.
-  /// All watcher relationships are preserved.
+  /// All binding relationships are preserved.
   ///
   /// Parameters:
   /// - [builder]: Optional custom builder for the new instance
@@ -353,12 +411,16 @@ class InstanceHandle<T> with ChangeNotifier {
   T recreate({
     T Function()? builder,
   }) {
+    if (_disposed) {
+      throw ViewModelError(
+          "Cannot recreate $T instance. Handle is disposed.");
+    }
     final previous = _instance;
     if (previous == null) {
       throw ViewModelError(
           "Cannot recreate $T instance. Instance is disposed.");
     }
-    final activeBindingIds = List<String>.of(bindingIds);
+    final activeBindingIds = List<String>.of(_bindingIds);
     final recreated = (builder?.call()) ?? factory.call();
     _tryCallInstanceDispose(previous);
     _instance = recreated;
@@ -368,6 +430,7 @@ class InstanceHandle<T> with ChangeNotifier {
     }
     _action = InstanceAction.recreate;
     notifyListeners();
+    _action = null;
     return instance;
   }
 
@@ -380,10 +443,10 @@ class InstanceHandle<T> with ChangeNotifier {
   ///
   /// This method is called when the instance is first created. It notifies
   /// the instance if it implements [InstanceLifeCycle] and adds the initial
-  /// watcher if provided.
+  /// binding if provided.
   ///
   /// Parameters:
-  /// - [arg]: Instance arguments containing initial watcher ID
+  /// - [arg]: Instance arguments containing initial binding ID
   void onCreate(InstanceArg arg) {
     _notifyCreate(arg);
     bind(arg.bindingId);
@@ -391,13 +454,31 @@ class InstanceHandle<T> with ChangeNotifier {
 
   void _notifyBind(String bindingId) {
     if (_instance is InstanceLifeCycle) {
-      (_instance as InstanceLifeCycle).onBind(arg, bindingId);
+      try {
+        (_instance as InstanceLifeCycle).onBind(arg, bindingId);
+      } catch (e, stack) {
+        final handler = ViewModel.config.onListenerError;
+        if (handler != null) {
+          handler(e, stack, 'onBind');
+        } else {
+          viewModelLog("${_instance.runtimeType} onBind error: $e\n$stack");
+        }
+      }
     }
   }
 
   void _notifyCreate(InstanceArg arg) {
     if (_instance is InstanceLifeCycle) {
-      (_instance as InstanceLifeCycle).onCreate(arg);
+      try {
+        (_instance as InstanceLifeCycle).onCreate(arg);
+      } catch (e, stack) {
+        final handler = ViewModel.config.onListenerError;
+        if (handler != null) {
+          handler(e, stack, 'onCreate');
+        } else {
+          viewModelLog("${_instance.runtimeType} onCreate error: $e\n$stack");
+        }
+      }
     }
   }
 
@@ -410,8 +491,13 @@ class InstanceHandle<T> with ChangeNotifier {
     if (target is InstanceLifeCycle) {
       try {
         target.onDispose(arg);
-      } catch (e) {
-        viewModelLog("${target.runtimeType} onDispose error $e");
+      } catch (e, stack) {
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(e, stack);
+        } else {
+          viewModelLog("${target.runtimeType} onDispose error: $e\n$stack");
+        }
       }
     }
   }
@@ -419,7 +505,7 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Handles instance disposal cleanup.
   ///
   /// This method calls the instance's disposal lifecycle method,
-  /// clears all watchers, and nullifies the instance reference.
+  /// nullifies the instance reference, and disposes the ChangeNotifier.
   void onDispose() {
     if (_disposed) return;
     _disposed = true;
@@ -444,12 +530,12 @@ enum InstanceAction {
 /// Interface for ViewModel lifecycle management.
 ///
 /// ViewModels can implement this interface to receive notifications
-/// about their lifecycle events, including creation, watcher changes,
+/// about their lifecycle events, including creation, binding changes,
 /// and disposal.
 ///
 /// This interface enables ViewModels to:
 /// - Initialize resources on creation
-/// - Track their usage through watcher management
+/// - Track their usage through binding management
 /// - Clean up resources on disposal
 /// - React to dependency changes
 abstract interface class InstanceLifeCycle {
@@ -459,18 +545,18 @@ abstract interface class InstanceLifeCycle {
   /// - [arg]: Instance arguments used for creation
   void onCreate(InstanceArg arg);
 
-  /// Called when a new watcher starts watching this ViewModel.
+  /// Called when a new binding is added to this ViewModel.
   ///
   /// Parameters:
   /// - [arg]: Instance arguments
-  /// - [bindingId]: ID of the new watcher
+  /// - [bindingId]: ID of the new binding
   void onBind(InstanceArg arg, String bindingId);
 
-  /// Called when a watcher stops watching this ViewModel.
+  /// Called when a binding is removed from this ViewModel.
   ///
   /// Parameters:
   /// - [arg]: Instance arguments
-  /// - [bindingId]: ID of the removed watcher
+  /// - [bindingId]: ID of the removed binding
   void onUnbind(InstanceArg arg, String bindingId);
 
   /// Called when the ViewModel instance is being disposed.
@@ -484,12 +570,12 @@ abstract interface class InstanceLifeCycle {
 ///
 /// This class encapsulates the metadata needed to create, identify, and
 /// manage ViewModel instances. It contains information about instance
-/// keys, tags, and watcher relationships.
+/// keys, tags, and binding relationships.
 ///
 /// Key components:
 /// - **key**: Unique identifier for instance caching
 /// - **tag**: Logical grouping identifier for related instances
-/// - **watchId**: Identifier for the component watching this instance
+/// - **bindingId**: Identifier for the component bound to this instance
 ///
 /// Example:
 /// ```dart
@@ -499,8 +585,8 @@ abstract interface class InstanceLifeCycle {
 /// // Create with tag for logical grouping
 /// final taggedArg = InstanceArg(tag: 'dashboard_widgets');
 ///
-/// // Create with watcher for lifecycle tracking
-/// final watchedArg = InstanceArg(watchId: 'widget_123');
+/// // Create with binding for lifecycle tracking
+/// final boundArg = InstanceArg(bindingId: 'widget_123');
 /// ```
 class InstanceArg {
   /// Unique identifier for instance caching.
@@ -517,12 +603,11 @@ class InstanceArg {
   /// can share the same tag.
   final Object? tag;
 
-  /// Identifier for the component watching this instance.
+  /// Identifier for the component bound to this instance.
   ///
   /// This ID is used for lifecycle tracking and automatic cleanup.
-  /// When the watcher is disposed, the instance can be automatically
-  /// cleaned up if no other watchers remain.
-  /// The watcher ID for lifecycle tracking.
+  /// When the binding is disposed, the instance can be automatically
+  /// cleaned up if no other bindings remain.
   final String? bindingId;
 
   /// Whether the instance should live forever (never be disposed).
@@ -534,7 +619,7 @@ class InstanceArg {
   /// Parameters:
   /// - [key]: Unique identifier for instance caching (optional)
   /// - [tag]: Logical grouping identifier (optional)
-  /// - [bindingId]: Watcher identifier for lifecycle tracking (optional)
+  /// - [bindingId]: Binding identifier for lifecycle tracking (optional)
   /// - [aliveForever]: Whether the instance should live forever (optional,
   /// default: false)
   const InstanceArg({
@@ -603,8 +688,8 @@ class InstanceArg {
   factory InstanceArg.fromMap(Map<String, dynamic> map) {
     return InstanceArg(
       key: map['key'],
-      tag: map['tag'] as Object,
-      bindingId: map['bindingId'] as String,
+      tag: map['tag'],
+      bindingId: map['bindingId'] as String?,
       aliveForever: (map['aliveForever'] ?? false) as bool,
     );
   }

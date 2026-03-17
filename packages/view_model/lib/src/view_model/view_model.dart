@@ -35,9 +35,13 @@ import 'state_store.dart';
 /// A ViewModel implementation that extends Flutter's [ChangeNotifier].
 ///
 /// This class provides compatibility with existing Flutter code that uses
-/// [ChangeNotifier] while adding ViewModel capabilities. The
-/// [addListener] method
-/// is overridden to use the ViewModel's [listen] method internally.
+/// [ChangeNotifier] while adding ViewModel capabilities.
+///
+/// **Note:** Due to Dart's mixin linearization, `ViewModel` is applied after
+/// `ChangeNotifier`, so [ViewModel.addListener] takes precedence. Listeners
+/// added via `addListener()` go to `ViewModel`'s list. Call
+/// [ViewModel.notifyListeners] to notify them. [ChangeNotifier]'s internal
+/// listener list will typically remain empty.
 ///
 /// Example:
 /// ```dart
@@ -62,7 +66,7 @@ class ChangeNotifierViewModel extends ChangeNotifier with ViewModel {}
 /// - Integration with the ViewModel system
 ///
 /// Implements [Listenable] for compatibility with Flutter's standard listener
-/// patterns like [ListenableBuilder] and [AnimatedBuilder].
+/// patterns like [ListenableBuilder].
 ///
 /// ViewModels using this mixin are automatically managed by the system and will
 /// be disposed when no longer needed.
@@ -175,8 +179,8 @@ mixin class ViewModel
   /// not create new instances.
   ///
   /// Parameters:
-  /// - [key]: The unique key from [ViewModelFactoryBase.key].
-  /// - [tag]: The tag from [ViewModelFactoryBase.tag].
+  /// - [key]: The unique key from [ViewModelFactory.key].
+  /// - [tag]: The tag from [ViewModelFactory.tag].
   ///
   /// Returns the matching ViewModel instance.
   ///
@@ -192,7 +196,7 @@ mixin class ViewModel
   static T readCached<T extends ViewModel>({Object? key, Object? tag}) {
     T? vm;
 
-    /// find key firstly
+    // Find by key first to reuse existing instance
     if (key != null) {
       try {
         vm = instanceManager.get<T>(
@@ -201,15 +205,15 @@ mixin class ViewModel
             key: key,
           )),
         );
-      } catch (e) {
-        // rethrow if tag is null
+      } on ViewModelError {
+        // Expected: not found by key; fall through to tag lookup.
         if (tag == null) {
           rethrow;
         }
       }
     }
 
-    // find newly cache
+    // Fallback: find most recently created instance by tag
     vm ??= instanceManager.get<T>(
       factory: InstanceFactory<T>(
           arg: InstanceArg(
@@ -226,7 +230,7 @@ mixin class ViewModel
   /// Adds a global lifecycle observer to all ViewModels.
   ///
   /// The [lifecycle] will receive callbacks for all ViewModel lifecycle events
-  /// including creation, watcher addition/removal, and disposal.
+  /// including creation, binding addition/removal, and disposal.
   ///
   /// Returns a function that can be called to remove the lifecycle observer.
   ///
@@ -285,8 +289,8 @@ mixin class ViewModel
   /// Called when a dependency ViewModel notifies changes.
   ///
   /// This method is called when a dependency ViewModel that this ViewModel is
-  /// listening to notifies changes. By default, it simply notifies listeners of
-  /// this ViewModel.
+  /// listening to notifies changes. By default, this is a no-op. Override it
+  /// to react to dependency changes.
   ///
   /// Parameters:
   /// - [vm]: The dependency ViewModel that notified changes
@@ -407,7 +411,7 @@ mixin class ViewModel
   /// ```dart
   /// void main() {
   ///   ViewModel.initialize(
-  ///     config: ViewModelConfig(enableLogging: true),
+  ///     config: ViewModelConfig(isLoggingEnabled: true),
   ///     lifecycles: [MyGlobalLifecycleObserver()],
   ///   );
   ///   runApp(MyApp());
@@ -457,7 +461,11 @@ mixin class ViewModel
     _initDevtool();
     _instanceArg = arg;
     for (final element in _viewModelLifecycles) {
-      element.onCreate(this, arg);
+      try {
+        element.onCreate(this, arg);
+      } catch (e, stack) {
+        viewModelLog("Lifecycle observer onCreate error: $e\n$stack");
+      }
     }
   }
 
@@ -466,7 +474,11 @@ mixin class ViewModel
   @override
   void onBind(InstanceArg arg, String bindingId) {
     for (final element in _viewModelLifecycles) {
-      element.onBind(this, arg, bindingId);
+      try {
+        element.onBind(this, arg, bindingId);
+      } catch (e, stack) {
+        viewModelLog("Lifecycle observer onBind error: $e\n$stack");
+      }
     }
   }
 
@@ -475,7 +487,11 @@ mixin class ViewModel
   @override
   void onUnbind(InstanceArg arg, String bindingId) {
     for (final element in _viewModelLifecycles) {
-      element.onUnbind(this, arg, bindingId);
+      try {
+        element.onUnbind(this, arg, bindingId);
+      } catch (e, stack) {
+        viewModelLog("Lifecycle observer onUnbind error: $e\n$stack");
+      }
     }
   }
 
@@ -484,11 +500,27 @@ mixin class ViewModel
   @protected
   void onDispose(InstanceArg arg) {
     _isDisposed = true;
-    _autoDisposeController.dispose();
-    refHandler.dispose();
-    dispose();
+    try {
+      _autoDisposeController.dispose();
+    } catch (e, stack) {
+      viewModelLog("$runtimeType _autoDisposeController dispose error: $e\n$stack");
+    }
+    try {
+      refHandler.dispose();
+    } catch (e, stack) {
+      viewModelLog("$runtimeType refHandler dispose error: $e\n$stack");
+    }
+    try {
+      dispose();
+    } catch (e, stack) {
+      viewModelLog("$runtimeType dispose() error: $e\n$stack");
+    }
     for (final element in _viewModelLifecycles) {
-      element.onDispose(this, arg);
+      try {
+        element.onDispose(this, arg);
+      } catch (e, stack) {
+        viewModelLog("Lifecycle observer onDispose error: $e\n$stack");
+      }
     }
   }
 
@@ -653,21 +685,8 @@ abstract class StateViewModel<T> with ViewModel {
       }
     }
 
-    // Phase 2: Notify general listeners
-    final listeners = List<VoidCallback>.of(_listeners);
-    for (final element in listeners) {
-      if (!_listeners.contains(element)) continue;
-      try {
-        element.call();
-      } catch (e, stack) {
-        final handler = ViewModel.config.onListenerError;
-        if (handler != null) {
-          handler(e, stack, 'notifyListeners');
-        } else {
-          viewModelLog("error on notifyListeners: $e\n$stack");
-        }
-      }
-    }
+    // Phase 2: Notify general listeners (delegate to ViewModel.notifyListeners)
+    super.notifyListeners();
   }
 
   /// Removes a state-specific listener.
@@ -681,7 +700,14 @@ abstract class StateViewModel<T> with ViewModel {
   @override
   void notifyListeners() {
     if (_isDisposed) {
-      viewModelLog("notifyListeners after Disposed");
+      assert(() {
+        throw FlutterError(
+          '$runtimeType.notifyListeners() called after dispose.\n'
+          'This usually means a subscription or timer was not cancelled '
+          'in dispose().',
+        );
+      }());
+      viewModelLog("$runtimeType: notifyListeners after Disposed");
       return;
     }
     _store.notifyListeners();
@@ -714,26 +740,40 @@ abstract class StateViewModel<T> with ViewModel {
   @protected
   void setState(T state) {
     if (_isDisposed) {
-      viewModelLog("setState after Disposed");
+      assert(() {
+        throw FlutterError(
+          '$runtimeType.setState() called after dispose.\n'
+          'This usually means a subscription or timer was not cancelled '
+          'in dispose().',
+        );
+      }());
+      viewModelLog("$runtimeType: setState after Disposed");
       return;
     }
     try {
       _store.setState(state);
-    } catch (e) {
-      onError(e);
+    } catch (e, stack) {
+      onError(e, stack);
     }
   }
 
   /// Called when an error occurs during state operations.
   ///
   /// Override this method to provide custom error handling.
-  /// By default, errors are logged using [viewModelLog].
+  /// By default, errors are reported via [ViewModelConfig.onListenerError]
+  /// or logged using [viewModelLog].
   ///
   /// Parameters:
   /// - [e]: The error that occurred
+  /// - [stack]: The stack trace of the error
   @protected
-  void onError(dynamic e) {
-    viewModelLog("error :$e");
+  void onError(Object error, [StackTrace? stack]) {
+    final handler = ViewModel.config.onListenerError;
+    if (handler != null) {
+      handler(error, stack, 'setState');
+    } else {
+      viewModelLog("$runtimeType setState error: $error\n${stack ?? ''}");
+    }
   }
 
   /// Gets the previous state before the last [setState] call.
@@ -761,10 +801,6 @@ abstract class StateViewModel<T> with ViewModel {
     super.dispose();
   }
 
-  @override
-  void onCreate(InstanceArg arg) {
-    super.onCreate(arg);
-  }
 }
 
 /// Controller for managing automatic disposal of resources.
@@ -773,13 +809,13 @@ abstract class StateViewModel<T> with ViewModel {
 /// [dispose] is called. It's used internally by ViewModels to ensure
 /// proper cleanup of resources.
 class AutoDisposeController {
-  final _disposeSet = <Function()?>[];
+  final _disposeSet = <Function()>[];
 
   /// Adds a disposal callback to be executed when [dispose] is called.
   ///
   /// Parameters:
   /// - [block]: The cleanup function to execute
-  Future<void> addDispose(Function() block) async {
+  void addDispose(Function() block) {
     _disposeSet.add(block);
   }
 
@@ -792,7 +828,7 @@ class AutoDisposeController {
   void dispose() {
     for (final element in _disposeSet) {
       try {
-        element?.call();
+        element.call();
       } catch (e, stack) {
         final handler = ViewModel.config.onDisposeError;
         if (handler != null) {
@@ -813,7 +849,7 @@ class AutoDisposeController {
 ///
 /// Example:
 /// ```dart
-/// class MyViewModelFactory with ViewModelFactoryBase<MyViewModel> {
+/// class MyViewModelFactory with ViewModelFactory<MyViewModel> {
 ///   @override
 ///   MyViewModel build() => MyViewModel();
 ///
@@ -912,20 +948,20 @@ abstract class ViewModelLifecycle {
   /// - [arg]: Creation arguments including key, tag, and other metadata
   void onCreate(ViewModel viewModel, InstanceArg arg) {}
 
-  /// Called when a new watcher is added to a ViewModel.
+  /// Called when a new binding is added to a ViewModel.
   ///
   /// Parameters:
-  /// - [viewModel]: The ViewModel being watched
+  /// - [viewModel]: The ViewModel being bound
   /// - [arg]: Instance arguments
-  /// - [bindingId]: Unique identifier for the new watcher
+  /// - [bindingId]: Unique identifier for the new binding
   void onBind(ViewModel viewModel, InstanceArg arg, String bindingId) {}
 
-  /// Called when a watcher is removed from a ViewModel.
+  /// Called when a binding is removed from a ViewModel.
   ///
   /// Parameters:
-  /// - [viewModel]: The ViewModel being unwatched
+  /// - [viewModel]: The ViewModel being unbound
   /// - [arg]: Instance arguments
-  /// - [bindingId]: Unique identifier for the removed watcher
+  /// - [bindingId]: Unique identifier for the removed binding
   void onUnbind(ViewModel viewModel, InstanceArg arg, String bindingId) {}
 
   /// Called when a ViewModel is disposed.

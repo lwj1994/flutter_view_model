@@ -7,10 +7,10 @@ import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
+import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
-import 'package:view_model/src/view_model/binding_zone.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 import 'state_store.dart';
@@ -180,7 +180,7 @@ abstract interface class ViewModelBindingHost {
 ///
 /// ```dart
 /// test('Test ViewModel interactions', () {
-///   final ref = ViewModelBinding();
+///   final viewModelBinding = ViewModelBinding();
 ///   final vm = viewModelBinding.watch(MyViewModelSpec());
 ///
 ///   expect(vm.count, 0);
@@ -228,8 +228,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// Called when any watched ViewModel notifies changes.
   ///
   /// Override this method to respond to ViewModel state changes. For example,
-  /// [WidgetBinder] overrides this to call `setState()` and trigger widget
-  /// rebuilds.
+  /// [WidgetViewModelBinding] overrides this to call `setState()` and trigger
+  /// widget rebuilds.
   ///
   /// This method is called automatically when:
   /// - A watched ViewModel calls `notifyListeners()`
@@ -280,10 +280,10 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// Returns true if the binder is currently paused.
   bool get isPaused => _pauseAwareController.isPaused;
 
-  /// Generates a debug-friendly name for this ViewModel watcher.
+  /// Generates a debug-friendly name for this ViewModel binding.
   ///
   /// This method creates a unique identifier that includes the file path, line
-  /// number, and class name where the ViewModel is being watched. This
+  /// number, and class name where the ViewModel is being bound. This
   /// information is useful for debugging and development tools.
   ///
   /// Returns an empty string in release mode for performance.
@@ -492,7 +492,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   List<VM> readCachesByTag<VM extends ViewModel>(Object tag) {
-    return _instanceController.getInstancesByTag<VM>(tag, listen: true);
+    return _instanceController.getInstancesByTag<VM>(tag, listen: false);
   }
 
   VM _getViewModel<VM extends ViewModel>({
@@ -520,8 +520,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
           ),
           listen: listen,
         );
-      } catch (e) {
-        // rethrow if factory is null and tag is null
+      } on ViewModelError {
+        // Expected: not found by key; fall through to factory or tag lookup.
         if (factory == null && arg.tag == null) {
           rethrow;
         }
@@ -677,13 +677,25 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
 
   @mustCallSuper
   void dispose() {
+    if (_dispose) return;
     _dispose = true;
     _stateListeners.clear();
-    _pauseAwareController.dispose();
-    _instanceController.dispose();
+    // Run listener cleanup callbacks before disposing the instance controller,
+    // to avoid listener callbacks firing during the disposal cascade.
     for (final e in _disposes) {
-      e.call();
+      try {
+        e.call();
+      } catch (e, stack) {
+        viewModelLog("ViewModelBinding dispose listener error: $e\n$stack");
+      }
     }
+    try {
+      _pauseAwareController.dispose();
+    } catch (e, stack) {
+      viewModelLog(
+          "ViewModelBinding pauseController dispose error: $e\n$stack");
+    }
+    _instanceController.dispose();
   }
 
   @override
@@ -719,7 +731,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     try {
       return readCached(key: key, tag: tag);
     } on ViewModelError {
-      //
+      // Expected: ViewModel not found in cache, return null as documented.
       return null;
     }
   }

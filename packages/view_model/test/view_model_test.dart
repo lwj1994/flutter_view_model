@@ -725,8 +725,8 @@ class CoverageStateVM extends StateViewModel<int> {
   void forceSetState(int s) => setState(s);
 
   @override
-  void onError(dynamic e) {
-    super.onError(e); // Coverage for super.onError
+  void onError(Object e, [StackTrace? stack]) {
+    super.onError(e, stack); // Coverage for super.onError
   }
 
   void triggerError(dynamic e) {

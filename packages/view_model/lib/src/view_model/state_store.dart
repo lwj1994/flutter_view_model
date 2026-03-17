@@ -34,16 +34,13 @@ import 'package:view_model/src/view_model/view_model.dart';
 /// ```dart
 /// final store = ViewModelStateStore<int>(initialState: 0);
 /// store.stateStream.listen((diff) {
-///   print('State changed from ${diff.p} to ${diff.n}');
+///   print('State changed from ${diff.previousState} to ${diff.currentState}');
 /// });
 /// store.setState(1); // Triggers notification
 /// ```
 class ViewModelStateStore<S> implements StateStore<S> {
   final StreamController<DiffState<S>> _stateStreamController =
-      StreamController.broadcast(
-    onCancel: () {},
-    onListen: () {},
-  );
+      StreamController.broadcast();
 
   /// The initial state provided when the store was created.
   final S initialState;
@@ -252,16 +249,7 @@ class Reducer<S> {
 ///
 /// Example:
 /// ```dart
-/// try {
-///   await someAsyncOperation();
-/// } catch (error, stackTrace) {
-///   final viewModelError = ViewModelError(
-///     message: 'Failed to load data',
-///     error: error,
-///     stackTrace: stackTrace,
-///   );
-///   // Handle or propagate the error
-/// }
+/// throw ViewModelError('Failed to load data');
 /// ```
 class ViewModelError extends Error {
   final Object? message;
