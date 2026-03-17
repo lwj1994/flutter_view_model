@@ -264,8 +264,13 @@ class AutoDisposeInstanceController {
         }
         e.unbind(viewModelBinding.id);
       } catch (err, stack) {
-        viewModelLog(
-            "AutoDisposeInstanceController dispose error: $err\n$stack");
+        final handler = ViewModel.config.onDisposeError;
+        if (handler != null) {
+          handler(err, stack);
+        } else {
+          viewModelLog(
+              "AutoDisposeInstanceController dispose error: $err\n$stack");
+        }
       }
     }
     _notifierListeners.clear();
