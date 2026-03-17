@@ -492,7 +492,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   List<VM> readCachesByTag<VM extends ViewModel>(Object tag) {
-    return _instanceController.getInstancesByTag<VM>(tag, listen: true);
+    // listen: false — read is a snapshot, must NOT register recreate listeners.
+    return _instanceController.getInstancesByTag<VM>(tag, listen: false);
   }
 
   VM _getViewModel<VM extends ViewModel>({

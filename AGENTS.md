@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Repository guidance for agents working in `/Volumes/mac-ext-ssd/document/GitHub/flutter_view_model`.
+Repository guidance for agents working in the `view_model` monorepo.
 
 ## Repository Scope
 
@@ -92,6 +92,60 @@ If a skill file is missing or blocked:
 - Local DevTools extension
 - `publish_to: none`
 - Depends on local path `../view_model`
+
+## getInstance 获取逻辑
+
+实例获取分为三层：`ViewModelBinding` → `AutoDisposeInstanceController` → `Store`。
+
+### 公开 API（ViewModelBinding）
+
+| 方法 | 创建实例 | bind | addRef | ViewModel listener | recreate listener |
+|------|---------|------|--------|-------------------|------------------|
+| `watch(factory)` | 是 | 是 | 是 | 是（触发 widget rebuild） | 是 |
+| `watchCached(key/tag)` | 否 | 是 | 是 | 是 | 是 |
+| `read(factory)` | 是 | 是 | 是 | 否 | 是 |
+| `readCached(key/tag)` | 否 | 是 | 是 | 否 | 是 |
+| `watchCachesByTag(tag)` | 否 | 是 | 是 | 是 | 是 |
+| `readCachesByTag(tag)` | 否 | 是 | 是 | 否 | 否 |
+
+关键区别：
+
+- **watch vs read**：watch 注册 ViewModel listener（`_addListener`），ViewModel 调用 `notifyListeners()` 时会触发 widget rebuild；read 不注册，不触发 rebuild。
+- **有 factory vs Cached**：有 factory 时可以创建新实例；Cached 只查找已有缓存。
+- **recreate listener**：注册在 `InstanceHandle`（ChangeNotifier）上，仅在实例被 recreate/dispose 时触发，不响应 ViewModel 自身的 `notifyListeners()`。
+- **`readCachesByTag` 是唯一不注册 recreate listener 的 API**，因此其获取的实例不会被 `AutoDisposeInstanceController` 跟踪，dispose 时不会自动 unbind。`listen: false` 必须保持，不可改为 `true`。
+
+### 内部调用链
+
+```
+watch/read/watchCached/readCached
+  → ViewModelBinding._getViewModel(listen)
+    → 按 key 查找 → _requireExistingViewModel
+    → 有 factory → _createViewModel → AutoDisposeInstanceController.getInstance
+    → 按 tag 回退 → _requireExistingViewModel
+    → listen=true 时追加 _addListener（ViewModel listener）
+
+watchCachesByTag/readCachesByTag
+  → AutoDisposeInstanceController.getInstancesByTag(listen)
+    → bind + addRef（始终执行）
+    → listen=true 时追加 _attachRecreateListener
+  → listen=true 时追加 _addListener（仅 watchCachesByTag）
+```
+
+### AutoDisposeInstanceController.getInstance
+
+1. 将 `viewModelBinding.id` 注入 factory arg 的 `bindingId`
+2. 调用 `instanceManager.getNotifier(factory)` → `Store.getNotifier()`
+   - 缓存命中：直接返回已有 handle，按需 `bind(bindingId)`
+   - 缓存未命中：调用 `factory.builder()` 创建实例，包装为 `InstanceHandle`，触发 `onCreate` + `bind`
+3. `addRef(viewModelBinding)` — 将 binding 加入 ViewModel 的 refHandler（依赖追踪）
+4. `_attachRecreateListener(notifier)` — 在 InstanceHandle 上注册 listener，仅响应 recreate/dispose 事件
+
+### 注意事项
+
+- `getInstance` 内部无条件注册 recreate listener，`listen` 参数只在 ViewModelBinding 层控制 ViewModel listener（`_addListener`）。`getInstancesByTag` 的 `listen` 参数则控制 recreate listener（`_attachRecreateListener`），两条路径行为不对称。
+- 修改 `listen` 传参时必须理解 watch/read 语义差异，不可随意将 `false` 改为 `true`。
+- `InstanceHandle.action` 仅在 `notifyListeners()` 回调期间有值，回调后清空为 `null`；disposed 后回退到 `_lastAction`。
 
 ## Publishing Notes
 

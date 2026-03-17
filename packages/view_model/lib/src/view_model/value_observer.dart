@@ -111,14 +111,20 @@ class ObserverBuilder<T> extends StatefulWidget {
 
 class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
     with ViewModelStateMixin<ObserverBuilder<T>> {
-  /// Subscribes to the shared StateViewModel identified by
-  /// `observable.shareKey` and passes its current state to
-  /// `builder` as `data`.
+  @override
+  void initState() {
+    super.initState();
+    widget.observable._ensureViewModel();
+  }
+
+  @override
+  void didUpdateWidget(covariant ObserverBuilder<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    widget.observable._ensureViewModel();
+  }
+
   @override
   Widget build(BuildContext context) {
-    widget.observable._ensureViewModel();
-    // Rebuilds when the view model's state changes; latest value
-    // is provided to `builder`.
     return widget.builder(
       viewModelBinding
           .watchCached<_ObserveDataViewModel<T>>(
@@ -154,16 +160,22 @@ class ObserverBuilder2<T1, T2> extends StatefulWidget {
 
 class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
     with ViewModelStateMixin<ObserverBuilder2<T1, T2>> {
-  /// Subscribes to two shared StateViewModels identified by
-  /// `observable1.shareKey` and `observable2.shareKey`,
-  /// passing their current states to `builder` as `value1`
-  /// and `value2`.
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
     widget.observable1._ensureViewModel();
     widget.observable2._ensureViewModel();
-    // Rebuilds when any view model's state changes; latest values
-    // are passed to `builder`.
+  }
+
+  @override
+  void didUpdateWidget(covariant ObserverBuilder2<T1, T2> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    widget.observable1._ensureViewModel();
+    widget.observable2._ensureViewModel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return widget.builder(
       viewModelBinding
           .watchCached<_ObserveDataViewModel<T1>>(
@@ -207,16 +219,24 @@ class ObserverBuilder3<T1, T2, T3> extends StatefulWidget {
 class _ObserverBuilder3State<T1, T2, T3>
     extends State<ObserverBuilder3<T1, T2, T3>>
     with ViewModelStateMixin<ObserverBuilder3<T1, T2, T3>> {
-  /// Subscribes to three shared StateViewModels identified by
-  /// each observable's `shareKey`, passing their current states
-  /// to `builder` as `value1`, `value2`, and `value3`.
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
     widget.observable1._ensureViewModel();
     widget.observable2._ensureViewModel();
     widget.observable3._ensureViewModel();
-    // Rebuilds when any view model's state changes; latest values
-    // are passed to `builder`.
+  }
+
+  @override
+  void didUpdateWidget(covariant ObserverBuilder3<T1, T2, T3> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    widget.observable1._ensureViewModel();
+    widget.observable2._ensureViewModel();
+    widget.observable3._ensureViewModel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return widget.builder(
       viewModelBinding
           .watchCached<_ObserveDataViewModel<T1>>(
