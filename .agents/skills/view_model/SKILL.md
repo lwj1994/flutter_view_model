@@ -106,7 +106,7 @@ Use this skill for requests like:
 - Configure `ViewModelConfig` when needed:
   - `isLoggingEnabled`
   - `equals` (state equality strategy)
-  - `onError` (with `ErrorType.listener` / `ErrorType.dispose`)
+  - `onError` (with `ErrorType.listener` / `ErrorType.lifecycle` / `ErrorType.dispose` / `ErrorType.pauseResume`)
 - If using `equals: (a, b) => a == b`, ensure state classes implement `==` and `hashCode`.
 
 9. Testing and mocking

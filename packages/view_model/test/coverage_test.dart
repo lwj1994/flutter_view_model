@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/view_model.dart';
 import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/view_model/pause_aware.dart';
+import 'package:view_model/view_model.dart';
 
 class ErrorThrowingViewModel extends ViewModel {
   void trigger() => notifyListeners();
@@ -32,6 +34,13 @@ class TestNotifyVM extends ViewModel {
   void simulateDispose() {
     // ignore: invalid_use_of_protected_member
     onDispose(const InstanceArg(key: 'simulated'));
+  }
+}
+
+class _ThrowingLifecycle extends ViewModelLifecycle {
+  @override
+  void onCreate(ViewModel viewModel, InstanceArg arg) {
+    throw 'Lifecycle onCreate Error';
   }
 }
 
@@ -156,6 +165,124 @@ void main() {
       vm.simulateDispose();
       await Future.delayed(const Duration(seconds: 1));
       expect(errorCaught, isTrue);
+    });
+
+    test('onError config works for ErrorType.lifecycle', () {
+      bool errorCaught = false;
+      ViewModel.initialize(
+        config: ViewModelConfig(
+          onError: (e, stack, type) {
+            errorCaught = true;
+            expect(type, ErrorType.lifecycle);
+            expect(e, 'Lifecycle onCreate Error');
+          },
+        ),
+        lifecycles: [_ThrowingLifecycle()],
+      );
+
+      instanceManager.getNotifier(
+        factory: InstanceFactory(
+          builder: () => ErrorThrowingViewModel(),
+          arg: const InstanceArg(key: 'lifecycle_test'),
+        ),
+      );
+      expect(errorCaught, isTrue);
+    });
+
+    test('onError config works for ErrorType.pauseResume', () async {
+      bool errorCaught = false;
+      ViewModel.initialize(
+        config: ViewModelConfig(
+          onError: (e, stack, type) {
+            errorCaught = true;
+            expect(type, ErrorType.pauseResume);
+          },
+        ),
+      );
+
+      final provider = ViewModelBindingPauseProvider();
+      final controller = PauseAwareController(
+        onWidgetPause: () {
+          throw 'Pause Error';
+        },
+        onWidgetResume: () {},
+        providers: [provider],
+      );
+
+      provider.pause();
+      await Future.delayed(Duration.zero);
+      expect(errorCaught, isTrue);
+      controller.dispose();
+      provider.dispose();
+    });
+
+    test(
+        'reportViewModelError secondary catch '
+        'when onError throws', () {
+      final logs = <String>[];
+      final originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+
+      ViewModel.initialize(
+        config: ViewModelConfig(
+          onError: (e, stack, type) {
+            throw 'Handler Error';
+          },
+        ),
+      );
+
+      final vm = ErrorThrowingViewModel();
+      vm.listen(onChanged: () {
+        throw 'Original Error';
+      });
+
+      // Should NOT throw — secondary catch handles it
+      vm.trigger();
+
+      expect(
+        logs.any((l) => l.contains('onError callback threw')),
+        isTrue,
+      );
+      expect(
+        logs.any((l) => l.contains('Handler Error')),
+        isTrue,
+      );
+      expect(
+        logs.any((l) => l.contains('Original Error')),
+        isTrue,
+      );
+
+      debugPrint = originalDebugPrint;
+    });
+
+    test(
+        'error reporting works '
+        'even when isLoggingEnabled is false', () {
+      final logs = <String>[];
+      final originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+
+      ViewModel.initialize(
+        config: ViewModelConfig(isLoggingEnabled: false),
+      );
+
+      final vm = ErrorThrowingViewModel();
+      vm.listen(onChanged: () {
+        throw 'Silent Error';
+      });
+
+      vm.trigger();
+
+      expect(
+        logs.any((l) => l.contains('Silent Error')),
+        isTrue,
+      );
+
+      debugPrint = originalDebugPrint;
     });
   });
 }

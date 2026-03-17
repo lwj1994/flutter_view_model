@@ -388,7 +388,7 @@ mixin class ViewModel
         element.call();
       } catch (e, stack) {
         reportViewModelError(
-            e, stack, ErrorType.listener, 'error on notifyListeners');
+            e, stack, ErrorType.listener, 'notifyListeners error');
       }
     }
   }
@@ -680,7 +680,7 @@ abstract class StateViewModel<T> with ViewModel {
         element.call(event.previousState, event.currentState);
       } catch (e, stack) {
         reportViewModelError(
-            e, stack, ErrorType.listener, 'error on stateListener');
+            e, stack, ErrorType.listener, 'stateListener error');
       }
     }
 
