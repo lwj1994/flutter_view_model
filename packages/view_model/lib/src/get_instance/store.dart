@@ -167,8 +167,7 @@ class Store<T> {
     // cache
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
-      final newBind =
-          bindingId != null && !notifier.containsBinding(bindingId);
+      final newBind = bindingId != null && !notifier.containsBinding(bindingId);
       if (newBind) {
         notifier.bind(bindingId);
       }
@@ -355,30 +354,32 @@ class InstanceHandle<T> with ChangeNotifier {
 
   /// Current action being performed on this instance.
   InstanceAction? _action;
+  InstanceAction? _lastAction;
 
   /// Gets the current action being performed on this instance.
   ///
   /// Returns the current [InstanceAction] or null if no action is in progress.
-  InstanceAction? get action => _action;
+  InstanceAction? get action => _action ?? (_disposed ? _lastAction : null);
 
   /// Disposes this instance and triggers cleanup.
   ///
   /// This method marks the instance for disposal, notifies listeners,
   /// and calls the disposal lifecycle methods. The instance becomes
   /// unusable after this call.
-  void _recycle() {
-    if (arg.aliveForever) return;
+  void _recycle({bool force = false}) {
+    if (arg.aliveForever && !force) return;
     _action = InstanceAction.dispose;
+    _lastAction = _action;
     notifyListeners();
     _action = null;
     onDispose();
   }
 
-  void unbindAll() {
+  void unbindAll({bool force = false}) {
     if (_disposed) return;
     // Skip onUnbind callbacks and cleanup for aliveForever instances,
     // as they should retain their bindings.
-    if (arg.aliveForever) return;
+    if (arg.aliveForever && !force) return;
     for (int i = 0; i < _bindingIds.length; i++) {
       try {
         if (_instance is InstanceLifeCycle) {
@@ -389,13 +390,12 @@ class InstanceHandle<T> with ChangeNotifier {
         if (handler != null) {
           handler(e, stack);
         } else {
-          viewModelLog(
-              "${_instance.runtimeType} onUnbind error: $e\n$stack");
+          viewModelLog("${_instance.runtimeType} onUnbind error: $e\n$stack");
         }
       }
     }
     _bindingIds.clear();
-    _recycle();
+    _recycle(force: force);
   }
 
   /// Recreates the instance with optional custom builder.
@@ -412,8 +412,7 @@ class InstanceHandle<T> with ChangeNotifier {
     T Function()? builder,
   }) {
     if (_disposed) {
-      throw ViewModelError(
-          "Cannot recreate $T instance. Handle is disposed.");
+      throw ViewModelError("Cannot recreate $T instance. Handle is disposed.");
     }
     final previous = _instance;
     if (previous == null) {
@@ -429,6 +428,7 @@ class InstanceHandle<T> with ChangeNotifier {
       _notifyBind(bindingId);
     }
     _action = InstanceAction.recreate;
+    _lastAction = _action;
     notifyListeners();
     _action = null;
     return instance;

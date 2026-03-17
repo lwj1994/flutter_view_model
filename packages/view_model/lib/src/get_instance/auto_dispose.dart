@@ -197,7 +197,7 @@ class AutoDisposeInstanceController {
         if (listener != null) {
           e.removeListener(listener);
         }
-        e.unbindAll();
+        e.unbindAll(force: true);
         return true;
       } else {
         return false;

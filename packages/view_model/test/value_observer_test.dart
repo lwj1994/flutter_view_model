@@ -253,5 +253,34 @@ void main() {
       obs1.value = 30;
       expect(obs2.value, 30);
     });
+
+    testWidgets('observable recreates its backing view model after unmount',
+        (tester) async {
+      final observable = ObservableValue<int>(5, shareKey: 'recreate-key');
+
+      Future<void> pumpObserver() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ObserverBuilder<int>(
+              observable: observable,
+              builder: (value) => Text('Value: $value'),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await pumpObserver();
+      expect(find.text('Value: 5'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      observable.value = 9;
+      expect(observable.value, 9);
+
+      await pumpObserver();
+      expect(find.text('Value: 9'), findsOneWidget);
+    });
   });
 }

@@ -40,12 +40,15 @@ class TodoViewModel extends StateViewModel<TodoState> {
 
   void editTodo(String id, String newTitle, {String? newCategory}) {
     if (newTitle.trim().isEmpty) return;
+    final normalizedCategory = newCategory?.trim();
 
     final updatedItems = state.items.map((item) {
       if (item.id == id) {
         return item.copyWith(
           title: newTitle.trim(),
-          category: newCategory ?? item.category,
+          category: normalizedCategory == null || normalizedCategory.isEmpty
+              ? null
+              : normalizedCategory,
         );
       }
       return item;

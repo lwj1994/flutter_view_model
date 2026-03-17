@@ -1,6 +1,7 @@
 import 'package:source_gen_test/source_gen_test.dart';
 import 'package:test/test.dart';
 import 'package:view_model_annotation/view_model_annotation.dart';
+import 'package:view_model_annotation/view_model_annotation.dart' as vm;
 import 'package:view_model_generator/src/spec_generator.dart';
 
 // 1. Test no-args constructor
@@ -181,8 +182,7 @@ Future<void> main() async {
     test(
       'view_model_generator source_gen tests require dart test',
       () {},
-      skip:
-          'source_gen_test relies on Isolate.packageConfig, which flutter '
+      skip: 'source_gen_test relies on Isolate.packageConfig, which flutter '
           'test does not support.',
     );
     return;
@@ -552,4 +552,42 @@ final constLiteralDollarSpec = ViewModelSpec.arg<ConstLiteralDollar, P>(
 class ConstLiteralDollar {
   final P p;
   ConstLiteralDollar({required this.p});
+}
+
+@ShouldGenerate(r'''
+final prefixedSpecSpec = ViewModelSpec.arg<PrefixedSpec, P>(
+  builder: (P p) => PrefixedSpec(p: p),
+  key: (P p) => '${p.id}',
+  tag: (P p) => '${p.name}',
+);
+''')
+@vm.GenSpec(key: r'${p.id}', tag: r'${p.name}')
+class PrefixedSpec {
+  final P p;
+  PrefixedSpec({required this.p});
+}
+
+@ShouldGenerate(r'''
+ViewModelSpecWithArg<GenericBoxViewModel<T>, T> genericBoxSpec<T>() {
+  return ViewModelSpec.arg<GenericBoxViewModel<T>, T>(
+    builder: (T value) => GenericBoxViewModel<T>(value),
+  );
+}
+''')
+@GenSpec()
+class GenericBoxViewModel<T> {
+  final T value;
+  GenericBoxViewModel(this.value);
+}
+
+@ShouldGenerate(r'''
+final commaConstSpec = ViewModelSpec<CommaConst>(
+  builder: () => CommaConst(),
+  key: const {'id': 1, 'page': 2},
+  tag: const [1, 2],
+);
+''')
+@GenSpec(key: const {'id': 1, 'page': 2}, tag: const [1, 2])
+class CommaConst {
+  CommaConst();
 }

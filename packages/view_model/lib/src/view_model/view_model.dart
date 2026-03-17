@@ -503,7 +503,8 @@ mixin class ViewModel
     try {
       _autoDisposeController.dispose();
     } catch (e, stack) {
-      viewModelLog("$runtimeType _autoDisposeController dispose error: $e\n$stack");
+      viewModelLog(
+          "$runtimeType _autoDisposeController dispose error: $e\n$stack");
     }
     try {
       refHandler.dispose();
@@ -700,13 +701,6 @@ abstract class StateViewModel<T> with ViewModel {
   @override
   void notifyListeners() {
     if (_isDisposed) {
-      assert(() {
-        throw FlutterError(
-          '$runtimeType.notifyListeners() called after dispose.\n'
-          'This usually means a subscription or timer was not cancelled '
-          'in dispose().',
-        );
-      }());
       viewModelLog("$runtimeType: notifyListeners after Disposed");
       return;
     }
@@ -740,13 +734,6 @@ abstract class StateViewModel<T> with ViewModel {
   @protected
   void setState(T state) {
     if (_isDisposed) {
-      assert(() {
-        throw FlutterError(
-          '$runtimeType.setState() called after dispose.\n'
-          'This usually means a subscription or timer was not cancelled '
-          'in dispose().',
-        );
-      }());
       viewModelLog("$runtimeType: setState after Disposed");
       return;
     }
@@ -800,7 +787,6 @@ abstract class StateViewModel<T> with ViewModel {
     _stateListeners.clear();
     super.dispose();
   }
-
 }
 
 /// Controller for managing automatic disposal of resources.
