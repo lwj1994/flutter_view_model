@@ -1,4 +1,5 @@
 import 'package:source_gen_test/source_gen_test.dart';
+import 'package:test/test.dart';
 import 'package:view_model_annotation/view_model_annotation.dart';
 import 'package:view_model_generator/src/spec_generator.dart';
 
@@ -176,6 +177,17 @@ class FeedVM2 extends StateViewModel<FeedState> {
 }
 
 Future<void> main() async {
+  if (const bool.fromEnvironment('dart.library.ui')) {
+    test(
+      'view_model_generator source_gen tests require dart test',
+      () {},
+      skip:
+          'source_gen_test relies on Isolate.packageConfig, which flutter '
+          'test does not support.',
+    );
+    return;
+  }
+
   // 1. Get reader, read all files under test/src
   final reader = await initializeLibraryReaderForDirectory(
     'test',
@@ -482,4 +494,62 @@ class LiveForeverArg4 {
   final bool active;
   final double score;
   LiveForeverArg4(this.id, this.name, this.active, this.score);
+}
+
+// 30. plain string literals keep escapes valid in generated code
+@ShouldGenerate(r'''
+final escapedLiteralSpec = ViewModelSpec<EscapedLiteral>(
+  builder: () => EscapedLiteral(),
+  key: 'C:\\temp\\it\'s',
+  tag: 'line1\nline2',
+);
+''')
+@GenSpec(key: 'C:\\temp\\it\'s', tag: 'line1\nline2')
+class EscapedLiteral {
+  EscapedLiteral();
+}
+
+const sharedKeyTemplate = r'${p.id}';
+const sharedEscapedTagTemplate = r'prefix\${p.name}';
+const escapedLiteralKeyTemplate = 'price \$value';
+
+// 31. raw template strings preserve interpolation and literal backslashes
+@ShouldGenerate(r'''
+final escapedTemplateSpec = ViewModelSpec.arg<EscapedTemplate, P>(
+  builder: (P p) => EscapedTemplate(p: p),
+  key: (P p) => '${p.id}\\n',
+  tag: (P p) => 'prefix\\\${p.name}',
+);
+''')
+@GenSpec(key: r'${p.id}\n', tag: r'prefix\${p.name}')
+class EscapedTemplate {
+  final P p;
+  EscapedTemplate({required this.p});
+}
+
+// 32. const string references preserve template semantics
+@ShouldGenerate(r'''
+final constTemplateSpec = ViewModelSpec.arg<ConstTemplate, P>(
+  builder: (P p) => ConstTemplate(p: p),
+  key: (P p) => '${p.id}',
+  tag: (P p) => 'prefix\\\${p.name}',
+);
+''')
+@GenSpec(key: sharedKeyTemplate, tag: sharedEscapedTagTemplate)
+class ConstTemplate {
+  final P p;
+  ConstTemplate({required this.p});
+}
+
+// 33. const string references keep escaped literal dollars escaped
+@ShouldGenerate(r'''
+final constLiteralDollarSpec = ViewModelSpec.arg<ConstLiteralDollar, P>(
+  builder: (P p) => ConstLiteralDollar(p: p),
+  key: (P p) => 'price \$value',
+);
+''')
+@GenSpec(key: escapedLiteralKeyTemplate)
+class ConstLiteralDollar {
+  final P p;
+  ConstLiteralDollar({required this.p});
 }
