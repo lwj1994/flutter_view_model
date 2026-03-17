@@ -1,3 +1,10 @@
+## 1.0.3
+- Extend `ErrorType` enum with `lifecycle` and `pauseResume` for finer-grained error classification.
+- Unify all error handling through `reportViewModelError` with secondary try-catch to prevent `onError` callback failures from breaking dispose chains.
+- Fix silent error swallowing when `isLoggingEnabled` is false — errors are now always reported via `debugPrint`.
+- Fix `AutoDisposeInstanceController._attachRecreateListener` not using unified error path.
+- Add `handlerStack` capture in `reportViewModelError` secondary catch for better diagnostics.
+
 ## 1.0.2
 - Fix listener mutation safety during notification dispatch.
 - Fix recreate failure handling to keep previous instance valid.
