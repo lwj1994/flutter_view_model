@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/view_model.dart';
 
 class SimpleVM with ViewModel {
@@ -288,6 +289,51 @@ void main() {
 
       vm2.notifyListeners();
       expect(ref.updates, 0);
+
+      creator.dispose();
+      ref.dispose();
+    });
+
+    test('watchCachesByTag rebuilds on recreate', () {
+      final creator = TestRef();
+      final ref = TestRefWithCounter();
+      const tag = 'group-3';
+
+      final vm = creator.read(ViewModelSpec(
+        builder: () => SimpleVM(),
+        tag: tag,
+        key: 'k5',
+      ));
+
+      ref.watchCachesByTag<SimpleVM>(tag);
+      ref.updates = 0;
+
+      instanceManager.recreate(vm);
+      expect(ref.updates, 1);
+
+      creator.dispose();
+      ref.dispose();
+    });
+
+    test('readCachesByTag rebuilds on recreate but not on notifyListeners', () {
+      final creator = TestRef();
+      final ref = TestRefWithCounter();
+      const tag = 'group-4';
+
+      final vm = creator.read(ViewModelSpec(
+        builder: () => SimpleVM(),
+        tag: tag,
+        key: 'k6',
+      ));
+
+      ref.readCachesByTag<SimpleVM>(tag);
+      ref.updates = 0;
+
+      vm.notifyListeners();
+      expect(ref.updates, 0);
+
+      instanceManager.recreate(vm);
+      expect(ref.updates, 1);
 
       creator.dispose();
       ref.dispose();

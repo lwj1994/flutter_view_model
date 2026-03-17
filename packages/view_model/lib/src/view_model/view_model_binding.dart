@@ -54,6 +54,20 @@ abstract interface class ViewModelBindingInterface {
     Object? tag,
   });
 
+  /// Fetches all existing `VM` instances with the given `tag` and listens for
+  /// their changes.
+  ///
+  /// Does not create new instances. The binding will rebuild when any matched
+  /// ViewModel notifies listeners.
+  List<VM> watchCachesByTag<VM extends ViewModel>(Object tag);
+
+  /// Reads all existing `VM` instances with the given `tag` without listening.
+  ///
+  /// Does not create new instances. Matched ViewModels still bind to the
+  /// current binding for lifecycle cleanup, but their `notifyListeners()`
+  /// calls do not trigger rebuilds.
+  List<VM> readCachesByTag<VM extends ViewModel>(Object tag);
+
   /// Safe version of `watchCached` that returns `null` when not
   /// found.
   ///
@@ -493,8 +507,9 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   List<VM> readCachesByTag<VM extends ViewModel>(Object tag) {
-    // listen: false — read is a snapshot, must NOT register recreate listeners.
-    return _instanceController.getInstancesByTag<VM>(tag, listen: false);
+    // Batch read: keep recreate/dispose awareness like read()/readCached(),
+    // but do not attach ViewModel listeners for notifyListeners() updates.
+    return _instanceController.getInstancesByTag<VM>(tag, listen: true);
   }
 
   VM _getViewModel<VM extends ViewModel>({

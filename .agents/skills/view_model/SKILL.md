@@ -71,10 +71,13 @@ Use this skill for requests like:
 
 4. Choose access API correctly
 - `watch(spec)`: create/get + bind + listen (reactive rebuild/`onUpdate`).
-- `read(spec)`: create/get + bind, no listener.
-- `watchCached/readCached`: lookup existing instance only (no creation).
+- `read(spec)`: create/get + bind, no ViewModel listener.
+- `watchCached/readCached`: lookup existing instance only (no creation); `watchCached` binds + listens, `readCached` binds only.
 - `maybeWatchCached/maybeReadCached`: null-safe cached lookup.
-- `watchCachesByTag/readCachesByTag`: batch tag lookup.
+- `watchCachesByTag/readCachesByTag`: batch tag lookup; `watchCachesByTag`
+  is batch `watch`, `readCachesByTag` is batch `read`: it still binds,
+  participates in lifecycle cleanup, and reacts to recreate/dispose, but it
+  does not react to `notifyListeners()`.
 - `listen/listenState/listenStateSelect`: side-effect listeners, auto-cleaned on binding dispose.
 - `recycle(vm)`: force unbind all and dispose; next `watch/read` gets fresh instance.
 
@@ -94,7 +97,8 @@ Use this skill for requests like:
 - For route-based pause/resume, register:
   - `MaterialApp(navigatorObservers: [ViewModel.routeObserver])`
 - Built-in pause providers: route cover, ticker mode, app lifecycle.
-- Use `StateViewModelValueWatcher` for selector-level rebuilds (usually pair with `read`, not `watch`).
+- Use `StateViewModelValueWatcher` for selector-level rebuilds; pair it with
+  `read`, not `watch`, to avoid duplicate subscriptions and broad rebuilds.
 - `ObservableValue` + `ObserverBuilder(1/2/3)` for lightweight reactive values; same `shareKey` means shared underlying state.
 
 8. App-level setup
@@ -118,12 +122,17 @@ Use this skill for requests like:
 
 Do:
 - Keep `watch` for reactive UI, `read` for imperative actions.
+- For field-level updates (`listenStateSelect`, `StateViewModelValueWatcher`,
+  selector-based rebuilds), read the ViewModel with `read` and let the
+  selector mechanism drive updates; avoid `watch` on the same ViewModel.
 - Set explicit `key` whenever instance sharing is a requirement.
 - Dispose non-widget bindings explicitly.
 - Use `listenStateSelect` for side effects on selected state fields.
 
 Don't:
 - Claim `read` is "non-binding" (it still binds and affects lifecycle).
+- Pair selector-level rebuild tools with `watch`; this usually causes broader
+  rebuilds than intended.
 - Use cached APIs expecting auto-create behavior.
 - Overuse `aliveForever` for page-scoped state.
 - Forget `ViewModel.routeObserver` when relying on route pause behavior.
