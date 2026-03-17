@@ -264,8 +264,8 @@ class AutoDisposeInstanceController {
           e.removeListener(_notifierListeners[e]!);
         }
         e.unbind(viewModelBinding.id);
-      } catch (err, stack) {
-        reportViewModelError(err, stack, ErrorType.dispose,
+      } catch (e, stack) {
+        reportViewModelError(e, stack, ErrorType.dispose,
             'AutoDisposeInstanceController dispose error');
       }
     }

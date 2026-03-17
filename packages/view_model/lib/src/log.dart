@@ -56,9 +56,10 @@ void reportViewModelError(
   if (handler != null) {
     try {
       handler(error, stack, type);
-    } catch (handlerError) {
+    } catch (handlerError, handlerStack) {
       debugPrint(
-        'view_model ERROR: onError callback threw ($handlerError). '
+        'view_model ERROR: onError callback threw ($handlerError)\n'
+        '$handlerStack\n'
         'Original: $fallbackMessage: $error\n${stack ?? ""}',
       );
     }

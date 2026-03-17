@@ -5,6 +5,13 @@ on:
     branches:
       - main
       - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
 
 jobs:
   codecov-upload:
@@ -17,6 +24,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Verify toolchain
         timeout-minutes: 2
