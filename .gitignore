@@ -36,3 +36,4 @@ build/
 
 .trae
 .agent
+.claude/settings.local.json

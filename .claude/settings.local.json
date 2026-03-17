@@ -15,7 +15,10 @@
       "Bash(git rm:*)",
       "Bash(git pull:*)",
       "Bash(git stash:*)",
-      "Bash(dart test:*)"
+      "Bash(dart test:*)",
+      "Bash(git status:*)",
+      "Bash(git:*)",
+      "Bash(flutter analyze:*)"
     ]
   }
 }
