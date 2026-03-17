@@ -116,7 +116,8 @@ class DevToolsService {
       try {
         final data = _getDependencyGraph();
         return developer.ServiceExtensionResponse.result(jsonEncode(data));
-      } catch (e) {
+      } catch (e, stack) {
+        viewModelLog("DevTool _getDependencyGraph error: $e\n$stack");
         return developer.ServiceExtensionResponse.error(
           developer.ServiceExtensionResponse.extensionError,
           'DevTools extension error: Unable to retrieve dependency graph. '

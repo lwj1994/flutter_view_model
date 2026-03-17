@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/view_model_binding.dart';
 import 'package:view_model/src/view_model/view_model.dart';
@@ -16,29 +17,32 @@ import 'store.dart';
 /// is disposed.
 ///
 /// Key features:
-/// - Automatic watcher registration and cleanup
+/// - Automatic binding registration and cleanup
 /// - Instance recreation handling
-/// - Unique watcher identification
+/// - Unique binding identification
 /// - Memory leak prevention
 ///
 /// Example:
 /// ```dart
 /// final controller = AutoDisposeInstanceController(
 ///   onRecreate: () => setState(() {}),
-///   watcherName: 'MyWidget',
+///   viewModelBinding: viewModelBinding,
 /// );
 ///
 /// // Get a ViewModel instance
 /// final viewModel = controller.getInstance<MyViewModel>();
 ///
 /// // Clean up when done
-/// await controller.dispose();
+/// controller.dispose();
 /// ```
 class AutoDisposeInstanceController {
+  bool _disposed = false;
+
   /// List of instance handles being tracked by this controller.
   final List<InstanceHandle> _instanceNotifiers = List.empty(growable: true);
 
-  List<InstanceHandle> get instanceNotifiers => _instanceNotifiers;
+  List<InstanceHandle> get instanceNotifiers =>
+      List.unmodifiable(_instanceNotifiers);
 
   /// Callback function called when an instance needs to be recreated.
   ///
@@ -46,9 +50,6 @@ class AutoDisposeInstanceController {
   /// instance is recreated due to dependency changes.
   final Function() onRecreate;
 
-  /// Map tracking which notifiers already have listeners attached.
-  ///
-  /// Prevents duplicate listener registration for the same instance handle.
   /// Map tracking which notifiers already have listeners attached.
   ///
   /// Prevents duplicate listener registration for the same instance handle.
@@ -60,16 +61,45 @@ class AutoDisposeInstanceController {
   ///
   /// Parameters:
   /// - [onRecreate]: Callback for handling instance recreation events
-  /// - [binderName]: Descriptive name for this watcher context
+  /// - [viewModelBinding]: The binding context for lifecycle management
   AutoDisposeInstanceController({
     required this.onRecreate,
     required this.viewModelBinding,
   });
 
+  /// Attaches a recreate listener to the notifier if not already attached.
+  void _attachRecreateListener(InstanceHandle notifier) {
+    if (_disposed || _notifierListeners.containsKey(notifier)) return;
+    _instanceNotifiers.add(notifier);
+    final listener = () {
+      try {
+        switch (notifier.action) {
+          case null:
+            break;
+          case InstanceAction.dispose:
+            break;
+          case InstanceAction.recreate:
+            if (!notifier.isDisposed && notifier.instance is ViewModel) {
+              (notifier.instance as ViewModel).refHandler.addRef(
+                    viewModelBinding,
+                  );
+            }
+            onRecreate.call();
+            break;
+        }
+      } catch (e, stack) {
+        viewModelLog(
+            "AutoDisposeInstanceController recreate listener error: $e\n$stack");
+      }
+    };
+    _notifierListeners[notifier] = listener;
+    notifier.addListener(listener);
+  }
+
   /// Gets a ViewModel instance with automatic lifecycle management.
   ///
   /// This method retrieves or creates a ViewModel instance of type [T] and
-  /// automatically registers this controller as a watcher. The instance will
+  /// automatically registers this controller as a binding. The instance will
   /// be tracked for automatic cleanup when the controller is disposed.
   ///
   /// Type parameter [T] must be a ViewModel type, not dynamic.
@@ -89,13 +119,16 @@ class AutoDisposeInstanceController {
   ///   factory: InstanceFactory<MyViewModel>(
   ///     arg: InstanceArg(key: 'custom'),
   ///   ),
-  ///   // ignore: deprecated_member_use
   ///   viewModelBinding: viewModelBinding,
   /// );
   /// ```
   T getInstance<T>({
     InstanceFactory<T>? factory,
   }) {
+    if (_disposed) {
+      throw ViewModelError(
+          "AutoDisposeInstanceController.getInstance() called after dispose.");
+    }
     if (T == dynamic) {
       throw ViewModelError("T must extends ViewModel");
     }
@@ -111,27 +144,7 @@ class AutoDisposeInstanceController {
     if (notifier.instance is ViewModel) {
       (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
     }
-    if (!_notifierListeners.containsKey(notifier)) {
-      _instanceNotifiers.add(notifier);
-      final listener = () {
-        switch (notifier.action) {
-          case null:
-            break;
-          case InstanceAction.dispose:
-            break;
-          case InstanceAction.recreate:
-            if (!notifier.isDisposed && notifier.instance is ViewModel) {
-              (notifier.instance as ViewModel).refHandler.addRef(
-                    viewModelBinding,
-                  );
-            }
-            onRecreate.call();
-            break;
-        }
-      };
-      _notifierListeners[notifier] = listener;
-      notifier.addListener(listener);
-    }
+    _attachRecreateListener(notifier);
     return notifier.instance;
   }
 
@@ -140,32 +153,11 @@ class AutoDisposeInstanceController {
     final List<T> result = [];
     for (final notifier in notifiers) {
       if (listen) {
-        if (!_notifierListeners.containsKey(notifier)) {
-          _instanceNotifiers.add(notifier);
-          final listener = () {
-            switch (notifier.action) {
-              case null:
-                break;
-              case InstanceAction.dispose:
-                break;
-              case InstanceAction.recreate:
-                if (!notifier.isDisposed && notifier.instance is ViewModel) {
-                  (notifier.instance as ViewModel).refHandler.addRef(
-                        viewModelBinding,
-                      );
-                }
-                onRecreate.call();
-                break;
-            }
-          };
-          _notifierListeners[notifier] = listener;
-          notifier.addListener(listener);
-        }
+        notifier.bind(viewModelBinding.id);
         if (notifier.instance is ViewModel) {
           (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
         }
-        // bind viewModelBinding
-        notifier.bind(viewModelBinding.id);
+        _attachRecreateListener(notifier);
       }
       result.add(notifier.instance);
     }
@@ -228,7 +220,7 @@ class AutoDisposeInstanceController {
 
   /// Disposes the controller and cleans up all tracked instances.
   ///
-  /// This method removes this controller as a watcher from all tracked
+  /// This method removes this controller as a binding from all tracked
   /// ViewModel instances and clears the internal tracking lists. This
   /// prevents memory leaks and ensures proper cleanup.
   ///
@@ -243,16 +235,23 @@ class AutoDisposeInstanceController {
   /// }
   /// ```
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     for (final e in _instanceNotifiers) {
-      if (!e.isDisposed && e.instance is ViewModel) {
-        (e.instance as ViewModel).refHandler.removeRef(viewModelBinding);
+      try {
+        if (!e.isDisposed && e.instance is ViewModel) {
+          (e.instance as ViewModel).refHandler.removeRef(viewModelBinding);
+        }
+        // Remove listener before unbind, because unbind may trigger _recycle()
+        // which disposes the ChangeNotifier, making removeListener fail.
+        if (_notifierListeners.containsKey(e)) {
+          e.removeListener(_notifierListeners[e]!);
+        }
+        e.unbind(viewModelBinding.id);
+      } catch (err, stack) {
+        viewModelLog(
+            "AutoDisposeInstanceController dispose error: $err\n$stack");
       }
-      // Remove listener before unbind, because unbind may trigger _recycle()
-      // which disposes the ChangeNotifier, making removeListener fail.
-      if (_notifierListeners.containsKey(e)) {
-        e.removeListener(_notifierListeners[e]!);
-      }
-      e.unbind(viewModelBinding.id);
     }
     _notifierListeners.clear();
     _instanceNotifiers.clear();

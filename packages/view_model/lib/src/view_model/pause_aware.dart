@@ -1,6 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
+import 'package:view_model/src/view_model/view_model.dart';
 
 /// A controller that manages pause/resume lifecycle for a ViewModel, based on a
 /// collection of [ViewModelBindingPauseProvider]s.
@@ -20,8 +23,9 @@ class PauseAwareController {
 
   /// Creates a [PauseAwareController] with the given pause/resume callbacks.
   ///
-  /// If no [providers] are provided, it defaults to using Flutter's standard
-  /// [PageRoutePauseProvider] and [AppPauseProvider].
+  /// [providers] is a required list of [ViewModelBindingPauseProvider]s that
+  /// determine the pause state. The default provider setup happens in
+  /// `ViewModelStateMixin.initState()`.
   ///
   /// For custom lifecycle sources (e.g., mixed-stack environments), provide a
   /// list of your custom [ViewModelBindingPauseProvider] implementations.
@@ -34,6 +38,8 @@ class PauseAwareController {
     _providers.addAll(providers);
     _setupSubscriptions();
   }
+
+  bool _disposed = false;
 
   // A list of providers that determine the pause state.
   final List<ViewModelBindingPauseProvider> _providers = [];
@@ -72,12 +78,13 @@ class PauseAwareController {
   }
 
   void addProvider(ViewModelBindingPauseProvider provider) {
-    if (_providers.contains(provider)) return;
+    if (_disposed || _providers.contains(provider)) return;
     _providers.add(provider);
     _subscribeToProvider(provider);
   }
 
   void removeProvider(ViewModelBindingPauseProvider provider) {
+    if (_disposed) return;
     if (_providers.remove(provider)) {
       final subscription = _subscriptions.remove(provider);
       subscription?.cancel();
@@ -95,12 +102,12 @@ class PauseAwareController {
     _reevaluatePauseState();
   }
 
-  /// A simple map to track the pause state signaled by each provider
   /// Tracks the individual pause state of each provider.
   final Map<ViewModelBindingPauseProvider, bool> _providerPauseStates = {};
 
   /// Re-evaluates the combined pause state from all providers.
   void _reevaluatePauseState() {
+    if (_disposed) return;
     final newPauseState =
         _providerPauseStates.values.any((isPaused) => isPaused);
     if (_isPausedByProviders != newPauseState) {
@@ -111,21 +118,36 @@ class PauseAwareController {
 
   /// Updates the view model's pause/resume state and triggers callbacks.
   void _updatePauseState() {
-    if (_isPausedByProviders) {
-      onWidgetPause();
-    } else {
-      onWidgetResume();
+    try {
+      if (_isPausedByProviders) {
+        onWidgetPause();
+      } else {
+        onWidgetResume();
+      }
+    } catch (e, stack) {
+      final handler = ViewModel.config.onListenerError;
+      if (handler != null) {
+        handler(e, stack, 'PauseAwareController._updatePauseState');
+      } else {
+        viewModelLog("PauseAwareController callback error: $e\n$stack");
+      }
     }
   }
 
   /// Disposes the controller and all its subscriptions.
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     for (final sub in _subscriptions.values) {
       sub.cancel();
     }
     _subscriptions.clear();
     for (final provider in _disposableProviders) {
-      provider.dispose();
+      try {
+        provider.dispose();
+      } catch (e, stack) {
+        viewModelLog("PauseAwareController provider dispose error: $e\n$stack");
+      }
     }
     _providerPauseStates.clear();
   }

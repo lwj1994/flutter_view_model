@@ -76,9 +76,8 @@ class _StatelessViewModelElement extends StatelessElement {
 
   void _rebuildState() {
     if (!mounted) return;
-    if (mounted &&
-        SchedulerBinding.instance.schedulerPhase !=
-            SchedulerPhase.persistentCallbacks) {
+    if (SchedulerBinding.instance.schedulerPhase !=
+        SchedulerPhase.persistentCallbacks) {
       markNeedsBuild();
     } else {
       SchedulerBinding.instance.addPostFrameCallback((_) {

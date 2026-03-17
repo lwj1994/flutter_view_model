@@ -119,8 +119,8 @@ class DevToolTracker extends ViewModelLifecycle {
     for (final listener in _listeners) {
       try {
         listener();
-      } catch (e) {
-        viewModelLog('DependencyTracker listener error: $e');
+      } catch (e, stack) {
+        viewModelLog('DependencyTracker listener error: $e\n$stack');
       }
     }
   }

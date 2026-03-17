@@ -2,7 +2,7 @@
 ///
 /// This file provides the core instance management functionality
 /// for ViewModels,
-/// including creation, caching, recreation, and watcher management. The system
+/// including creation, caching, recreation, and binding management. The system
 /// ensures efficient resource usage and proper lifecycle management.
 ///
 /// @author luwenjie on 2025/3/25 12:23:33
@@ -25,11 +25,11 @@ final instanceManager = InstanceManager._get();
 /// This singleton class manages the creation, caching, and disposal
 /// of ViewModel
 /// instances across the application. It maintains separate stores for each
-/// ViewModel type and handles watcher relationships.
+/// ViewModel type and handles binding relationships.
 ///
 /// Key responsibilities:
 /// - ViewModel instance creation and caching
-/// - Watcher registration and management
+/// - Binding registration and management
 /// - Instance recreation and cleanup
 /// - Type-safe instance retrieval
 ///
@@ -57,8 +57,7 @@ class InstanceManager {
     if (store is! Store<T>) {
       throw ViewModelError("Cannot recreate $T instance. Store not found.");
     }
-    final Store<T> s = store;
-    return s.recreate(
+    return store.recreate(
       t,
       builder: builder,
     );
@@ -124,8 +123,8 @@ class InstanceManager {
   }) {
     try {
       return get(factory: factory);
-    } catch (e) {
-      //
+    } on ViewModelError {
+      // Expected: instance not found, return null as documented.
       return null;
     }
   }
@@ -139,7 +138,7 @@ class InstanceManager {
   /// The method supports several scenarios:
   /// - Creating new instances with custom builders
   /// - Finding existing instances by key or tag
-  /// - Adding watchers to existing instances
+  /// - Adding bindings to existing instances
   /// - Automatic instance discovery when no specific factory is provided
   ///
   /// Parameters:
@@ -167,7 +166,7 @@ class InstanceManager {
         throw ViewModelError("no $T instance found");
       }
 
-      // if watchId is not null, add watcher
+      // if bindingId is not null, add binding
       if (bindingId != null) {
         final factory = InstanceFactory<T>(
             arg: InstanceArg(
@@ -204,12 +203,12 @@ class InstanceManager {
 ///
 /// This class encapsulates the configuration needed to create or retrieve
 /// ViewModel instances, including custom builder functions and instance
-/// arguments like keys, tags, and watcher IDs.
+/// arguments like keys, tags, and binding IDs.
 ///
 /// The factory supports various creation patterns:
 /// - Custom instance creation with builder functions
 /// - Instance retrieval by key or tag
-/// - Watcher registration for lifecycle management
+/// - Binding registration for lifecycle management
 ///
 /// Example:
 /// ```dart
@@ -219,8 +218,8 @@ class InstanceManager {
 ///   arg: InstanceArg(key: 'custom'),
 /// );
 ///
-/// // Create for watching only
-/// final watchFactory = InstanceFactory.watch(watchId: 'widget123');
+/// // Create for binding only
+/// final bindingFactory = InstanceFactory.binding(bindingId: 'widget123');
 /// ```
 class InstanceFactory<T> {
   /// Optional builder function for creating new instances.
@@ -231,7 +230,7 @@ class InstanceFactory<T> {
 
   /// Arguments for instance creation and identification.
   ///
-  /// Contains metadata like key, tag, and watcher ID that help identify
+  /// Contains metadata like key, tag, and binding ID that help identify
   /// and manage the instance lifecycle.
   final InstanceArg arg;
 
@@ -245,15 +244,15 @@ class InstanceFactory<T> {
     return builder == null && arg.key == null;
   }
 
-  /// Creates a factory specifically for watching an existing instance.
+  /// Creates a factory specifically for binding to an existing instance.
   ///
-  /// This factory constructor is used when you want to add a watcher
+  /// This factory constructor is used when you want to add a binding
   /// to an existing ViewModel instance without creating a new one.
   ///
   /// Parameters:
-  /// - [bindingId]: Unique identifier for the watcher
+  /// - [bindingId]: Unique identifier for the binding
   ///
-  /// Returns a new [InstanceFactory] configured for watching.
+  /// Returns a new [InstanceFactory] configured for binding.
   factory InstanceFactory.binding({required String bindingId}) {
     return InstanceFactory(
       arg: InstanceArg(
