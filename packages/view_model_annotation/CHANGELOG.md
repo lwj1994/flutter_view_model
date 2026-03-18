@@ -1,3 +1,6 @@
+## 1.0.3
+- Fix documentation references from `@GenProvider` to `@GenSpec`.
+
 ## 1.0.2
 - Improve release consistency for annotation package.
 

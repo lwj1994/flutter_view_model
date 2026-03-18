@@ -1,3 +1,10 @@
+## 1.0.3
+- Support generic type parameters in ViewModelSpec generation.
+- Improve string interpolation and escaping handling for `key`/`tag` annotations.
+- Improve annotation source parsing with proper delimiter matching (supports nested generics, maps, lists).
+- Support prefixed annotation syntax (e.g., `@vm.GenSpec`).
+- Add tests for escaping, raw templates, const references, generic classes, and comma-containing const expressions.
+
 ## 1.0.2
 - Improve generator error reporting with explicit source errors.
 
