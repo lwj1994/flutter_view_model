@@ -381,6 +381,10 @@ mixin class ViewModel
   /// is provided, errors are logged. This prevents one listener from
   /// affecting others.
   void notifyListeners() {
+    if (_isDisposed) {
+      viewModelLog("$runtimeType: notifyListeners after Disposed");
+      return;
+    }
     final listeners = List<VoidCallback>.of(_listeners);
     for (final element in listeners) {
       if (!_listeners.contains(element)) continue;

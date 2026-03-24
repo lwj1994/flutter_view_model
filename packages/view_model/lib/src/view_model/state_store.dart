@@ -308,7 +308,7 @@ class DiffState<S> {
           currentState == other.currentState;
 
   @override
-  int get hashCode => previousState.hashCode ^ currentState.hashCode;
+  int get hashCode => Object.hash(previousState, currentState);
 
   @override
   String toString() {

@@ -81,16 +81,15 @@ class Store<T> {
       throw ViewModelError("Store<$T> has been disposed.");
     }
     if (_instances.isEmpty) return null;
+    if (tag != null) {
+      return getInstancesByTag(tag).firstOrNull;
+    }
     final l = _instances.values.toList();
     l.sort((InstanceHandle<T> a, InstanceHandle<T> b) {
       // desc
       return b.index.compareTo(a.index);
     });
-    if (tag == null) {
-      return l.firstOrNull;
-    } else {
-      return getInstancesByTag(tag).firstOrNull;
-    }
+    return l.firstOrNull;
   }
 
   List<InstanceHandle<T>> getInstancesByTag(Object tag) {
@@ -623,7 +622,7 @@ class InstanceArg {
 
   @override
   int get hashCode =>
-      key.hashCode ^ tag.hashCode ^ bindingId.hashCode ^ aliveForever.hashCode;
+      Object.hash(key, tag, bindingId, aliveForever);
 
   @override
   String toString() {

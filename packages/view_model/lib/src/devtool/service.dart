@@ -101,8 +101,8 @@ class DevToolsService {
         final res = jsonEncode(data);
         viewModelLog("DevTool _getViewModelData success: $res");
         return developer.ServiceExtensionResponse.result(res);
-      } catch (e) {
-        viewModelLog("DevTool _getViewModelData error: $e");
+      } catch (e, stack) {
+        viewModelLog("DevTool _getViewModelData error: $e\n$stack");
         return developer.ServiceExtensionResponse.error(
           developer.ServiceExtensionResponse.extensionError,
           'DevTools extension error: Unable to retrieve ViewModel data. '
