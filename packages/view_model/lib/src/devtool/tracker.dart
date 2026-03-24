@@ -11,6 +11,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
+import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
 /// Singleton dependency tracker for ViewModels.
@@ -120,7 +121,8 @@ class DevToolTracker extends ViewModelLifecycle {
       try {
         listener();
       } catch (e, stack) {
-        viewModelLog('DependencyTracker listener error: $e\n$stack');
+        reportViewModelError(
+            e, stack, ErrorType.listener, 'DependencyTracker listener error');
       }
     }
   }

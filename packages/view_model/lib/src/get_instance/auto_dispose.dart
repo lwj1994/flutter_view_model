@@ -187,7 +187,12 @@ class AutoDisposeInstanceController {
   void performForAllInstances(void Function(ViewModel viewModel) action) {
     for (final notifier in _instanceNotifiers) {
       if (!notifier.isDisposed && notifier.instance is ViewModel) {
-        action(notifier.instance as ViewModel);
+        try {
+          action(notifier.instance as ViewModel);
+        } catch (e, stack) {
+          reportViewModelError(e, stack, ErrorType.lifecycle,
+              'performForAllInstances error');
+        }
       }
     }
   }

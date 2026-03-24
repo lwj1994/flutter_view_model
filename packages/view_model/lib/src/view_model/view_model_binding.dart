@@ -621,7 +621,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   void _addListener(ViewModel res) {
     if (_stateListeners[res] != true) {
       _stateListeners[res] = true;
-      _disposes.add(res.listen(onChanged: () async {
+      _disposes.add(res.listen(onChanged: () {
         if (_dispose) return;
         // When paused, ignore updates; we'll blindly refresh on resume.
         if (_pauseAwareController.isPaused) {
@@ -713,7 +713,12 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       reportViewModelError(e, stack, ErrorType.dispose,
           'ViewModelBinding pauseController dispose error');
     }
-    _instanceController.dispose();
+    try {
+      _instanceController.dispose();
+    } catch (e, stack) {
+      reportViewModelError(e, stack, ErrorType.dispose,
+          'ViewModelBinding instanceController dispose error');
+    }
   }
 
   @override

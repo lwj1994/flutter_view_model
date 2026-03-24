@@ -532,8 +532,17 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
   }
 
   String _normalizeStringLiteral(String s) {
-    if (s.startsWith("r'")) return "'${s.substring(2)}";
-    if (s.startsWith('r"')) return '"${s.substring(2)}';
+    if (s.startsWith("r'") || s.startsWith('r"')) {
+      final quote = s[1];
+      final content = s.substring(2, s.length - 1);
+      // Re-escape backslashes and dollar signs that gain special meaning
+      // when converting from raw string to normal string.
+      final escaped = content
+          .replaceAll(r'\', r'\\')
+          .replaceAll(r'$', r'\$')
+          .replaceAll(quote, '\\$quote');
+      return '$quote$escaped$quote';
+    }
     return s;
   }
 
@@ -626,6 +635,12 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
     final buf = StringBuffer();
     while (i < s.length) {
       final ch = s[i];
+      if (ch == r'\' && i + 1 < s.length) {
+        buf.write(ch);
+        buf.write(s[++i]);
+        i++;
+        continue;
+      }
       if (ch == quote) break;
       buf.write(ch);
       i++;
