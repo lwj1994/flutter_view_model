@@ -523,7 +523,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     }
     if (isDisposed) {
       throw ViewModelError(
-          "Cannot get $VM: ViewModelBinding(${getName()}) is already disposed.");
+          "Cannot get $VM: "
+          "ViewModelBinding(${getName()}) is already disposed.");
     }
     if (VM == ViewModel || VM == dynamic) {
       throw ViewModelError("VM must extends ViewModel");

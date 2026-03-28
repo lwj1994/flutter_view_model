@@ -165,11 +165,13 @@ class AutoDisposeInstanceController {
         (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
       }
       if (listen) {
-        // Register recreate listener for watch (listen: true) — rebuild on recreate.
+        // Register recreate listener for watch (listen: true)
+        // — rebuild on recreate.
         _attachRecreateListener(notifier);
       } else {
-        // Track for cleanup (removeRef + unbind on dispose) without a recreate
-        // listener. Without this, dispose() would skip these notifiers entirely.
+        // Track for cleanup (removeRef + unbind on dispose) without
+        // a recreate listener. Without this, dispose() would skip
+        // these notifiers entirely.
         if (!_notifierListeners.containsKey(notifier) &&
             !_instanceNotifiers.contains(notifier)) {
           _instanceNotifiers.add(notifier);
