@@ -13,8 +13,6 @@ import 'package:flutter/widgets.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/config.dart';
-import 'package:view_model/src/view_model/view_model.dart';
-
 import 'manager.dart';
 
 /// Sentinel value for distinguishing between "not provided" and "null" in
