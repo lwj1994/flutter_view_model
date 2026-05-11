@@ -499,7 +499,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   List<VM> watchCachesByTag<VM extends ViewModel>(Object tag) {
-    final res = _instanceController.getInstancesByTag<VM>(tag, listen: true);
+    final res = _instanceController.getInstancesByTag<VM>(tag);
     for (final vm in res) {
       _addListener(vm);
     }
@@ -507,9 +507,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   List<VM> readCachesByTag<VM extends ViewModel>(Object tag) {
-    // Batch read: keep recreate/dispose awareness like read()/readCached(),
-    // but do not attach ViewModel listeners for notifyListeners() updates.
-    return _instanceController.getInstancesByTag<VM>(tag, listen: true);
+    return _instanceController.getInstancesByTag<VM>(tag);
   }
 
   VM _getViewModel<VM extends ViewModel>({

@@ -339,40 +339,20 @@ void main() {
         expect(controller.instanceNotifiers.length, 2);
       });
 
-      test('listen: true attaches listeners and binds viewModelBinding', () {
-        const tag = 'listen_true_tag';
+      test('binds viewModelBinding and tracks notifier for cleanup', () {
+        const tag = 'bind_tag';
         final factory = InstanceFactory<TestStatelessViewModel>(
           builder: () => TestStatelessViewModel(),
-          arg: const InstanceArg(key: 'vm_listen', tag: tag),
+          arg: const InstanceArg(key: 'vm_bind', tag: tag),
         );
 
         instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
 
-        controller.getInstancesByTag<TestStatelessViewModel>(tag, listen: true);
+        controller.getInstancesByTag<TestStatelessViewModel>(tag);
 
         final handle = instanceManager.getNotifier<TestStatelessViewModel>(
             factory: factory);
         expect(handle.bindingIds.contains(mockRef.id), isTrue);
-        expect(controller.instanceNotifiers.length, 1);
-      });
-
-      test('listen: false binds but does not attach recreate listener', () {
-        const tag = 'listen_false_tag';
-        final factory = InstanceFactory<TestStatelessViewModel>(
-          builder: () => TestStatelessViewModel(),
-          arg: const InstanceArg(key: 'vm_no_listen', tag: tag),
-        );
-
-        instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
-
-        controller.getInstancesByTag<TestStatelessViewModel>(tag,
-            listen: false);
-
-        final handle = instanceManager.getNotifier<TestStatelessViewModel>(
-            factory: factory);
-        // listen: false still binds for lifecycle tracking.
-        expect(handle.bindingIds.contains(mockRef.id), isTrue);
-        // Tracked in instanceNotifiers for cleanup on dispose.
         expect(controller.instanceNotifiers.length, 1);
       });
     });

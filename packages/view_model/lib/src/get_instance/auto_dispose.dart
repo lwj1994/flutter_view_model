@@ -153,30 +153,15 @@ class AutoDisposeInstanceController {
     return notifier.instance;
   }
 
-  List<T> getInstancesByTag<T>(Object tag, {bool listen = true}) {
+  List<T> getInstancesByTag<T>(Object tag) {
     final notifiers = instanceManager.getNotifiersByTag<T>(tag);
     final List<T> result = [];
     for (final notifier in notifiers) {
-      // Always bind + addRef to establish the binding relationship and keep
-      // the instance alive. This matches read() semantics (bind without
-      // listener).
       notifier.bind(viewModelBinding.id);
       if (notifier.instance is ViewModel) {
         (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
       }
-      if (listen) {
-        // Register recreate listener for watch (listen: true)
-        // — rebuild on recreate.
-        _attachRecreateListener(notifier);
-      } else {
-        // Track for cleanup (removeRef + unbind on dispose) without
-        // a recreate listener. Without this, dispose() would skip
-        // these notifiers entirely.
-        if (!_notifierListeners.containsKey(notifier) &&
-            !_instanceNotifiers.contains(notifier)) {
-          _instanceNotifiers.add(notifier);
-        }
-      }
+      _attachRecreateListener(notifier);
       result.add(notifier.instance);
     }
     return result;
