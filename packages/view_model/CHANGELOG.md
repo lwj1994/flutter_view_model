@@ -1,3 +1,6 @@
+## 1.0.4
+- Refactor `AutoDisposeInstanceController.getInstancesByTag` to drop the unused `listen` parameter; recreate-listener attachment is now unconditional, matching the documented semantics of `watchCachesByTag` / `readCachesByTag`.
+
 ## 1.0.3
 - Extend `ErrorType` enum with `lifecycle` and `pauseResume` for finer-grained error classification.
 - Unify all error handling through `reportViewModelError` with secondary try-catch to prevent `onError` callback failures from breaking dispose chains.

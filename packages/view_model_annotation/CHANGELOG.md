@@ -1,3 +1,6 @@
+## 1.0.4
+- Version bump for consistency with `view_model` 1.0.4 release.
+
 ## 1.0.3
 - Fix documentation references from `@GenProvider` to `@GenSpec`.
 
