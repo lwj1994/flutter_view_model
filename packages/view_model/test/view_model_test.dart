@@ -295,8 +295,12 @@ void main() {
 
     test('StackPathLocator works', () {
       final locator = StackPathLocator();
+      expect(locator.ready, isFalse);
+
       final path = locator.getCurrentObjectPath();
       expect(path, isNotNull);
+      expect(locator.ready, path.isNotEmpty);
+
       final path2 = locator.getCurrentObjectPath();
       expect(path, path2); // Should be cached
     });
