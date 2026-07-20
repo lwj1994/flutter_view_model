@@ -38,21 +38,22 @@ class TodoViewModel extends StateViewModel<TodoState> {
     );
   }
 
-  void editTodo(String id, String newTitle, {String? newCategory}) {
+  void editTodo(
+    String id,
+    String newTitle, {
+    required String? newCategory,
+  }) {
     if (newTitle.trim().isEmpty) return;
 
     final updatedItems = state.items.map((item) {
       if (item.id == id) {
-        if (newCategory != null) {
-          final normalized = newCategory.trim();
-          return item.copyWith(
-            title: newTitle.trim(),
-            category: normalized.isEmpty ? null : normalized,
-          );
-        } else {
-          // Don't pass category — copyWith sentinel preserves existing value.
-          return item.copyWith(title: newTitle.trim());
-        }
+        final normalizedCategory = newCategory?.trim();
+        return item.copyWith(
+          title: newTitle.trim(),
+          category: normalizedCategory == null || normalizedCategory.isEmpty
+              ? null
+              : normalizedCategory,
+        );
       }
       return item;
     }).toList();
