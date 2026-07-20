@@ -843,10 +843,13 @@ class AutoDisposeController {
 abstract mixin class ViewModelFactory<T> {
   static const _defaultShareId = Object();
 
-  /// Returns a unique key for sharing ViewModel instances.
+  /// Returns an explicit key for identifying ViewModel instances.
   ///
-  /// ViewModels with the same key will be shared across different widgets.
-  /// If this returns `null`, a new instance will be created each time.
+  /// Resolutions using the same generic ViewModel type `T` and equal non-null
+  /// keys share one instance across bindings. If this returns `null`, the
+  /// resolving binding supplies a private default key: repeated resolutions of
+  /// the same `T` reuse one instance in that binding, while different bindings
+  /// remain isolated.
   ///
   /// By default, this returns a shared key when deprecated singleton switches
   /// are enabled, otherwise `null`.
@@ -896,7 +899,9 @@ abstract mixin class ViewModelFactory<T> {
       'singleton() will be removed in a future major release.')
   bool singleton() => false;
 
-  /// Returns `true` if the instance should live forever (never be disposed).
+  /// Returns `true` to skip automatic disposal when no bindings remain.
+  ///
+  /// The instance can still be force-disposed with `recycle`.
   bool aliveForever() => false;
 }
 

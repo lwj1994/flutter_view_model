@@ -14,10 +14,9 @@ final authSpec = ViewModelSpec<AuthService>(
 );
 
 class ProfileViewModel with ViewModel {
-  // Dependency injection via viewModelBinding
-  // It automatically binds ProfileViewModel's lifecycle to AuthService if needed,
-  // but here authSpec is aliveForever.
-  late final auth = viewModelBinding.read(authSpec);
+  // Re-resolve through refHandler's currently selected owner on every access.
+  // The registry still reuses authSpec's keyed instance.
+  AuthService get auth => viewModelBinding.read(authSpec);
 
   String get status => auth.isLoggedIn ? 'Online' : 'Offline';
 }

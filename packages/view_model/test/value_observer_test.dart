@@ -1,6 +1,8 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:view_model/src/view_model/value_observer.dart';
+import 'package:view_model/view_model.dart';
 
 void main() {
   group('ObservableValue', () {

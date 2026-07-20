@@ -1,6 +1,6 @@
 ---
 name: view_model
-description: Build or refactor Flutter state management with the view_model package, including ViewModel/ViewModelBinding mixins, ViewModelSpec sharing, watch/read semantics, lifecycle, pause-resume, testing, and code generation.
+description: Build or refactor Flutter functional modules and state management with the view_model package, including module-to-module dependency injection, ViewModel/ViewModelBinding mixins, ViewModelSpec sharing, watch/read semantics, lifecycle, pause-resume, testing, and code generation.
 mintlify-proj: flutter-view-model
 ---
 
@@ -34,12 +34,22 @@ Use this skill for requests like:
 - "用 view_model 写/改状态管理"
 - "watch/read 有什么区别"
 - "ViewModelSpec 怎么做共享/单例"
+- "每个功能模块都是 ViewModel / ViewModel 之间如何依赖注入"
 - "StateViewModel / listenStateSelect / ValueWatcher"
 - "生命周期、自动销毁、pause/resume"
 - "`@GenSpec` 或 view_model_generator"
 
 ## Core model (must stay accurate)
 
+- **Every functional module can be a ViewModel.** A ViewModel is not limited to
+  page or UI state: a feature, service, repository, coordinator, or domain
+  capability can all be modeled as `class X with ViewModel`.
+- **ViewModel modules can inject each other.** Resolve module dependencies with
+  non-caching `viewModelBinding.read/watch` getters. This forms a demand-driven
+  module-to-module DI graph managed by binding-based reference counting.
+- **Prefer managed instances over singletons.** Do not make a module static,
+  global, keyed, or `aliveForever` by default. Let the first `read/watch`
+  create it and let `ViewModelBinding` dispose it automatically.
 - Architecture is type-keyed instance registry + binding-based reference counting.
 - Two base mixins:
   - `with ViewModel`: managed instance (lifecycle + notify + DI access).
@@ -47,6 +57,141 @@ Use this skill for requests like:
 - Widget mixins are wrappers over `ViewModelBinding`:
   - `ViewModelStateMixin` (recommended default for widgets).
   - `ViewModelStatelessMixin` (lightweight, but has multi-mount caveat).
+
+## Feature-module architecture
+
+Treat `ViewModel` as the reusable unit of application functionality, rather
+than as a class reserved for a screen. Keep each module independently
+constructible through a `ViewModelSpec`, then compose larger modules by
+injecting the smaller ViewModels they depend on:
+
+```dart
+class CheckoutViewModel with ViewModel {
+  CartViewModel get cart => viewModelBinding.read(cartViewModelSpec);
+  PricingViewModel get pricing =>
+      viewModelBinding.read(pricingViewModelSpec);
+
+  Future<void> submit() async {
+    final cart = this.cart;
+    final pricing = this.pricing;
+    await pricing.validate(cart.items);
+  }
+}
+```
+
+- Prefer a getter over `late final`, a constructor-cached field, or `??=`.
+  A getter re-resolves the dependency through the owner binding currently
+  selected by `refHandler`—the first remaining owner, not necessarily the
+  caller's root. Within one binding, the registry still returns the same
+  managed instance.
+- Use `read` when a module only needs to call another module.
+- Use `watch` when dependency notifications must also update the parent
+  binding. Do not put `listen` in a repeatedly evaluated getter because every
+  evaluation can register another side-effect listener; register it explicitly
+  in the binding owner instead.
+- Keep dependency access inside `viewModelBinding` so each resolved module is
+  owned and released by the root binding that resolved it.
+- A ViewModel's identity is the resolved generic VM type `T` plus its effective
+  `key`; the builder's runtime result type is not part of identity, and `tag`
+  is only a grouping label. When factory `key()` returns `null`, the binding
+  supplies a private default key, so the same `T` is reused within one binding
+  and is isolated across bindings. Add a key to share across bindings,
+  distinguish multiple instances of the same `T` in one binding, or provide
+  stable keyed cached lookup. A key does not keep an instance alive.
+
+### App composed from ViewModel modules (pseudo-code)
+
+An app can be a graph of many small ViewModel modules. Specs below deliberately
+have no `key` and no `aliveForever`; they are managed instances, not
+singletons:
+
+```dart
+final sessionSpec = ViewModelSpec(builder: SessionViewModel.new);
+final catalogSpec = ViewModelSpec(builder: CatalogViewModel.new);
+final cartSpec = ViewModelSpec(builder: CartViewModel.new);
+final paymentSpec = ViewModelSpec(builder: PaymentViewModel.new);
+final checkoutSpec = ViewModelSpec(builder: CheckoutViewModel.new);
+final appSpec = ViewModelSpec(builder: AppViewModel.new);
+
+class SessionViewModel with ViewModel { /* login / token */ }
+
+class CatalogViewModel with ViewModel { /* products / search */ }
+
+class CartViewModel with ViewModel { /* cart state */ }
+
+class PaymentViewModel with ViewModel { /* payment capability */ }
+
+class CheckoutViewModel with ViewModel {
+  SessionViewModel get session => viewModelBinding.read(sessionSpec);
+  CartViewModel get cart => viewModelBinding.read(cartSpec);
+  PaymentViewModel get payment => viewModelBinding.read(paymentSpec);
+
+  Future<void> submit() async {
+    final session = this.session;
+    final cart = this.cart;
+    final payment = this.payment;
+    await payment.pay(user: session.user, items: cart.items);
+  }
+}
+
+class AppViewModel with ViewModel {
+  SessionViewModel get session => viewModelBinding.read(sessionSpec);
+  CatalogViewModel get catalog => viewModelBinding.read(catalogSpec);
+  CartViewModel get cart => viewModelBinding.read(cartSpec);
+  CheckoutViewModel get checkout => viewModelBinding.read(checkoutSpec);
+}
+
+class _AppShellState extends State<AppShell> with ViewModelStateMixin {
+  AppViewModel get app => viewModelBinding.watch(appSpec);
+
+  @override
+  Widget build(BuildContext context) => AppView(viewModel: app);
+}
+```
+
+The getter declarations create nothing by themselves. `AppViewModel` is
+created or reused when `_AppShellState.build` evaluates `app`; each child is
+resolved only when its corresponding getter is evaluated. After every getter
+above has been accessed, the conceptual dependency graph is:
+
+```text
+AppShell ViewModelBinding
+└── AppViewModel
+    ├── SessionViewModel
+    ├── CatalogViewModel
+    ├── CartViewModel
+    └── CheckoutViewModel
+        ├── SessionViewModel (same binding-managed instance)
+        ├── CartViewModel (same binding-managed instance)
+        └── PaymentViewModel
+```
+
+When `AppShell` is disposed, its binding releases every module that it actually
+resolved. Any module with no remaining binding reference is disposed
+automatically. This is binding ownership, not a parent-to-child ownership edge:
+recycling a parent does not automatically recycle its children. Keep composite
+or coordinator ViewModels unkeyed by default. If a leaf service must be shared,
+put the explicit `key` on that leaf and make every root resolve it so every root
+obtains its own binding reference.
+
+### Shared-parent lifecycle boundary
+
+A keyed parent ViewModel can be referenced by multiple root bindings, but its
+nested dependencies are not transitively bound to every root that binds the
+parent. `viewModelBinding` resolves through the first remaining owner binding
+selected by `refHandler`, not necessarily the caller's root. A child resolved
+by the shared parent belongs to that selected root unless the other roots
+resolve the child themselves. When that root is disposed, the child may be
+disposed while the keyed parent remains alive under another root.
+
+Non-caching getters prevent the parent from retaining a disposed child: the
+next access re-resolves through the next owner selected by `refHandler`. They
+do not guarantee child state continuity; the child may be recreated. For
+continuous shared state, prefer an unkeyed parent plus a keyed leaf resolved by
+every root, or use a dedicated application-level binding owner. Use
+`aliveForever` only when retention beyond binding lifetime is intentional;
+explicit `recycle` is then responsible for early cleanup. Never cache a nested
+ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 
 ## Implementation workflow
 
@@ -58,9 +203,15 @@ Use this skill for requests like:
 2. Define `ViewModelSpec`
 - `ViewModelSpec<T>(builder: ...)` for no args.
 - `ViewModelSpec.arg/arg2/arg3/arg4` for parameterized construction.
-- Use `key` for shared instance identity.
+- Identity is resolved generic VM type `T` + effective `key`; `tag` and the
+  builder's runtime result type do not participate in identity.
+- When factory `key()` returns `null`, repeated access to the same `T` reuses
+  one instance within a binding and remains isolated across bindings.
+- Use `key` for cross-binding sharing, multiple same-`T` instances in one
+  binding, or stable keyed cached lookup. It does not keep an instance alive.
 - Use `tag` for grouped lookup.
-- Use `aliveForever: true` only for real process-lifetime singletons.
+- Use `aliveForever: true` only for intentional long-lived retention. It skips
+  automatic disposal at zero binding references; `recycle` still force-disposes.
 
 3. Integrate with host
 - Widget page: `State<T> with ViewModelStateMixin`.
@@ -82,10 +233,15 @@ Use this skill for requests like:
 - `recycle(vm)`: force unbind all and dispose; next `watch/read` gets fresh instance.
 
 5. Handle dependencies and sharing
+- Model each independent functional capability as a ViewModel when it benefits
+  from managed lifecycle, state notifications, dependency injection, or reuse.
 - In a ViewModel, `viewModelBinding` is available via Zone from parent binding.
 - ViewModel-to-ViewModel calls (`read/watch/listen`) are part of the same binding lifecycle chain.
-- Without `key`: per-binding isolated instance.
-- With same `key`: cross-binding shared instance.
+- Resolve nested ViewModels through non-caching getters; do not retain them in
+  `late final`, `final`, or `??=` fields.
+- With `key() == null`: one instance per resolved generic VM type `T` per binding.
+- With same `T` + same `key`: shared identity across bindings.
+- Multiple instances of the same `T` in one binding need distinct keys.
 - Static lookup (`ViewModel.readCached`, `ViewModel.maybeReadCached`) is lookup-only (no bind, no create).
 
 6. Lifecycle and cleanup
@@ -99,7 +255,12 @@ Use this skill for requests like:
 - Built-in pause providers: route cover, ticker mode, app lifecycle.
 - Use `StateViewModelValueWatcher` for selector-level rebuilds; pair it with
   `read`, not `watch`, to avoid duplicate subscriptions and broad rebuilds.
-- `ObservableValue` + `ObserverBuilder(1/2/3)` for lightweight reactive values; same `shareKey` means shared underlying state.
+- `ObservableValue` and `ObserverBuilder(1/2/3)` are deprecated compatibility
+  APIs scheduled for removal in 2.0.0. Do not introduce new usages.
+- Use Flutter's `ValueNotifier` + `ValueListenableBuilder` for widget-local
+  values, or an explicit `StateViewModel` + `ViewModelSpec` for managed state.
+  Add a `key` when cross-binding sharing, multiple same-type instances in one
+  binding, or stable keyed cached lookup is required.
 
 8. App-level setup
 - Call `ViewModel.initialize(...)` once at app startup (subsequent calls are ignored).
@@ -121,6 +282,10 @@ Use this skill for requests like:
 ## Do/Don't checklist
 
 Do:
+- Default feature-module specs to no `key` and no `aliveForever`, allowing the
+  binding to own creation, reuse, and disposal.
+- Expose ViewModels through typed, non-caching getters that call
+  `viewModelBinding.read/watch`.
 - Keep `watch` for reactive UI, `read` for imperative actions.
 - For field-level updates (`listenStateSelect`, `StateViewModelValueWatcher`,
   selector-based rebuilds), read the ViewModel with `read` and let the
@@ -130,9 +295,14 @@ Do:
 - Use `listenStateSelect` for side effects on selected state fields.
 
 Don't:
+- Introduce a global singleton or service locator for ViewModel modules by
+  default; compose modules through `viewModelBinding` instead.
 - Claim `read` is "non-binding" (it still binds and affects lifecycle).
 - Pair selector-level rebuild tools with `watch`; this usually causes broader
   rebuilds than intended.
+- Cache a ViewModel dependency in `late final`, `final`, or `??=`; the active
+  owner binding can change after recycle or shared-parent transfer.
+- Introduce `ObservableValue` or `ObserverBuilder`; they are deprecated.
 - Use cached APIs expecting auto-create behavior.
 - Overuse `aliveForever` for page-scoped state.
 - Forget `ViewModel.routeObserver` when relying on route pause behavior.
@@ -140,6 +310,9 @@ Don't:
 ## Response pattern for implementation requests
 
 When generating code for users:
+- For app architecture, present features as collaborating ViewModel modules;
+  compose them through `viewModelBinding` and default to managed, non-singleton
+  specs without `key` or `aliveForever`.
 - Prefer complete, runnable snippets with:
   - imports
   - ViewModel class

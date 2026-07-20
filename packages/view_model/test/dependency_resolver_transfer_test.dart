@@ -7,23 +7,13 @@ import 'package:view_model/view_model.dart';
 class MyViewModel with ViewModel {
   final String name;
 
-  MyViewModel(this.name) {
-    childViewModel1 = viewModelBinding
-        .read<ChildViewModel1>(ViewModelSpec(builder: () => ChildViewModel1()));
-  }
+  MyViewModel(this.name);
 
-  late ChildViewModel2 childViewModel2;
-  late ChildViewModel1 childViewModel1;
-
-  void doSome() {
-    childViewModel2 = viewModelBinding
-        .read<ChildViewModel2>(ViewModelSpec(builder: () => ChildViewModel2()));
-  }
+  ChildViewModel get childViewModel => viewModelBinding
+      .read<ChildViewModel>(ViewModelSpec(builder: ChildViewModel.new));
 }
 
-class ChildViewModel1 with ViewModel {}
-
-class ChildViewModel2 with ViewModel {}
+class ChildViewModel with ViewModel {}
 
 // A stateful widget that uses the ViewModel.
 class MyWidget extends StatefulWidget {
@@ -36,24 +26,16 @@ class MyWidget extends StatefulWidget {
 }
 
 class MyWidgetState extends State<MyWidget> with ViewModelStateMixin<MyWidget> {
-  late MyViewModel vm;
+  MyViewModel get vm => viewModelBinding.watch<MyViewModel>(
+        ViewModelSpec(key: 'share', builder: () => MyViewModel(widget.name)),
+      );
 
-  @override
-  void initState() {
-    super.initState();
-    // Use a key to ensure the same ViewModel instance is shared.
-    vm = viewModelBinding.watch<MyViewModel>(
-      ViewModelSpec(key: "share", builder: () => MyViewModel(widget.name)),
-    );
-  }
-
-  void doSome() {
-    vm.doSome();
-  }
+  ViewModelBinding get testBinding => viewModelBinding;
 
   @override
   Widget build(BuildContext context) {
-    return Text(vm.name);
+    final viewModel = vm;
+    return Text(viewModel.name);
   }
 }
 
@@ -79,6 +61,7 @@ void main() {
     final stateA = tester.state<MyWidgetState>(find.byKey(keyA));
     var stateB = tester.state<MyWidgetState>(find.byKey(keyB));
     final vm = stateA.vm;
+    final initialChild = vm.childViewModel;
 
     // Check that stateA and stateB share the same vm instance
     expect(identical(stateA.vm, stateB.vm), isTrue);
@@ -89,10 +72,11 @@ void main() {
     // Initially, the ViewModel's dependency handler should have resolvers
     // from both states.
     expect(dependencyHandler.ownerResolvers.length, 2);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding),
-        isTrue);
-    expect(dependencyHandler.ownerResolvers.contains(stateB.viewModelBinding),
-        isTrue);
+    expect(
+        dependencyHandler.ownerResolvers.contains(stateA.testBinding), isTrue);
+    expect(
+        dependencyHandler.ownerResolvers.contains(stateB.testBinding), isTrue);
+    expect(initialChild.refHandler.dependencyBindings, [stateA.testBinding]);
 
     // Dispose StateA by removing its widget.
     await tester.pumpWidget(
@@ -110,24 +94,21 @@ void main() {
     // After StateA is disposed, its resolver should be removed.
     expect(dependencyHandler.ownerResolvers.length, 1);
     // The remaining resolver should be from StateB.
-    expect(dependencyHandler.ownerResolvers.first, stateB.viewModelBinding);
-    expect(dependencyHandler.ownerResolvers.contains(stateA.viewModelBinding),
-        isFalse);
-
-    expect(() => stateB.vm.childViewModel2, throwsA(isA<Error>()));
-
-    stateB.vm.doSome();
-
-    expect(stateB.vm.childViewModel2.refHandler.dependencyBindings.length == 1,
-        true);
+    expect(dependencyHandler.ownerResolvers.first, stateB.testBinding);
     expect(
-        stateB.vm.childViewModel2.refHandler.dependencyBindings
-            .contains(stateB.viewModelBinding),
-        isTrue);
+        dependencyHandler.ownerResolvers.contains(stateA.testBinding), isFalse);
 
-    expect(stateB.vm.isDisposed, false);
-    expect(stateB.vm.childViewModel2.isDisposed, false);
-    expect(stateB.vm.childViewModel1.isDisposed, true);
+    // The child belonged to StateA and is disposed with that root. The getter
+    // must resolve a fresh child through the remaining StateB binding instead
+    // of retaining the disposed instance.
+    expect(initialChild.isDisposed, true);
+    final transferredChild = stateB.vm.childViewModel;
+    expect(identical(transferredChild, initialChild), false);
+    expect(identical(stateB.vm.childViewModel, transferredChild), true);
+    expect(
+        transferredChild.refHandler.dependencyBindings, [stateB.testBinding]);
+    expect(vm.isDisposed, false);
+    expect(transferredChild.isDisposed, false);
     await tester.pumpWidget(
       const MaterialApp(
         home: Column(
@@ -136,9 +117,8 @@ void main() {
       ),
     );
 
-    expect(stateB.vm.isDisposed, true);
-    expect(stateB.vm.childViewModel2.isDisposed, true);
-    expect(stateB.vm.childViewModel1.isDisposed, true);
+    expect(vm.isDisposed, true);
+    expect(transferredChild.isDisposed, true);
   });
 }
 

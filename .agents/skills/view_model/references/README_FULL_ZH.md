@@ -1,12 +1,15 @@
-# view_model
+# view_model：状态管理、依赖注入与模块架构
 
 [![pub package](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model)
 
 [English](./README.md)
 
-**一切皆 ViewModel。**
+**不只是状态管理。view_model 同时是一套面向 Flutter 的依赖注入、功能模块组合与自动生命周期管理架构。**
 
-这是一个为 Flutter 量身定制的状态管理框架。它基于“类型键（Type-keyed）实例注册表”构建，并自带“自动引用计数”的生命周期管理系统。无需繁琐的初始化，真正做到**按需创建，自动销毁**。
+每个功能单元——页面状态、服务、仓储、协调器或领域能力——都可以是
+ViewModel。ViewModel 之间通过 `viewModelBinding` 相互依赖注入与组合，
+由 `ViewModelBinding` 在 getter 被实际访问时按需解析对应节点、在作用域内
+复用实例，并自动完成回收；无需依赖全局单例。
 
 ```yaml
 dependencies:
@@ -35,6 +38,7 @@ npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
 - [🏗️ 在任意非 Widget 类中使用](#️-在任意非-widget-类中使用)
 - [🔄 ViewModel 间的强力联动](#-viewmodel-间的强力联动)
 - [⚡ 细粒度更新（性能优化）](#-细粒度更新性能优化)
+- [⚠️ ObservableValue 迁移](#️-observablevalue-迁移)
 - [💤 智能 暂停 / 恢复 机制](#-智能-暂停--恢复-机制)
 - [♻️ 生命周期细节与资源回收](#-生命周期细节与资源回收)
 - [🛠️ 全局配置与调试](#-全局配置与调试)
@@ -117,7 +121,7 @@ class CounterPage extends StatefulWidget {
 
 class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
   // watch 会建立连接：ViewModel 变了，当前 Widget 自动刷新
-  late final vm = viewModelBinding.watch(counterSpec);
+  CounterViewModel get vm => viewModelBinding.watch(counterSpec);
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +139,10 @@ class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
 
 ### StateViewModel（强状态版）
 如果你追求不可变状态（配合 `Freezed` 简直完美），它是你的不二之选。它能记录 `previousState`，并支持字段级的差异化监听（`listenStateSelect`）。
+
+做字段级更新时，建议用 `read` 读取 ViewModel，再交给
+`listenStateSelect` / `StateViewModelValueWatcher` 驱动更新；不要再对同一
+个 ViewModel 额外使用 `watch`，否则会把整份 ViewModel 的宽范围监听也挂上。
 
 ```dart
 class UserViewModel extends StateViewModel<UserState> {
@@ -156,6 +164,158 @@ StreamViewModel() {
 }
 ```
 
+## 🔄 ViewModel 间的强力联动
+
+ViewModel 内部的依赖统一通过非缓存 getter 获取。getter 每次都会经由
+`refHandler` 当前选中的 owner binding（首个仍存在的 owner，不一定是调用方
+root）解析，但同一 binding 内仍会复用同一个受管实例：
+
+```dart
+class OrderViewModel with ViewModel {
+  CartViewModel get cart => viewModelBinding.read(cartSpec);
+  UserViewModel get user => viewModelBinding.read(userSpec);
+
+  double get total => cart.items.fold(0, (sum, item) => sum + item.price);
+}
+```
+
+优先 getter，不要用 `late final`、构造时缓存或 `??=` 持有嵌套 ViewModel。
+root binding 只负责释放它实际解析过的实例；getter 声明本身不会创建任何
+对象。
+
+> **共享父模块边界：** 一个带 key 的父 ViewModel 可以被多个 root binding
+> 共同持有，但父模块解析出的子依赖不会自动绑定到所有 root。解析子依赖的
+> root 被销毁后，父模块可能仍存活而子模块已经销毁。非缓存 getter 能避免
+> 继续持有已销毁对象，并在下次访问时通过 `refHandler` 新选中的 owner 重新
+> 解析；但子模块可能被重新创建，原状态不保证连续。需要连续共享状态时，
+> 优先使用不带 key 的复合父模块，并让每个 root 都解析带 key 的共享叶子
+> 模块；也可以使用明确的应用级 binding owner。
+
+## ⚠️ ObservableValue 迁移
+
+`ObservableValue`、`ObserverBuilder`、`ObserverBuilder2` 和
+`ObserverBuilder3` 已弃用，计划在 2.0.0 移除。它们只是隐藏
+`StateViewModel` 的便捷封装，并不是核心状态管理能力；1.x 期间仍会保留，
+供现有项目迁移。
+
+Widget 内部的局部响应式值，请改用 Flutter 自带的 `ValueNotifier` 和
+`ValueListenableBuilder`，并由其持有者负责 `dispose`：
+
+```dart
+class ThemeToggle extends StatefulWidget {
+  const ThemeToggle({super.key});
+
+  @override
+  State<ThemeToggle> createState() => _ThemeToggleState();
+}
+
+class _ThemeToggleState extends State<ThemeToggle> {
+  final ValueNotifier<bool> _isDarkMode = ValueNotifier<bool>(false);
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _isDarkMode,
+      builder: (context, isDarkMode, child) {
+        return IconButton(
+          icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode),
+          onPressed: () => _isDarkMode.value = !isDarkMode,
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _isDarkMode.dispose();
+    super.dispose();
+  }
+}
+```
+
+需要 view_model 自动生命周期管理时，请显式使用 `StateViewModel` 和
+`ViewModelSpec`。下面通过带 key 的非 Widget binding owner 持有状态，因此
+生产者可以在观察 Widget 挂载前或卸载期间继续读取和更新：
+
+```dart
+class ThemeModeViewModel extends StateViewModel<bool> {
+  ThemeModeViewModel() : super(state: false);
+
+  void setDarkMode(bool value) => setState(value);
+}
+
+final themeModeSpec = ViewModelSpec<ThemeModeViewModel>(
+  builder: ThemeModeViewModel.new,
+  key: 'theme-dark',
+);
+
+class ThemeModeOwner with ViewModelBinding {
+  ThemeModeViewModel get themeMode =>
+      viewModelBinding.read(themeModeSpec);
+
+  void setDarkMode(bool value) => themeMode.setDarkMode(value);
+}
+
+class ThemeModeExample extends StatefulWidget {
+  const ThemeModeExample({super.key});
+
+  @override
+  State<ThemeModeExample> createState() => _ThemeModeExampleState();
+}
+
+class _ThemeModeExampleState extends State<ThemeModeExample> {
+  final ThemeModeOwner _owner = ThemeModeOwner();
+
+  @override
+  void initState() {
+    super.initState();
+    // 在观察子 Widget 挂载前创建并更新实例。
+    _owner.setDarkMode(true);
+  }
+
+  @override
+  Widget build(BuildContext context) => const ThemeModeButton();
+
+  @override
+  void dispose() {
+    _owner.dispose();
+    super.dispose();
+  }
+}
+
+class ThemeModeButton extends StatefulWidget {
+  const ThemeModeButton({super.key});
+
+  @override
+  State<ThemeModeButton> createState() => _ThemeModeButtonState();
+}
+
+class _ThemeModeButtonState extends State<ThemeModeButton>
+    with ViewModelStateMixin {
+  ThemeModeViewModel get themeMode =>
+      viewModelBinding.watch(themeModeSpec);
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = themeMode;
+    return IconButton(
+      icon: Icon(viewModel.state ? Icons.dark_mode : Icons.light_mode),
+      onPressed: () => viewModel.setDarkMode(!viewModel.state),
+    );
+  }
+}
+```
+
+`ThemeModeExample` 完整展示了 owner 边界：在 `ThemeModeButton` 挂载前
+更新状态、观察子 Widget 不存在时继续持有状态，并在作用域结束时释放非
+Widget owner。应用、服务或启动作用域也遵循同一模式。这里的 key 用于跨
+binding 共享；同一 binding 内要区分多个同 `T` 实例时也需要不同 key。key
+本身不会保活，也不能替代 owner。只有明确需要进程级常驻并接受显式
+recycle 或进程结束清理时，才使用 `aliveForever`。
+
+迁移 `ObserverBuilder2` 或 `ObserverBuilder3` 时，优先把相关值合并为一个
+明确的状态对象，避免继续用多个独立可观察值拼装业务状态。
+
 ---
 
 ## 🔗 viewModelBinding 核心接口
@@ -168,16 +328,22 @@ StreamViewModel() {
 | **`read(spec)`** | 事件回调、只需调用方法时 | **非响应式**：仅读取，不监听。若 VM 不存在则创建。 |
 | **`watchCached(key/tag)`** | 寻找现有的单例或共享 VM | 如果缓存里没找到，它会抛出异常。 |
 | **`readCached(key/tag)`** | 读取现有缓存但不触发刷新 | 只查找已有实例，不创建；会参与 binding 生命周期，但不响应 `notifyListeners()`。 |
-| **`watchCachesByTag(tag)`** | 按 tag 批量响应式获取 VM | 批量版 `watch`：会 `bind`，也会监听变化。 |
-| **`readCachesByTag(tag)`** | 按 tag 批量读取已有 VM | 批量版 `read`：会 `bind`、参与 dispose 清理，并感知 recreate/dispose，但不响应 `notifyListeners()`。 |
+| **`watchCachesByTag(tag)`** | 按 tag 批量响应式获取 VM | 批量版 `watch`：会 `bind`、响应 `notifyListeners()`，也会感知 recreate/dispose。 |
+| **`readCachesByTag(tag)`** | 按 tag 批量读取已有 VM | 批量版 `read`：会 `bind`、感知 recreate/dispose，并参与 dispose 清理，但不响应 `notifyListeners()`。 |
 | **`listenStateSelect(...)`**| 针对性监听某个字段 | 例如：只有 `user.age` 变了才弹窗，别的字段变了不理。 |
 | **`recycle(vm)`** | 强制销毁重来 | 比如：退出登录时，一键回收所有用户相关的 VM。 |
 
 补充说明：
 
 - `watch*` 和 `read*` 都会建立 binding，都会影响实例生命周期；差别主要在于是否监听 ViewModel 自身的变化。
-- `readCachesByTag(tag)` 不会响应 `notifyListeners()`，但会注册 recreate listener；它不是纯静态查询，binding dispose 时仍会自动 `unbind/removeRef`。
 - 做字段级更新时，优先用 `read` 拿到 ViewModel，再交给 `listenStateSelect` 或 `StateViewModelValueWatcher` 驱动更新；不要再对同一个 ViewModel 额外 `watch`。
+- 实例身份由“解析时使用的泛型 ViewModel 类型 `T` + effective key”共同
+  决定；builder 返回对象的运行时具体类型不参与身份，`tag` 也只用于分组
+  检索。factory 的 `key()` 返回 `null` 时，同一 binding 内同一 `T` 只会
+  复用一个实例，不同 binding 默认隔离。跨 binding 共享、同一 binding 内
+  区分多个同 `T` 实例，
+  或需要稳定的 keyed cached lookup 时，应显式设置 key。key 本身不负责
+  保活；`aliveForever` 只跳过引用归零时的自动回收，显式 `recycle` 仍可销毁。
 
 ---
 
@@ -229,14 +395,14 @@ class CounterViewModel with ViewModel { ... }
 | :--- | :--- | :--- |
 | **类实现方式** | 继承/codegen 为主（`Notifier`/`AsyncNotifier`/`@riverpod`） | **纯 mixin 方式**（`class X with ViewModel`） |
 | **优点** | Provider 组合与响应式派生能力强 | 零侵入、可多 mixin 叠加、任意类可直接成为 ViewModel |
-| **watch/read 位置** | 在 `Consumer` 的 `build` 中常用 `ref.watch(...)`；在 Provider/Notifier 的 `build` 中也可 `ref.watch(...)`；在 Widget 中若需在 `build` 外监听，可用 `WidgetRef.listenManual(...)` | 可直接声明为类字段（如 `late final vm = viewModelBinding.watch(...)`），不强制写在 `build` 内 |
+| **watch/read 位置** | 在 `Consumer` 的 `build` 中常用 `ref.watch(...)`；在 Provider/Notifier 的 `build` 中也可 `ref.watch(...)`；在 Widget 中若需在 `build` 外监听，可用 `WidgetRef.listenManual(...)` | 可通过 getter 暴露（如 `MyViewModel get vm => viewModelBinding.watch(...)`），不强制写在 `build` 内 |
 
-**view_model 示例（字段声明）**：
+**view_model 示例（getter 声明）**：
 
 ```dart
 class _MyPageState extends State<MyPage> with ViewModelStateMixin {
-  late final counterVM = viewModelBinding.watch(counterSpec); // 只初始化一次
-  late final userVM = viewModelBinding.watch(userSpec);
+  CounterViewModel get counterVM => viewModelBinding.watch(counterSpec);
+  UserViewModel get userVM => viewModelBinding.watch(userSpec);
 
   @override
   Widget build(BuildContext context) {
@@ -248,13 +414,13 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin {
 ### 3. 实例获取与作用域（核心差异）
 
 - **Riverpod**：实例按 `ProviderContainer` 隔离。常见项目只有一个根 `ProviderScope`，因此同一 Provider 在整个 App 内通常共享一份状态；需要隔离时通过局部 `ProviderScope`/override/family 控制。
-- **view_model**：默认 **per-binding 单例**。同一 `ViewModelBinding` 内多次 `watch/read` 共享同实例；不同页面（不同 binding）默认隔离。需要全局共享时显式声明 key：
+- **view_model**：默认是“每个 binding、每个解析类型参数 `T` 一个实例”。同一 `ViewModelBinding` 内对同一 `T` 多次 `watch/read` 会复用实例，不同页面（不同 binding）默认隔离。跨 binding 共享或在同一 binding 内区分多个同 `T` 实例时显式声明 key：
 
 ```dart
 final globalAuthSpec = ViewModelSpec<AuthViewModel>(
   builder: () => AuthViewModel(),
   key: 'global-auth',
-  aliveForever: true, // 可选：常驻
+  aliveForever: true, // 可选：引用归零时仍保留，可显式 recycle
 );
 ```
 
