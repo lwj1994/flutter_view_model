@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
@@ -10,6 +12,17 @@ import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 /// trigger a rebuild in any listening [ObserverBuilder].
 ///
 /// The data can be shared and identified by [shareKey].
+///
+/// Deprecated. For widget-local reactive state, use Flutter's
+/// `ValueNotifier<T>` with `ValueListenableBuilder<T>`. For state managed by
+/// this package, use `StateViewModel<T>` with `ViewModelSpec`.
+///
+/// This compatibility API is scheduled for removal in 2.0.0.
+@Deprecated(
+  'Use ValueNotifier with ValueListenableBuilder for widget-local state, '
+  'or StateViewModel with ViewModelSpec for managed state. '
+  'Scheduled for removal in 2.0.0.',
+)
 class ObservableValue<T> {
   /// A key to identify and share this value across different
   /// [ObserverBuilder]s. If not provided, a unique key is
@@ -91,6 +104,14 @@ class _ObserveDataViewModel<T> extends StateViewModel<T> {
 
 /// A widget that listens to an [ObservableValue] and rebuilds whenever the
 /// value changes.
+///
+/// Deprecated. Use Flutter's `ValueListenableBuilder<T>` for widget-local
+/// state, or resolve a `StateViewModel<T>` from a `ViewModelSpec` for managed
+/// state.
+@Deprecated(
+  'Use ValueListenableBuilder for widget-local state, or StateViewModel '
+  'with ViewModelSpec for managed state. Scheduled for removal in 2.0.0.',
+)
 class ObserverBuilder<T> extends StatefulWidget {
   final ObservableValue<T> observable;
 
@@ -137,6 +158,13 @@ class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
 
 /// A widget that listens to two [ObservableValue]s and rebuilds whenever either
 /// value changes.
+///
+/// Deprecated. Use Flutter's `ValueListenableBuilder` for widget-local state,
+/// or one `StateViewModel` containing both values for managed state.
+@Deprecated(
+  'Use ValueListenableBuilder for widget-local state, or one StateViewModel '
+  'containing both values. Scheduled for removal in 2.0.0.',
+)
 class ObserverBuilder2<T1, T2> extends StatefulWidget {
   final ObservableValue<T1> observable1;
   final ObservableValue<T2> observable2;
@@ -193,6 +221,13 @@ class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
 
 /// A widget that listens to three [ObservableValue]s and rebuilds whenever any
 /// value changes.
+///
+/// Deprecated. Use Flutter's `ValueListenableBuilder` for widget-local state,
+/// or one `StateViewModel` containing all values for managed state.
+@Deprecated(
+  'Use ValueListenableBuilder for widget-local state, or one StateViewModel '
+  'containing all values. Scheduled for removal in 2.0.0.',
+)
 class ObserverBuilder3<T1, T2, T3> extends StatefulWidget {
   final ObservableValue<T1> observable1;
   final ObservableValue<T2> observable2;

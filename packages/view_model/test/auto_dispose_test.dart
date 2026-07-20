@@ -299,6 +299,45 @@ void main() {
       expect(count, 1);
     });
 
+    test('performForAllInstances reports action errors', () {
+      final previousConfig = ViewModel.config;
+      final actionError = StateError('perform action failed');
+      Object? reportedError;
+      StackTrace? reportedStack;
+      ErrorType? reportedType;
+
+      ViewModel.reset();
+      ViewModel.initialize(
+        config: ViewModelConfig(
+          onError: (error, stack, type) {
+            reportedError = error;
+            reportedStack = stack;
+            reportedType = type;
+          },
+        ),
+      );
+      addTearDown(() {
+        controller.dispose();
+        mockRef.dispose();
+        ViewModel.reset();
+        ViewModel.initialize(config: previousConfig);
+      });
+
+      final factory = InstanceFactory<TestStatelessViewModel>(
+        builder: () => TestStatelessViewModel(),
+        arg: const InstanceArg(key: 'perform_error_test'),
+      );
+      controller.getInstance<TestStatelessViewModel>(factory: factory);
+
+      expect(
+        () => controller.performForAllInstances((_) => throw actionError),
+        returnsNormally,
+      );
+      expect(reportedError, same(actionError));
+      expect(reportedStack, isNotNull);
+      expect(reportedType, ErrorType.lifecycle);
+    });
+
     test('unbindInstance', () {
       final factory = InstanceFactory<TestStatelessViewModel>(
         builder: () => TestStatelessViewModel(),

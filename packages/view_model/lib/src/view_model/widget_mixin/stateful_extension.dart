@@ -23,15 +23,8 @@ import 'package:view_model/src/view_model/widget_mixin/view_model_binding.dart';
 /// }
 ///
 /// class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage> {
-///   late final MyViewModel viewModel;
-///
-///   @override
-///   void initState() {
-///     super.initState();
-///     viewModel = viewModelBinding.watch(
-///       MyViewModelSpec(),
-///     );
-///   }
+///   MyViewModel get viewModel =>
+///       viewModelBinding.watch(MyViewModelSpec());
 ///
 ///   @override
 ///   Widget build(BuildContext context) {

@@ -26,7 +26,7 @@ class CounterWidget extends StatefulWidget {
 class _CounterWidgetState extends State<CounterWidget>
     with ViewModelStateMixin {
   // Bind and watch the ViewModel
-  late final vm = viewModelBinding.watch(counterSpec);
+  CounterViewModel get vm => viewModelBinding.watch(counterSpec);
 
   @override
   Widget build(BuildContext context) {

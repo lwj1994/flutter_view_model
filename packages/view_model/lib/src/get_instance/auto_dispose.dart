@@ -177,8 +177,8 @@ class AutoDisposeInstanceController {
         try {
           action(notifier.instance as ViewModel);
         } catch (e, stack) {
-          reportViewModelError(e, stack, ErrorType.lifecycle,
-              'performForAllInstances error');
+          reportViewModelError(
+              e, stack, ErrorType.lifecycle, 'performForAllInstances error');
         }
       }
     }

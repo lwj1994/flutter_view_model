@@ -168,11 +168,8 @@ abstract interface class ViewModelBindingHost {
 ///
 /// ```dart
 /// class DownloadService with ViewModelBinding {
-///   late final DownloadViewModel _downloadVM;
-///
-///   DownloadService() {
-///     _downloadVM = viewModelBinding.watch(DownloadViewModelSpec());
-///   }
+///   DownloadViewModel get _downloadVM =>
+///       viewModelBinding.watch(DownloadViewModelSpec());
 ///
 ///   @override
 ///   void onUpdate() {
@@ -381,13 +378,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// Example:
   /// ```dart
   /// class _MyWidgetState extends State<MyWidget> with ViewModelStateMixin {
-  ///   late final MyViewModel _viewModel;
-  ///
-  ///   @override
-  ///   void initState() {
-  ///     super.initState();
-  ///     _viewModel = viewModelBinding.watch(MyViewModelSpec());
-  ///   }
+  ///   MyViewModel get _viewModel =>
+  ///       viewModelBinding.watch(MyViewModelSpec());
   ///
   ///   @override
   ///   Widget build(BuildContext context) {
@@ -520,8 +512,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       getName();
     }
     if (isDisposed) {
-      throw ViewModelError(
-          "Cannot get $VM: "
+      throw ViewModelError("Cannot get $VM: "
           "ViewModelBinding(${getName()}) is already disposed.");
     }
     if (VM == ViewModel || VM == dynamic) {

@@ -1,9 +1,10 @@
 import 'package:view_model/src/view_model/view_model.dart';
 
 /// A simple, argument-less specification for creating a ViewModel.
-/// Provides builder and optional cache identifiers (`key` and `tag`).
-/// Use [key] to reuse the same instance for
-/// identical `key`+`tag`.
+/// Provides a builder, an optional instance `key`, and an optional grouping
+/// `tag`.
+/// Equal non-null [key] values reuse one instance for the same resolved generic
+/// ViewModel type `T`; [tag] is only a grouping and lookup label.
 class ViewModelSpec<T extends ViewModel> extends ViewModelFactory<T> {
   final T Function() builder;
   late final Object? _key;
@@ -16,7 +17,8 @@ class ViewModelSpec<T extends ViewModel> extends ViewModelFactory<T> {
     Object? key,
     Object? tag,
 
-    /// Whether the instance should live forever (never be disposed).
+    /// Whether to skip automatic disposal when no bindings remain.
+    /// Explicit `recycle` still force-disposes the instance.
     bool aliveForever = false,
   }) : _aliveForever = aliveForever {
     _key = key;
@@ -156,7 +158,8 @@ class ViewModelSpecWithArg<VM extends ViewModel, A> {
   /// Computes a cache tag from argument (optional).
   final Object? Function(A argument)? tag;
 
-  /// Whether the instance should live forever (never be disposed).
+  /// Whether to skip automatic disposal when no bindings remain.
+  /// Explicit `recycle` still force-disposes the instance.
   final bool Function(A argument)? aliveForever;
 
   /// Proxy for test-time override.
