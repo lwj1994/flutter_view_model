@@ -7,8 +7,7 @@ class StackPathLocator {
   // Cache path information to avoid repeated retrieval
   String? _cachedObjectPath;
 
-  bool get ready =>
-      _cachedObjectPath != null && _cachedObjectPath!.isNotEmpty;
+  bool get ready => _cachedObjectPath != null && _cachedObjectPath!.isNotEmpty;
 
   /// Gets the file path and line number where this mixin is being used.
   ///

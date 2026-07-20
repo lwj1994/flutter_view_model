@@ -619,8 +619,7 @@ class InstanceArg {
           aliveForever == other.aliveForever);
 
   @override
-  int get hashCode =>
-      Object.hash(key, tag, bindingId, aliveForever);
+  int get hashCode => Object.hash(key, tag, bindingId, aliveForever);
 
   @override
   String toString() {
