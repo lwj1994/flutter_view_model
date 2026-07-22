@@ -1,6 +1,8 @@
 # view_model：状态管理、依赖注入与模块架构
 
-[![pub package](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model)
+| `view_model` | `view_model_annotation` | `view_model_generator` | 覆盖率 |
+| :---: | :---: | :---: | :---: |
+| [![view_model 版本](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model) | [![view_model_annotation 版本](https://img.shields.io/pub/v/view_model_annotation.svg)](https://pub.dev/packages/view_model_annotation) | [![view_model_generator 版本](https://img.shields.io/pub/v/view_model_generator.svg)](https://pub.dev/packages/view_model_generator) | [![codecov](https://codecov.io/gh/lwj1994/flutter_view_model/branch/main/graph/badge.svg)](https://app.codecov.io/gh/lwj1994/flutter_view_model) |
 
 [English](./README.md)
 

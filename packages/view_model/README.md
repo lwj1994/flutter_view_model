@@ -1,6 +1,8 @@
 # view_model — State Management, Dependency Injection, and Module Architecture
 
-[![pub package](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model)
+| `view_model` | `view_model_annotation` | `view_model_generator` | Coverage |
+| :---: | :---: | :---: | :---: |
+| [![view_model version](https://img.shields.io/pub/v/view_model.svg)](https://pub.dev/packages/view_model) | [![view_model_annotation version](https://img.shields.io/pub/v/view_model_annotation.svg)](https://pub.dev/packages/view_model_annotation) | [![view_model_generator version](https://img.shields.io/pub/v/view_model_generator.svg)](https://pub.dev/packages/view_model_generator) | [![codecov](https://codecov.io/gh/lwj1994/flutter_view_model/branch/main/graph/badge.svg)](https://app.codecov.io/gh/lwj1994/flutter_view_model) |
 
 [简体中文](./README_ZH.md)
 
