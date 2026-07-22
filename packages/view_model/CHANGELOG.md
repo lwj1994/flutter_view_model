@@ -1,9 +1,12 @@
-## Unreleased
+## 1.0.5
 - Deprecate `ObservableValue` and the `ObserverBuilder` family. Use Flutter's
   `ValueNotifier` / `ValueListenableBuilder` for widget-local values, or
   `StateViewModel` / `ViewModelSpec` for lifecycle-managed and shared state.
   The compatibility APIs remain available in 1.x and are scheduled for removal
   in 2.0.0.
+- Document getter-based ViewModel dependencies and shared-parent lifecycle
+  boundaries.
+- Show all package versions and Codecov coverage in the README status table.
 
 ## 1.0.4
 - Refactor `AutoDisposeInstanceController.getInstancesByTag` to drop the unused `listen` parameter; recreate-listener attachment is now unconditional, matching the documented semantics of `watchCachesByTag` / `readCachesByTag`.
