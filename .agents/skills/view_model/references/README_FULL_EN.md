@@ -243,13 +243,15 @@ class UserViewModel extends StateViewModel<UserState> {
 }
 ```
 
-State equality is checked by `identical()` by default. You can override this globally via `ViewModelConfig.equals` so that, for example, `==` is used instead (see [Configuration](#configuration)).
+Full-state equality uses the ViewModel constructor's local `equals`, then the
+global `ViewModelConfig.equals` fallback, and finally `identical()` when neither
+is configured (see [Configuration](#configuration)).
 
 `setState` is the only API that emits a state diff. Calling `notifyListeners()`
 only refreshes broad ViewModel listeners; it does not replay the last diff or
-invoke `listenState` / `listenStateSelect` again. A selector uses `==` by default
-for its selected value. Use `listenStateSelectWithEquals` when a strongly typed,
-per-listener comparison is needed.
+invoke `listenState` / `listenStateSelect` again. Selected values use the global
+`ViewModelConfig.equals` fallback when configured, then `==`. An explicit
+`equals` passed to `listenStateSelect` takes priority over the global fallback.
 
 ### ChangeNotifierViewModel
 
@@ -424,7 +426,7 @@ viewModelBinding.listenState(userSpec, onChanged: (UserState? prev, UserState cu
 });
 
 // StateViewModel: selected property with a custom equality rule
-viewModelBinding.listenStateSelectWithEquals(
+viewModelBinding.listenStateSelect(
   userSpec,
   selector: (UserState s) => s.name,
   equals: (previous, current) => previous == current,
@@ -434,9 +436,10 @@ viewModelBinding.listenStateSelectWithEquals(
 );
 ```
 
-Use `listenStateSelect` for the default `==` comparison. The separate
-`listenStateSelectWithEquals` API keeps custom equality strongly typed without
-changing the long-standing `listenStateSelect` signature.
+Use `listenStateSelect` without `equals` for the global
+`ViewModelConfig.equals` fallback, or `==` when the global comparator is `null`.
+Pass its optional strongly typed `equals` when this selector needs a local rule;
+the local rule takes priority over the global fallback.
 
 For field-level updates, prefer `read` plus selector-based listeners. Avoid
 pairing `listenStateSelect` with `watch` on the same ViewModel, or you'll keep
@@ -454,12 +457,12 @@ lifecycle controls are:
 - `recreate(vm, builder: ...)` replaces the instance while preserving active
   binding relationships. Without `builder`, the original factory is reused.
 
-The built-in `ViewModelBinding` supports both `recreate` and custom selector
-equality. A type that directly implements `ViewModelBindingInterface` can keep
-the old interface unchanged; opt into the new operations by also implementing
-`ViewModelBindingRecreateCapability` and/or
-`ViewModelBindingStateSelectEqualsCapability`. Calling an unsupported optional
-operation through the interface extension throws `UnsupportedError`.
+Custom selector equality is the optional `equals` argument on
+`listenStateSelect`. `recreate` remains a separate optional capability: a type
+that directly implements `ViewModelBindingInterface` opts in by also
+implementing `ViewModelBindingRecreateCapability`. Calling `recreate` through
+the interface extension on an unsupported implementation throws
+`UnsupportedError`.
 
 > **After `recycle`, the old object is disposed.** Every consumer—especially
 > other owners of a shared instance—must resolve the ViewModel through a
@@ -656,8 +659,9 @@ only when its getter is evaluated.
 ### StateViewModelSelector
 
 For new code, prefer one strongly typed selector and selected builder value.
-Use a Dart record to select several fields as one update boundary, and pass a
-typed `equals` when `==` is not the desired comparison:
+Use a Dart record to select several fields as one update boundary. The selected
+value uses global `ViewModelConfig.equals` when configured and otherwise `==`;
+pass a typed `equals` to override that fallback locally:
 
 ```dart
 StateViewModelSelector<UserState, ({String name, int age})>(
@@ -691,9 +695,10 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin {
 
 Internally, each selector is wrapped into a `listenStateSelect` call on the
 ViewModel. The widget only rebuilds when at least one selector's output differs
-from its previous value using `==`. To keep updates truly fine-grained, read the
-ViewModel with `read` and let the selector mechanism drive rebuilds instead of
-also using `watch`.
+from its previous value according to global `ViewModelConfig.equals`, or `==`
+when the global comparator is `null`. To keep updates truly fine-grained, read
+the ViewModel with `read` and let the selector mechanism drive rebuilds instead
+of also using `watch`.
 
 ### Deprecated: ObservableValue & ObserverBuilder
 
@@ -978,8 +983,8 @@ void main() {
       // Enable debug logging
       isLoggingEnabled: true,
 
-      // Custom state equality (default: identical())
-      // Used by StateViewModel.setState (selectors have typed per-call equals)
+      // Global equality fallback (default: null)
+      // Full state ultimately falls back to identical(); selectors to ==.
       equals: (a, b) => a == b,
 
       // Global error handler for listener and disposal errors
@@ -993,7 +998,12 @@ void main() {
 }
 ```
 
-**State equality note**: by default `StateViewModel.setState` uses `identical()` to decide whether to skip the update. This means creating a new object with the same field values will still trigger notification. If you configure `equals: (a, b) => a == b`, you need to implement `==` and `hashCode` on your state classes.
+**Equality priority**: full state uses local constructor `equals` → global
+`ViewModelConfig.equals` → `identical()`. A selected value uses explicit
+selector `equals` → global `ViewModelConfig.equals` → `==`. The global
+comparator defaults to `null`. If it delegates to `==`, every state and selected
+value type it receives must support the intended `==` semantics; state classes
+should also implement matching `hashCode`.
 
 ---
 
@@ -1038,7 +1048,7 @@ await userSpec.runWithOverride(mockUserSpec, () async {
 }); // prior override is restored here, even if the body throws
 ```
 
-Call `ViewModel.resetForTesting()` between isolated runtime tests when needed.
+Call `ViewModel.reset()` between isolated runtime tests when needed.
 It force-disposes every cached instance (including `aliveForever` instances),
 clears lifecycle/configuration and DevTools tracking state, and permits clean
 re-initialization.

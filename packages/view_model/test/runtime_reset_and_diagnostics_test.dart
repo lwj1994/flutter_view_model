@@ -80,12 +80,12 @@ void main() {
 
   setUp(() {
     originalDebugPrint = debugPrint;
-    ViewModel.resetForTesting();
+    ViewModel.reset();
   });
 
   tearDown(() {
     debugPrint = originalDebugPrint;
-    ViewModel.resetForTesting();
+    ViewModel.reset();
   });
 
   test('ambiguous cached lookup silently keeps latest-instance behavior', () {
@@ -272,7 +272,7 @@ void main() {
     removeThrowingOwnerListener();
   });
 
-  test('resetForTesting disposes retained instances and restores tracking', () {
+  test('reset disposes retained instances and restores tracking', () {
     final binding = ViewModelBinding();
     final retained = binding.read(
       ViewModelSpec(
@@ -285,7 +285,7 @@ void main() {
     expect(retained.isDisposed, isFalse);
     expect(instanceManager.debugStoreCount, greaterThan(0));
 
-    ViewModel.resetForTesting();
+    ViewModel.reset();
 
     expect(retained.isDisposed, isTrue);
     expect(instanceManager.debugStoreCount, 0);
@@ -305,7 +305,7 @@ void main() {
     nextBinding.dispose();
   });
 
-  test('resetForTesting blocks reentrant instance creation', () {
+  test('reset blocks reentrant instance creation', () {
     final binding = ViewModelBinding();
     final retained = binding.read(
       ViewModelSpec<ReentrantDisposeViewModel>(
@@ -315,7 +315,7 @@ void main() {
       ),
     );
 
-    ViewModel.resetForTesting();
+    ViewModel.reset();
 
     expect(retained.resolutionError, isA<ViewModelError>());
     expect(instanceManager.debugStoreCount, 0);
@@ -331,7 +331,7 @@ void main() {
       () => binding.read(
         ViewModelSpec<DiagnosticViewModel>(
           builder: () {
-            ViewModel.resetForTesting();
+            ViewModel.reset();
             return created = DiagnosticViewModel(7);
           },
           key: 'reset-inside-create-builder',
@@ -371,7 +371,7 @@ void main() {
       () => binding.recreate(
         original,
         builder: () {
-          ViewModel.resetForTesting();
+          ViewModel.reset();
           return replacement = DiagnosticViewModel(2);
         },
       ),

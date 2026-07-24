@@ -79,10 +79,12 @@ abstract interface class ViewModelBindingInterface {
   /// Does not create new instances and does not cause the widget to
   /// rebuild when the ViewModel changes.
   ///
-  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
-  /// `key` 可唯一定位缓存；`tag` 可能对应多个实例，应使用
-  /// [readCachesByTag]。若 `key`、`tag` 都不传，多实例场景会按创建顺序返回
-  /// 最新实例，仅应在明确理解该行为时使用。
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified `key` uniquely identifies a cached instance;
+  /// a `tag` may match multiple instances, so use [readCachesByTag]. If neither
+  /// `key` nor `tag` is provided, a multi-instance lookup returns the most
+  /// recently created instance. Use this only when you fully understand that
+  /// behavior.
   VM readCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -118,10 +120,12 @@ abstract interface class ViewModelBindingInterface {
   /// Reads the cached ViewModel without listening and avoids throwing
   /// when the instance does not exist.
   ///
-  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
-  /// `key` 可唯一定位缓存；`tag` 多结果请使用 [readCachesByTag]。若 `key`、
-  /// `tag` 都不传，多实例场景会依赖创建顺序返回最新实例，仅应在明确理解该
-  /// 行为时使用。
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified `key` uniquely identifies a cached instance;
+  /// use [readCachesByTag] when a `tag` may match multiple instances. If
+  /// neither `key` nor `tag` is provided, a multi-instance lookup returns the
+  /// most recently created instance based on creation order. Use this only
+  /// when you fully understand that behavior.
   VM? maybeReadCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -141,9 +145,15 @@ abstract interface class ViewModelBindingInterface {
     required Function(S? previous, S state) onChanged,
   });
 
+  /// Listens to a selected state value.
+  ///
+  /// Comparison uses the local [equals] rule when provided, then
+  /// [ViewModelConfig.equals] when configured, and otherwise falls back to
+  /// `==`.
   void listenStateSelect<VM extends StateViewModel<S>, S, R>(
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
     required Function(R? previous, R current) onChanged,
   });
 
@@ -158,12 +168,14 @@ abstract interface class ViewModelBindingInterface {
   void recycle<VM extends ViewModel>(VM viewModel);
 }
 
-/// 可选能力：在保留现有 binding 关系的前提下替换 [ViewModel] 实例。
+/// Optional capability for replacing a [ViewModel] instance while preserving
+/// its existing binding relationships.
 ///
-/// 该能力独立于 [ViewModelBindingInterface]，避免给已有的自定义 binding 实现
-/// 增加新的抽象成员。使用方仍可通过
-/// [ViewModelBindingCapabilityExtension.recreate] 调用；不支持该能力的自定义
-/// binding 会抛出 [UnsupportedError]。
+/// This capability is separate from [ViewModelBindingInterface] to avoid
+/// adding an abstract member to existing custom binding implementations.
+/// Callers can still use [ViewModelBindingCapabilityExtension.recreate];
+/// custom bindings that do not support this capability throw
+/// [UnsupportedError].
 abstract interface class ViewModelBindingRecreateCapability {
   VM recreate<VM extends ViewModel>(
     VM viewModel, {
@@ -171,20 +183,7 @@ abstract interface class ViewModelBindingRecreateCapability {
   });
 }
 
-/// 可选能力：为 selector 提供强类型的自定义相等判断。
-///
-/// 独立能力接口用于保持 [ViewModelBindingInterface.listenStateSelect] 的旧签名
-/// 不变，使已有的 `implements ViewModelBindingInterface` 实现继续兼容。
-abstract interface class ViewModelBindingStateSelectEqualsCapability {
-  void listenStateSelectWithEquals<VM extends StateViewModel<S>, S, R>(
-    ViewModelFactory<VM> factory, {
-    required R Function(S state) selector,
-    required bool Function(R previous, R current) equals,
-    required Function(R? previous, R current) onChanged,
-  });
-}
-
-/// 通过基础 binding 接口访问新增的可选能力。
+/// Accesses new optional capabilities through the base binding interface.
 extension ViewModelBindingCapabilityExtension on ViewModelBindingInterface {
   /// Replaces [viewModel] while preserving its active binding relationships.
   VM recreate<VM extends ViewModel>(
@@ -193,36 +192,13 @@ extension ViewModelBindingCapabilityExtension on ViewModelBindingInterface {
   }) {
     final binding = this;
     if (binding is ViewModelBindingRecreateCapability) {
-      // 使用 capability 静态类型调用实例成员，避免再次解析到当前 extension。
+      // Use the capability's static type to invoke the instance member and
+      // avoid resolving back to this extension.
       final capability = binding as ViewModelBindingRecreateCapability;
       return capability.recreate<VM>(viewModel, builder: builder);
     }
     throw UnsupportedError(
       '${binding.runtimeType} does not support ViewModel recreation.',
-    );
-  }
-
-  /// 使用强类型 [equals] 判断 selector 的前后值是否相等。
-  void listenStateSelectWithEquals<VM extends StateViewModel<S>, S, R>(
-    ViewModelFactory<VM> factory, {
-    required R Function(S state) selector,
-    required bool Function(R previous, R current) equals,
-    required Function(R? previous, R current) onChanged,
-  }) {
-    final binding = this;
-    if (binding is ViewModelBindingStateSelectEqualsCapability) {
-      // 使用 capability 静态类型调用实例成员，避免再次解析到当前 extension。
-      final capability = binding as ViewModelBindingStateSelectEqualsCapability;
-      capability.listenStateSelectWithEquals<VM, S, R>(
-        factory,
-        selector: selector,
-        equals: equals,
-        onChanged: onChanged,
-      );
-      return;
-    }
-    throw UnsupportedError(
-      '${binding.runtimeType} does not support custom selector equality.',
     );
   }
 }
@@ -324,10 +300,7 @@ abstract interface class ViewModelBindingHost {
 /// - [ViewModelStateMixin]: Mixin that uses ViewModelBinding for StatefulWidget
 /// - [ViewModelBindingPauseProvider]: Interface for pause/resume providers
 mixin class ViewModelBinding
-    implements
-        ViewModelBindingInterface,
-        ViewModelBindingRecreateCapability,
-        ViewModelBindingStateSelectEqualsCapability {
+    implements ViewModelBindingInterface, ViewModelBindingRecreateCapability {
   late final String _id = "${getName()}#${identityHashCode(this)}";
 
   String get id => _id;
@@ -664,10 +637,12 @@ mixin class ViewModelBinding
   /// its [key] or [tag]. It does not create new instances and does not cause
   /// the widget to rebuild when the ViewModel changes.
   ///
-  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
-  /// [key] 可唯一定位缓存；[tag] 可能对应多个实例，应使用 [readCachesByTag]
-  /// 批量获取。若 [key]、[tag] 都不传，多实例场景会按创建顺序返回最新实例，
-  /// 仅应在明确理解该行为时使用。
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified [key] uniquely identifies a cached instance;
+  /// a [tag] may match multiple instances, so use [readCachesByTag] for a
+  /// batch lookup. If neither [key] nor [tag] is provided, a multi-instance
+  /// lookup returns the most recently created instance based on creation
+  /// order. Use this only when you fully understand that behavior.
   ///
   /// Parameters:
   /// - [key]: The unique key used to find the ViewModel.
@@ -971,6 +946,7 @@ mixin class ViewModelBinding
   void listenStateSelect<VM extends StateViewModel<S>, S, R>(
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
     required Function(R? previous, R current) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
@@ -979,34 +955,19 @@ mixin class ViewModelBinding
       (value) => value.listenStateSelect(
         onChanged: onChanged,
         selector: selector,
-      ),
-    );
-  }
-
-  @override
-  void listenStateSelectWithEquals<VM extends StateViewModel<S>, S, R>(
-    ViewModelFactory<VM> factory, {
-    required R Function(S state) selector,
-    required bool Function(R previous, R current) equals,
-    required Function(R? previous, R current) onChanged,
-  }) {
-    final VM vm = viewModelBinding.read<VM>(factory);
-    _addSubscription(
-      vm,
-      (value) => value.listenStateSelectWithEquals(
-        onChanged: onChanged,
-        selector: selector,
         equals: equals,
       ),
     );
   }
 
-  /// 安全查询已有缓存，未找到时返回 `null`。
+  /// Safely queries the existing cache and returns `null` when not found.
   ///
-  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
-  /// [key] 可唯一定位缓存；[tag] 多结果请使用 [readCachesByTag]。若 [key]、
-  /// [tag] 都不传，多实例场景会依赖创建顺序返回最新实例，仅应在明确理解该
-  /// 行为时使用。
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified [key] uniquely identifies a cached instance;
+  /// use [readCachesByTag] when a [tag] may match multiple instances. If
+  /// neither [key] nor [tag] is provided, a multi-instance lookup returns the
+  /// most recently created instance based on creation order. Use this only
+  /// when you fully understand that behavior.
   @override
   VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) {
     try {
@@ -1041,23 +1002,10 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
   void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
     required ViewModelFactory<VM> factory,
     required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
     required Function(R? previous, R current) onChanged,
   }) {
     viewModelBinding.listenStateSelect<VM, S, R>(
-      factory,
-      selector: selector,
-      onChanged: onChanged,
-    );
-  }
-
-  void
-      listenViewModelStateSelectWithEquals<VM extends StateViewModel<S>, S, R>({
-    required ViewModelFactory<VM> factory,
-    required R Function(S state) selector,
-    required bool Function(R previous, R current) equals,
-    required Function(R? previous, R current) onChanged,
-  }) {
-    viewModelBinding.listenStateSelectWithEquals<VM, S, R>(
       factory,
       selector: selector,
       equals: equals,
@@ -1065,17 +1013,22 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     );
   }
 
-  /// [ViewModelBindingInterface.recycle] 的兼容便捷入口。
+  /// Compatibility convenience entry point for
+  /// [ViewModelBindingInterface.recycle].
   ///
-  /// 这是危险的全局强制回收操作：会解除目标实例的全部 owners 并立即
-  /// dispose，即使该实例设置了 `aliveForever`。一般不鼓励调用；只有明确
-  /// 知道所有共享使用方都会受到影响时才应使用。
+  /// This is a dangerous global force-recycle operation: it removes every
+  /// owner from the target instance and disposes it immediately, even when
+  /// the instance is marked `aliveForever`. Its use is generally discouraged;
+  /// call it only when you fully understand that every shared consumer will
+  /// be affected.
   ///
-  /// recycle 后传入的旧实例已经 dispose。所有使用方都必须通过 getter
-  /// 被动获取 ViewModel，并在每次访问时重新调用 `watch`/`read`；这样下一次
-  /// 访问才能走正常的缓存未命中与实例创建流程。不要把 ViewModel 长期保存在
-  /// `late final`、`final` 等字段中，否则字段会继续引用已销毁对象，可能造成
-  /// 内存泄漏或其他异常。
+  /// After recycling, the old instance passed to this method is disposed.
+  /// Every consumer must resolve the ViewModel lazily through a getter that
+  /// calls `watch`/`read` again on each access. This allows the next access to
+  /// follow the normal cache-miss and instance-creation path. Do not retain a
+  /// ViewModel in a `late final`, `final`, or similar field; that field would
+  /// keep referencing the disposed object and may cause memory leaks or other
+  /// errors.
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     viewModelBinding.recycle<VM>(viewModel);
   }
@@ -1092,12 +1045,14 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     return viewModelBinding.read<VM>(factory);
   }
 
-  /// 查询已有缓存但不监听变化。
+  /// Queries the existing cache without listening for changes.
   ///
-  /// 常规业务代码应优先使用 `readViewModel` / `watchViewModel` 配合 spec
-  /// 精确获取。明确的 [key] 可唯一定位缓存；[tag] 可能对应多个实例，应使用
-  /// `viewModelBinding.readCachesByTag`。若 [key]、[tag] 都不传，多实例场景会
-  /// 按创建顺序返回最新实例，仅应在明确理解该行为时使用。
+  /// Regular application code should prefer `readViewModel` /
+  /// `watchViewModel` with a spec for precise lookup. A specified [key]
+  /// uniquely identifies a cached instance; a [tag] may match multiple
+  /// instances, so use `viewModelBinding.readCachesByTag`. If neither [key]
+  /// nor [tag] is provided, a multi-instance lookup returns the most recently
+  /// created instance. Use this only when you fully understand that behavior.
   VM readCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -1128,12 +1083,15 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     );
   }
 
-  /// 安全查询已有缓存，未找到时返回 `null`。
+  /// Safely queries the existing cache and returns `null` when not found.
   ///
-  /// 常规业务代码应优先使用 `readViewModel` / `watchViewModel` 配合 spec
-  /// 精确获取。明确的 [key] 可唯一定位缓存；[tag] 多结果请使用
-  /// `viewModelBinding.readCachesByTag`。若 [key]、[tag] 都不传，多实例场景会
-  /// 依赖创建顺序返回最新实例，仅应在明确理解该行为时使用。
+  /// Regular application code should prefer `readViewModel` /
+  /// `watchViewModel` with a spec for precise lookup. A specified [key]
+  /// uniquely identifies a cached instance; use
+  /// `viewModelBinding.readCachesByTag` when a [tag] may match multiple
+  /// instances. If neither [key] nor [tag] is provided, a multi-instance
+  /// lookup returns the most recently created instance based on creation
+  /// order. Use this only when you fully understand that behavior.
   VM? maybeReadCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,

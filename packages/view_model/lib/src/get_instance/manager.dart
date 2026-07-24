@@ -210,7 +210,7 @@ class InstanceManager {
 
   /// Force-disposes every cached instance and clears all type stores.
   ///
-  /// This is primarily used by `ViewModel.resetForTesting()` to guarantee
+  /// This is primarily used by `ViewModel.reset()` to guarantee
   /// isolation between tests, including instances retained with keep-alive
   /// semantics.
   void disposeAll({bool force = true}) {

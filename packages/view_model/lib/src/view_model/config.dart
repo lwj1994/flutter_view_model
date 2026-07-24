@@ -43,18 +43,15 @@ class ViewModelConfig {
   /// Defaults to `false` for production builds.
   final bool isLoggingEnabled;
 
-  /// A global custom equality comparison function.
+  /// The global fallback equality comparison function.
   ///
-  /// This function is used by `StateViewModel` to compare the previous and new
-  /// states. Selector APIs use their own typed equality function because a
-  /// selected value can have a different type and comparison semantics.
-  /// Prefer instance-level state equality for business-specific comparisons;
-  /// a global comparator must be valid for every StateViewModel state type.
+  /// Defaults to `null` and is used only when an API has no local equality
+  /// rule. Full-state comparison then falls back to `identical()`, while
+  /// value selectors fall back to `==`.
   ///
-  /// If this function returns `true`, the update is skipped, preventing
-  /// unnecessary notifications and rebuilds.
-  ///
-  /// If not provided, `StateViewModel` defaults to `identical()`.
+  /// If this function returns `true`, the caller treats the values as equal:
+  /// a full-state transition is skipped, or a selector suppresses its callback
+  /// and rebuild.
   ///
   /// Parameters:
   /// - [previous]: The previous value.
@@ -91,7 +88,7 @@ class ViewModelConfig {
   /// Parameters:
   /// - [isLoggingEnabled]: Whether to enable debug logging
   ///   (defaults to `false`)
-  /// - [equals]: Custom state equality function (optional)
+  /// - [equals]: Global fallback equality function (defaults to `null`)
   /// - [onError]: Custom error handler (optional)
   ViewModelConfig({
     this.isLoggingEnabled = false,

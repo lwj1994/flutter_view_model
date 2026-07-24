@@ -95,7 +95,7 @@ void main() {
       expect(generalCount, 2);
     });
 
-    test('selector equality is typed and defaults to ==', () {
+    test('listenStateSelect uses global equals as its fallback', () {
       ViewModel.reset();
       final globalCalls = <(Object?, Object?)>[];
       ViewModel.initialize(
@@ -116,32 +116,66 @@ void main() {
       );
 
       owner.viewModel.setState("1");
-      expect(changes, isEmpty);
-      expect(globalCalls, [("0", "1")]);
+      expect(changes, [(1, 1)]);
+      expect(globalCalls, [("0", "1"), (1, 1)]);
 
       owner.viewModel.setState("22");
-      expect(changes, [(1, 2)]);
-      expect(globalCalls, [("0", "1"), ("1", "22")]);
+      expect(changes, [(1, 1), (1, 2)]);
+      expect(
+        globalCalls,
+        [("0", "1"), (1, 1), ("1", "22"), (1, 2)],
+      );
 
       ViewModel.reset();
       ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
-    test('listenStateSelectWithEquals supports selected-value equality', () {
-      final owner = _createTestViewModelOwner(initialState: "a");
-      final changes = <(String?, String)>[];
-      owner.viewModel.listenStateSelectWithEquals<String>(
-        selector: (state) => state,
-        equals: (previous, current) => previous.length == current.length,
+    test('listenStateSelect falls back to == when global equals is null', () {
+      ViewModel.reset();
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
+      final owner = _createTestViewModelOwner();
+      final changes = <(int?, int)>[];
+      owner.viewModel.listenStateSelect<int>(
+        selector: (state) => state.length,
         onChanged: (previous, current) {
           changes.add((previous, current));
         },
       );
 
-      owner.viewModel.setState("b");
-      owner.viewModel.setState("cc");
+      owner.viewModel.setState("1");
+      owner.viewModel.setState("22");
 
-      expect(changes, [("b", "cc")]);
+      expect(changes, [(1, 2)]);
+    });
+
+    test('listenStateSelect local equals overrides the global fallback', () {
+      ViewModel.reset();
+      final globalCalls = <(Object?, Object?)>[];
+      ViewModel.initialize(
+        config: ViewModelConfig(
+          equals: (previous, current) {
+            globalCalls.add((previous, current));
+            return previous is int && current is int;
+          },
+        ),
+      );
+      final owner = _createTestViewModelOwner(initialState: "a");
+      final changes = <(int?, int)>[];
+      owner.viewModel.listenStateSelect<int>(
+        selector: (state) => state.length,
+        equals: (previous, current) => false,
+        onChanged: (previous, current) {
+          changes.add((previous, current));
+        },
+      );
+
+      owner.viewModel.setState("bb");
+
+      expect(changes, [(1, 2)]);
+      expect(globalCalls, [("a", "bb")]);
+
+      ViewModel.reset();
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
   });
 

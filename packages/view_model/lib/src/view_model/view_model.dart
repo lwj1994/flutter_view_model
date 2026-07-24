@@ -120,11 +120,14 @@ mixin class ViewModel
   /// Returns `null` if no matching ViewModel is found, unlike [readCached]
   /// which throws an exception.
   ///
-  /// 常规业务代码应优先通过 `ViewModelBinding.read/watch(spec)` 精确获取实例。
-  /// 此方法只查询已有缓存：传入明确 [key] 可唯一定位实例；按 [tag] 查询可能
-  /// 命中多个实例，此时应通过 binding 的 `readCachesByTag` 批量获取。若既不传
-  /// [key] 也不传 [tag]，多实例场景会依赖创建顺序返回最新实例，仅应在明确
-  /// 理解该行为时使用。
+  /// Normal application code should prefer
+  /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
+  ///
+  /// This method only queries the existing cache. A specific [key] uniquely
+  /// identifies an instance. A [tag] can match several instances; use the
+  /// binding's `readCachesByTag` for that case. With neither [key] nor [tag],
+  /// multiple matches are resolved by creation order and the newest instance
+  /// is returned. Use that behavior only when you understand and intend it.
   ///
   /// This method is useful for safely accessing a cached ViewModel without
   /// causing
@@ -190,10 +193,13 @@ mixin class ViewModel
   /// It does
   /// not create new instances.
   ///
-  /// 常规业务代码应优先通过 `ViewModelBinding.read/watch(spec)` 精确获取实例。
-  /// 传入明确 [key] 可唯一定位缓存；按 [tag] 查询可能命中多个实例，应改用
-  /// binding 的 `readCachesByTag` 批量获取。若既不传 [key] 也不传 [tag]，
-  /// 多实例场景会依赖创建顺序返回最新实例，仅应在明确理解该行为时使用。
+  /// Normal application code should prefer
+  /// `ViewModelBinding.read/watch(spec)` for explicit resolution. A specific
+  /// [key] uniquely identifies a cached instance. A [tag] can match several
+  /// instances; use the binding's `readCachesByTag` for that case. With neither
+  /// [key] nor [tag], multiple matches are resolved by creation order and the
+  /// newest instance is returned. Use that behavior only when you understand
+  /// and intend it.
   ///
   /// Parameters:
   /// - [key]: The unique key from [ViewModelFactory.key].
@@ -448,18 +454,13 @@ mixin class ViewModel
     _initDevtool();
   }
 
-  @visibleForTesting
-  static void reset() {
-    resetForTesting();
-  }
-
   /// Completely resets ViewModel runtime state for test isolation.
   ///
   /// Unlike a configuration-only reset, this also force-disposes every cached
   /// instance (including retained instances), clears DevTools tracking data,
   /// and allows the built-in tracker to be registered again.
   @visibleForTesting
-  static void resetForTesting() {
+  static void reset() {
     instanceManager.disposeAll(force: true);
     DevToolTracker.instance.resetForTesting();
     _initialized = false;
@@ -629,12 +630,15 @@ abstract class StateViewModel<T> with ViewModel {
   ///
   /// This method observes changes to a specific field or computed value of
   /// the state, rather than the entire state object. It invokes [onChanged]
-  /// only when the selected property's value changes according to `==`.
+  /// only when the selected property's value changes. Comparison uses the
+  /// local [equals] rule when provided, then [ViewModelConfig.equals] when
+  /// configured, and otherwise falls back to `==`.
   ///
   /// Parameters:
   /// - [selector]: Selector function that maps the full state `T` to
   /// the watched
   ///   property `S` (e.g., `(s) => s.count`).
+  /// - [equals]: Optional strongly typed local equality rule.
   /// - [onChanged]: Callback receiving `(previousSelected, currentSelected)`.
   ///
   /// Returns a function to remove this listener.
@@ -651,36 +655,15 @@ abstract class StateViewModel<T> with ViewModel {
   /// ```
   Function() listenStateSelect<S>({
     required S Function(T state) selector,
+    bool Function(S previous, S current)? equals,
     required void Function(S? previous, S current) onChanged,
   }) {
-    return _listenStateSelect(
-      selector: selector,
-      equals: (previous, current) => previous == current,
-      onChanged: onChanged,
-    );
-  }
+    final globalEquals = ViewModel.config.equals;
+    final effectiveEquals = equals ??
+        (globalEquals == null
+            ? (S previous, S current) => previous == current
+            : (S previous, S current) => globalEquals(previous, current));
 
-  /// 监听 selector 的选中值，并使用强类型 [equals] 判断前后值是否相等。
-  ///
-  /// 该方法与 [listenStateSelect] 分开，既保持原方法的公开签名兼容，也避免把
-  /// state 自身的相等策略错误复用于类型可能完全不同的 selector 结果。
-  Function() listenStateSelectWithEquals<S>({
-    required S Function(T state) selector,
-    required bool Function(S previous, S current) equals,
-    required void Function(S? previous, S current) onChanged,
-  }) {
-    return _listenStateSelect(
-      selector: selector,
-      equals: equals,
-      onChanged: onChanged,
-    );
-  }
-
-  Function() _listenStateSelect<S>({
-    required S Function(T state) selector,
-    required bool Function(S previous, S current) equals,
-    required void Function(S? previous, S current) onChanged,
-  }) {
     // Wrap into a full-state listener to reuse the existing dispatch path.
     // ignore: prefer_final_locals
     Function(T? previous, T state) wrapper = (prevState, currState) {
@@ -689,7 +672,7 @@ abstract class StateViewModel<T> with ViewModel {
       // T: in that case null is a valid previous state passed to the selector.
       final S prevSel = selector(prevState as T);
       final S currSel = selector(currState);
-      if (!equals(prevSel, currSel)) {
+      if (!effectiveEquals(prevSel, currSel)) {
         onChanged(prevSel, currSel);
       }
     };

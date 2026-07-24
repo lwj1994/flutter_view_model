@@ -3,8 +3,12 @@ import 'package:view_model/view_model.dart';
 
 void main() {
   group('ViewModelConfig', () {
+    test('equals defaults to null', () {
+      expect(ViewModelConfig().equals, isNull);
+    });
+
     test('custom equals works', () {
-      // Initialize with custom config
+      ViewModel.reset();
       ViewModel.initialize(
         config: ViewModelConfig(
           equals: (prev, curr) {
@@ -13,8 +17,13 @@ void main() {
           },
         ),
       );
+      final owner = _TestConfigViewModelOwner();
+      addTearDown(() {
+        owner.dispose();
+        ViewModel.reset();
+      });
 
-      final vm = TestConfigViewModel();
+      final vm = owner.viewModel;
       // Initial state
       expect(vm.state, 0);
 
@@ -22,14 +31,16 @@ void main() {
       vm.increment();
       // Since equals returns true, _update should return early.
       expect(vm.state, 0);
-
-      // Note: We cannot easily reset ViewModel.config in the same process
-      // because initialize() guards against re-initialization.
-      // So we can't test the "reset to default" behavior in the same test run
-      // if we already initialized it.
-      // But we verified the custom config works.
     });
   });
+}
+
+final _testConfigViewModelSpec = ViewModelSpec<TestConfigViewModel>(
+  builder: TestConfigViewModel.new,
+);
+
+class _TestConfigViewModelOwner with ViewModelBinding {
+  TestConfigViewModel get viewModel => read(_testConfigViewModelSpec);
 }
 
 class TestConfigViewModel extends StateViewModel<int> {

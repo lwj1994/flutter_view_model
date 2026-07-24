@@ -152,13 +152,15 @@ class ViewModelStateStore<S> implements StateStore<S> {
     if (_stateStreamController.isClosed) return;
     final diff = DiffState(_previousState, _state);
 
-    // 先把异步事件排入队列，确保同步 callback 内发生嵌套 setState 时，stream
-    // 仍按真实转换顺序收到事件。broadcast controller 是异步的，因此下面的
-    // callback 仍会先于 stream listener 执行；callback 即使同步 dispose store，
-    // 已排队的事件也能安全完成，而不会在已关闭的 controller 上再次 add。
+    // Queue the asynchronous event first so nested setState calls from a
+    // synchronous callback still reach stream listeners in the real
+    // transition order. The broadcast controller is asynchronous, so the
+    // callback below still runs before stream listeners. If that callback
+    // disposes the store synchronously, the queued event can still complete
+    // without adding another event to a closed controller.
     _stateStreamController.add(diff);
 
-    // 同步通知 StateViewModel 的 state listener 与普通 listener。
+    // Notify StateViewModel state listeners and broad listeners synchronously.
     _onStateChanged?.call(diff);
   }
 

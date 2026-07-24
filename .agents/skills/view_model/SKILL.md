@@ -226,16 +226,19 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 - Do not introduce direct cached lookup in normal application code. Prefer a
   stable spec and resolve it explicitly with `watch(spec)` or `read(spec)`.
 - `listen/listenState/listenStateSelect`: side-effect listeners, auto-cleaned on binding dispose.
-- `listenStateSelect` compares selected values with `==`; use
-  `listenStateSelectWithEquals` for a custom strongly typed comparison.
+- Equality priority is local full-state `equals` → global
+  `ViewModelConfig.equals` → `identical`, and explicit selector `equals` →
+  global `ViewModelConfig.equals` → `==`. The global fallback defaults to
+  `null`.
+- Pass the optional typed `equals` directly to `listenStateSelect` when a
+  selector needs a local rule that overrides the global fallback.
 - `recreate(vm, builder: ...)`: replace an instance while preserving active
   binding relationships; omit `builder` to reuse the original factory.
 - `recycle(vm)`: force unbind all and dispose; next `watch/read` gets fresh instance.
-- The built-in `ViewModelBinding` implements the optional recreate and custom
-  selector-equality capabilities. A direct `ViewModelBindingInterface`
-  implementation opts in via `ViewModelBindingRecreateCapability` and/or
-  `ViewModelBindingStateSelectEqualsCapability`; otherwise the corresponding
-  interface extension throws `UnsupportedError`.
+- The built-in `ViewModelBinding` implements the optional recreate capability.
+  A direct `ViewModelBindingInterface` implementation opts in via
+  `ViewModelBindingRecreateCapability`; otherwise the interface extension
+  throws `UnsupportedError`.
 
 5. Handle dependencies and sharing
 - Model each independent functional capability as a ViewModel when it benefits
@@ -270,7 +273,7 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 - Call `ViewModel.initialize(...)` once at app startup (subsequent calls are ignored).
 - Configure `ViewModelConfig` when needed:
   - `isLoggingEnabled`
-  - `equals` (state equality strategy)
+  - `equals` (global equality fallback, default `null`)
   - `onError` (with `ErrorType.listener` / `ErrorType.lifecycle` / `ErrorType.dispose` / `ErrorType.pauseResume`)
 - If using `equals: (a, b) => a == b`, ensure state classes implement `==` and `hashCode`.
 
@@ -301,9 +304,9 @@ Do:
   selector mechanism drive updates; avoid `watch` on the same ViewModel.
 - Set explicit `key` whenever instance sharing is a requirement.
 - Dispose non-widget bindings explicitly.
-- Use `listenStateSelect` for side effects on selected state fields; use
-  `listenStateSelectWithEquals` only when the selected value needs a custom
-  equality rule.
+- Use `listenStateSelect` for side effects on selected state fields; pass its
+  optional typed `equals` when the selected value needs a local rule that
+  overrides the global fallback.
 
 Don't:
 - Introduce a global singleton or service locator for ViewModel modules by

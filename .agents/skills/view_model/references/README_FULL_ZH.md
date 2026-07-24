@@ -162,12 +162,14 @@ class UserViewModel extends StateViewModel<UserState> {
 
 只有 `setState` 会产生新的 state diff。`notifyListeners()` 只刷新宽范围
 ViewModel listener，不会重复发送上一次 diff，也不会再次调用
-`listenState` / `listenStateSelect`。selector 的选中值默认使用 `==` 比较；
-需要自定义比较时，使用独立的强类型
-`listenStateSelectWithEquals`：
+`listenState` / `listenStateSelect`。完整 state 的判等优先级是：构造器局部
+`equals` → 全局 `ViewModelConfig.equals` → `identical`。selector 选中值的
+判等优先级是：显式局部 `equals` → 全局 `ViewModelConfig.equals` → `==`。
+全局 `equals` 默认为空；需要局部强类型比较时，直接传给
+`listenStateSelect`：
 
 ```dart
-viewModelBinding.listenStateSelectWithEquals(
+viewModelBinding.listenStateSelect(
   userSpec,
   selector: (UserState state) => state.name,
   equals: (String previous, String current) => previous == current,
@@ -362,19 +364,18 @@ binding 共享；同一 binding 内要区分多个同 `T` 实例时也需要不�
 | **`read(spec)`** | 事件回调、只需调用方法时 | **非响应式**：仅读取，不监听。若 VM 不存在则创建。 |
 | **`watchCachesByTag(tag)`** | 按 tag 批量响应式获取 VM | 批量版 `watch`：会 `bind`、响应 `notifyListeners()`，也会感知 recreate/dispose。 |
 | **`readCachesByTag(tag)`** | 按 tag 批量读取已有 VM | 批量版 `read`：会 `bind`、感知 recreate/dispose，并参与 dispose 清理，但不响应 `notifyListeners()`。 |
-| **`listenStateSelect(...)`**| 使用 `==` 针对性监听某个字段 | 例如：只有 `user.age` 变了才弹窗，别的字段变了不理。 |
-| **`listenStateSelectWithEquals(...)`** | 使用自定义强类型比较监听某个字段 | selector 结果需要特定相等规则时使用。 |
+| **`listenStateSelect(...)`**| 针对性监听某个字段 | 可选局部 `equals` 优先，其次使用全局 `ViewModelConfig.equals`，最后使用 `==`。 |
 | **`recycle(vm)`** | 危险的全局强制回收 | 解除所有 owners 并销毁共享实例，`aliveForever` 也不例外；下次 `watch/read` 创建新实例。 |
 | **`recreate(vm)`** | 原位替换实例 | 保留现有 binding 关系；可传 `builder`，不传则复用原 factory。 |
 
 补充说明：
 
 - `watch*` 和 `read*` 都会建立 binding，都会影响实例生命周期；差别主要在于是否监听 ViewModel 自身的变化。
-- 内置 `ViewModelBinding` 已支持 `recreate` 和 selector 自定义比较。直接
-  `implements ViewModelBindingInterface` 的自定义类型无需修改旧接口；如需
-  使用新能力，再按需实现 `ViewModelBindingRecreateCapability` 或
-  `ViewModelBindingStateSelectEqualsCapability`。通过接口 extension 调用尚未
-  实现的可选能力时会抛出 `UnsupportedError`。
+- selector 自定义比较直接通过 `listenStateSelect` 的可选 `equals`
+  传入。`recreate` 仍是独立可选能力；直接
+  `implements ViewModelBindingInterface` 的类型如需支持它，再实现
+  `ViewModelBindingRecreateCapability`。通过接口 extension 对不支持的实现
+  调用 `recreate` 时会抛出 `UnsupportedError`。
 - `recycle` 是高级 escape hatch，具有危险的全局影响；只有明确需要解除全部
   owners、销毁共享实例时才使用，不应作为常规清理路径。
 - `recycle` 后旧对象已经 dispose。所有使用方，尤其共享实例的其他 owner，
@@ -428,7 +429,7 @@ await userSpec.runWithOverride(mockUserSpec, () async {
 });
 ```
 
-需要隔离完整运行时状态时，调用 `ViewModel.resetForTesting()`：它会强制
+需要隔离完整运行时状态时，调用 `ViewModel.reset()`：它会强制
 销毁全部缓存（包括
 `aliveForever` 实例）、清空配置、生命周期与 DevTools 跟踪数据，并允许
 重新初始化。

@@ -23,7 +23,10 @@ class StateViewModelSelector<T, R> extends StatefulWidget {
   /// Selects the typed value used by [builder].
   final R Function(T state) selector;
 
-  /// Optional equality function for selected values. Defaults to `==`.
+  /// Optional local equality function for selected values.
+  ///
+  /// When omitted, [ViewModelConfig.equals] is used if configured; otherwise
+  /// comparison falls back to `==`.
   final bool Function(R previous, R current)? equals;
 
   /// Builds the widget from the latest selected value.
@@ -69,17 +72,11 @@ class _StateViewModelSelectorState<T, R>
       _scheduleRebuild();
     }
 
-    final equals = widget.equals;
-    _unsubscribe = equals == null
-        ? widget.viewModel.listenStateSelect<R>(
-            selector: widget.selector,
-            onChanged: onChanged,
-          )
-        : widget.viewModel.listenStateSelectWithEquals<R>(
-            selector: widget.selector,
-            equals: equals,
-            onChanged: onChanged,
-          );
+    _unsubscribe = widget.viewModel.listenStateSelect<R>(
+      selector: widget.selector,
+      equals: widget.equals,
+      onChanged: onChanged,
+    );
   }
 
   void _scheduleRebuild() {
@@ -120,7 +117,8 @@ class _StateViewModelSelectorState<T, R>
 ///
 /// It takes a [viewModel], a list of [selectors], and a [builder].
 /// The [selectors] are functions that extract values from the view model's
-/// state.
+/// state. Selected values use [ViewModelConfig.equals] when configured and
+/// otherwise fall back to `==`.
 /// The [builder] is called whenever any of the selected values change.
 ///
 /// Example:

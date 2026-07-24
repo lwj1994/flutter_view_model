@@ -182,7 +182,7 @@ class Store<T> {
       _disposeUntrackedInstance(instance, arg);
       throw ViewModelError(
         'Cannot create $T because its Store was disposed while the factory '
-        'builder was running (for example by ViewModel.resetForTesting()). '
+        'builder was running (for example by ViewModel.reset()). '
         'The new instance was disposed and was not cached.',
       );
     }
@@ -198,7 +198,7 @@ class Store<T> {
       throw ViewModelError(
         'Cannot create $T because its Store was disposed while instance '
         'creation was in progress (for example by '
-        'ViewModel.resetForTesting()). The new instance was disposed and was '
+        'ViewModel.reset()). The new instance was disposed and was '
         'not cached.',
       );
     }
@@ -480,7 +480,7 @@ class InstanceHandle<T> with ChangeNotifier {
     throw ViewModelError(
       'Cannot recreate $T because its handle was disposed or replaced while '
       'the builder was running (for example by '
-      'ViewModel.resetForTesting()). The detached replacement was disposed '
+      'ViewModel.reset()). The detached replacement was disposed '
       'and was not installed.',
     );
   }
@@ -490,7 +490,7 @@ class InstanceHandle<T> with ChangeNotifier {
     throw ViewModelError(
       'Cannot recreate $T because its handle was disposed or replaced while '
       'the replacement lifecycle was being initialized (for example by '
-      'ViewModel.resetForTesting()).',
+      'ViewModel.reset()).',
     );
   }
 

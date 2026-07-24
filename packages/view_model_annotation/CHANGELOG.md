@@ -1,3 +1,6 @@
+## 1.0.7
+- Version bump for consistency with `view_model` 1.0.7 release.
+
 ## 1.0.6
 - Version bump for consistency with `view_model` 1.0.6 release.
 

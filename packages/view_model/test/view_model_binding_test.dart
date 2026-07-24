@@ -15,17 +15,19 @@ class SimpleStateVM extends StateViewModel<SimpleState> {
   SimpleStateVM({required SimpleState initial}) : super(state: initial);
 }
 
-/// 模拟旧版本中覆写 `listenStateSelect` 的第三方 StateViewModel。
-class LegacySelectorOverrideVM extends StateViewModel<SimpleState> {
-  LegacySelectorOverrideVM() : super(state: const SimpleState(0));
+/// A custom StateViewModel that overrides `listenStateSelect`.
+class SelectorOverrideVM extends StateViewModel<SimpleState> {
+  SelectorOverrideVM() : super(state: const SimpleState(0));
 
   @override
   Function() listenStateSelect<R>({
     required R Function(SimpleState state) selector,
+    bool Function(R previous, R current)? equals,
     required void Function(R? previous, R current) onChanged,
   }) {
     return super.listenStateSelect(
       selector: selector,
+      equals: equals,
       onChanged: onChanged,
     );
   }
@@ -73,11 +75,8 @@ class GetterRef with ViewModelBinding {
   SimpleVM get vm => watch(factory);
 }
 
-/// 模拟 1.0.5 及更早版本中完整实现基础 binding 接口的第三方类型。
-///
-/// 这里刻意不实现 1.0.6 新增的可选 capability；如果基础接口再新增抽象成员，
-/// 这个编译回归会直接失败。
-class LegacyBindingImplementation implements ViewModelBindingInterface {
+/// A direct binding implementation without the optional recreate capability.
+class DirectBindingImplementation implements ViewModelBindingInterface {
   Never _unsupported() => throw UnsupportedError('test stub');
 
   @override
@@ -127,6 +126,7 @@ class LegacyBindingImplementation implements ViewModelBindingInterface {
   void listenStateSelect<VM extends StateViewModel<S>, S, R>(
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
     required Function(R? previous, R current) onChanged,
   }) =>
       _unsupported();
@@ -247,7 +247,7 @@ void main() {
 
       int equalSelectListens = 0;
       final ViewModelBindingInterface bindingApi = ref;
-      bindingApi.listenStateSelectWithEquals<SimpleStateVM, SimpleState, int>(
+      bindingApi.listenStateSelect<SimpleStateVM, SimpleState, int>(
         stateProvider,
         selector: (s) => s.value,
         equals: (previous, current) => previous.isEven == current.isEven,
@@ -261,41 +261,38 @@ void main() {
       ref.dispose();
     });
 
-    test('legacy interface implementations keep their old source contract', () {
-      final ViewModelBindingInterface legacy = LegacyBindingImplementation();
-      final stateProvider = ViewModelSpec<SimpleStateVM>(
-        builder: () => SimpleStateVM(initial: const SimpleState(0)),
+    test('direct interface implementations can omit recreate capability', () {
+      final ViewModelBindingInterface direct = DirectBindingImplementation();
+      final owner = TestRef();
+      addTearDown(owner.dispose);
+      final viewModel = owner.read(
+        ViewModelSpec<SimpleVM>(builder: SimpleVM.new),
       );
 
-      expect(legacy, isNot(isA<ViewModelBindingRecreateCapability>()));
+      expect(direct, isNot(isA<ViewModelBindingRecreateCapability>()));
       expect(
-        () =>
-            legacy.listenStateSelectWithEquals<SimpleStateVM, SimpleState, int>(
-          stateProvider,
-          selector: (state) => state.value,
-          equals: (previous, current) => previous == current,
-          onChanged: (_, __) {},
-        ),
+        () => direct.recreate(viewModel),
         throwsA(isA<UnsupportedError>()),
       );
     });
 
-    test('legacy StateViewModel selector overrides keep compiling', () {
+    test('StateViewModel selector overrides forward local equals', () {
       final binding = TestRef();
-      final provider = ViewModelSpec<LegacySelectorOverrideVM>(
-        builder: LegacySelectorOverrideVM.new,
+      addTearDown(binding.dispose);
+      final provider = ViewModelSpec<SelectorOverrideVM>(
+        builder: SelectorOverrideVM.new,
       );
       final viewModel = binding.read(provider);
       var changes = 0;
       viewModel.listenStateSelect<int>(
         selector: (state) => state.value,
+        equals: (_, __) => true,
         onChanged: (_, __) => changes++,
       );
 
       viewModel.setState(const SimpleState(1));
 
-      expect(changes, 1);
-      binding.dispose();
+      expect(changes, 0);
     });
   });
 

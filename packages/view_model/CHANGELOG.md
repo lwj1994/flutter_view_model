@@ -1,3 +1,14 @@
+## 1.0.7
+
+- Restore `ViewModelConfig.equals` as the global equality fallback. Full state
+  uses local `equals` → global `equals` → `identical()`, while selected
+  values use explicit `equals` → global `equals` → `==`.
+- Fold the selected-value comparator into the optional `equals` argument on
+  `listenStateSelect` and remove the redundant `listenStateSelectWithEquals`
+  API and binding capability.
+- Remove the redundant `ViewModel.resetForTesting()` alias. `ViewModel.reset()`
+  directly performs the complete test runtime reset.
+
 ## 1.0.6
 
 - Make `ViewModel.update` notify synchronously for synchronous blocks and notify
