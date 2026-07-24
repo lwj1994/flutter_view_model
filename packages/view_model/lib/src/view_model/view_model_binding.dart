@@ -16,6 +16,35 @@ import 'package:view_model/src/view_model/view_model.dart';
 
 import 'state_store.dart';
 
+class _BindingSubscription {
+  _BindingSubscription({
+    required ViewModel viewModel,
+    required this.attach,
+  }) : _viewModel = viewModel {
+    _remove = attach(viewModel);
+  }
+
+  ViewModel _viewModel;
+  final Function() Function(ViewModel viewModel) attach;
+  late Function() _remove;
+  bool _disposed = false;
+
+  bool isAttachedTo(ViewModel viewModel) => identical(_viewModel, viewModel);
+
+  void moveTo(ViewModel viewModel) {
+    if (_disposed || identical(_viewModel, viewModel)) return;
+    _remove.call();
+    _viewModel = viewModel;
+    _remove = attach(viewModel);
+  }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _remove.call();
+  }
+}
+
 /// Interface that exposes helpers to access ViewModels from widgets.
 ///
 /// `ViewModelBinding` connects the ViewModel system with the Widget tree.
@@ -49,6 +78,13 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Does not create new instances and does not cause the widget to
   /// rebuild when the ViewModel changes.
+  ///
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified `key` uniquely identifies a cached instance;
+  /// a `tag` may match multiple instances, so use [readCachesByTag]. If neither
+  /// `key` nor `tag` is provided, a multi-instance lookup returns the most
+  /// recently created instance. Use this only when you fully understand that
+  /// behavior.
   VM readCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -83,6 +119,13 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Reads the cached ViewModel without listening and avoids throwing
   /// when the instance does not exist.
+  ///
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified `key` uniquely identifies a cached instance;
+  /// use [readCachesByTag] when a `tag` may match multiple instances. If
+  /// neither `key` nor `tag` is provided, a multi-instance lookup returns the
+  /// most recently created instance based on creation order. Use this only
+  /// when you fully understand that behavior.
   VM? maybeReadCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -102,13 +145,62 @@ abstract interface class ViewModelBindingInterface {
     required Function(S? previous, S state) onChanged,
   });
 
+  /// Listens to a selected state value.
+  ///
+  /// Comparison uses the local [equals] rule when provided, then
+  /// [ViewModelConfig.equals] when configured, and otherwise falls back to
+  /// `==`.
   void listenStateSelect<VM extends StateViewModel<S>, S, R>(
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
     required Function(R? previous, R current) onChanged,
   });
 
+  /// Danger: force-disposes the shared instance and removes every owner,
+  /// including owners in other widgets or bindings. This also disposes an
+  /// `aliveForever` instance. Do not use this as a routine lifecycle API;
+  /// call it only when the global effect is intentional and understood.
+  ///
+  /// Every consumer must resolve the ViewModel through a getter rather than
+  /// retaining it in a field. After recycling, the old object is disposed;
+  /// the next getter evaluation follows the normal cache-miss creation path.
   void recycle<VM extends ViewModel>(VM viewModel);
+}
+
+/// Optional capability for replacing a [ViewModel] instance while preserving
+/// its existing binding relationships.
+///
+/// This capability is separate from [ViewModelBindingInterface] to avoid
+/// adding an abstract member to existing custom binding implementations.
+/// Callers can still use [ViewModelBindingCapabilityExtension.recreate];
+/// custom bindings that do not support this capability throw
+/// [UnsupportedError].
+abstract interface class ViewModelBindingRecreateCapability {
+  VM recreate<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  });
+}
+
+/// Accesses new optional capabilities through the base binding interface.
+extension ViewModelBindingCapabilityExtension on ViewModelBindingInterface {
+  /// Replaces [viewModel] while preserving its active binding relationships.
+  VM recreate<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  }) {
+    final binding = this;
+    if (binding is ViewModelBindingRecreateCapability) {
+      // Use the capability's static type to invoke the instance member and
+      // avoid resolving back to this extension.
+      final capability = binding as ViewModelBindingRecreateCapability;
+      return capability.recreate<VM>(viewModel, builder: builder);
+    }
+    throw UnsupportedError(
+      '${binding.runtimeType} does not support ViewModel recreation.',
+    );
+  }
 }
 
 /// Common host interface for types exposing a [viewModelBinding] accessor.
@@ -207,7 +299,8 @@ abstract interface class ViewModelBindingHost {
 /// - [WidgetViewModelBinding]: Specialized implementation for Flutter widgets
 /// - [ViewModelStateMixin]: Mixin that uses ViewModelBinding for StatefulWidget
 /// - [ViewModelBindingPauseProvider]: Interface for pause/resume providers
-mixin class ViewModelBinding implements ViewModelBindingInterface {
+mixin class ViewModelBinding
+    implements ViewModelBindingInterface, ViewModelBindingRecreateCapability {
   late final String _id = "${getName()}#${identityHashCode(this)}";
 
   String get id => _id;
@@ -230,12 +323,70 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   bool get isDisposed => _dispose;
 
   late final _instanceController = AutoDisposeInstanceController(
-    onRecreate: onUpdate,
+    onRecreate: _handleInstanceChange,
+    onInstanceDetached: _handleInstanceDetached,
+    onInstanceRecreated: _handleInstanceRecreated,
     viewModelBinding: this,
   );
-  final Map<ViewModel, bool> _stateListeners = {};
+  final Map<ViewModel, Function()> _stateListeners = Map.identity();
   final _defaultViewModelKey = Object();
-  final List<Function()> _disposes = [];
+  final List<_BindingSubscription> _subscriptions = [];
+  final Map<(Type, Object), Object> _factorySources = {};
+  final Map<ViewModel, (Type, Object)> _factoryIdentities = Map.identity();
+
+  void _handleInstanceChange() {
+    onUpdate();
+  }
+
+  void _handleInstanceDetached(ViewModel viewModel) {
+    _stateListeners.remove(viewModel)?.call();
+    final subscriptions = _subscriptions
+        .where((subscription) => subscription.isAttachedTo(viewModel))
+        .toList(growable: false);
+    for (final subscription in subscriptions) {
+      subscription.dispose();
+      _subscriptions.remove(subscription);
+    }
+    assert(() {
+      final identity = _factoryIdentities.remove(viewModel);
+      if (identity != null) {
+        _factorySources.remove(identity);
+      }
+      return true;
+    }());
+  }
+
+  void _handleInstanceRecreated(ViewModel previous, ViewModel current) {
+    final removeWatchListener = _stateListeners.remove(previous);
+    if (removeWatchListener != null) {
+      removeWatchListener.call();
+      _addListener(current);
+    }
+    for (final subscription in _subscriptions.where(
+      (subscription) => subscription.isAttachedTo(previous),
+    )) {
+      subscription.moveTo(current);
+    }
+    assert(() {
+      final identity = _factoryIdentities.remove(previous);
+      if (identity != null) {
+        _factoryIdentities[current] = identity;
+      }
+      return true;
+    }());
+  }
+
+  void _addSubscription<VM extends ViewModel>(
+    VM viewModel,
+    Function() Function(VM viewModel) attach,
+  ) {
+    _subscriptions.add(
+      _BindingSubscription(
+        viewModel: viewModel,
+        attach: (value) => attach(value as VM),
+      ),
+    );
+  }
 
   /// Called when any watched ViewModel notifies changes.
   ///
@@ -308,27 +459,45 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     return pathInfo.isNotEmpty ? "$pathInfo#$runtimeType" : "$runtimeType";
   }
 
-  /// Forces disposal of a ViewModel and removes it from cache.
+  /// Force-recycles a ViewModel and removes it from cache for every owner.
   ///
-  /// This method manually disposes a ViewModel instance and triggers
-  /// a widget rebuild. Use this when you need to force recreation
-  /// of a ViewModel (e.g., after a logout or data reset).
+  /// This method manually disposes a ViewModel instance and triggers owner
+  /// updates. Do not use it as a routine recreation or cleanup mechanism.
+  /// Call it only when you explicitly understand and accept that every owner
+  /// of the shared instance will lose the old object at once.
   ///
   /// Parameters:
   /// - [vm]: The ViewModel instance to dispose and remove
   ///
   /// Example:
   /// ```dart
-  /// var userVM = viewModelBinding.watch(fac);
-  /// // Later, force recreation
-  /// viewModelBinding.recycle(userVM);
+  /// UserViewModel get userVM => viewModelBinding.watch(fac);
   ///
-  /// recreate new instance
-  /// userVM = viewModelBinding.watch(fac);
+  /// // Advanced escape hatch: userVM is disposed for every owner. Their next
+  /// // getter evaluation resolves a newly created instance.
+  /// viewModelBinding.recycle(userVM);
   /// ```
+  /// Warning: this is a destructive global operation for a shared instance.
+  /// It removes all owners and also disposes `aliveForever` instances. It is
+  /// an escape hatch, not the normal way to release the current binding.
+  /// Consumers must use getter-based resolution; a stored field would keep
+  /// pointing at the disposed object instead of resolving its replacement.
+  @override
   void recycle<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
     onUpdate();
+  }
+
+  @override
+  VM recreate<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  }) {
+    final owner = viewModel.refHandler.primaryOwner ?? viewModelBinding;
+    return runWithBinding(
+      () => _instanceController.recreate(viewModel, builder: builder),
+      owner,
+    );
   }
 
   /// Gets an existing ViewModel by key or throws an error if not found.
@@ -468,6 +637,13 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// its [key] or [tag]. It does not create new instances and does not cause
   /// the widget to rebuild when the ViewModel changes.
   ///
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified [key] uniquely identifies a cached instance;
+  /// a [tag] may match multiple instances, so use [readCachesByTag] for a
+  /// batch lookup. If neither [key] nor [tag] is provided, a multi-instance
+  /// lookup returns the most recently created instance based on creation
+  /// order. Use this only when you fully understand that behavior.
+  ///
   /// Parameters:
   /// - [key]: The unique key used to find the ViewModel.
   /// - [tag]: The tag used to find the ViewModel.
@@ -589,10 +765,37 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       viewModelBinding,
     );
 
+    assert(() {
+      _recordFactoryResolution<VM>(factory, key);
+      _factoryIdentities[res] = (VM, key);
+      return true;
+    }());
+
     if (listen) {
       _addListener(res);
     }
     return res;
+  }
+
+  void _recordFactoryResolution<VM extends ViewModel>(
+    ViewModelFactory<VM> factory,
+    Object key,
+  ) {
+    assert(() {
+      final identity = (VM, key);
+      final source = factory.debugSource;
+      final previous = _factorySources[identity];
+      if (previous != null && !identical(previous, source)) {
+        debugPrint(
+          'view_model warning: Different factory sources resolved the same '
+          '$VM + key ${Error.safeToString(key)} in binding $id. The cached '
+          'instance is reused and the later builder will not run. Give each '
+          'spec an explicit, distinct key.',
+        );
+      }
+      _factorySources.putIfAbsent(identity, () => source);
+      return true;
+    }());
   }
 
   bool _hasMissedUpdates = false;
@@ -609,9 +812,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// Parameters:
   /// - [res]: The ViewModel to listen to
   void _addListener(ViewModel res) {
-    if (_stateListeners[res] != true) {
-      _stateListeners[res] = true;
-      _disposes.add(res.listen(onChanged: () {
+    if (!_stateListeners.containsKey(res)) {
+      _stateListeners[res] = res.listen(onChanged: () {
         if (_dispose) return;
         // When paused, ignore updates; we'll blindly refresh on resume.
         if (_pauseAwareController.isPaused) {
@@ -622,7 +824,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
           return;
         }
         onUpdate();
-      }));
+      });
     }
   }
 
@@ -686,17 +888,28 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   void dispose() {
     if (_dispose) return;
     _dispose = true;
+    for (final removeListener in _stateListeners.values.toList()) {
+      try {
+        removeListener.call();
+      } catch (e, stack) {
+        reportViewModelError(e, stack, ErrorType.dispose,
+            'ViewModelBinding watch listener dispose error');
+      }
+    }
     _stateListeners.clear();
+    _factorySources.clear();
+    _factoryIdentities.clear();
     // Run listener cleanup callbacks before disposing the instance controller,
     // to avoid listener callbacks firing during the disposal cascade.
-    for (final e in _disposes) {
+    for (final subscription in _subscriptions.toList(growable: false)) {
       try {
-        e.call();
+        subscription.dispose();
       } catch (e, stack) {
         reportViewModelError(e, stack, ErrorType.dispose,
             'ViewModelBinding dispose listener error');
       }
     }
+    _subscriptions.clear();
     try {
       _pauseAwareController.dispose();
     } catch (e, stack) {
@@ -716,7 +929,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     ViewModelFactory<VM> factory, {
     required VoidCallback onChanged,
   }) {
-    _disposes.add(viewModelBinding.read(factory).listen(onChanged: onChanged));
+    final vm = viewModelBinding.read(factory);
+    _addSubscription(vm, (value) => value.listen(onChanged: onChanged));
   }
 
   @override
@@ -725,20 +939,35 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     required Function(S? previous, S state) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
-    _disposes.add(vm.listenState(onChanged: onChanged));
+    _addSubscription(vm, (value) => value.listenState(onChanged: onChanged));
   }
 
   @override
   void listenStateSelect<VM extends StateViewModel<S>, S, R>(
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
     required Function(R? previous, R current) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
-    _disposes
-        .add(vm.listenStateSelect(onChanged: onChanged, selector: selector));
+    _addSubscription(
+      vm,
+      (value) => value.listenStateSelect(
+        onChanged: onChanged,
+        selector: selector,
+        equals: equals,
+      ),
+    );
   }
 
+  /// Safely queries the existing cache and returns `null` when not found.
+  ///
+  /// Regular application code should prefer [read] or [watch] with a spec for
+  /// precise lookup. A specified [key] uniquely identifies a cached instance;
+  /// use [readCachesByTag] when a [tag] may match multiple instances. If
+  /// neither [key] nor [tag] is provided, a multi-instance lookup returns the
+  /// most recently created instance based on creation order. Use this only
+  /// when you fully understand that behavior.
   @override
   VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) {
     try {
@@ -773,17 +1002,42 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
   void listenViewModelStateSelect<VM extends StateViewModel<S>, S, R>({
     required ViewModelFactory<VM> factory,
     required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
     required Function(R? previous, R current) onChanged,
   }) {
     viewModelBinding.listenStateSelect<VM, S, R>(
       factory,
       selector: selector,
+      equals: equals,
       onChanged: onChanged,
     );
   }
 
+  /// Compatibility convenience entry point for
+  /// [ViewModelBindingInterface.recycle].
+  ///
+  /// This is a dangerous global force-recycle operation: it removes every
+  /// owner from the target instance and disposes it immediately, even when
+  /// the instance is marked `aliveForever`. Its use is generally discouraged;
+  /// call it only when you fully understand that every shared consumer will
+  /// be affected.
+  ///
+  /// After recycling, the old instance passed to this method is disposed.
+  /// Every consumer must resolve the ViewModel lazily through a getter that
+  /// calls `watch`/`read` again on each access. This allows the next access to
+  /// follow the normal cache-miss and instance-creation path. Do not retain a
+  /// ViewModel in a `late final`, `final`, or similar field; that field would
+  /// keep referencing the disposed object and may cause memory leaks or other
+  /// errors.
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     viewModelBinding.recycle<VM>(viewModel);
+  }
+
+  VM recreateViewModel<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  }) {
+    return viewModelBinding.recreate<VM>(viewModel, builder: builder);
   }
 
   VM readViewModel<VM extends ViewModel>(
@@ -791,6 +1045,14 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     return viewModelBinding.read<VM>(factory);
   }
 
+  /// Queries the existing cache without listening for changes.
+  ///
+  /// Regular application code should prefer `readViewModel` /
+  /// `watchViewModel` with a spec for precise lookup. A specified [key]
+  /// uniquely identifies a cached instance; a [tag] may match multiple
+  /// instances, so use `viewModelBinding.readCachesByTag`. If neither [key]
+  /// nor [tag] is provided, a multi-instance lookup returns the most recently
+  /// created instance. Use this only when you fully understand that behavior.
   VM readCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -821,6 +1083,15 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     );
   }
 
+  /// Safely queries the existing cache and returns `null` when not found.
+  ///
+  /// Regular application code should prefer `readViewModel` /
+  /// `watchViewModel` with a spec for precise lookup. A specified [key]
+  /// uniquely identifies a cached instance; use
+  /// `viewModelBinding.readCachesByTag` when a [tag] may match multiple
+  /// instances. If neither [key] nor [tag] is provided, a multi-instance
+  /// lookup returns the most recently created instance based on creation
+  /// order. Use this only when you fully understand that behavior.
   VM? maybeReadCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,

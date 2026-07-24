@@ -15,6 +15,37 @@ class SimpleStateVM extends StateViewModel<SimpleState> {
   SimpleStateVM({required SimpleState initial}) : super(state: initial);
 }
 
+/// A custom StateViewModel that overrides `listenStateSelect`.
+class SelectorOverrideVM extends StateViewModel<SimpleState> {
+  SelectorOverrideVM() : super(state: const SimpleState(0));
+
+  @override
+  Function() listenStateSelect<R>({
+    required R Function(SimpleState state) selector,
+    bool Function(R previous, R current)? equals,
+    required void Function(R? previous, R current) onChanged,
+  }) {
+    return super.listenStateSelect(
+      selector: selector,
+      equals: equals,
+      onChanged: onChanged,
+    );
+  }
+}
+
+final _recreateDependencySpec = ViewModelSpec<SimpleVM>(
+  builder: SimpleVM.new,
+  key: 'recreate-constructor-dependency',
+);
+
+class RecreatedParentVM with ViewModel {
+  RecreatedParentVM() {
+    dependency;
+  }
+
+  SimpleVM get dependency => viewModelBinding.read(_recreateDependencySpec);
+}
+
 class ThrowingHashKey {
   const ThrowingHashKey();
 
@@ -34,6 +65,74 @@ class TestRefWithCounter with ViewModelBinding {
     super.onUpdate();
     updates++;
   }
+}
+
+class GetterRef with ViewModelBinding {
+  GetterRef(this.factory);
+
+  final ViewModelFactory<SimpleVM> factory;
+
+  SimpleVM get vm => watch(factory);
+}
+
+/// A direct binding implementation without the optional recreate capability.
+class DirectBindingImplementation implements ViewModelBindingInterface {
+  Never _unsupported() => throw UnsupportedError('test stub');
+
+  @override
+  VM watch<VM extends ViewModel>(ViewModelFactory<VM> factory) =>
+      _unsupported();
+
+  @override
+  VM watchCached<VM extends ViewModel>({Object? key, Object? tag}) =>
+      _unsupported();
+
+  @override
+  VM read<VM extends ViewModel>(ViewModelFactory<VM> factory) => _unsupported();
+
+  @override
+  VM readCached<VM extends ViewModel>({Object? key, Object? tag}) =>
+      _unsupported();
+
+  @override
+  List<VM> watchCachesByTag<VM extends ViewModel>(Object tag) => _unsupported();
+
+  @override
+  List<VM> readCachesByTag<VM extends ViewModel>(Object tag) => _unsupported();
+
+  @override
+  VM? maybeWatchCached<VM extends ViewModel>({Object? key, Object? tag}) =>
+      _unsupported();
+
+  @override
+  VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) =>
+      _unsupported();
+
+  @override
+  void listen<VM extends ViewModel>(
+    ViewModelFactory<VM> factory, {
+    required void Function() onChanged,
+  }) =>
+      _unsupported();
+
+  @override
+  void listenState<VM extends StateViewModel<S>, S>(
+    ViewModelFactory<VM> factory, {
+    required Function(S? previous, S state) onChanged,
+  }) =>
+      _unsupported();
+
+  @override
+  void listenStateSelect<VM extends StateViewModel<S>, S, R>(
+    ViewModelFactory<VM> factory, {
+    required R Function(S state) selector,
+    bool Function(R previous, R current)? equals,
+    required Function(R? previous, R current) onChanged,
+  }) =>
+      _unsupported();
+
+  @override
+  void recycle<VM extends ViewModel>(VM viewModel) => _unsupported();
 }
 
 void main() {
@@ -146,7 +245,54 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 50));
       expect(selectListens, 1);
 
+      int equalSelectListens = 0;
+      final ViewModelBindingInterface bindingApi = ref;
+      bindingApi.listenStateSelect<SimpleStateVM, SimpleState, int>(
+        stateProvider,
+        selector: (s) => s.value,
+        equals: (previous, current) => previous.isEven == current.isEven,
+        onChanged: (p, c) => equalSelectListens++,
+      );
+      svm2.setState(const SimpleState(4));
+      expect(equalSelectListens, 0);
+      svm2.setState(const SimpleState(5));
+      expect(equalSelectListens, 1);
+
       ref.dispose();
+    });
+
+    test('direct interface implementations can omit recreate capability', () {
+      final ViewModelBindingInterface direct = DirectBindingImplementation();
+      final owner = TestRef();
+      addTearDown(owner.dispose);
+      final viewModel = owner.read(
+        ViewModelSpec<SimpleVM>(builder: SimpleVM.new),
+      );
+
+      expect(direct, isNot(isA<ViewModelBindingRecreateCapability>()));
+      expect(
+        () => direct.recreate(viewModel),
+        throwsA(isA<UnsupportedError>()),
+      );
+    });
+
+    test('StateViewModel selector overrides forward local equals', () {
+      final binding = TestRef();
+      addTearDown(binding.dispose);
+      final provider = ViewModelSpec<SelectorOverrideVM>(
+        builder: SelectorOverrideVM.new,
+      );
+      final viewModel = binding.read(provider);
+      var changes = 0;
+      viewModel.listenStateSelect<int>(
+        selector: (state) => state.value,
+        equals: (_, __) => true,
+        onChanged: (_, __) => changes++,
+      );
+
+      viewModel.setState(const SimpleState(1));
+
+      expect(changes, 0);
     });
   });
 
@@ -174,7 +320,7 @@ void main() {
     });
   });
 
-  group('ViewModelBinding recycle creates fresh instance', () {
+  group('ViewModelBinding lifecycle controls', () {
     test('recycle then watch returns new instance', () {
       final ref = TestRef();
       final fac = ViewModelSpec<SimpleVM>(builder: () => SimpleVM());
@@ -183,6 +329,138 @@ void main() {
       final b = ref.watch(fac);
       expect(identical(a, b), isFalse);
       ref.dispose();
+    });
+
+    test('unbind detaches only the current binding and its listeners', () {
+      final first = TestRefWithCounter();
+      final second = TestRefWithCounter();
+      final factory = ViewModelSpec<SimpleVM>(
+        builder: SimpleVM.new,
+        key: 'unbind-shared-instance',
+      );
+      final vm = first.watch(factory);
+      expect(second.watch(factory), same(vm));
+      var firstEffects = 0;
+      var secondEffects = 0;
+      first.listen(factory, onChanged: () => firstEffects++);
+      second.listen(factory, onChanged: () => secondEffects++);
+      first.updates = 0;
+      second.updates = 0;
+
+      first.unbind(vm);
+      vm.notifyListeners();
+
+      expect(first.updates, 0);
+      expect(second.updates, 1);
+      expect(firstEffects, 0);
+      expect(secondEffects, 1);
+      expect(vm.isDisposed, isFalse);
+      first.dispose();
+      second.dispose();
+      expect(vm.isDisposed, isTrue);
+    });
+
+    test('recycle disposes a shared instance for every binding', () {
+      final first = TestRefWithCounter();
+      final second = TestRefWithCounter();
+      final factory = ViewModelSpec<SimpleVM>(
+        builder: SimpleVM.new,
+        key: 'recycle-shared-instance',
+      );
+      final vm = first.watch(factory);
+      expect(second.watch(factory), same(vm));
+      first.updates = 0;
+      second.updates = 0;
+
+      first.recycle(vm);
+
+      expect(vm.isDisposed, isTrue);
+      expect(first.updates, 1);
+      expect(second.updates, 1);
+      final replacement = first.watch(factory);
+      expect(replacement, isNot(same(vm)));
+      expect(second.watch(factory), same(replacement));
+      first.dispose();
+      second.dispose();
+    });
+
+    test('owners re-resolve a recycled shared instance through getters', () {
+      final factory = ViewModelSpec<SimpleVM>(
+        builder: SimpleVM.new,
+        key: 'recycle-getter-resolution',
+      );
+      final first = GetterRef(factory);
+      final second = GetterRef(factory);
+      final old = first.vm;
+      expect(second.vm, same(old));
+
+      first.recycle(old);
+
+      expect(old.isDisposed, isTrue);
+      final replacement = second.vm;
+      expect(replacement, isNot(same(old)));
+      expect(first.vm, same(replacement));
+      first.dispose();
+      second.dispose();
+    });
+
+    test('recreate replaces the object while preserving shared bindings', () {
+      final first = TestRefWithCounter();
+      final second = TestRefWithCounter();
+      final factory = ViewModelSpec<SimpleVM>(
+        builder: SimpleVM.new,
+        key: 'recreate-shared-instance',
+      );
+      final vm = first.watch(factory);
+      expect(second.watch(factory), same(vm));
+      var firstEffects = 0;
+      var secondEffects = 0;
+      first.listen(factory, onChanged: () => firstEffects++);
+      second.listen(factory, onChanged: () => secondEffects++);
+      first.updates = 0;
+      second.updates = 0;
+
+      final ViewModelBindingInterface bindingApi = first;
+      final replacement = bindingApi.recreate(vm, builder: SimpleVM.new);
+
+      expect(vm.isDisposed, isTrue);
+      expect(replacement, isNot(same(vm)));
+      expect(first.updates, 1);
+      expect(second.updates, 1);
+      first.updates = 0;
+      second.updates = 0;
+      replacement.notifyListeners();
+      expect(first.updates, 1);
+      expect(second.updates, 1);
+      expect(firstEffects, 1);
+      expect(secondEffects, 1);
+      expect(first.watch(factory), same(replacement));
+      expect(second.watch(factory), same(replacement));
+      first.updates = 0;
+      second.updates = 0;
+      replacement.notifyListeners();
+      expect(first.updates, 1);
+      expect(second.updates, 1);
+      expect(firstEffects, 2);
+      expect(secondEffects, 2);
+      first.dispose();
+      second.dispose();
+    });
+
+    test('recreate builds inside the primary owner binding zone', () {
+      final binding = TestRef();
+      final factory = ViewModelSpec<RecreatedParentVM>(
+        builder: RecreatedParentVM.new,
+        key: 'recreate-parent',
+      );
+      final first = binding.read(factory);
+      final dependency = first.dependency;
+
+      final replacement = binding.recreate(first);
+
+      expect(replacement, isNot(same(first)));
+      expect(replacement.dependency, same(dependency));
+      binding.dispose();
     });
   });
 

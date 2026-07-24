@@ -120,6 +120,15 @@ mixin class ViewModel
   /// Returns `null` if no matching ViewModel is found, unlike [readCached]
   /// which throws an exception.
   ///
+  /// Normal application code should prefer
+  /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
+  ///
+  /// This method only queries the existing cache. A specific [key] uniquely
+  /// identifies an instance. A [tag] can match several instances; use the
+  /// binding's `readCachesByTag` for that case. With neither [key] nor [tag],
+  /// multiple matches are resolved by creation order and the newest instance
+  /// is returned. Use that behavior only when you understand and intend it.
+  ///
   /// This method is useful for safely accessing a cached ViewModel without
   /// causing
   /// an error if it doesn't exist.
@@ -160,9 +169,15 @@ mixin class ViewModel
   ///   _counter++;
   /// });
   /// ```
-  Future<void> update(FutureOr<dynamic> Function() block) async {
-    await block.call();
+  Future<void> update(FutureOr<dynamic> Function() block) {
+    final result = block.call();
+    if (result is Future<dynamic>) {
+      return result.then<void>((_) {
+        notifyListeners();
+      });
+    }
     notifyListeners();
+    return Future<void>.value();
   }
 
   /// Reads a ViewModel instance by [key] or [tag].
@@ -177,6 +192,14 @@ mixin class ViewModel
   /// This method is for accessing already-created and cached ViewModels.
   /// It does
   /// not create new instances.
+  ///
+  /// Normal application code should prefer
+  /// `ViewModelBinding.read/watch(spec)` for explicit resolution. A specific
+  /// [key] uniquely identifies a cached instance. A [tag] can match several
+  /// instances; use the binding's `readCachesByTag` for that case. With neither
+  /// [key] nor [tag], multiple matches are resolved by creation order and the
+  /// newest instance is returned. Use that behavior only when you understand
+  /// and intend it.
   ///
   /// Parameters:
   /// - [key]: The unique key from [ViewModelFactory.key].
@@ -431,9 +454,17 @@ mixin class ViewModel
     _initDevtool();
   }
 
+  /// Completely resets ViewModel runtime state for test isolation.
+  ///
+  /// Unlike a configuration-only reset, this also force-disposes every cached
+  /// instance (including retained instances), clears DevTools tracking data,
+  /// and allows the built-in tracker to be registered again.
   @visibleForTesting
   static void reset() {
+    instanceManager.disposeAll(force: true);
+    DevToolTracker.instance.resetForTesting();
     _initialized = false;
+    _initializedDevtool = false;
     _config = ViewModelConfig();
     _viewModelLifecycles.clear();
   }
@@ -533,7 +564,9 @@ mixin class ViewModel
 
   @protected
   @mustCallSuper
-  void dispose() {}
+  void dispose() {
+    _listeners.clear();
+  }
 }
 
 /// Abstract base class for ViewModels that manage state of type [T].
@@ -597,12 +630,15 @@ abstract class StateViewModel<T> with ViewModel {
   ///
   /// This method observes changes to a specific field or computed value of
   /// the state, rather than the entire state object. It invokes [onChanged]
-  /// only when the selected property's value changes according to [equals].
+  /// only when the selected property's value changes. Comparison uses the
+  /// local [equals] rule when provided, then [ViewModelConfig.equals] when
+  /// configured, and otherwise falls back to `==`.
   ///
   /// Parameters:
   /// - [selector]: Selector function that maps the full state `T` to
   /// the watched
   ///   property `S` (e.g., `(s) => s.count`).
+  /// - [equals]: Optional strongly typed local equality rule.
   /// - [onChanged]: Callback receiving `(previousSelected, currentSelected)`.
   ///
   /// Returns a function to remove this listener.
@@ -619,15 +655,24 @@ abstract class StateViewModel<T> with ViewModel {
   /// ```
   Function() listenStateSelect<S>({
     required S Function(T state) selector,
+    bool Function(S previous, S current)? equals,
     required void Function(S? previous, S current) onChanged,
   }) {
-    final equals = ViewModel.config.equals ?? ((a, b) => a == b);
+    final globalEquals = ViewModel.config.equals;
+    final effectiveEquals = equals ??
+        (globalEquals == null
+            ? (S previous, S current) => previous == current
+            : (S previous, S current) => globalEquals(previous, current));
+
     // Wrap into a full-state listener to reuse the existing dispatch path.
     // ignore: prefer_final_locals
     Function(T? previous, T state) wrapper = (prevState, currState) {
-      final S? prevSel = prevState == null ? null : selector(prevState);
+      // State listeners are only dispatched for a real setState transition,
+      // so a previous state always exists. The cast also preserves a nullable
+      // T: in that case null is a valid previous state passed to the selector.
+      final S prevSel = selector(prevState as T);
       final S currSel = selector(currState);
-      if (!equals(prevSel, currSel)) {
+      if (!effectiveEquals(prevSel, currSel)) {
         onChanged(prevSel, currSel);
       }
     };
@@ -698,15 +743,6 @@ abstract class StateViewModel<T> with ViewModel {
   /// - [listener]: The listener function to remove
   void removeStateListener(Function(T? previous, T state) listener) {
     _stateListeners.remove(listener);
-  }
-
-  @override
-  void notifyListeners() {
-    if (_isDisposed) {
-      viewModelLog("$runtimeType: notifyListeners after Disposed");
-      return;
-    }
-    _store.notifyListeners();
   }
 
   /// Updates the state and notifies all listeners.
@@ -818,6 +854,7 @@ class AutoDisposeController {
             e, stack, ErrorType.dispose, 'AutoDisposeMixin error');
       }
     }
+    _disposeSet.clear();
   }
 }
 
@@ -864,9 +901,8 @@ abstract mixin class ViewModelFactory<T> {
 
   /// Returns a tag to identify or categorize this ViewModel.
   ///
-  /// Tags can be used to find ViewModels by category rather than type.
-  /// The tag is accessible via [ViewModel.tag] and can be used with
-  /// [ViewModel.readCached] to find ViewModels by tag.
+  /// Tags group related ViewModels for diagnostics and explicit batch lookup.
+  /// The tag is also exposed through [ViewModel.tag].
   ///
   /// Example:
   /// ```dart
@@ -890,6 +926,14 @@ abstract mixin class ViewModelFactory<T> {
   /// ```
   T build();
 
+  /// Stable source identity used by debug collision diagnostics.
+  ///
+  /// The default is the concrete factory type, so rebuilding with another
+  /// instance of the same factory class does not produce a false warning.
+  /// Stateful factories may override this and include the state that changes
+  /// their builder's meaning.
+  Object get debugSource => runtimeType;
+
   /// (Deprecated) Returns `true` if this factory should create singleton
   /// instances. Use [key] instead.
   ///
@@ -899,9 +943,11 @@ abstract mixin class ViewModelFactory<T> {
       'singleton() will be removed in a future major release.')
   bool singleton() => false;
 
-  /// Returns `true` to skip automatic disposal when no bindings remain.
+  /// Returns `true` to keep the instance alive when no bindings remain.
   ///
-  /// The instance can still be force-disposed with `recycle`.
+  /// This is an explicit lifetime guarantee, not a best-effort cache hint.
+  /// The exceptional path is a deliberate force recycle via `recycle` (or a
+  /// complete test-runtime reset), which still disposes the instance.
   bool aliveForever() => false;
 }
 

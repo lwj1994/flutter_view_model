@@ -5,33 +5,28 @@ import 'test_widget.dart';
 
 void main() {
   group('view_model state', () {
-    late TestViewModel viewModel;
-
     setUpAll(() {
       ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
 
-    setUp(() {
-      viewModel = TestViewModel(state: "0");
-    });
-
     test("should correctly trigger listeners on batch state updates", () {
+      final owner = _createTestViewModelOwner();
       const total = 100;
       int listenStateCount = 0;
 
-      viewModel.listenState(onChanged: (p, s) {
+      owner.viewModel.listenState(onChanged: (p, s) {
         listenStateCount++;
         expect(s, listenStateCount.toString());
         expect(p, (listenStateCount - 1).toString());
       });
 
       int listenCallbackCount = 0;
-      viewModel.listen(onChanged: () {
+      owner.viewModel.listen(onChanged: () {
         listenCallbackCount++;
       });
 
       for (int i = 1; i <= total; i++) {
-        viewModel.setState(i.toString());
+        owner.viewModel.setState(i.toString());
       }
 
       // No need to wait - notifications are now synchronous
@@ -40,15 +35,16 @@ void main() {
     });
 
     test("should correctly update state on notifyListeners", () {
+      final owner = _createTestViewModelOwner();
       int completedCount = 0;
 
-      viewModel.listen(onChanged: () {
-        expect(viewModel.name, "a");
+      owner.viewModel.listen(onChanged: () {
+        expect(owner.viewModel.name, "a");
         completedCount += 1;
       });
 
-      viewModel.name = "a";
-      viewModel.notifyListeners();
+      owner.viewModel.name = "a";
+      owner.viewModel.notifyListeners();
 
       // No need to wait - notifications are now synchronous
       expect(completedCount, 1);
@@ -57,30 +53,138 @@ void main() {
 
   group('state_view_model extras', () {
     test('listenState unsubscription works', () {
-      final vm = TestViewModel(state: "0");
-      final dispose = vm.listenState(onChanged: (prev, curr) {});
+      final owner = _createTestViewModelOwner();
+      final dispose = owner.viewModel.listenState(onChanged: (prev, curr) {});
       dispose();
     });
 
     test('notifyListeners after dispose is ignored', () {
-      final vm = TestViewModel(state: "0");
-      vm.onDispose(const InstanceArg());
-      vm.notifyListeners();
+      final owner = _createTestViewModelOwner();
+      owner.notifyListenersAfterRecycle();
     });
 
     test('setState after dispose is ignored', () {
-      final vm = TestViewModel(state: "0");
-      vm.onDispose(const InstanceArg());
-      vm.setState("1");
+      final owner = _createTestViewModelOwner();
+      owner.setStateAfterRecycle("1");
+    });
+
+    test('notifyListeners only notifies general listeners', () {
+      final owner = _createTestViewModelOwner();
+      final diffs = <(String?, String)>[];
+      var selectedCount = 0;
+      var generalCount = 0;
+
+      owner.viewModel.listenState(onChanged: (previous, current) {
+        diffs.add((previous, current));
+      });
+      owner.viewModel.listenStateSelect<String>(
+        selector: (state) => state,
+        onChanged: (_, __) => selectedCount++,
+      );
+      owner.viewModel.listen(onChanged: () => generalCount++);
+
+      owner.viewModel.setState("1");
+      expect(diffs, [("0", "1")]);
+      expect(selectedCount, 1);
+      expect(generalCount, 1);
+
+      owner.viewModel.notifyListeners();
+
+      expect(diffs, [("0", "1")]);
+      expect(selectedCount, 1);
+      expect(generalCount, 2);
+    });
+
+    test('listenStateSelect uses global equals as its fallback', () {
+      ViewModel.reset();
+      final globalCalls = <(Object?, Object?)>[];
+      ViewModel.initialize(
+        config: ViewModelConfig(
+          equals: (previous, current) {
+            globalCalls.add((previous, current));
+            return false;
+          },
+        ),
+      );
+      final owner = _createTestViewModelOwner();
+      final changes = <(int?, int)>[];
+      owner.viewModel.listenStateSelect<int>(
+        selector: (state) => state.length,
+        onChanged: (previous, current) {
+          changes.add((previous, current));
+        },
+      );
+
+      owner.viewModel.setState("1");
+      expect(changes, [(1, 1)]);
+      expect(globalCalls, [("0", "1"), (1, 1)]);
+
+      owner.viewModel.setState("22");
+      expect(changes, [(1, 1), (1, 2)]);
+      expect(
+        globalCalls,
+        [("0", "1"), (1, 1), ("1", "22"), (1, 2)],
+      );
+
+      ViewModel.reset();
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
+    });
+
+    test('listenStateSelect falls back to == when global equals is null', () {
+      ViewModel.reset();
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
+      final owner = _createTestViewModelOwner();
+      final changes = <(int?, int)>[];
+      owner.viewModel.listenStateSelect<int>(
+        selector: (state) => state.length,
+        onChanged: (previous, current) {
+          changes.add((previous, current));
+        },
+      );
+
+      owner.viewModel.setState("1");
+      owner.viewModel.setState("22");
+
+      expect(changes, [(1, 2)]);
+    });
+
+    test('listenStateSelect local equals overrides the global fallback', () {
+      ViewModel.reset();
+      final globalCalls = <(Object?, Object?)>[];
+      ViewModel.initialize(
+        config: ViewModelConfig(
+          equals: (previous, current) {
+            globalCalls.add((previous, current));
+            return previous is int && current is int;
+          },
+        ),
+      );
+      final owner = _createTestViewModelOwner(initialState: "a");
+      final changes = <(int?, int)>[];
+      owner.viewModel.listenStateSelect<int>(
+        selector: (state) => state.length,
+        equals: (previous, current) => false,
+        onChanged: (previous, current) {
+          changes.add((previous, current));
+        },
+      );
+
+      owner.viewModel.setState("bb");
+
+      expect(changes, [(1, 2)]);
+      expect(globalCalls, [("a", "bb")]);
+
+      ViewModel.reset();
+      ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
   });
 
   group('notification timing consistency', () {
     test('StateViewModel notifies listeners synchronously', () {
-      final vm = TestViewModel(state: "0");
+      final owner = _createTestViewModelOwner();
       int callCount = 0;
 
-      vm.listen(onChanged: () {
+      owner.viewModel.listen(onChanged: () {
         callCount++;
       });
 
@@ -88,48 +192,48 @@ void main() {
       expect(callCount, 0);
 
       // After setState, count should be immediately updated (synchronous)
-      vm.setState("1");
+      owner.viewModel.setState("1");
       expect(callCount, 1);
 
-      vm.setState("2");
+      owner.viewModel.setState("2");
       expect(callCount, 2);
     });
 
     test('StateViewModel state listeners are called synchronously', () {
-      final vm = TestViewModel(state: "0");
+      final owner = _createTestViewModelOwner();
       String? capturedPrevious;
       String? capturedCurrent;
 
-      vm.listenState(onChanged: (prev, curr) {
+      owner.viewModel.listenState(onChanged: (prev, curr) {
         capturedPrevious = prev;
         capturedCurrent = curr;
       });
 
-      vm.setState("1");
+      owner.viewModel.setState("1");
 
       // Should be immediately updated (synchronous)
       expect(capturedPrevious, "0");
       expect(capturedCurrent, "1");
 
-      vm.setState("2");
+      owner.viewModel.setState("2");
       expect(capturedPrevious, "1");
       expect(capturedCurrent, "2");
     });
 
     test('both state listeners and regular listeners are called synchronously',
         () {
-      final vm = TestViewModel(state: "0");
+      final owner = _createTestViewModelOwner();
       final callOrder = <String>[];
 
-      vm.listenState(onChanged: (prev, curr) {
+      owner.viewModel.listenState(onChanged: (prev, curr) {
         callOrder.add('state');
       });
 
-      vm.listen(onChanged: () {
+      owner.viewModel.listen(onChanged: () {
         callOrder.add('regular');
       });
 
-      vm.setState("1");
+      owner.viewModel.setState("1");
 
       // Both should be called synchronously, state listeners first
       expect(callOrder, ['state', 'regular']);
@@ -138,23 +242,23 @@ void main() {
 
   group('per-instance equals configuration', () {
     test('instance-level equals is used when provided', () {
-      final vm = UserViewModel(
+      final owner = _createUserViewModelOwner(
         user: User(id: 1, name: "Alice"),
         // Only compare by ID
         equals: (prev, curr) => prev.id == curr.id,
       );
 
       int notifyCount = 0;
-      vm.listen(onChanged: () {
+      owner.viewModel.listen(onChanged: () {
         notifyCount++;
       });
 
       // Same ID, different name - should NOT trigger notification
-      vm.setState(User(id: 1, name: "Alice Updated"));
+      owner.viewModel.setState(User(id: 1, name: "Alice Updated"));
       expect(notifyCount, 0);
 
       // Different ID - should trigger notification
-      vm.setState(User(id: 2, name: "Bob"));
+      owner.viewModel.setState(User(id: 2, name: "Bob"));
       expect(notifyCount, 1);
     });
 
@@ -172,19 +276,21 @@ void main() {
         ),
       );
 
-      final vm = UserViewModel(user: User(id: 1, name: "Alice"));
+      final owner = _createUserViewModelOwner(
+        user: User(id: 1, name: "Alice"),
+      );
 
       int notifyCount = 0;
-      vm.listen(onChanged: () {
+      owner.viewModel.listen(onChanged: () {
         notifyCount++;
       });
 
       // Same ID - should NOT trigger (uses global equals)
-      vm.setState(User(id: 1, name: "Alice Updated"));
+      owner.viewModel.setState(User(id: 1, name: "Alice Updated"));
       expect(notifyCount, 0);
 
       // Different ID - should trigger
-      vm.setState(User(id: 2, name: "Bob"));
+      owner.viewModel.setState(User(id: 2, name: "Bob"));
       expect(notifyCount, 1);
 
       // Reset for other tests
@@ -201,23 +307,23 @@ void main() {
         ),
       );
 
-      final vm = UserViewModel(
+      final owner = _createUserViewModelOwner(
         user: User(id: 1, name: "Alice"),
         // Instance: compare by ID (should override global)
         equals: (prev, curr) => prev.id == curr.id,
       );
 
       int notifyCount = 0;
-      vm.listen(onChanged: () {
+      owner.viewModel.listen(onChanged: () {
         notifyCount++;
       });
 
       // Same ID - instance equals says no update
-      vm.setState(User(id: 1, name: "Updated"));
+      owner.viewModel.setState(User(id: 1, name: "Updated"));
       expect(notifyCount, 0);
 
       // Different ID - instance equals says update (overrides global)
-      vm.setState(User(id: 2, name: "Bob"));
+      owner.viewModel.setState(User(id: 2, name: "Bob"));
       expect(notifyCount, 1);
 
       // Reset for other tests
@@ -229,15 +335,17 @@ void main() {
       ViewModel.reset();
       ViewModel.initialize(config: ViewModelConfig());
 
-      final vm = UserViewModel(user: User(id: 1, name: "Alice"));
+      final owner = _createUserViewModelOwner(
+        user: User(id: 1, name: "Alice"),
+      );
 
       int notifyCount = 0;
-      vm.listen(onChanged: () {
+      owner.viewModel.listen(onChanged: () {
         notifyCount++;
       });
 
       // Different instance - should trigger (uses identical by default)
-      vm.setState(User(id: 1, name: "Alice"));
+      owner.viewModel.setState(User(id: 1, name: "Alice"));
       expect(notifyCount, 1);
 
       // Reset for other tests
@@ -245,6 +353,61 @@ void main() {
       ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
     });
   });
+}
+
+final _testViewModelSpec = ViewModelSpec.arg<TestViewModel, String>(
+  builder: (state) => TestViewModel(state: state),
+);
+
+final _userViewModelSpec = ViewModelSpec.arg2<UserViewModel, User,
+    bool Function(User previous, User current)?>(
+  builder: (user, equals) => UserViewModel(user: user, equals: equals),
+);
+
+_TestViewModelOwner _createTestViewModelOwner({String initialState = "0"}) {
+  final owner = _TestViewModelOwner(initialState);
+  addTearDown(owner.dispose);
+  return owner;
+}
+
+_UserViewModelOwner _createUserViewModelOwner({
+  required User user,
+  bool Function(User previous, User current)? equals,
+}) {
+  final owner = _UserViewModelOwner(user: user, equals: equals);
+  addTearDown(owner.dispose);
+  return owner;
+}
+
+class _TestViewModelOwner with ViewModelBinding {
+  _TestViewModelOwner(this.initialState);
+
+  final String initialState;
+
+  TestViewModel get viewModel =>
+      viewModelBinding.read(_testViewModelSpec(initialState));
+
+  void notifyListenersAfterRecycle() {
+    final disposedViewModel = viewModel;
+    viewModelBinding.recycle(disposedViewModel);
+    disposedViewModel.notifyListeners();
+  }
+
+  void setStateAfterRecycle(String state) {
+    final disposedViewModel = viewModel;
+    viewModelBinding.recycle(disposedViewModel);
+    disposedViewModel.setState(state);
+  }
+}
+
+class _UserViewModelOwner with ViewModelBinding {
+  _UserViewModelOwner({required this.user, this.equals});
+
+  final User user;
+  final bool Function(User previous, User current)? equals;
+
+  UserViewModel get viewModel =>
+      viewModelBinding.read(_userViewModelSpec(user, equals));
 }
 
 // Test model class for equals configuration tests

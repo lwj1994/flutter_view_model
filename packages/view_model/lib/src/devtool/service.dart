@@ -157,6 +157,11 @@ class DevToolsService {
               'createdAt': vm.createTime.toIso8601String(),
               'disposeTime': vm.disposeTime?.toIso8601String(),
               'bindings': vm.watchers.toList(),
+              'owners': vm.owners,
+              'primaryOwner': vm.primaryOwner,
+              'primaryOwnerHandoff': _serializePrimaryOwnerHandoff(
+                vm.primaryOwnerHandoff,
+              ),
             })
         .toList();
 
@@ -196,6 +201,7 @@ class DevToolsService {
           'from': bindingId,
           'to': vm.instanceId,
           'type': 'binding',
+          'isPrimaryOwner': bindingId == vm.primaryOwner,
         });
       }
     }
@@ -207,6 +213,11 @@ class DevToolsService {
                 'type': vm.typeName,
                 'label': '${vm.typeName}\n${vm.key ?? vm.instanceId}',
                 'isActive': !vm.isDisposed,
+                'owners': vm.owners,
+                'primaryOwner': vm.primaryOwner,
+                'primaryOwnerHandoff': _serializePrimaryOwnerHandoff(
+                  vm.primaryOwnerHandoff,
+                ),
               })
           .toList(),
       'edges': dependencies,
@@ -234,6 +245,17 @@ class DevToolsService {
       'orphanedInstances': stats.orphanedInstances,
       'totalWatchers': stats.totalWatchers,
       'viewModelTypes': stats.viewModelTypes,
+    };
+  }
+
+  Map<String, String>? _serializePrimaryOwnerHandoff(
+    PrimaryOwnerHandoff? handoff,
+  ) {
+    if (handoff == null) return null;
+    return {
+      'from': handoff.from,
+      'to': handoff.to,
+      'occurredAt': handoff.occurredAt.toIso8601String(),
     };
   }
 

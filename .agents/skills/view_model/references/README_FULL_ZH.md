@@ -135,6 +135,10 @@ class _CounterPageState extends State<CounterPage> with ViewModelStateMixin {
 }
 ```
 
+`update()` 对同步 block 保持同步通知：调用返回时 listener 已执行。若 block
+返回 `Future`，则仅在 Future 成功完成后通知；同步抛错或 Future 失败都会把
+错误继续交给调用方，并且不会发送通知。
+
 ---
 
 ## 📖 ViewModel 深度探索
@@ -156,6 +160,35 @@ class UserViewModel extends StateViewModel<UserState> {
 }
 ```
 
+只有 `setState` 会产生新的 state diff。`notifyListeners()` 只刷新宽范围
+ViewModel listener，不会重复发送上一次 diff，也不会再次调用
+`listenState` / `listenStateSelect`。完整 state 的判等优先级是：构造器局部
+`equals` → 全局 `ViewModelConfig.equals` → `identical`。selector 选中值的
+判等优先级是：显式局部 `equals` → 全局 `ViewModelConfig.equals` → `==`。
+全局 `equals` 默认为空；需要局部强类型比较时，直接传给
+`listenStateSelect`：
+
+```dart
+viewModelBinding.listenStateSelect(
+  userSpec,
+  selector: (UserState state) => state.name,
+  equals: (String previous, String current) => previous == current,
+  onChanged: (previous, current) => print(current),
+);
+```
+
+Widget 新代码优先使用单 selector 的强类型
+`StateViewModelSelector<T, R>`；多个字段可组成 Dart record，作为一次更新
+边界：
+
+```dart
+StateViewModelSelector<UserState, ({String name, int age})>(
+  viewModel: vm,
+  selector: (state) => (name: state.name, age: state.age),
+  builder: (context, value) => Text('${value.name}, ${value.age}'),
+)
+```
+
 ### 资源快捷回收
 在构造函数里使用 `addDispose()`，确保资源不遗忘：
 
@@ -168,9 +201,9 @@ StreamViewModel() {
 
 ## 🔄 ViewModel 间的强力联动
 
-ViewModel 内部的依赖统一通过非缓存 getter 获取。getter 每次都会经由
-`refHandler` 当前选中的 owner binding（首个仍存在的 owner，不一定是调用方
-root）解析，但同一 binding 内仍会复用同一个受管实例：
+ViewModel 内部的依赖统一通过解析型 getter 获取，getter 每次访问都调用
+`watch`/`read`，并经由 `refHandler` 当前选中的 owner binding（首个仍存在的
+owner，不一定是调用方 root）解析，但同一 binding 内仍会复用同一个受管实例：
 
 ```dart
 class OrderViewModel with ViewModel {
@@ -187,7 +220,7 @@ root binding 只负责释放它实际解析过的实例；getter 声明本身不
 
 > **共享父模块边界：** 一个带 key 的父 ViewModel 可以被多个 root binding
 > 共同持有，但父模块解析出的子依赖不会自动绑定到所有 root。解析子依赖的
-> root 被销毁后，父模块可能仍存活而子模块已经销毁。非缓存 getter 能避免
+> root 被销毁后，父模块可能仍存活而子模块已经销毁。解析型 getter 能避免
 > 继续持有已销毁对象，并在下次访问时通过 `refHandler` 新选中的 owner 重新
 > 解析；但子模块可能被重新创建，原状态不保证连续。需要连续共享状态时，
 > 优先使用不带 key 的复合父模块，并让每个 root 都解析带 key 的共享叶子
@@ -312,8 +345,9 @@ class _ThemeModeButtonState extends State<ThemeModeButton>
 更新状态、观察子 Widget 不存在时继续持有状态，并在作用域结束时释放非
 Widget owner。应用、服务或启动作用域也遵循同一模式。这里的 key 用于跨
 binding 共享；同一 binding 内要区分多个同 `T` 实例时也需要不同 key。key
-本身不会保活，也不能替代 owner。只有明确需要进程级常驻并接受显式
-recycle 或进程结束清理时，才使用 `aliveForever`。
+本身不会保活，也不能替代 owner。只有明确需要进程级常驻，并接受进程结束
+清理或高级 `recycle` escape hatch 的危险全局影响时，才使用
+`aliveForever`。
 
 迁移 `ObserverBuilder2` 或 `ObserverBuilder3` 时，优先把相关值合并为一个
 明确的状态对象，避免继续用多个独立可观察值拼装业务状态。
@@ -328,16 +362,33 @@ recycle 或进程结束清理时，才使用 `aliveForever`。
 | :--- | :--- | :--- |
 | **`watch(spec)`** | 在 Widget 的 `build` 或逻辑中 | **响应式**：VM 变化会触发 UI 刷新。若 VM 不存在则创建。 |
 | **`read(spec)`** | 事件回调、只需调用方法时 | **非响应式**：仅读取，不监听。若 VM 不存在则创建。 |
-| **`watchCached(key/tag)`** | 寻找现有的单例或共享 VM | 如果缓存里没找到，它会抛出异常。 |
-| **`readCached(key/tag)`** | 读取现有缓存但不触发刷新 | 只查找已有实例，不创建；会参与 binding 生命周期，但不响应 `notifyListeners()`。 |
 | **`watchCachesByTag(tag)`** | 按 tag 批量响应式获取 VM | 批量版 `watch`：会 `bind`、响应 `notifyListeners()`，也会感知 recreate/dispose。 |
 | **`readCachesByTag(tag)`** | 按 tag 批量读取已有 VM | 批量版 `read`：会 `bind`、感知 recreate/dispose，并参与 dispose 清理，但不响应 `notifyListeners()`。 |
-| **`listenStateSelect(...)`**| 针对性监听某个字段 | 例如：只有 `user.age` 变了才弹窗，别的字段变了不理。 |
-| **`recycle(vm)`** | 强制销毁重来 | 比如：退出登录时，一键回收所有用户相关的 VM。 |
+| **`listenStateSelect(...)`**| 针对性监听某个字段 | 可选局部 `equals` 优先，其次使用全局 `ViewModelConfig.equals`，最后使用 `==`。 |
+| **`recycle(vm)`** | 危险的全局强制回收 | 解除所有 owners 并销毁共享实例，`aliveForever` 也不例外；下次 `watch/read` 创建新实例。 |
+| **`recreate(vm)`** | 原位替换实例 | 保留现有 binding 关系；可传 `builder`，不传则复用原 factory。 |
 
 补充说明：
 
 - `watch*` 和 `read*` 都会建立 binding，都会影响实例生命周期；差别主要在于是否监听 ViewModel 自身的变化。
+- selector 自定义比较直接通过 `listenStateSelect` 的可选 `equals`
+  传入。`recreate` 仍是独立可选能力；直接
+  `implements ViewModelBindingInterface` 的类型如需支持它，再实现
+  `ViewModelBindingRecreateCapability`。通过接口 extension 对不支持的实现
+  调用 `recreate` 时会抛出 `UnsupportedError`。
+- `recycle` 是高级 escape hatch，具有危险的全局影响；只有明确需要解除全部
+  owners、销毁共享实例时才使用，不应作为常规清理路径。
+- `recycle` 后旧对象已经 dispose。所有使用方，尤其共享实例的其他 owner，
+  都必须通过解析型 getter 被动获取 ViewModel（每次访问都调用 `watch`/`read`）；
+  owner 收到更新后，getter 下次访问会因缓存未命中而正常创建新实例。长期
+  缓存 VM 字段会继续引用 disposed 对象，可能导致泄漏或异常。正确写法如下：
+
+  ```dart
+  MyViewModel get vm => viewModelBinding.watch(mySpec);
+
+  // 仅在明确接受全部 owners 都受影响时使用：
+  void resetGlobally() => viewModelBinding.recycle(vm);
+  ```
 - 做字段级更新时，优先用 `read` 拿到 ViewModel，再交给 `listenStateSelect` 或 `StateViewModelValueWatcher` 驱动更新；不要再对同一个 ViewModel 额外 `watch`。
 - 实例身份由“解析时使用的泛型 ViewModel 类型 `T` + effective key”共同
   决定；builder 返回对象的运行时具体类型不参与身份，`tag` 也只用于分组
@@ -345,7 +396,10 @@ recycle 或进程结束清理时，才使用 `aliveForever`。
   复用一个实例，不同 binding 默认隔离。跨 binding 共享、同一 binding 内
   区分多个同 `T` 实例，
   或需要稳定的 keyed cached lookup 时，应显式设置 key。key 本身不负责
-  保活；`aliveForever` 只跳过引用归零时的自动回收，显式 `recycle` 仍可销毁。
+  保活；`aliveForever` 只跳过引用归零时的自动回收，但显式 `recycle` 仍会
+  解除全部 owners 并强制销毁。
+- 同一个 binding 中若两个不同 spec 使用相同的 `T` 与 effective key，第二个
+  builder 不会执行；debug 模式会发出提示。逻辑上不同的 spec 应使用不同 key。
 
 ---
 
@@ -356,6 +410,29 @@ recycle 或进程结束清理时，才使用 `aliveForever`。
 *   **丝滑追赶**：当你重新看到页面的一瞬间，系统会帮你做一次补报刷新，确保数据是最新的。
 
 > **提示**：为了让路由感知生效，别忘了在 `MaterialApp` 里加上 `ViewModel.routeObserver`。
+
+---
+
+## 🧪 测试方案
+
+`ViewModelSpec.overrideWith(mockSpec)` 会安装一个作用域 override，并返回
+幂等的 restore 回调；嵌套 override 以及乱序 restore 都是安全的。
+`runWithOverride` 则会在同步或异步 body 成功、失败后自动恢复；每次调用
+使用独立的异步 Zone，因此并发重叠的 body 不会互相读取到对方的 scoped
+override 选择；factory 选定后，正常的 key 实例共享规则仍然生效。原有
+`setProxy` / `clearProxy` 继续作为全局兼容 fallback：
+
+```dart
+await userSpec.runWithOverride(mockUserSpec, () async {
+  final vm = binding.read(userSpec);
+  expect(vm, isA<MockUserViewModel>());
+});
+```
+
+需要隔离完整运行时状态时，调用 `ViewModel.reset()`：它会强制
+销毁全部缓存（包括
+`aliveForever` 实例）、清空配置、生命周期与 DevTools 跟踪数据，并允许
+重新初始化。
 
 ---
 
@@ -377,6 +454,8 @@ class CounterViewModel with ViewModel { ... }
 我们为你准备了强大的 **DevTools 扩展**。在调试模式下，打开 Flutter DevTools：
 *   **可视化依赖图**：一眼看清哪个 Widget 绑定了哪个 ViewModel，谁又依赖了谁。
 *   **状态实时监控**：在不需要打印日志的情况下，直接在浏览器里检视所有存活实例的数据。
+*   **owner 诊断**：查看有序的活跃 `owners`、用于解析嵌套依赖的当前
+    `primaryOwner`，以及 primary owner 的交接记录。
 
 ---
 

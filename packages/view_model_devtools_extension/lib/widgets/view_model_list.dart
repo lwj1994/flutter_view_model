@@ -99,6 +99,11 @@ class ViewModelGraph extends StatelessWidget {
                     theme: Theme.of(context),
                   ),
                 ),
+                Positioned(
+                  top: 12,
+                  left: canvasWidth / 2 - 118,
+                  child: const _GraphLegend(),
+                ),
                 ...bindingIds.map((id) {
                   final rect = bindingRects[id]!;
                   return Positioned(
@@ -109,6 +114,12 @@ class ViewModelGraph extends StatelessWidget {
                     child: _BindingNode(
                       bindingId: id,
                       viewModels: _bindingViewModels(id, edges, vmMap),
+                      primaryOwnerCount: edges
+                          .where(
+                            (edge) =>
+                                edge.from == id && edge.isPrimaryOwnerBinding,
+                          )
+                          .length,
                     ),
                   );
                 }),
@@ -179,10 +190,12 @@ class ViewModelGraph extends StatelessWidget {
 class _BindingNode extends StatelessWidget {
   final String bindingId;
   final List<ViewModelInfo> viewModels;
+  final int primaryOwnerCount;
 
   const _BindingNode({
     required this.bindingId,
     required this.viewModels,
+    required this.primaryOwnerCount,
   });
 
   @override
@@ -236,7 +249,11 @@ class _BindingNode extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '$count ViewModels',
+                    primaryOwnerCount == 0
+                        ? '$count ViewModels'
+                        : '$count ViewModels • $primaryOwnerCount primary',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.secondary,
                       fontSize: 11,
@@ -261,6 +278,67 @@ class _BindingNode extends StatelessWidget {
           viewModels: viewModels,
         );
       },
+    );
+  }
+}
+
+class _GraphLegend extends StatelessWidget {
+  const _GraphLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withAlpha(230),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: theme.dividerColor.withAlpha(100)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _LegendLine(
+              color: theme.colorScheme.primary,
+              thickness: 3.2,
+            ),
+            const SizedBox(width: 6),
+            const Text('Primary owner'),
+            const SizedBox(width: 14),
+            _LegendLine(
+              color: theme.colorScheme.outline,
+              thickness: 1.4,
+            ),
+            const SizedBox(width: 6),
+            const Text('Other owner'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendLine extends StatelessWidget {
+  final Color color;
+  final double thickness;
+
+  const _LegendLine({
+    required this.color,
+    required this.thickness,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 8,
+      child: Center(
+        child: Container(
+          height: thickness,
+          color: color,
+        ),
+      ),
     );
   }
 }
@@ -394,11 +472,6 @@ class _GraphPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    final basePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..color = theme.colorScheme.primary.withAlpha(120);
-
     for (final edge in edges) {
       final fromRect = bindingRects[edge.from];
       final toRect = vmRects[edge.to];
@@ -414,8 +487,28 @@ class _GraphPainter extends CustomPainter {
 
       final vm = vmMap[edge.to];
       final isActive = vm?.status == 'active';
-      final color = isActive ? Colors.green : Colors.orange;
-      canvas.drawPath(path, basePaint..color = color.withAlpha(140));
+      final isPrimaryOwner = edge.isPrimaryOwnerBinding;
+      final color = isPrimaryOwner
+          ? theme.colorScheme.primary
+          : isActive
+              ? Colors.green
+              : Colors.orange;
+      final edgePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isPrimaryOwner ? 3.2 : 1.4
+        ..strokeCap = StrokeCap.round
+        ..color = color.withAlpha(isPrimaryOwner ? 220 : 120);
+      canvas.drawPath(path, edgePaint);
+
+      if (isPrimaryOwner) {
+        canvas.drawCircle(
+          end,
+          4,
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = color,
+        );
+      }
     }
   }
 

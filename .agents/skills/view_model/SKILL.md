@@ -207,8 +207,8 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
   builder's runtime result type do not participate in identity.
 - When factory `key()` returns `null`, repeated access to the same `T` reuses
   one instance within a binding and remains isolated across bindings.
-- Use `key` for cross-binding sharing, multiple same-`T` instances in one
-  binding, or stable keyed cached lookup. It does not keep an instance alive.
+- Use `key` for cross-binding sharing or multiple same-`T` instances in one
+  binding. It does not keep an instance alive.
 - Use `tag` for grouped lookup.
 - Use `aliveForever: true` only for intentional long-lived retention. It skips
   automatic disposal at zero binding references; `recycle` still force-disposes.
@@ -223,14 +223,22 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 4. Choose access API correctly
 - `watch(spec)`: create/get + bind + listen (reactive rebuild/`onUpdate`).
 - `read(spec)`: create/get + bind, no ViewModel listener.
-- `watchCached/readCached`: lookup existing instance only (no creation); `watchCached` binds + listens, `readCached` binds only.
-- `maybeWatchCached/maybeReadCached`: null-safe cached lookup.
-- `watchCachesByTag/readCachesByTag`: batch tag lookup; `watchCachesByTag`
-  is batch `watch`, `readCachesByTag` is batch `read`: it still binds,
-  participates in lifecycle cleanup, and reacts to recreate/dispose, but it
-  does not react to `notifyListeners()`.
+- Do not introduce direct cached lookup in normal application code. Prefer a
+  stable spec and resolve it explicitly with `watch(spec)` or `read(spec)`.
 - `listen/listenState/listenStateSelect`: side-effect listeners, auto-cleaned on binding dispose.
+- Equality priority is local full-state `equals` → global
+  `ViewModelConfig.equals` → `identical`, and explicit selector `equals` →
+  global `ViewModelConfig.equals` → `==`. The global fallback defaults to
+  `null`.
+- Pass the optional typed `equals` directly to `listenStateSelect` when a
+  selector needs a local rule that overrides the global fallback.
+- `recreate(vm, builder: ...)`: replace an instance while preserving active
+  binding relationships; omit `builder` to reuse the original factory.
 - `recycle(vm)`: force unbind all and dispose; next `watch/read` gets fresh instance.
+- The built-in `ViewModelBinding` implements the optional recreate capability.
+  A direct `ViewModelBindingInterface` implementation opts in via
+  `ViewModelBindingRecreateCapability`; otherwise the interface extension
+  throws `UnsupportedError`.
 
 5. Handle dependencies and sharing
 - Model each independent functional capability as a ViewModel when it benefits
@@ -242,7 +250,6 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 - With `key() == null`: one instance per resolved generic VM type `T` per binding.
 - With same `T` + same `key`: shared identity across bindings.
 - Multiple instances of the same `T` in one binding need distinct keys.
-- Static lookup (`ViewModel.readCached`, `ViewModel.maybeReadCached`) is lookup-only (no bind, no create).
 
 6. Lifecycle and cleanup
 - Lifecycle hooks: `onCreate`, `onBind`, `onUnbind`, `onDispose`.
@@ -266,12 +273,17 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 - Call `ViewModel.initialize(...)` once at app startup (subsequent calls are ignored).
 - Configure `ViewModelConfig` when needed:
   - `isLoggingEnabled`
-  - `equals` (state equality strategy)
+  - `equals` (global equality fallback, default `null`)
   - `onError` (with `ErrorType.listener` / `ErrorType.lifecycle` / `ErrorType.dispose` / `ErrorType.pauseResume`)
 - If using `equals: (a, b) => a == b`, ensure state classes implement `==` and `hashCode`.
 
 9. Testing and mocking
 - Prefer pure Dart unit tests with `ViewModelBinding()` (no `testWidgets` required for many cases).
+- Never construct a ViewModel directly in a test body or `setUp`. Constructor
+  calls belong inside a `ViewModelSpec`/factory builder; obtain the managed
+  instance through the test binding's `read`/`watch` API.
+- Do not retain a ViewModel in a `late`/`final` test field. Use a getter that
+  resolves it through the test binding.
 - Always `binding.dispose()` in teardown.
 - For spec override: `spec.setProxy(...)` and `spec.clearProxy()`.
 
@@ -292,7 +304,9 @@ Do:
   selector mechanism drive updates; avoid `watch` on the same ViewModel.
 - Set explicit `key` whenever instance sharing is a requirement.
 - Dispose non-widget bindings explicitly.
-- Use `listenStateSelect` for side effects on selected state fields.
+- Use `listenStateSelect` for side effects on selected state fields; pass its
+  optional typed `equals` when the selected value needs a local rule that
+  overrides the global fallback.
 
 Don't:
 - Introduce a global singleton or service locator for ViewModel modules by

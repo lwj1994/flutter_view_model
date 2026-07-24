@@ -46,8 +46,6 @@
 /// |--------|-------------|
 /// | `viewModelBinding.watch(spec)` | Get VM and rebuild on changes |
 /// | `viewModelBinding.read(spec)` | Get VM without rebuilding |
-/// | `viewModelBinding.watchCached<T>(key:)` | Cached VM with rebuilds |
-/// | `viewModelBinding.readCached<T>(key:)` | Cached VM, no rebuilds |
 /// | `viewModelBinding.listen(spec, onChanged:)` | Side effects, auto-dispose |
 ///
 /// ## Core Features

@@ -73,6 +73,13 @@ Map<String, dynamic> _viewModelDataJson() {
         'key': 'counter',
         'tag': 'main',
         'bindings': <String>['binding-1', 'binding-2'],
+        'owners': <String>['binding-1', 'binding-2'],
+        'primaryOwner': 'binding-1',
+        'primaryOwnerHandoff': <String, dynamic>{
+          'from': 'binding-0',
+          'to': 'binding-1',
+          'occurredAt': '2026-03-16T00:30:00.000Z',
+        },
         'isActive': true,
         'createdAt': '2026-03-16T00:00:00.000Z',
       },
@@ -107,6 +114,13 @@ Map<String, dynamic> _dependencyGraphJson() {
         'type': 'view_model',
         'label': 'CounterViewModel',
         'isActive': true,
+        'owners': <String>['binding-1', 'binding-2'],
+        'primaryOwner': 'binding-1',
+        'primaryOwnerHandoff': <String, dynamic>{
+          'from': 'binding-0',
+          'to': 'binding-1',
+          'occurredAt': '2026-03-16T00:30:00.000Z',
+        },
       },
       <String, dynamic>{
         'id': 'vm-2',
@@ -120,6 +134,7 @@ Map<String, dynamic> _dependencyGraphJson() {
         'from': 'binding-1',
         'to': 'vm-1',
         'type': 'binding',
+        'isPrimaryOwner': true,
       },
       <String, dynamic>{
         'from': 'binding-1',
@@ -161,6 +176,18 @@ void main() {
         result.viewModels[0].properties['bindings'],
         ['binding-1', 'binding-2'],
       );
+      expect(
+        result.viewModels[0].properties['owners'],
+        ['binding-1', 'binding-2'],
+      );
+      expect(
+        result.viewModels[0].properties['primaryOwner'],
+        'binding-1',
+      );
+      expect(
+        result.viewModels[0].properties['primaryOwnerHandoff'],
+        containsPair('from', 'binding-0'),
+      );
       expect(result.viewModels[1].status, 'disposed');
       expect(result.viewModels[1].lastUpdated, DateTime.utc(2026, 3, 16, 2));
       expect(result.viewModels[2].status, 'inactive');
@@ -178,9 +205,21 @@ void main() {
 
       expect(result.nodes, hasLength(2));
       expect(result.nodes.first.label, 'CounterViewModel');
+      expect(result.nodes.first.owners, ['binding-1', 'binding-2']);
+      expect(result.nodes.first.primaryOwner, 'binding-1');
+      expect(result.nodes.first.primaryOwnerHandoff?.from, 'binding-0');
+      expect(result.nodes.first.primaryOwnerHandoff?.to, 'binding-1');
+      expect(
+        result.nodes.first.primaryOwnerHandoff?.occurredAt,
+        DateTime.utc(2026, 3, 16, 0, 30),
+      );
+      expect(result.nodes[1].owners, isEmpty);
+      expect(result.nodes[1].primaryOwner, isNull);
       expect(result.edges, hasLength(2));
       expect(result.edges.first.from, 'binding-1');
       expect(result.edges.first.to, 'vm-1');
+      expect(result.edges.first.isPrimaryOwner, isTrue);
+      expect(result.edges[1].isPrimaryOwner, isFalse);
       expect(
         serviceManager.invokedMethods,
         ['ext.view_model.getDependencyGraph'],
@@ -223,6 +262,9 @@ void main() {
       expect(find.text('Connection Error'), findsNothing);
       expect(find.text('CounterViewModel'), findsOneWidget);
       expect(find.text('binding-1'), findsOneWidget);
+      expect(find.text('Primary owner'), findsOneWidget);
+      expect(find.text('Other owner'), findsOneWidget);
+      expect(find.text('2 ViewModels • 1 primary'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

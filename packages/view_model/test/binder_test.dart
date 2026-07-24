@@ -126,6 +126,8 @@ void main() {
       final vm1 = binder.viewModelBinding.watch(factory);
       vm1.increment();
       expect(vm1.count, 1);
+      expect(binder.updateCount, 1);
+      binder.updateCount = 0;
 
       // Recycle
       binder.viewModelBinding.recycle(vm1);

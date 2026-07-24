@@ -114,7 +114,7 @@ class ViewModelStateStore<S> implements StateStore<S> {
     if (_isSameState(_state, state)) return;
     _previousState = _state;
     _state = state;
-    notifyListeners();
+    _notifyStateChanged();
   }
 
   /// Checks if two states are considered equal.
@@ -139,23 +139,29 @@ class ViewModelStateStore<S> implements StateStore<S> {
     }
   }
 
-  /// Notifies all listeners of state changes without changing the state.
+  /// Notifies all listeners about the state transition recorded by [_update].
   ///
-  /// This method can be used to trigger a refresh when the state object
-  /// itself hasn't changed but its internal properties might have.
+  /// A store event always represents a real transition. Calls to
+  /// [ViewModel.notifyListeners] only refresh broad listeners and never enter
+  /// [stateStream].
   ///
   /// The notification happens in two phases:
   /// 1. Synchronously calls [_onStateChanged] callback if set
   /// 2. Asynchronously emits event to [stateStream]
-  void notifyListeners() {
+  void _notifyStateChanged() {
     if (_stateStreamController.isClosed) return;
     final diff = DiffState(_previousState, _state);
 
-    // Phase 1: Synchronous notification
-    _onStateChanged?.call(diff);
-
-    // Phase 2: Asynchronous stream notification
+    // Queue the asynchronous event first so nested setState calls from a
+    // synchronous callback still reach stream listeners in the real
+    // transition order. The broadcast controller is asynchronous, so the
+    // callback below still runs before stream listeners. If that callback
+    // disposes the store synchronously, the queued event can still complete
+    // without adding another event to a closed controller.
     _stateStreamController.add(diff);
+
+    // Notify StateViewModel state listeners and broad listeners synchronously.
+    _onStateChanged?.call(diff);
   }
 
   /// Sets a new state and notifies listeners.

@@ -30,13 +30,7 @@ enum ErrorType {
 ///
 /// Example:
 /// ```dart
-/// final config = ViewModelConfig(
-///   isLoggingEnabled: true,
-///   equals: (previous, current) {
-///     // Custom equality logic
-///     return previous?.id == current?.id;
-///   },
-/// );
+/// final config = ViewModelConfig(isLoggingEnabled: true);
 ///
 /// // Apply configuration globally
 /// ViewModel.initialize(config: config);
@@ -49,19 +43,15 @@ class ViewModelConfig {
   /// Defaults to `false` for production builds.
   final bool isLoggingEnabled;
 
-  /// A global custom equality comparison function.
+  /// The global fallback equality comparison function.
   ///
-  /// This function is used to determine if two values are considered equal,
-  /// and it is utilized in two main places:
-  /// 1. By `StateViewModel` to compare the previous and new states.
-  /// 2. By the `listen` method's selector to compare the previous and new
-  ///    selected values.
+  /// Defaults to `null` and is used only when an API has no local equality
+  /// rule. Full-state comparison then falls back to `identical()`, while
+  /// value selectors fall back to `==`.
   ///
-  /// If this function returns `true`, the update is skipped, preventing
-  /// unnecessary notifications and rebuilds.
-  ///
-  /// If not provided, `StateViewModel` defaults to `identical()`, while the
-  /// `listen` selector defaults to the `==` operator.
+  /// If this function returns `true`, the caller treats the values as equal:
+  /// a full-state transition is skipped, or a selector suppresses its callback
+  /// and rebuild.
   ///
   /// Parameters:
   /// - [previous]: The previous value.
@@ -98,7 +88,7 @@ class ViewModelConfig {
   /// Parameters:
   /// - [isLoggingEnabled]: Whether to enable debug logging
   ///   (defaults to `false`)
-  /// - [equals]: Custom state equality function (optional)
+  /// - [equals]: Global fallback equality function (defaults to `null`)
   /// - [onError]: Custom error handler (optional)
   ViewModelConfig({
     this.isLoggingEnabled = false,
