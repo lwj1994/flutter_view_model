@@ -38,6 +38,18 @@ final instanceManager = InstanceManager._get();
 class InstanceManager {
   InstanceManager._();
 
+  bool _isResetting = false;
+
+  bool get isResetting => _isResetting;
+
+  void _requireNotResetting() {
+    if (_isResetting) {
+      throw ViewModelError(
+        'Cannot resolve or recreate ViewModels while the runtime is resetting.',
+      );
+    }
+  }
+
   /// Recreates an existing ViewModel instance.
   ///
   /// This method forces the recreation of a ViewModel instance, optionally
@@ -53,6 +65,7 @@ class InstanceManager {
     T t, {
     T Function()? builder,
   }) {
+    _requireNotResetting();
     final store = _stores[T];
     if (store is! Store<T>) {
       throw ViewModelError("Cannot recreate $T instance. Store not found.");
@@ -122,10 +135,13 @@ class InstanceManager {
     InstanceFactory<T>? factory,
   }) {
     try {
-      return get(factory: factory);
-    } on ViewModelError {
-      // Expected: instance not found, return null as documented.
-      return null;
+      return get<T>(factory: factory);
+    } catch (error) {
+      if (error is ViewModelError) {
+        // Expected: instance not found, return null as documented.
+        return null;
+      }
+      rethrow;
     }
   }
 
@@ -152,6 +168,7 @@ class InstanceManager {
   InstanceHandle<T> getNotifier<T>({
     InstanceFactory<T>? factory,
   }) {
+    _requireNotResetting();
     if (T == dynamic) {
       throw ViewModelError("T is dynamic");
     }
@@ -159,9 +176,7 @@ class InstanceManager {
       final bindingId = factory?.arg.bindingId;
       final tag = factory?.arg.tag;
       // find newly T instance
-      final find = _getStore<T>().findNewlyInstance(
-        tag: tag,
-      );
+      final find = _getStore<T>().findNewlyInstance(tag: tag);
       if (find == null) {
         throw ViewModelError("no $T instance found");
       }
@@ -186,10 +201,33 @@ class InstanceManager {
   }
 
   List<InstanceHandle<T>> getNotifiersByTag<T>(Object tag) {
+    _requireNotResetting();
     if (T == dynamic) {
       throw ViewModelError("T is dynamic");
     }
     return _getStore<T>().getInstancesByTag(tag);
+  }
+
+  /// Force-disposes every cached instance and clears all type stores.
+  ///
+  /// This is primarily used by `ViewModel.resetForTesting()` to guarantee
+  /// isolation between tests, including instances retained with keep-alive
+  /// semantics.
+  void disposeAll({bool force = true}) {
+    if (_isResetting) return;
+    _isResetting = true;
+    try {
+      final stores = _stores.values.cast<Store<dynamic>>().toList(
+            growable: false,
+          );
+      _stores.clear();
+      for (final store in stores) {
+        store.dispose(force: force);
+      }
+    } finally {
+      _stores.clear();
+      _isResetting = false;
+    }
   }
 
   @visibleForTesting

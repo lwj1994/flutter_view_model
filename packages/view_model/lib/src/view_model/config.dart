@@ -30,13 +30,7 @@ enum ErrorType {
 ///
 /// Example:
 /// ```dart
-/// final config = ViewModelConfig(
-///   isLoggingEnabled: true,
-///   equals: (previous, current) {
-///     // Custom equality logic
-///     return previous?.id == current?.id;
-///   },
-/// );
+/// final config = ViewModelConfig(isLoggingEnabled: true);
 ///
 /// // Apply configuration globally
 /// ViewModel.initialize(config: config);
@@ -51,17 +45,16 @@ class ViewModelConfig {
 
   /// A global custom equality comparison function.
   ///
-  /// This function is used to determine if two values are considered equal,
-  /// and it is utilized in two main places:
-  /// 1. By `StateViewModel` to compare the previous and new states.
-  /// 2. By the `listen` method's selector to compare the previous and new
-  ///    selected values.
+  /// This function is used by `StateViewModel` to compare the previous and new
+  /// states. Selector APIs use their own typed equality function because a
+  /// selected value can have a different type and comparison semantics.
+  /// Prefer instance-level state equality for business-specific comparisons;
+  /// a global comparator must be valid for every StateViewModel state type.
   ///
   /// If this function returns `true`, the update is skipped, preventing
   /// unnecessary notifications and rebuilds.
   ///
-  /// If not provided, `StateViewModel` defaults to `identical()`, while the
-  /// `listen` selector defaults to the `==` operator.
+  /// If not provided, `StateViewModel` defaults to `identical()`.
   ///
   /// Parameters:
   /// - [previous]: The previous value.

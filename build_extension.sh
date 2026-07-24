@@ -26,6 +26,7 @@ fi
 
 # 创建目标目录
 echo "📁 Creating target directory..."
+rm -rf ../view_model/extension/devtools/build
 mkdir -p ../view_model/extension/devtools/build
 
 # 复制构建产物

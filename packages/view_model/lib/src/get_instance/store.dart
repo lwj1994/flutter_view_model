@@ -178,6 +178,14 @@ class Store<T> {
 
     // create new instance
     final instance = factory.builder!();
+    if (_disposed) {
+      _disposeUntrackedInstance(instance, arg);
+      throw ViewModelError(
+        'Cannot create $T because its Store was disposed while the factory '
+        'builder was running (for example by ViewModel.resetForTesting()). '
+        'The new instance was disposed and was not cached.',
+      );
+    }
 
     final create = InstanceHandle<T>(
       instance: instance,
@@ -185,10 +193,33 @@ class Store<T> {
       factory: factory.builder!,
       index: _nextIndex++,
     );
+    if (_disposed) {
+      create.onDispose();
+      throw ViewModelError(
+        'Cannot create $T because its Store was disposed while instance '
+        'creation was in progress (for example by '
+        'ViewModel.resetForTesting()). The new instance was disposed and was '
+        'not cached.',
+      );
+    }
     _instances[realKey] = create;
     _streamController.add(create);
     _listenDispose(create);
     return create;
+  }
+
+  void _disposeUntrackedInstance(T instance, InstanceArg arg) {
+    if (instance is! InstanceLifeCycle) return;
+    try {
+      instance.onDispose(arg);
+    } catch (error, stack) {
+      reportViewModelError(
+        error,
+        stack,
+        ErrorType.dispose,
+        'Untracked $T instance dispose error',
+      );
+    }
   }
 
   /// Recreates an existing instance with optional custom builder.
@@ -217,7 +248,7 @@ class Store<T> {
     return find.recreate(builder: builder);
   }
 
-  void dispose() {
+  void dispose({bool force = false}) {
     if (_disposed) return;
     _disposed = true;
     // Dispose remaining handles to ensure lifecycle callbacks are called.
@@ -225,7 +256,11 @@ class Store<T> {
     final handles = List<InstanceHandle<T>>.of(_instances.values);
     for (final handle in handles) {
       try {
-        handle.onDispose();
+        if (force) {
+          handle.unbindAll(force: true);
+        } else {
+          handle.onDispose();
+        }
       } catch (e, stack) {
         reportViewModelError(
             e, stack, ErrorType.dispose, 'Store<$T> handle dispose error');
@@ -412,17 +447,51 @@ class InstanceHandle<T> with ChangeNotifier {
     }
     final activeBindingIds = List<String>.of(_bindingIds);
     final recreated = (builder?.call()) ?? factory.call();
+    if (!_isActiveWith(previous)) {
+      _abortInvalidatedRecreate(previous, recreated);
+    }
     _tryCallInstanceDispose(previous);
+    if (!_isActiveWith(previous)) {
+      _abortInvalidatedRecreate(previous, recreated);
+    }
     _instance = recreated;
     _notifyCreate(arg);
+    _requireActiveRecreatedInstance(recreated);
     for (final bindingId in activeBindingIds) {
       _notifyBind(bindingId);
+      _requireActiveRecreatedInstance(recreated);
     }
     _action = InstanceAction.recreate;
     _lastAction = _action;
     notifyListeners();
     _action = null;
     return instance;
+  }
+
+  bool _isActiveWith(T expected) {
+    return !_disposed && identical(_instance, expected);
+  }
+
+  Never _abortInvalidatedRecreate(T previous, T recreated) {
+    final replacementIsManaged = _isActiveWith(recreated);
+    if (!replacementIsManaged && !identical(recreated, previous)) {
+      _tryCallInstanceDispose(recreated);
+    }
+    throw ViewModelError(
+      'Cannot recreate $T because its handle was disposed or replaced while '
+      'the builder was running (for example by '
+      'ViewModel.resetForTesting()). The detached replacement was disposed '
+      'and was not installed.',
+    );
+  }
+
+  void _requireActiveRecreatedInstance(T recreated) {
+    if (_isActiveWith(recreated)) return;
+    throw ViewModelError(
+      'Cannot recreate $T because its handle was disposed or replaced while '
+      'the replacement lifecycle was being initialized (for example by '
+      'ViewModel.resetForTesting()).',
+    );
   }
 
   @override

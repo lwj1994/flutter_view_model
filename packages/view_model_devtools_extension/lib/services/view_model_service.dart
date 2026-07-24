@@ -107,20 +107,54 @@ class DependencyNode {
   final String type;
   final String label;
   final bool isActive;
+  final List<String> owners;
+  final String? primaryOwner;
+  final PrimaryOwnerHandoffInfo? primaryOwnerHandoff;
 
   DependencyNode({
     required this.id,
     required this.type,
     required this.label,
     required this.isActive,
+    this.owners = const [],
+    this.primaryOwner,
+    this.primaryOwnerHandoff,
   });
 
   factory DependencyNode.fromJson(Map<String, dynamic> json) {
+    final handoff = json['primaryOwnerHandoff'];
     return DependencyNode(
       id: json['id'] as String,
       type: json['type'] as String,
       label: json['label'] as String,
       isActive: json['isActive'] as bool? ?? true,
+      owners: (json['owners'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>()
+          .toList(growable: false),
+      primaryOwner: json['primaryOwner'] as String?,
+      primaryOwnerHandoff: handoff is Map<String, dynamic>
+          ? PrimaryOwnerHandoffInfo.fromJson(handoff)
+          : null,
+    );
+  }
+}
+
+class PrimaryOwnerHandoffInfo {
+  final String from;
+  final String to;
+  final DateTime occurredAt;
+
+  PrimaryOwnerHandoffInfo({
+    required this.from,
+    required this.to,
+    required this.occurredAt,
+  });
+
+  factory PrimaryOwnerHandoffInfo.fromJson(Map<String, dynamic> json) {
+    return PrimaryOwnerHandoffInfo(
+      from: json['from'] as String,
+      to: json['to'] as String,
+      occurredAt: DateTime.parse(json['occurredAt'] as String),
     );
   }
 }
@@ -129,11 +163,15 @@ class DependencyEdge {
   final String from;
   final String to;
   final String type;
+  final bool isPrimaryOwner;
+
+  bool get isPrimaryOwnerBinding => type == 'binding' && isPrimaryOwner;
 
   DependencyEdge({
     required this.from,
     required this.to,
     required this.type,
+    this.isPrimaryOwner = false,
   });
 
   factory DependencyEdge.fromJson(Map<String, dynamic> json) {
@@ -141,6 +179,7 @@ class DependencyEdge {
       from: json['from'] as String,
       to: json['to'] as String,
       type: json['type'] as String,
+      isPrimaryOwner: json['isPrimaryOwner'] as bool? ?? false,
     );
   }
 }
@@ -183,6 +222,12 @@ class ViewModelInfo {
         'key': json['key'],
         'tag': json['tag'],
         'bindings': json['bindings'] as List<dynamic>? ?? [],
+        if (json.containsKey('owners'))
+          'owners': json['owners'] as List<dynamic>? ?? [],
+        if (json.containsKey('primaryOwner'))
+          'primaryOwner': json['primaryOwner'],
+        if (json.containsKey('primaryOwnerHandoff'))
+          'primaryOwnerHandoff': json['primaryOwnerHandoff'],
         if (isDisposed && json['disposeTime'] != null)
           'disposeTime': json['disposeTime'],
       },

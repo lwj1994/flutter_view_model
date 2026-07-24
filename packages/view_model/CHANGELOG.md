@@ -1,3 +1,37 @@
+## 1.0.6
+
+- Make `ViewModel.update` notify synchronously for synchronous blocks and notify
+  after successful asynchronous completion; failed blocks no longer notify.
+- Add relationship-preserving `recreate`. Clarify that `recycle` is a dangerous
+  global operation that removes all owners and force-disposes the shared
+  instance, including `aliveForever` instances. Consumers must re-resolve it
+  through getters that call `watch`/`read` on every access after owner updates,
+  instead of retaining the disposed object in a field. The optional recreate
+  capability keeps existing direct `ViewModelBindingInterface` implementations
+  source-compatible.
+- Warn in debug builds when different specs resolve the same ViewModel type and
+  effective key in one binding, because the later builder is not part of
+  instance identity and will not run.
+- Add `ViewModel.resetForTesting()` for complete runtime isolation, including
+  force-disposal of cached retained instances and reset of configuration,
+  lifecycle observers, and DevTools tracking state.
+- Keep `listenStateSelect` source-compatible with its `==` default and add
+  `listenStateSelectWithEquals` for strongly typed, per-listener equality.
+  The binding-side comparator is also an optional capability for direct custom
+  interface implementations. `notifyListeners()` continues to refresh only
+  broad listeners without replaying state diffs.
+- Keep `StateViewModel` callbacks synchronous while preserving state-stream
+  transition order during reentrant updates; a synchronous callback may also
+  dispose the state store safely.
+- Add `StateViewModelSelector<T, R>` as a strongly typed, single-selector
+  widget while retaining `StateViewModelValueWatcher` for compatibility.
+- Add scoped spec overrides with idempotent `overrideWith` restore callbacks
+  and async-Zone-isolated `runWithOverride`, including safe concurrent,
+  nested, and out-of-order restore.
+- Extend DevTools diagnostics with ordered active owners, the current primary
+  owner used for nested dependency resolution, and primary-owner handoff
+  metadata.
+
 ## 1.0.5
 - Deprecate `ObservableValue` and the `ObserverBuilder` family. Use Flutter's
   `ValueNotifier` / `ValueListenableBuilder` for widget-local values, or

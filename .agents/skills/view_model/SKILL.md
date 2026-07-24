@@ -207,8 +207,8 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
   builder's runtime result type do not participate in identity.
 - When factory `key()` returns `null`, repeated access to the same `T` reuses
   one instance within a binding and remains isolated across bindings.
-- Use `key` for cross-binding sharing, multiple same-`T` instances in one
-  binding, or stable keyed cached lookup. It does not keep an instance alive.
+- Use `key` for cross-binding sharing or multiple same-`T` instances in one
+  binding. It does not keep an instance alive.
 - Use `tag` for grouped lookup.
 - Use `aliveForever: true` only for intentional long-lived retention. It skips
   automatic disposal at zero binding references; `recycle` still force-disposes.
@@ -223,14 +223,19 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 4. Choose access API correctly
 - `watch(spec)`: create/get + bind + listen (reactive rebuild/`onUpdate`).
 - `read(spec)`: create/get + bind, no ViewModel listener.
-- `watchCached/readCached`: lookup existing instance only (no creation); `watchCached` binds + listens, `readCached` binds only.
-- `maybeWatchCached/maybeReadCached`: null-safe cached lookup.
-- `watchCachesByTag/readCachesByTag`: batch tag lookup; `watchCachesByTag`
-  is batch `watch`, `readCachesByTag` is batch `read`: it still binds,
-  participates in lifecycle cleanup, and reacts to recreate/dispose, but it
-  does not react to `notifyListeners()`.
+- Do not introduce direct cached lookup in normal application code. Prefer a
+  stable spec and resolve it explicitly with `watch(spec)` or `read(spec)`.
 - `listen/listenState/listenStateSelect`: side-effect listeners, auto-cleaned on binding dispose.
+- `listenStateSelect` compares selected values with `==`; use
+  `listenStateSelectWithEquals` for a custom strongly typed comparison.
+- `recreate(vm, builder: ...)`: replace an instance while preserving active
+  binding relationships; omit `builder` to reuse the original factory.
 - `recycle(vm)`: force unbind all and dispose; next `watch/read` gets fresh instance.
+- The built-in `ViewModelBinding` implements the optional recreate and custom
+  selector-equality capabilities. A direct `ViewModelBindingInterface`
+  implementation opts in via `ViewModelBindingRecreateCapability` and/or
+  `ViewModelBindingStateSelectEqualsCapability`; otherwise the corresponding
+  interface extension throws `UnsupportedError`.
 
 5. Handle dependencies and sharing
 - Model each independent functional capability as a ViewModel when it benefits
@@ -242,7 +247,6 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 - With `key() == null`: one instance per resolved generic VM type `T` per binding.
 - With same `T` + same `key`: shared identity across bindings.
 - Multiple instances of the same `T` in one binding need distinct keys.
-- Static lookup (`ViewModel.readCached`, `ViewModel.maybeReadCached`) is lookup-only (no bind, no create).
 
 6. Lifecycle and cleanup
 - Lifecycle hooks: `onCreate`, `onBind`, `onUnbind`, `onDispose`.
@@ -272,6 +276,11 @@ ViewModel in `late final`, `final`, or `??=` on a cross-binding shared parent.
 
 9. Testing and mocking
 - Prefer pure Dart unit tests with `ViewModelBinding()` (no `testWidgets` required for many cases).
+- Never construct a ViewModel directly in a test body or `setUp`. Constructor
+  calls belong inside a `ViewModelSpec`/factory builder; obtain the managed
+  instance through the test binding's `read`/`watch` API.
+- Do not retain a ViewModel in a `late`/`final` test field. Use a getter that
+  resolves it through the test binding.
 - Always `binding.dispose()` in teardown.
 - For spec override: `spec.setProxy(...)` and `spec.clearProxy()`.
 
@@ -292,7 +301,9 @@ Do:
   selector mechanism drive updates; avoid `watch` on the same ViewModel.
 - Set explicit `key` whenever instance sharing is a requirement.
 - Dispose non-widget bindings explicitly.
-- Use `listenStateSelect` for side effects on selected state fields.
+- Use `listenStateSelect` for side effects on selected state fields; use
+  `listenStateSelectWithEquals` only when the selected value needs a custom
+  equality rule.
 
 Don't:
 - Introduce a global singleton or service locator for ViewModel modules by

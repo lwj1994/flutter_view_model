@@ -67,6 +67,15 @@ If a skill file is missing or blocked:
 - If working on `view_model` architecture, prefer the `view_model` skill as the source of truth.
 - If working on publishing, prefer the `Publish Process` skill.
 
+## ViewModel Test Rules
+
+- Never instantiate a ViewModel directly in a test body or `setUp` callback.
+  Put constructor calls inside a `ViewModelSpec`/factory builder and resolve the
+  instance through a `ViewModelBinding` with `read` or `watch`.
+- Do not retain ViewModels in `late`/`final` test fields. Expose them through a
+  getter that resolves via the test binding, and dispose that binding in
+  `tearDown` or `addTearDown`.
+
 ## Package-Specific Notes
 
 ### `packages/view_model`

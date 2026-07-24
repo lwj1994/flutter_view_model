@@ -44,9 +44,8 @@ npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
   - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
 - [viewModelBinding API](#viewmodelbinding-api)
   - [watch vs read](#watch-vs-read)
-  - [Cached Access](#cached-access)
   - [listen / listenState / listenStateSelect](#listen--listenstate--listenstateselect)
-  - [recycle](#recycle)
+  - [Lifecycle Control](#lifecycle-control)
 - [Instance Sharing](#instance-sharing)
   - [key-based Sharing](#key-based-sharing)
   - [tag-based Lookup](#tag-based-lookup)
@@ -55,6 +54,7 @@ npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
 - [ViewModelBinding in Any Class](#viewmodelbinding-in-any-class)
 - [ViewModel-to-ViewModel Dependencies](#viewmodel-to-viewmodel-dependencies)
 - [Fine-Grained Reactivity](#fine-grained-reactivity)
+  - [StateViewModelSelector](#stateviewmodelselector)
   - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
   - [Deprecated: ObservableValue & ObserverBuilder](#deprecated-observablevalue--observerbuilder)
 - [Pause / Resume](#pause--resume)
@@ -215,6 +215,11 @@ class TodoViewModel with ViewModel {
 }
 ```
 
+`update()` preserves synchronous notification for a synchronous block: listeners
+have already run when the call returns. If the block returns a `Future`, the
+notification runs after that future completes successfully. A synchronous throw
+or failed future is forwarded to the caller and does not notify listeners.
+
 ### StateViewModel
 
 `StateViewModel<T>` manages an immutable state object of type `T`. Internally it uses a `StreamController<DiffState<T>>` to broadcast `(previousState, currentState)` pairs. This unlocks `listenState` and `listenStateSelect` for selective listening.
@@ -239,6 +244,12 @@ class UserViewModel extends StateViewModel<UserState> {
 ```
 
 State equality is checked by `identical()` by default. You can override this globally via `ViewModelConfig.equals` so that, for example, `==` is used instead (see [Configuration](#configuration)).
+
+`setState` is the only API that emits a state diff. Calling `notifyListeners()`
+only refreshes broad ViewModel listeners; it does not replay the last diff or
+invoke `listenState` / `listenStateSelect` again. A selector uses `==` by default
+for its selected value. Use `listenStateSelectWithEquals` when a strongly typed,
+per-listener comparison is needed.
 
 ### ChangeNotifierViewModel
 
@@ -297,10 +308,14 @@ to:
 
 - share an instance across bindings;
 - distinguish multiple instances of the same `T` in one binding; or
-- locate an instance through stable `watchCached`/`readCached(key:)` lookup.
+- give shared instances a stable identity across all resolving bindings.
 
 A key does not keep an instance alive; retention is controlled separately by
 `aliveForever`.
+
+In debug mode, resolving different specs with the same `T` and effective key
+from one binding emits a warning: instance identity ignores the builder, so the
+second builder will not run. Give logically different specs distinct keys.
 
 Internally, `ViewModelSpec` extends `ViewModelFactory<T>`, which defines:
 - `build()` — creates the instance
@@ -393,32 +408,6 @@ void _onTap() {
 }
 ```
 
-### Cached Access
-
-These methods look up an already-created instance by `key` or `tag`. They never create new instances. Like `watch`/`read`, the `watch` variants bind + listen, while the `read` variants bind only.
-
-```dart
-// Throws if not found
-final vm = viewModelBinding.watchCached<MyVM>(key: 'abc');
-final vm = viewModelBinding.readCached<MyVM>(tag: 'dashboard');
-
-// Returns null if not found
-final vm = viewModelBinding.maybeWatchCached<MyVM>(key: 'abc');
-final vm = viewModelBinding.maybeReadCached<MyVM>(tag: 'dashboard');
-```
-
-Batch retrieval by tag:
-```dart
-List<MyVM> vms = viewModelBinding.watchCachesByTag<MyVM>('group-a');
-List<MyVM> vms = viewModelBinding.readCachesByTag<MyVM>('group-a');
-```
-
-`watchCachesByTag` behaves like batch `watch`: it binds each matched instance
-and listens for ViewModel changes. `readCachesByTag` behaves like batch `read`:
-it still binds each matched instance, participates in binding cleanup on
-dispose, and reacts to recreate/dispose events, but it does not react to
-`notifyListeners()`.
-
 ### listen / listenState / listenStateSelect
 
 Fire-and-forget listeners that are automatically cleaned up when the binding disposes. These use `read` internally (bind without triggering widget rebuild) and then attach custom callbacks:
@@ -434,28 +423,59 @@ viewModelBinding.listenState(userSpec, onChanged: (UserState? prev, UserState cu
   print('user state changed');
 });
 
-// StateViewModel: selected property only — fires only when selector output differs
-viewModelBinding.listenStateSelect(
+// StateViewModel: selected property with a custom equality rule
+viewModelBinding.listenStateSelectWithEquals(
   userSpec,
   selector: (UserState s) => s.name,
+  equals: (previous, current) => previous == current,
   onChanged: (String? prevName, String currName) {
     print('name changed to $currName');
   },
 );
 ```
 
+Use `listenStateSelect` for the default `==` comparison. The separate
+`listenStateSelectWithEquals` API keeps custom equality strongly typed without
+changing the long-standing `listenStateSelect` signature.
+
 For field-level updates, prefer `read` plus selector-based listeners. Avoid
 pairing `listenStateSelect` with `watch` on the same ViewModel, or you'll keep
 the broad ViewModel listener and lose the point of selective updates.
 
-### recycle
+### Lifecycle Control
 
-Force-disposes a ViewModel by calling `unbindAll()` on its handle (removes all bindingIds, triggering disposal). The next `watch`/`read` call with the same spec will create a fresh instance.
+Routine cleanup is automatic when a binding is disposed. The explicit
+lifecycle controls are:
+
+- `recycle(vm)` is an advanced escape hatch with dangerous global impact: it
+  removes every owner and force-disposes the shared cached instance, including
+  an `aliveForever` instance. Use it only when that global effect is explicitly
+  intended. The next `watch`/`read` creates a fresh instance.
+- `recreate(vm, builder: ...)` replaces the instance while preserving active
+  binding relationships. Without `builder`, the original factory is reused.
+
+The built-in `ViewModelBinding` supports both `recreate` and custom selector
+equality. A type that directly implements `ViewModelBindingInterface` can keep
+the old interface unchanged; opt into the new operations by also implementing
+`ViewModelBindingRecreateCapability` and/or
+`ViewModelBindingStateSelectEqualsCapability`. Calling an unsupported optional
+operation through the interface extension throws `UnsupportedError`.
+
+> **After `recycle`, the old object is disposed.** Every consumer—especially
+> other owners of a shared instance—must resolve the ViewModel through a
+> resolver getter that calls `watch`/`read` on every access. Owners are notified,
+> and the getter's next access misses the removed cache entry and creates the
+> fresh instance normally. A long-lived field keeps pointing at the disposed
+> object and can cause leaks or failures.
 
 ```dart
-viewModelBinding.recycle(vm);
-// vm is now disposed
-final freshVm = viewModelBinding.watch(spec); // new instance
+MyViewModel get vm => viewModelBinding.watch(mySpec); // resolve on each access
+
+MyViewModel replaceInPlace() => viewModelBinding.recreate(vm);
+
+// Advanced escape hatch only; this affects every owner:
+void resetGlobally() => viewModelBinding.recycle(vm);
+// Do not keep using the old value; the next `vm` getter access resolves fresh.
 ```
 
 ---
@@ -488,7 +508,7 @@ the same `T` in one binding, give their specs distinct keys.
 
 ### tag-based Lookup
 
-`tag` is a grouping label. Multiple instances can share the same tag. Use `watchCached`/`readCached` with `tag:` to find the most recently created instance with that tag:
+`tag` is a grouping label. Multiple instances can share the same tag:
 
 ```dart
 final spec = ViewModelSpec<ItemVM>(
@@ -510,17 +530,6 @@ final authSpec = ViewModelSpec<AuthViewModel>(
   aliveForever: true,
 );
 ```
-
-### Static Global Access
-
-Read any cached ViewModel from anywhere (no binding context needed). These are pure lookups — they don't bind or create instances:
-
-```dart
-final auth = ViewModel.readCached<AuthViewModel>(key: 'auth');
-final auth = ViewModel.maybeReadCached<AuthViewModel>(key: 'auth'); // null-safe
-```
-
----
 
 ## ViewModelBinding in Any Class
 
@@ -587,9 +596,9 @@ You can override `onUpdate()`, `onPause()`, `onResume()` in your class. You can 
 
 Inside a ViewModel, `viewModelBinding` resolves through the owner binding
 currently selected by `refHandler`: the first remaining owner, not necessarily
-the caller's root. Expose nested ViewModels through non-caching getters so every
-access is resolved through that selected binding. Within one binding, the
-registry still returns the same managed instance:
+the caller's root. Expose nested ViewModels through resolver getters that call
+`watch`/`read` on every access, so each access uses that selected binding. Within
+one binding, the registry still returns the same managed instance:
 
 ```dart
 class OrderViewModel with ViewModel {
@@ -601,7 +610,7 @@ class OrderViewModel with ViewModel {
 ```
 
 Prefer a getter over `late final`, a constructor-cached field, or `??=`. This
-also avoids retaining a disposed dependency after recycle or a root-binding
+also avoids retaining a disposed dependency after `recycle` or a root-binding
 handoff.
 
 Reactive dependencies use `watch`; when the dependency notifies, the selected
@@ -633,7 +642,7 @@ only when its getter is evaluated.
 > **Shared-parent boundary:** a keyed parent can be held by multiple root
 > bindings, but a child resolved through that parent is not automatically bound
 > to every one of them. If the root that resolved the child is disposed, the
-> child may be disposed while the parent survives. A non-caching getter avoids
+> child may be disposed while the parent survives. A resolver getter avoids
 > retaining that disposed child and re-resolves through the next owner selected
 > by `refHandler`, but the child may be recreated and lose its previous state.
 > Prefer an unkeyed composite parent plus keyed leaf dependencies that every
@@ -644,9 +653,24 @@ only when its getter is evaluated.
 
 ## Fine-Grained Reactivity
 
+### StateViewModelSelector
+
+For new code, prefer one strongly typed selector and selected builder value.
+Use a Dart record to select several fields as one update boundary, and pass a
+typed `equals` when `==` is not the desired comparison:
+
+```dart
+StateViewModelSelector<UserState, ({String name, int age})>(
+  viewModel: vm,
+  selector: (state) => (name: state.name, age: state.age),
+  builder: (context, value) => Text('${value.name}, ${value.age}'),
+)
+```
+
 ### StateViewModelValueWatcher
 
-Only rebuilds when the selected properties of a `StateViewModel` change:
+This compatibility widget accepts a list of untyped selectors and only rebuilds
+when at least one selected value changes:
 
 ```dart
 class _MyPageState extends State<MyPage> with ViewModelStateMixin {
@@ -667,9 +691,9 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin {
 
 Internally, each selector is wrapped into a `listenStateSelect` call on the
 ViewModel. The widget only rebuilds when at least one selector's output differs
-from its previous value (compared using `ViewModelConfig.equals` or `==` by
-default). To keep updates truly fine-grained, read the ViewModel with `read`
-and let the selector mechanism drive rebuilds instead of also using `watch`.
+from its previous value using `==`. To keep updates truly fine-grained, read the
+ViewModel with `read` and let the selector mechanism drive rebuilds instead of
+also using `watch`.
 
 ### Deprecated: ObservableValue & ObserverBuilder
 
@@ -794,8 +818,8 @@ bootstrap scope follows the same pattern. The key is needed here for
 cross-binding sharing; it is also required when distinguishing multiple
 same-`T` instances inside one binding. It does not replace an owner or keep
 the instance alive by itself. Use `aliveForever` only for intentional
-process-lifetime retention, which then requires explicit recycle or process
-termination for cleanup.
+process-lifetime retention when you also accept either process-end cleanup or
+the dangerous global impact of the advanced `recycle` escape hatch.
 
 When migrating `ObserverBuilder2` or `ObserverBuilder3`, prefer one state object
 that contains the related values. This keeps ownership and update boundaries
@@ -865,7 +889,7 @@ ViewModelFactory.build()
    [active: notifyListeners(), setState(), etc.]
        │
        ▼
-   onUnbind(arg, bindingId) ← a ViewModelBinding unbinds (dispose or recycle)
+   onUnbind(arg, bindingId) ← unbound by dispose or recycle
        │
        ▼
    (if bindingIds is empty and not aliveForever)
@@ -955,7 +979,7 @@ void main() {
       isLoggingEnabled: true,
 
       // Custom state equality (default: identical())
-      // Used by StateViewModel.setState and listenStateSelect
+      // Used by StateViewModel.setState (selectors have typed per-call equals)
       equals: (a, b) => a == b,
 
       // Global error handler for listener and disposal errors
@@ -975,7 +999,14 @@ void main() {
 
 ## Testing
 
-`ViewModelSpec` supports proxy overrides for testing. Call `setProxy` to replace the builder (and optionally key/tag), and `clearProxy` to restore:
+`ViewModelSpec` supports proxy overrides for testing. For scoped overrides,
+`overrideWith` returns an idempotent restore callback, and `runWithOverride`
+restores automatically after synchronous or asynchronous success/failure.
+Nested and out-of-order restores are safe. Each `runWithOverride` invocation
+uses its own async Zone, so overlapping asynchronous bodies do not observe one
+another's scoped override selection. Normal key-based ViewModel instance
+sharing still applies after factory selection. The older `setProxy` /
+`clearProxy` pair remains available as a global legacy fallback:
 
 ```dart
 final userSpec = ViewModelSpec<UserViewModel>(
@@ -999,6 +1030,18 @@ test('with mock', () {
 ```
 
 Parameterized specs (`ViewModelSpec.arg`, `.arg2`, etc.) also support `setProxy` / `clearProxy`.
+
+```dart
+await userSpec.runWithOverride(mockUserSpec, () async {
+  final vm = binding.read(userSpec);
+  expect(vm, isA<MockUserViewModel>());
+}); // prior override is restored here, even if the body throws
+```
+
+Call `ViewModel.resetForTesting()` between isolated runtime tests when needed.
+It force-disposes every cached instance (including `aliveForever` instances),
+clears lifecycle/configuration and DevTools tracking state, and permits clean
+re-initialization.
 
 For widget-free testing, just use a plain `ViewModelBinding`:
 
@@ -1055,7 +1098,7 @@ The generator supports ViewModels with up to 4 constructor parameters and produc
 
 ## DevTools Extension
 
-The package includes a Flutter DevTools extension for real-time ViewModel inspection. In debug mode, a `DevToolTracker` lifecycle observer is automatically registered, and a `DevToolsService` starts a VM service extension for communication with DevTools.
+The package includes a Flutter DevTools extension for real-time ViewModel inspection. In debug mode, a `DevToolTracker` lifecycle observer is automatically registered, and a `DevToolsService` starts a VM service extension for communication with DevTools. Diagnostics expose the ordered active `owners`, the current `primaryOwner` used for nested dependency resolution, and primary-owner handoffs.
 
 To enable, create `devtools_options.yaml` in your project root:
 
@@ -1112,6 +1155,6 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin {
 final globalAuthSpec = ViewModelSpec<AuthViewModel>(
   builder: () => AuthViewModel(),
   key: 'global-auth',
-  aliveForever: true, // optional: keep alive
+  aliveForever: true, // optional: retain after the last owner releases it
 );
 ```

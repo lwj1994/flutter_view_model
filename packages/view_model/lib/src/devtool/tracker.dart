@@ -14,6 +14,8 @@ import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 
+const _notProvided = Object();
+
 /// Singleton dependency tracker for ViewModels.
 ///
 /// This class monitors and manages dependency relationships between ViewModels
@@ -117,7 +119,9 @@ class DevToolTracker extends ViewModelLifecycle {
   /// Listeners are called safely with error handling to prevent one failing
   /// listener from affecting others.
   void _notifyListeners() {
-    for (final listener in _listeners) {
+    final listeners = List<VoidCallback>.of(_listeners);
+    for (final listener in listeners) {
+      if (!_listeners.contains(listener)) continue;
       try {
         listener();
       } catch (e, stack) {
@@ -147,12 +151,56 @@ class DevToolTracker extends ViewModelLifecycle {
       tag: arg.tag?.toString(),
       createTime: DateTime.now(),
       watchers: {},
+      owners: viewModel.refHandler.owners.map((owner) => owner.id).toList(),
+      primaryOwner: viewModel.refHandler.primaryOwner?.id,
+    );
+
+    // The handler owns this callback and clears it on disposal. The callback
+    // captures only the tracker and the string instance ID, so tracking owner
+    // changes does not retain the ViewModel or any ViewModelBinding.
+    viewModel.refHandler.addOwnerChangeListener(
+      (owners, previousPrimaryOwner, primaryOwner) {
+        _updateOwners(
+          instanceId,
+          owners: owners,
+          previousPrimaryOwner: previousPrimaryOwner,
+          primaryOwner: primaryOwner,
+        );
+      },
     );
 
     _typeToInstances.putIfAbsent(typeName, () => {}).add(instanceId);
 
     viewModelLog("📱 onCreated, $instanceId");
 
+    _notifyListeners();
+  }
+
+  void _updateOwners(
+    String instanceId, {
+    required List<String> owners,
+    required String? previousPrimaryOwner,
+    required String? primaryOwner,
+  }) {
+    final info = _viewModelInfos[instanceId];
+    if (info == null) return;
+
+    var primaryOwnerHandoff = info.primaryOwnerHandoff;
+    if (previousPrimaryOwner != null &&
+        primaryOwner != null &&
+        previousPrimaryOwner != primaryOwner) {
+      primaryOwnerHandoff = PrimaryOwnerHandoff(
+        from: previousPrimaryOwner,
+        to: primaryOwner,
+        occurredAt: DateTime.now(),
+      );
+    }
+
+    _viewModelInfos[instanceId] = info.copyWith(
+      owners: List<String>.unmodifiable(owners),
+      primaryOwner: primaryOwner,
+      primaryOwnerHandoff: primaryOwnerHandoff,
+    );
     _notifyListeners();
   }
 
@@ -242,6 +290,8 @@ class DevToolTracker extends ViewModelLifecycle {
         isDisposed: true,
         disposeTime: DateTime.now(),
         watchers: <String>{}, // Clear watchers as they are no longer valid
+        owners: const <String>[],
+        primaryOwner: null,
       );
     }
 
@@ -300,6 +350,14 @@ class DevToolTracker extends ViewModelLifecycle {
     _notifyListeners();
   }
 
+  /// Resets all tracker state without notifying or retaining test listeners.
+  void resetForTesting() {
+    _bindingIds.clear();
+    _viewModelInfos.clear();
+    _typeToInstances.clear();
+    _listeners.clear();
+  }
+
   /// Gets comprehensive statistics about the current dependency state.
   ///
   /// This method analyzes all tracked ViewModels and their relationships
@@ -342,6 +400,27 @@ class DevToolTracker extends ViewModelLifecycle {
   }
 }
 
+/// The most recent transfer between two active primary owners.
+///
+/// Owner IDs are stored instead of binding objects to avoid extending binding
+/// lifetimes through DevTools history.
+class PrimaryOwnerHandoff {
+  /// Binding ID that previously resolved nested dependencies.
+  final String from;
+
+  /// Binding ID that now resolves nested dependencies.
+  final String to;
+
+  /// Time at which the handoff occurred.
+  final DateTime occurredAt;
+
+  const PrimaryOwnerHandoff({
+    required this.from,
+    required this.to,
+    required this.occurredAt,
+  });
+}
+
 /// Detailed information about a ViewModel instance.
 ///
 /// This class contains comprehensive metadata about a ViewModel instance
@@ -368,6 +447,15 @@ class ViewModelInfo {
   /// Set of watcher IDs currently watching this ViewModel.
   final Set<String> watchers;
 
+  /// Ordered binding IDs that currently own this ViewModel.
+  final List<String> owners;
+
+  /// Binding ID currently used to resolve nested dependencies.
+  final String? primaryOwner;
+
+  /// Most recent transfer between two active primary owners.
+  final PrimaryOwnerHandoff? primaryOwnerHandoff;
+
   /// Whether this ViewModel instance has been disposed.
   final bool isDisposed;
 
@@ -392,6 +480,9 @@ class ViewModelInfo {
     this.tag,
     required this.createTime,
     required this.watchers,
+    this.owners = const <String>[],
+    this.primaryOwner,
+    this.primaryOwnerHandoff,
     this.isDisposed = false,
     this.disposeTime,
   });
@@ -420,6 +511,9 @@ class ViewModelInfo {
     String? tag,
     DateTime? createTime,
     Set<String>? watchers,
+    List<String>? owners,
+    Object? primaryOwner = _notProvided,
+    Object? primaryOwnerHandoff = _notProvided,
     bool? isDisposed,
     DateTime? disposeTime,
   }) {
@@ -430,6 +524,13 @@ class ViewModelInfo {
       tag: tag ?? this.tag,
       createTime: createTime ?? this.createTime,
       watchers: watchers ?? this.watchers,
+      owners: owners ?? this.owners,
+      primaryOwner: identical(primaryOwner, _notProvided)
+          ? this.primaryOwner
+          : primaryOwner as String?,
+      primaryOwnerHandoff: identical(primaryOwnerHandoff, _notProvided)
+          ? this.primaryOwnerHandoff
+          : primaryOwnerHandoff as PrimaryOwnerHandoff?,
       isDisposed: isDisposed ?? this.isDisposed,
       disposeTime: disposeTime ?? this.disposeTime,
     );
@@ -438,7 +539,8 @@ class ViewModelInfo {
   @override
   String toString() {
     return 'ViewModelInfo(id: $instanceId, type: $typeName, key: $key, '
-        'tag: $tag, watchers: ${watchers.length}, isDisposed: $isDisposed)';
+        'tag: $tag, watchers: ${watchers.length}, owners: ${owners.length}, '
+        'primaryOwner: $primaryOwner, isDisposed: $isDisposed)';
   }
 }
 

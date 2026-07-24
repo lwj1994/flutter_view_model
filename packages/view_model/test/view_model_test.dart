@@ -477,13 +477,55 @@ void main() {
     });
 
     test('update() triggers notifyListeners', () async {
-      final vm = TestModel();
+      final binding = _CoreRef();
+      addTearDown(binding.dispose);
+      final vm = binding.read(
+        ViewModelSpec<TestModel>(builder: TestModel.new),
+      );
       int hit = 0;
       final disposer = vm.listen(onChanged: () => hit++);
       await vm.update(() {
         // mutate
       });
       expect(hit, 1);
+      disposer();
+    });
+
+    test('update() notifies synchronously for synchronous work', () async {
+      final binding = _CoreRef();
+      addTearDown(binding.dispose);
+      final vm = binding.read(
+        ViewModelSpec<TestModel>(builder: TestModel.new),
+      );
+      var hits = 0;
+      final disposer = vm.listen(onChanged: () => hits++);
+
+      final completion = vm.update(() {});
+
+      expect(hits, 1);
+      await completion;
+      disposer();
+    });
+
+    test('update() does not notify when work fails', () async {
+      final binding = _CoreRef();
+      addTearDown(binding.dispose);
+      final vm = binding.read(
+        ViewModelSpec<TestModel>(builder: TestModel.new),
+      );
+      var hits = 0;
+      final disposer = vm.listen(onChanged: () => hits++);
+
+      expect(
+        () => vm.update(() => throw StateError('sync failure')),
+        throwsStateError,
+      );
+      await expectLater(
+        vm.update(() async => throw StateError('async failure')),
+        throwsStateError,
+      );
+
+      expect(hits, 0);
       disposer();
     });
   });

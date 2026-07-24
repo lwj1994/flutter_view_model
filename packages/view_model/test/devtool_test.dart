@@ -6,6 +6,8 @@ import 'package:view_model/src/get_instance/manager.dart';
 
 class DevVM extends ViewModel {}
 
+class OwnerDevVM extends ViewModel {}
+
 void main() {
   group('DevTools integration and tracker', () {
     /// Function-level comment: Verify service dispose when not initialized.
@@ -118,7 +120,7 @@ void main() {
       final tracker = DevToolTracker.instance;
       tracker.clear();
 
-      final handle = instanceManager.getNotifier<DevVM>(
+      instanceManager.getNotifier<DevVM>(
         factory: InstanceFactory<DevVM>(
           builder: () => DevVM(),
           arg: const InstanceArg(key: 'kA', tag: 'tA', bindingId: 'wZ'),
@@ -150,6 +152,11 @@ void main() {
       final vmData = svc.debugGetViewModelData();
       expect(vmData.containsKey('viewModels'), isTrue);
       expect(vmData.containsKey('stats'), isTrue);
+      final vmJson =
+          (vmData['viewModels'] as List<dynamic>).first as Map<String, dynamic>;
+      expect(vmJson['owners'], isA<List<dynamic>>());
+      expect(vmJson.containsKey('primaryOwner'), isTrue);
+      expect(vmJson.containsKey('primaryOwnerHandoff'), isTrue);
 
       final graphData = svc.debugGetDependencyGraph();
       expect((graphData['nodes'] as List).isNotEmpty, isTrue);
@@ -173,6 +180,96 @@ void main() {
       remove();
       tracker.clear();
       expect(count, 1);
+    });
+
+    test('tracker exposes owners and records primary owner handoff', () {
+      final tracker = DevToolTracker.instance;
+      tracker.resetForTesting();
+
+      final ownerA = ViewModelBinding();
+      final ownerB = ViewModelBinding();
+      final spec = ViewModelSpec<OwnerDevVM>(
+        key: 'owner-handoff',
+        builder: OwnerDevVM.new,
+      );
+
+      final vm = ownerA.read<OwnerDevVM>(spec);
+      expect(identical(ownerB.read<OwnerDevVM>(spec), vm), isTrue);
+
+      var info = tracker.dependencyGraph.viewModelInfos.values.single;
+      expect(info.owners, [ownerA.id, ownerB.id]);
+      expect(info.primaryOwner, ownerA.id);
+      expect(info.primaryOwnerHandoff, isNull);
+
+      final initialGraph = DevToolsService.instance.debugGetDependencyGraph();
+      final initialEdges =
+          (initialGraph['edges'] as List<dynamic>).cast<Map<String, dynamic>>();
+      expect(initialEdges, hasLength(2));
+      expect(
+        initialEdges
+            .singleWhere((edge) => edge['from'] == ownerA.id)['isPrimaryOwner'],
+        isTrue,
+      );
+      expect(
+        initialEdges
+            .singleWhere((edge) => edge['from'] == ownerB.id)['isPrimaryOwner'],
+        isFalse,
+      );
+
+      ownerA.dispose();
+
+      info = tracker.dependencyGraph.viewModelInfos.values.single;
+      expect(info.owners, [ownerB.id]);
+      expect(info.primaryOwner, ownerB.id);
+      expect(info.primaryOwnerHandoff?.from, ownerA.id);
+      expect(info.primaryOwnerHandoff?.to, ownerB.id);
+
+      final serviceData = DevToolsService.instance.debugGetViewModelData();
+      final viewModelJson = (serviceData['viewModels'] as List<dynamic>).single
+          as Map<String, dynamic>;
+      expect(viewModelJson['owners'], [ownerB.id]);
+      expect(viewModelJson['primaryOwner'], ownerB.id);
+      expect(
+        viewModelJson['primaryOwnerHandoff'],
+        containsPair('from', ownerA.id),
+      );
+      expect(
+        viewModelJson['primaryOwnerHandoff'],
+        containsPair('to', ownerB.id),
+      );
+
+      final graphData = DevToolsService.instance.debugGetDependencyGraph();
+      final node =
+          (graphData['nodes'] as List<dynamic>).single as Map<String, dynamic>;
+      expect(node['owners'], [ownerB.id]);
+      expect(node['primaryOwner'], ownerB.id);
+      final edge =
+          (graphData['edges'] as List<dynamic>).single as Map<String, dynamic>;
+      expect(edge['isPrimaryOwner'], isTrue);
+
+      ownerB.dispose();
+
+      info = tracker.dependencyGraph.viewModelInfos.values.single;
+      expect(info.owners, isEmpty);
+      expect(info.primaryOwner, isNull);
+      expect(info.primaryOwnerHandoff?.from, ownerA.id);
+      expect(info.primaryOwnerHandoff?.to, ownerB.id);
+    });
+
+    test('resetForTesting clears graph and tracker listeners silently', () {
+      final tracker = DevToolTracker.instance;
+      var notifications = 0;
+      tracker.addListener(() => notifications++);
+
+      tracker.resetForTesting();
+
+      expect(tracker.dependencyGraph.viewModelInfos, isEmpty);
+      expect(tracker.dependencyGraph.watcherToViewModels, isEmpty);
+      expect(tracker.dependencyGraph.typeToInstances, isEmpty);
+      expect(notifications, 0);
+
+      tracker.clear();
+      expect(notifications, 0);
     });
 
     /// Function-level comment: toString coverage for info and stats.

@@ -78,18 +78,67 @@ void main() {
       store.dispose();
     });
 
-    test('notifyListeners forces notification', () async {
+    test('state stream only emits actual transitions', () async {
       final store = ViewModelStateStore<int>(initialState: 0);
-      bool notified = false;
-      final sub = store.stateStream.listen((_) => notified = true);
+      final events = <DiffState<int>>[];
+      final sub = store.stateStream.listen(events.add);
 
-      store.notifyListeners();
+      store.setState(1);
+      store.setState(1);
+      store.setState(2);
       await Future.delayed(Duration.zero);
 
-      expect(notified, true);
+      expect(events, [DiffState<int>(0, 1), DiffState<int>(1, 2)]);
 
       await sub.cancel();
       store.dispose();
+    });
+
+    test('reentrant updates preserve state stream transition order', () async {
+      late ViewModelStateStore<int> store;
+      final synchronousEvents = <DiffState<int>>[];
+      final streamEvents = <DiffState<int>>[];
+      store = ViewModelStateStore<int>(
+        initialState: 0,
+        onStateChanged: (event) {
+          synchronousEvents.add(event);
+          if (event.currentState == 1) {
+            store.setState(2);
+          }
+        },
+      );
+      final sub = store.stateStream.listen(streamEvents.add);
+
+      store.setState(1);
+
+      expect(
+        synchronousEvents,
+        [DiffState<int>(0, 1), DiffState<int>(1, 2)],
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        streamEvents,
+        [DiffState<int>(0, 1), DiffState<int>(1, 2)],
+      );
+
+      await sub.cancel();
+      store.dispose();
+    });
+
+    test('synchronous callback may dispose store safely', () async {
+      late ViewModelStateStore<int> store;
+      final streamEvents = <DiffState<int>>[];
+      store = ViewModelStateStore<int>(
+        initialState: 0,
+        onStateChanged: (_) => store.dispose(),
+      );
+      final sub = store.stateStream.listen(streamEvents.add);
+
+      expect(() => store.setState(1), returnsNormally);
+      await Future<void>.delayed(Duration.zero);
+      expect(streamEvents, [DiffState<int>(0, 1)]);
+
+      await sub.cancel();
     });
 
     test('uses custom equality from config', () async {

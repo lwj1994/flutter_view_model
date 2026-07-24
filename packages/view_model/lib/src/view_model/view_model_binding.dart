@@ -16,6 +16,35 @@ import 'package:view_model/src/view_model/view_model.dart';
 
 import 'state_store.dart';
 
+class _BindingSubscription {
+  _BindingSubscription({
+    required ViewModel viewModel,
+    required this.attach,
+  }) : _viewModel = viewModel {
+    _remove = attach(viewModel);
+  }
+
+  ViewModel _viewModel;
+  final Function() Function(ViewModel viewModel) attach;
+  late Function() _remove;
+  bool _disposed = false;
+
+  bool isAttachedTo(ViewModel viewModel) => identical(_viewModel, viewModel);
+
+  void moveTo(ViewModel viewModel) {
+    if (_disposed || identical(_viewModel, viewModel)) return;
+    _remove.call();
+    _viewModel = viewModel;
+    _remove = attach(viewModel);
+  }
+
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _remove.call();
+  }
+}
+
 /// Interface that exposes helpers to access ViewModels from widgets.
 ///
 /// `ViewModelBinding` connects the ViewModel system with the Widget tree.
@@ -49,6 +78,11 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Does not create new instances and does not cause the widget to
   /// rebuild when the ViewModel changes.
+  ///
+  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
+  /// `key` 可唯一定位缓存；`tag` 可能对应多个实例，应使用
+  /// [readCachesByTag]。若 `key`、`tag` 都不传，多实例场景会按创建顺序返回
+  /// 最新实例，仅应在明确理解该行为时使用。
   VM readCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -83,6 +117,11 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Reads the cached ViewModel without listening and avoids throwing
   /// when the instance does not exist.
+  ///
+  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
+  /// `key` 可唯一定位缓存；`tag` 多结果请使用 [readCachesByTag]。若 `key`、
+  /// `tag` 都不传，多实例场景会依赖创建顺序返回最新实例，仅应在明确理解该
+  /// 行为时使用。
   VM? maybeReadCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -108,7 +147,84 @@ abstract interface class ViewModelBindingInterface {
     required Function(R? previous, R current) onChanged,
   });
 
+  /// Danger: force-disposes the shared instance and removes every owner,
+  /// including owners in other widgets or bindings. This also disposes an
+  /// `aliveForever` instance. Do not use this as a routine lifecycle API;
+  /// call it only when the global effect is intentional and understood.
+  ///
+  /// Every consumer must resolve the ViewModel through a getter rather than
+  /// retaining it in a field. After recycling, the old object is disposed;
+  /// the next getter evaluation follows the normal cache-miss creation path.
   void recycle<VM extends ViewModel>(VM viewModel);
+}
+
+/// 可选能力：在保留现有 binding 关系的前提下替换 [ViewModel] 实例。
+///
+/// 该能力独立于 [ViewModelBindingInterface]，避免给已有的自定义 binding 实现
+/// 增加新的抽象成员。使用方仍可通过
+/// [ViewModelBindingCapabilityExtension.recreate] 调用；不支持该能力的自定义
+/// binding 会抛出 [UnsupportedError]。
+abstract interface class ViewModelBindingRecreateCapability {
+  VM recreate<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  });
+}
+
+/// 可选能力：为 selector 提供强类型的自定义相等判断。
+///
+/// 独立能力接口用于保持 [ViewModelBindingInterface.listenStateSelect] 的旧签名
+/// 不变，使已有的 `implements ViewModelBindingInterface` 实现继续兼容。
+abstract interface class ViewModelBindingStateSelectEqualsCapability {
+  void listenStateSelectWithEquals<VM extends StateViewModel<S>, S, R>(
+    ViewModelFactory<VM> factory, {
+    required R Function(S state) selector,
+    required bool Function(R previous, R current) equals,
+    required Function(R? previous, R current) onChanged,
+  });
+}
+
+/// 通过基础 binding 接口访问新增的可选能力。
+extension ViewModelBindingCapabilityExtension on ViewModelBindingInterface {
+  /// Replaces [viewModel] while preserving its active binding relationships.
+  VM recreate<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  }) {
+    final binding = this;
+    if (binding is ViewModelBindingRecreateCapability) {
+      // 使用 capability 静态类型调用实例成员，避免再次解析到当前 extension。
+      final capability = binding as ViewModelBindingRecreateCapability;
+      return capability.recreate<VM>(viewModel, builder: builder);
+    }
+    throw UnsupportedError(
+      '${binding.runtimeType} does not support ViewModel recreation.',
+    );
+  }
+
+  /// 使用强类型 [equals] 判断 selector 的前后值是否相等。
+  void listenStateSelectWithEquals<VM extends StateViewModel<S>, S, R>(
+    ViewModelFactory<VM> factory, {
+    required R Function(S state) selector,
+    required bool Function(R previous, R current) equals,
+    required Function(R? previous, R current) onChanged,
+  }) {
+    final binding = this;
+    if (binding is ViewModelBindingStateSelectEqualsCapability) {
+      // 使用 capability 静态类型调用实例成员，避免再次解析到当前 extension。
+      final capability = binding as ViewModelBindingStateSelectEqualsCapability;
+      capability.listenStateSelectWithEquals<VM, S, R>(
+        factory,
+        selector: selector,
+        equals: equals,
+        onChanged: onChanged,
+      );
+      return;
+    }
+    throw UnsupportedError(
+      '${binding.runtimeType} does not support custom selector equality.',
+    );
+  }
 }
 
 /// Common host interface for types exposing a [viewModelBinding] accessor.
@@ -207,7 +323,11 @@ abstract interface class ViewModelBindingHost {
 /// - [WidgetViewModelBinding]: Specialized implementation for Flutter widgets
 /// - [ViewModelStateMixin]: Mixin that uses ViewModelBinding for StatefulWidget
 /// - [ViewModelBindingPauseProvider]: Interface for pause/resume providers
-mixin class ViewModelBinding implements ViewModelBindingInterface {
+mixin class ViewModelBinding
+    implements
+        ViewModelBindingInterface,
+        ViewModelBindingRecreateCapability,
+        ViewModelBindingStateSelectEqualsCapability {
   late final String _id = "${getName()}#${identityHashCode(this)}";
 
   String get id => _id;
@@ -230,12 +350,70 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   bool get isDisposed => _dispose;
 
   late final _instanceController = AutoDisposeInstanceController(
-    onRecreate: onUpdate,
+    onRecreate: _handleInstanceChange,
+    onInstanceDetached: _handleInstanceDetached,
+    onInstanceRecreated: _handleInstanceRecreated,
     viewModelBinding: this,
   );
-  final Map<ViewModel, bool> _stateListeners = {};
+  final Map<ViewModel, Function()> _stateListeners = Map.identity();
   final _defaultViewModelKey = Object();
-  final List<Function()> _disposes = [];
+  final List<_BindingSubscription> _subscriptions = [];
+  final Map<(Type, Object), Object> _factorySources = {};
+  final Map<ViewModel, (Type, Object)> _factoryIdentities = Map.identity();
+
+  void _handleInstanceChange() {
+    onUpdate();
+  }
+
+  void _handleInstanceDetached(ViewModel viewModel) {
+    _stateListeners.remove(viewModel)?.call();
+    final subscriptions = _subscriptions
+        .where((subscription) => subscription.isAttachedTo(viewModel))
+        .toList(growable: false);
+    for (final subscription in subscriptions) {
+      subscription.dispose();
+      _subscriptions.remove(subscription);
+    }
+    assert(() {
+      final identity = _factoryIdentities.remove(viewModel);
+      if (identity != null) {
+        _factorySources.remove(identity);
+      }
+      return true;
+    }());
+  }
+
+  void _handleInstanceRecreated(ViewModel previous, ViewModel current) {
+    final removeWatchListener = _stateListeners.remove(previous);
+    if (removeWatchListener != null) {
+      removeWatchListener.call();
+      _addListener(current);
+    }
+    for (final subscription in _subscriptions.where(
+      (subscription) => subscription.isAttachedTo(previous),
+    )) {
+      subscription.moveTo(current);
+    }
+    assert(() {
+      final identity = _factoryIdentities.remove(previous);
+      if (identity != null) {
+        _factoryIdentities[current] = identity;
+      }
+      return true;
+    }());
+  }
+
+  void _addSubscription<VM extends ViewModel>(
+    VM viewModel,
+    Function() Function(VM viewModel) attach,
+  ) {
+    _subscriptions.add(
+      _BindingSubscription(
+        viewModel: viewModel,
+        attach: (value) => attach(value as VM),
+      ),
+    );
+  }
 
   /// Called when any watched ViewModel notifies changes.
   ///
@@ -308,27 +486,45 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     return pathInfo.isNotEmpty ? "$pathInfo#$runtimeType" : "$runtimeType";
   }
 
-  /// Forces disposal of a ViewModel and removes it from cache.
+  /// Force-recycles a ViewModel and removes it from cache for every owner.
   ///
-  /// This method manually disposes a ViewModel instance and triggers
-  /// a widget rebuild. Use this when you need to force recreation
-  /// of a ViewModel (e.g., after a logout or data reset).
+  /// This method manually disposes a ViewModel instance and triggers owner
+  /// updates. Do not use it as a routine recreation or cleanup mechanism.
+  /// Call it only when you explicitly understand and accept that every owner
+  /// of the shared instance will lose the old object at once.
   ///
   /// Parameters:
   /// - [vm]: The ViewModel instance to dispose and remove
   ///
   /// Example:
   /// ```dart
-  /// var userVM = viewModelBinding.watch(fac);
-  /// // Later, force recreation
-  /// viewModelBinding.recycle(userVM);
+  /// UserViewModel get userVM => viewModelBinding.watch(fac);
   ///
-  /// recreate new instance
-  /// userVM = viewModelBinding.watch(fac);
+  /// // Advanced escape hatch: userVM is disposed for every owner. Their next
+  /// // getter evaluation resolves a newly created instance.
+  /// viewModelBinding.recycle(userVM);
   /// ```
+  /// Warning: this is a destructive global operation for a shared instance.
+  /// It removes all owners and also disposes `aliveForever` instances. It is
+  /// an escape hatch, not the normal way to release the current binding.
+  /// Consumers must use getter-based resolution; a stored field would keep
+  /// pointing at the disposed object instead of resolving its replacement.
+  @override
   void recycle<VM extends ViewModel>(VM vm) {
     _instanceController.recycle(vm);
     onUpdate();
+  }
+
+  @override
+  VM recreate<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  }) {
+    final owner = viewModel.refHandler.primaryOwner ?? viewModelBinding;
+    return runWithBinding(
+      () => _instanceController.recreate(viewModel, builder: builder),
+      owner,
+    );
   }
 
   /// Gets an existing ViewModel by key or throws an error if not found.
@@ -468,6 +664,11 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// its [key] or [tag]. It does not create new instances and does not cause
   /// the widget to rebuild when the ViewModel changes.
   ///
+  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
+  /// [key] 可唯一定位缓存；[tag] 可能对应多个实例，应使用 [readCachesByTag]
+  /// 批量获取。若 [key]、[tag] 都不传，多实例场景会按创建顺序返回最新实例，
+  /// 仅应在明确理解该行为时使用。
+  ///
   /// Parameters:
   /// - [key]: The unique key used to find the ViewModel.
   /// - [tag]: The tag used to find the ViewModel.
@@ -589,10 +790,37 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       viewModelBinding,
     );
 
+    assert(() {
+      _recordFactoryResolution<VM>(factory, key);
+      _factoryIdentities[res] = (VM, key);
+      return true;
+    }());
+
     if (listen) {
       _addListener(res);
     }
     return res;
+  }
+
+  void _recordFactoryResolution<VM extends ViewModel>(
+    ViewModelFactory<VM> factory,
+    Object key,
+  ) {
+    assert(() {
+      final identity = (VM, key);
+      final source = factory.debugSource;
+      final previous = _factorySources[identity];
+      if (previous != null && !identical(previous, source)) {
+        debugPrint(
+          'view_model warning: Different factory sources resolved the same '
+          '$VM + key ${Error.safeToString(key)} in binding $id. The cached '
+          'instance is reused and the later builder will not run. Give each '
+          'spec an explicit, distinct key.',
+        );
+      }
+      _factorySources.putIfAbsent(identity, () => source);
+      return true;
+    }());
   }
 
   bool _hasMissedUpdates = false;
@@ -609,9 +837,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// Parameters:
   /// - [res]: The ViewModel to listen to
   void _addListener(ViewModel res) {
-    if (_stateListeners[res] != true) {
-      _stateListeners[res] = true;
-      _disposes.add(res.listen(onChanged: () {
+    if (!_stateListeners.containsKey(res)) {
+      _stateListeners[res] = res.listen(onChanged: () {
         if (_dispose) return;
         // When paused, ignore updates; we'll blindly refresh on resume.
         if (_pauseAwareController.isPaused) {
@@ -622,7 +849,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
           return;
         }
         onUpdate();
-      }));
+      });
     }
   }
 
@@ -686,17 +913,28 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   void dispose() {
     if (_dispose) return;
     _dispose = true;
+    for (final removeListener in _stateListeners.values.toList()) {
+      try {
+        removeListener.call();
+      } catch (e, stack) {
+        reportViewModelError(e, stack, ErrorType.dispose,
+            'ViewModelBinding watch listener dispose error');
+      }
+    }
     _stateListeners.clear();
+    _factorySources.clear();
+    _factoryIdentities.clear();
     // Run listener cleanup callbacks before disposing the instance controller,
     // to avoid listener callbacks firing during the disposal cascade.
-    for (final e in _disposes) {
+    for (final subscription in _subscriptions.toList(growable: false)) {
       try {
-        e.call();
+        subscription.dispose();
       } catch (e, stack) {
         reportViewModelError(e, stack, ErrorType.dispose,
             'ViewModelBinding dispose listener error');
       }
     }
+    _subscriptions.clear();
     try {
       _pauseAwareController.dispose();
     } catch (e, stack) {
@@ -716,7 +954,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     ViewModelFactory<VM> factory, {
     required VoidCallback onChanged,
   }) {
-    _disposes.add(viewModelBinding.read(factory).listen(onChanged: onChanged));
+    final vm = viewModelBinding.read(factory);
+    _addSubscription(vm, (value) => value.listen(onChanged: onChanged));
   }
 
   @override
@@ -725,7 +964,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     required Function(S? previous, S state) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
-    _disposes.add(vm.listenState(onChanged: onChanged));
+    _addSubscription(vm, (value) => value.listenState(onChanged: onChanged));
   }
 
   @override
@@ -735,10 +974,39 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     required Function(R? previous, R current) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
-    _disposes
-        .add(vm.listenStateSelect(onChanged: onChanged, selector: selector));
+    _addSubscription(
+      vm,
+      (value) => value.listenStateSelect(
+        onChanged: onChanged,
+        selector: selector,
+      ),
+    );
   }
 
+  @override
+  void listenStateSelectWithEquals<VM extends StateViewModel<S>, S, R>(
+    ViewModelFactory<VM> factory, {
+    required R Function(S state) selector,
+    required bool Function(R previous, R current) equals,
+    required Function(R? previous, R current) onChanged,
+  }) {
+    final VM vm = viewModelBinding.read<VM>(factory);
+    _addSubscription(
+      vm,
+      (value) => value.listenStateSelectWithEquals(
+        onChanged: onChanged,
+        selector: selector,
+        equals: equals,
+      ),
+    );
+  }
+
+  /// 安全查询已有缓存，未找到时返回 `null`。
+  ///
+  /// 常规业务代码应优先使用 [read] 或 [watch] 配合 spec 精确获取。明确的
+  /// [key] 可唯一定位缓存；[tag] 多结果请使用 [readCachesByTag]。若 [key]、
+  /// [tag] 都不传，多实例场景会依赖创建顺序返回最新实例，仅应在明确理解该
+  /// 行为时使用。
   @override
   VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) {
     try {
@@ -782,8 +1050,41 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     );
   }
 
+  void
+      listenViewModelStateSelectWithEquals<VM extends StateViewModel<S>, S, R>({
+    required ViewModelFactory<VM> factory,
+    required R Function(S state) selector,
+    required bool Function(R previous, R current) equals,
+    required Function(R? previous, R current) onChanged,
+  }) {
+    viewModelBinding.listenStateSelectWithEquals<VM, S, R>(
+      factory,
+      selector: selector,
+      equals: equals,
+      onChanged: onChanged,
+    );
+  }
+
+  /// [ViewModelBindingInterface.recycle] 的兼容便捷入口。
+  ///
+  /// 这是危险的全局强制回收操作：会解除目标实例的全部 owners 并立即
+  /// dispose，即使该实例设置了 `aliveForever`。一般不鼓励调用；只有明确
+  /// 知道所有共享使用方都会受到影响时才应使用。
+  ///
+  /// recycle 后传入的旧实例已经 dispose。所有使用方都必须通过 getter
+  /// 被动获取 ViewModel，并在每次访问时重新调用 `watch`/`read`；这样下一次
+  /// 访问才能走正常的缓存未命中与实例创建流程。不要把 ViewModel 长期保存在
+  /// `late final`、`final` 等字段中，否则字段会继续引用已销毁对象，可能造成
+  /// 内存泄漏或其他异常。
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     viewModelBinding.recycle<VM>(viewModel);
+  }
+
+  VM recreateViewModel<VM extends ViewModel>(
+    VM viewModel, {
+    VM Function()? builder,
+  }) {
+    return viewModelBinding.recreate<VM>(viewModel, builder: builder);
   }
 
   VM readViewModel<VM extends ViewModel>(
@@ -791,6 +1092,12 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     return viewModelBinding.read<VM>(factory);
   }
 
+  /// 查询已有缓存但不监听变化。
+  ///
+  /// 常规业务代码应优先使用 `readViewModel` / `watchViewModel` 配合 spec
+  /// 精确获取。明确的 [key] 可唯一定位缓存；[tag] 可能对应多个实例，应使用
+  /// `viewModelBinding.readCachesByTag`。若 [key]、[tag] 都不传，多实例场景会
+  /// 按创建顺序返回最新实例，仅应在明确理解该行为时使用。
   VM readCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -821,6 +1128,12 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     );
   }
 
+  /// 安全查询已有缓存，未找到时返回 `null`。
+  ///
+  /// 常规业务代码应优先使用 `readViewModel` / `watchViewModel` 配合 spec
+  /// 精确获取。明确的 [key] 可唯一定位缓存；[tag] 多结果请使用
+  /// `viewModelBinding.readCachesByTag`。若 [key]、[tag] 都不传，多实例场景会
+  /// 依赖创建顺序返回最新实例，仅应在明确理解该行为时使用。
   VM? maybeReadCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,

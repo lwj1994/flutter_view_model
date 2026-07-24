@@ -28,22 +28,163 @@ class TestViewModel extends StateViewModel<TestState> {
   void changeName(String newName) {
     setState(state.copyWith(name: newName));
   }
+
+  void setValues({int? count, String? name}) {
+    setState(state.copyWith(count: count, name: name));
+  }
+}
+
+ViewModelSpec<TestViewModel> _testViewModelSpec(String key) {
+  return ViewModelSpec<TestViewModel>(
+    builder: () => TestViewModel(),
+    key: key,
+  );
+}
+
+class _TestViewModelOwner with ViewModelBinding {
+  _TestViewModelOwner(this.spec);
+
+  final ViewModelSpec<TestViewModel> spec;
+
+  TestViewModel get viewModel => viewModelBinding.read(spec);
 }
 
 void main() {
-  group('StateViewModelValueWatcher', () {
-    late TestViewModel viewModel;
+  group('StateViewModelSelector', () {
+    late _TestViewModelOwner owner;
 
     setUp(() {
-      viewModel = TestViewModel();
+      owner = _TestViewModelOwner(
+        _testViewModelSpec('state-view-model-selector'),
+      );
     });
+
+    tearDown(() => owner.dispose());
+
+    testWidgets('builds and updates one typed selected value', (tester) async {
+      var buildCount = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StateViewModelSelector<TestState, int>(
+            viewModel: owner.viewModel,
+            selector: (state) => state.count,
+            builder: (context, count) {
+              buildCount++;
+              return Text('Count: $count');
+            },
+          ),
+        ),
+      );
+
+      expect(find.text('Count: 0'), findsOneWidget);
+      owner.viewModel.changeName('Unselected');
+      await tester.pump();
+      expect(buildCount, 1);
+
+      owner.viewModel.increment();
+      await tester.pump();
+      expect(find.text('Count: 1'), findsOneWidget);
+      expect(buildCount, 2);
+    });
+
+    testWidgets('supports a typed record as one update boundary',
+        (tester) async {
+      var buildCount = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StateViewModelSelector<TestState, ({int count, String name})>(
+            viewModel: owner.viewModel,
+            selector: (state) => (count: state.count, name: state.name),
+            builder: (context, value) {
+              buildCount++;
+              return Text('${value.count}: ${value.name}');
+            },
+          ),
+        ),
+      );
+
+      owner.viewModel.setValues(count: 1, name: 'Updated');
+      await tester.pump();
+
+      expect(find.text('1: Updated'), findsOneWidget);
+      expect(buildCount, 2);
+    });
+
+    testWidgets('uses selected-value equality', (tester) async {
+      var buildCount = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StateViewModelSelector<TestState, int>(
+            viewModel: owner.viewModel,
+            selector: (state) => state.count,
+            equals: (previous, current) => previous.isEven == current.isEven,
+            builder: (context, count) {
+              buildCount++;
+              return Text('Count: $count');
+            },
+          ),
+        ),
+      );
+
+      owner.viewModel.setValues(count: 2);
+      await tester.pump();
+      expect(buildCount, 1);
+      expect(find.text('Count: 0'), findsOneWidget);
+
+      owner.viewModel.setValues(count: 3);
+      await tester.pump();
+      expect(buildCount, 2);
+      expect(find.text('Count: 3'), findsOneWidget);
+    });
+
+    testWidgets('resubscribes when the ViewModel changes', (tester) async {
+      final otherOwner = _TestViewModelOwner(
+        _testViewModelSpec('state-view-model-selector-other'),
+      );
+      addTearDown(otherOwner.dispose);
+      otherOwner.viewModel.setValues(count: 10);
+
+      Widget buildWith(_TestViewModelOwner currentOwner) {
+        return MaterialApp(
+          home: StateViewModelSelector<TestState, int>(
+            viewModel: currentOwner.viewModel,
+            selector: (state) => state.count,
+            builder: (context, count) => Text('Count: $count'),
+          ),
+        );
+      }
+
+      await tester.pumpWidget(buildWith(owner));
+      await tester.pumpWidget(buildWith(otherOwner));
+      expect(find.text('Count: 10'), findsOneWidget);
+
+      owner.viewModel.increment();
+      await tester.pump();
+      expect(find.text('Count: 10'), findsOneWidget);
+
+      otherOwner.viewModel.increment();
+      await tester.pump();
+      expect(find.text('Count: 11'), findsOneWidget);
+    });
+  });
+
+  group('StateViewModelValueWatcher', () {
+    late _TestViewModelOwner owner;
+
+    setUp(() {
+      owner = _TestViewModelOwner(
+        _testViewModelSpec('state-view-model-value-watcher'),
+      );
+    });
+
+    tearDown(() => owner.dispose());
 
     testWidgets('builds the initial state correctly',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: const [],
             builder: (state) => Text('Count: ${state.count}'),
           ),
@@ -58,7 +199,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: [(state) => state.count],
             builder: (state) => Text('Count: ${state.count}'),
           ),
@@ -67,7 +208,7 @@ void main() {
 
       expect(find.text('Count: 0'), findsOneWidget);
 
-      viewModel.increment();
+      owner.viewModel.increment();
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Count: 1'), findsOneWidget);
@@ -79,7 +220,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: [(state) => state.name],
             builder: (state) {
               buildCount++;
@@ -92,7 +233,7 @@ void main() {
       expect(buildCount, 1);
       expect(find.text('Name: Initial'), findsOneWidget);
 
-      viewModel.increment();
+      owner.viewModel.increment();
       await tester.pump(const Duration(seconds: 1));
 
       // The builder should not be called again because the 'name' did not
@@ -106,7 +247,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: [(state) => state.count, (state) => state.name],
             builder: (state) =>
                 Text('Count: ${state.count}, Name: ${state.name}'),
@@ -116,24 +257,27 @@ void main() {
 
       expect(find.text('Count: 0, Name: Initial'), findsOneWidget);
 
-      viewModel.increment();
+      owner.viewModel.increment();
       await tester.pump();
 
       expect(find.text('Count: 1, Name: Initial'), findsOneWidget);
 
-      viewModel.changeName('New Name');
+      owner.viewModel.changeName('New Name');
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Count: 1, Name: New Name'), findsOneWidget);
     });
 
     testWidgets('handles viewModel change', (WidgetTester tester) async {
-      final newViewModel = TestViewModel();
+      final newOwner = _TestViewModelOwner(
+        _testViewModelSpec('state-view-model-value-watcher-other'),
+      );
+      addTearDown(newOwner.dispose);
 
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: [(state) => state.count],
             builder: (state) => Text('Count: ${state.count}'),
           ),
@@ -146,7 +290,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: newViewModel,
+            viewModel: newOwner.viewModel,
             selectors: [(state) => state.count],
             builder: (state) => Text('Count: ${state.count}'),
           ),
@@ -156,13 +300,13 @@ void main() {
       // The widget should now reflect the state of the new view model.
       expect(find.text('Count: 0'), findsOneWidget);
 
-      newViewModel.increment();
+      newOwner.viewModel.increment();
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Count: 1'), findsOneWidget);
 
       // The old view model should no longer trigger rebuilds.
-      viewModel.increment();
+      owner.viewModel.increment();
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Count: 1'), findsOneWidget);
@@ -174,7 +318,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: selectors,
             builder: (state) =>
                 Text('Count: ${state.count}, Name: ${state.name}'),
@@ -184,7 +328,7 @@ void main() {
 
       expect(find.text('Count: 0, Name: Initial'), findsOneWidget);
 
-      viewModel.changeName('New Name');
+      owner.viewModel.changeName('New Name');
       await tester.pump(const Duration(seconds: 1));
 
       // Should not rebuild because 'name' is not selected.
@@ -195,7 +339,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: selectors,
             builder: (state) =>
                 Text('Count: ${state.count}, Name: ${state.name}'),
@@ -203,7 +347,7 @@ void main() {
         ),
       );
 
-      viewModel.changeName('Another Name');
+      owner.viewModel.changeName('Another Name');
       await tester.pump(const Duration(seconds: 1));
 
       // Should rebuild now because 'name' is selected.
@@ -214,7 +358,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: StateViewModelValueWatcher<TestState>(
-            viewModel: viewModel,
+            viewModel: owner.viewModel,
             selectors: [(state) => state.count],
             builder: (state) => Text('Count: ${state.count}'),
           ),
@@ -225,7 +369,7 @@ void main() {
       await tester.pumpWidget(Container());
 
       // The view model should not have any listeners.
-      expect(viewModel.hasListeners, isFalse);
+      expect(owner.viewModel.hasListeners, isFalse);
     });
   });
 }
