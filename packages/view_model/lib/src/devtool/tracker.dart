@@ -56,6 +56,21 @@ class DevToolTracker extends ViewModelLifecycle {
   /// by a specific widget or watcher.
   final Map<String, Set<String>> _bindingIds = {};
 
+  /// Maps binding IDs to their lifecycle and ownership metadata.
+  ///
+  /// Unlike [_bindingIds], this registry also contains bindings that currently
+  /// have no ViewModel edge. It therefore provides the complete binding node
+  /// list required by DevTools instead of forcing the UI to infer nodes from
+  /// active relationships.
+  final Map<String, BindingInfo> _bindingInfos = {};
+
+  /// Weakly associates a live ViewModel object with its diagnostics ID.
+  ///
+  /// An [Expando] avoids retaining ViewModel generations solely for linking
+  /// their internal dependency bindings in DevTools.
+  Expando<String> _viewModelInstanceIds =
+      Expando<String>('view_model_instance_ids');
+
   /// Maps ViewModel instance IDs to their detailed information.
   ///
   /// Contains comprehensive information about each ViewModel instance
@@ -83,8 +98,79 @@ class DevToolTracker extends ViewModelLifecycle {
   DependencyGraph get dependencyGraph {
     return DependencyGraph(
       watcherToViewModels: Map.unmodifiable(_bindingIds),
+      bindingInfos: Map.unmodifiable(_bindingInfos),
       viewModelInfos: Map.unmodifiable(_viewModelInfos),
       typeToInstances: Map.unmodifiable(_typeToInstances),
+    );
+  }
+
+  /// Registers a binding node independently from its ViewModel edges.
+  ///
+  /// [parentViewModel] is supplied for an internal dependency binding. The
+  /// relationship may initially be unresolved when the binding is created in
+  /// a parent constructor; [onCreate] fills in the parent generation ID once
+  /// that parent has entered the managed lifecycle.
+  void registerBinding({
+    required String bindingId,
+    required String name,
+    required bool isDependencyBinding,
+    ViewModel? parentViewModel,
+  }) {
+    final existing = _bindingInfos[bindingId];
+    final parentViewModelId =
+        parentViewModel == null ? null : _viewModelInstanceIds[parentViewModel];
+    final kind = isDependencyBinding ? 'dependency' : 'root';
+    final parentType = parentViewModel?.runtimeType.toString();
+
+    final next = existing == null
+        ? BindingInfo(
+            bindingId: bindingId,
+            name: name,
+            kind: kind,
+            createTime: DateTime.now(),
+            parentViewModelId: parentViewModelId,
+            parentViewModelType: parentType,
+          )
+        : existing.copyWith(
+            name: name,
+            kind: kind,
+            parentViewModelId: parentViewModelId ?? existing.parentViewModelId,
+            parentViewModelType: parentType ?? existing.parentViewModelType,
+          );
+
+    if (existing != null && existing.hasSameData(next)) return;
+    _bindingInfos[bindingId] = next;
+    _notifyListeners();
+  }
+
+  /// Marks a known binding as disposed while retaining its history.
+  ///
+  /// A dependency binding whose parent never completed creation is removed
+  /// instead. This keeps failed construction transactions from leaving
+  /// parentless virtual nodes in DevTools.
+  void disposeBinding(String bindingId) {
+    final info = _bindingInfos[bindingId];
+    if (info == null || info.isDisposed) return;
+    if (info.kind == 'dependency' && info.parentViewModelId == null) {
+      _bindingInfos.remove(bindingId);
+    } else {
+      _bindingInfos[bindingId] = info.copyWith(
+        isDisposed: true,
+        disposeTime: DateTime.now(),
+      );
+    }
+    _notifyListeners();
+  }
+
+  void _ensureUnknownBinding(String bindingId) {
+    _bindingInfos.putIfAbsent(
+      bindingId,
+      () => BindingInfo(
+        bindingId: bindingId,
+        name: bindingId,
+        kind: 'unknown',
+        createTime: DateTime.now(),
+      ),
     );
   }
 
@@ -144,6 +230,8 @@ class DevToolTracker extends ViewModelLifecycle {
     final instanceId = _getInstanceId(viewModel, arg);
     final typeName = viewModel.runtimeType.toString();
 
+    _viewModelInstanceIds[viewModel] = instanceId;
+
     _viewModelInfos[instanceId] = ViewModelInfo(
       instanceId: instanceId,
       typeName: typeName,
@@ -170,6 +258,16 @@ class DevToolTracker extends ViewModelLifecycle {
     );
 
     _typeToInstances.putIfAbsent(typeName, () => {}).add(instanceId);
+
+    final dependencyBinding = viewModel.dependencyBindingIfCreated;
+    if (dependencyBinding != null) {
+      registerBinding(
+        bindingId: dependencyBinding.id,
+        name: dependencyBinding.getName(),
+        isDependencyBinding: true,
+        parentViewModel: viewModel,
+      );
+    }
 
     viewModelLog("📱 onCreated, $instanceId");
 
@@ -218,6 +316,11 @@ class DevToolTracker extends ViewModelLifecycle {
     final instanceId = _getInstanceId(viewModel, arg);
     final typeName = viewModel.runtimeType.toString();
 
+    // Low-level/custom integrations can provide a binding ID without using a
+    // ViewModelBinding object. Keep those edges visible with an explicit
+    // fallback node; normal bindings will already have richer metadata.
+    _ensureUnknownBinding(bindingId);
+
     // Update watcher -> viewModels mapping
     _bindingIds.putIfAbsent(bindingId, () => {}).add(typeName);
 
@@ -254,6 +357,9 @@ class DevToolTracker extends ViewModelLifecycle {
       viewModels.remove(typeName);
       if (viewModels.isEmpty) {
         _bindingIds.remove(bindingId);
+        if (_bindingInfos[bindingId]?.kind == 'unknown') {
+          _bindingInfos.remove(bindingId);
+        }
       }
     }
 
@@ -303,6 +409,9 @@ class DevToolTracker extends ViewModelLifecycle {
           viewModels.remove(typeName);
           if (viewModels.isEmpty) {
             _bindingIds.remove(watcherId);
+            if (_bindingInfos[watcherId]?.kind == 'unknown') {
+              _bindingInfos.remove(watcherId);
+            }
           }
         }
       }
@@ -345,16 +454,20 @@ class DevToolTracker extends ViewModelLifecycle {
   /// Note: This will trigger listener notifications.
   void clear() {
     _bindingIds.clear();
+    _bindingInfos.clear();
     _viewModelInfos.clear();
     _typeToInstances.clear();
+    _viewModelInstanceIds = Expando<String>('view_model_instance_ids');
     _notifyListeners();
   }
 
   /// Resets all tracker state without notifying or retaining test listeners.
   void resetForTesting() {
     _bindingIds.clear();
+    _bindingInfos.clear();
     _viewModelInfos.clear();
     _typeToInstances.clear();
+    _viewModelInstanceIds = Expando<String>('view_model_instance_ids');
     _listeners.clear();
   }
 
@@ -388,6 +501,10 @@ class DevToolTracker extends ViewModelLifecycle {
         .where((info) => !info.isDisposed && info.watchers.isEmpty)
         .length;
     final totalWatchers = _bindingIds.length;
+    final activeBindings =
+        _bindingInfos.values.where((info) => !info.isDisposed).length;
+    final disposedBindings =
+        _bindingInfos.values.where((info) => info.isDisposed).length;
 
     return DependencyStats(
       activeInstances: activeInstances,
@@ -396,7 +513,86 @@ class DevToolTracker extends ViewModelLifecycle {
       totalWatchers: totalWatchers,
       viewModelTypes: _typeToInstances.length,
       disposedInstances: disposedInstances,
+      activeBindings: activeBindings,
+      disposedBindings: disposedBindings,
     );
+  }
+}
+
+/// DevTools metadata for one root or internal dependency binding.
+///
+/// Only scalar diagnostics data is retained. In particular, this object never
+/// stores the binding or parent ViewModel itself, so historical graph entries
+/// cannot extend either runtime lifetime.
+class BindingInfo {
+  /// Unique ID used by lifecycle callbacks and graph edges.
+  final String bindingId;
+
+  /// Human-readable binding name captured at registration.
+  final String name;
+
+  /// `root`, `dependency`, or `unknown` for low-level integrations.
+  final String kind;
+
+  /// Timestamp when this binding was first observed.
+  final DateTime createTime;
+
+  /// Parent ViewModel generation that owns this dependency binding.
+  final String? parentViewModelId;
+
+  /// Parent runtime type, also available before construction completes.
+  final String? parentViewModelType;
+
+  /// Whether the binding has completed its lifecycle.
+  final bool isDisposed;
+
+  /// Timestamp when the binding was disposed, if applicable.
+  final DateTime? disposeTime;
+
+  const BindingInfo({
+    required this.bindingId,
+    required this.name,
+    required this.kind,
+    required this.createTime,
+    this.parentViewModelId,
+    this.parentViewModelType,
+    this.isDisposed = false,
+    this.disposeTime,
+  });
+
+  BindingInfo copyWith({
+    String? name,
+    String? kind,
+    Object? parentViewModelId = _notProvided,
+    Object? parentViewModelType = _notProvided,
+    bool? isDisposed,
+    DateTime? disposeTime,
+  }) {
+    return BindingInfo(
+      bindingId: bindingId,
+      name: name ?? this.name,
+      kind: kind ?? this.kind,
+      createTime: createTime,
+      parentViewModelId: identical(parentViewModelId, _notProvided)
+          ? this.parentViewModelId
+          : parentViewModelId as String?,
+      parentViewModelType: identical(parentViewModelType, _notProvided)
+          ? this.parentViewModelType
+          : parentViewModelType as String?,
+      isDisposed: isDisposed ?? this.isDisposed,
+      disposeTime: disposeTime ?? this.disposeTime,
+    );
+  }
+
+  bool hasSameData(BindingInfo other) {
+    return bindingId == other.bindingId &&
+        name == other.name &&
+        kind == other.kind &&
+        createTime == other.createTime &&
+        parentViewModelId == other.parentViewModelId &&
+        parentViewModelType == other.parentViewModelType &&
+        isDisposed == other.isDisposed &&
+        disposeTime == other.disposeTime;
   }
 }
 
@@ -555,6 +751,9 @@ class DependencyGraph {
   /// Maps watcher IDs to sets of ViewModel type names they watch.
   final Map<String, Set<String>> watcherToViewModels;
 
+  /// Maps every observed binding ID to its lifecycle and kind metadata.
+  final Map<String, BindingInfo> bindingInfos;
+
   /// Maps ViewModel instance IDs to their detailed information.
   final Map<String, ViewModelInfo> viewModelInfos;
 
@@ -569,6 +768,7 @@ class DependencyGraph {
   /// - [typeToInstances]: Type name to instance ID mappings
   const DependencyGraph({
     required this.watcherToViewModels,
+    required this.bindingInfos,
     required this.viewModelInfos,
     required this.typeToInstances,
   });
@@ -661,6 +861,15 @@ class DependencyStats {
   /// This count is maintained for historical analysis and debugging.
   final int disposedInstances;
 
+  /// Number of registered bindings that are currently active.
+  final int activeBindings;
+
+  /// Number of registered bindings retained as disposed history.
+  final int disposedBindings;
+
+  /// Total number of registered root, dependency, and fallback bindings.
+  int get totalBindings => activeBindings + disposedBindings;
+
   /// Creates a new dependency statistics snapshot.
   ///
   /// Parameters:
@@ -677,6 +886,8 @@ class DependencyStats {
     required this.totalWatchers,
     required this.viewModelTypes,
     required this.disposedInstances,
+    this.activeBindings = 0,
+    this.disposedBindings = 0,
   });
 
   @override
@@ -688,6 +899,8 @@ DependencyStats:
   Shared Instances: $sharedInstances
   Orphaned Instances: $orphanedInstances
   Total Watchers: $totalWatchers
+  Active Bindings: $activeBindings
+  Disposed Bindings: $disposedBindings
   ViewModel Types: $viewModelTypes''';
   }
 }

@@ -20,23 +20,44 @@ class StatsPanel extends StatelessWidget {
         child: Column(
           children: [
             _StatRow(
-              label: 'Total',
+              label: 'ViewModels',
               value: stats.totalViewModels.toString(),
               icon: Icons.view_module,
               color: Colors.blue,
             ),
             const SizedBox(height: 8),
             _StatRow(
-              label: 'Active',
+              label: 'VM active',
               value: stats.activeViewModels.toString(),
               icon: Icons.play_circle_filled,
               color: Colors.green,
             ),
             const SizedBox(height: 8),
             _StatRow(
-              label: 'Disposed',
+              label: 'VM disposed',
               value: stats.disposedViewModels.toString(),
               icon: Icons.delete_outline,
+              color: Colors.orange,
+            ),
+            const Divider(height: 20),
+            _StatRow(
+              label: 'Bindings',
+              value: stats.totalBindings.toString(),
+              icon: Icons.hub_outlined,
+              color: Colors.indigo,
+            ),
+            const SizedBox(height: 8),
+            _StatRow(
+              label: 'Binding active',
+              value: stats.activeBindings.toString(),
+              icon: Icons.link,
+              color: Colors.green,
+            ),
+            const SizedBox(height: 8),
+            _StatRow(
+              label: 'Binding disposed',
+              value: stats.disposedBindings.toString(),
+              icon: Icons.link_off,
               color: Colors.orange,
             ),
           ],

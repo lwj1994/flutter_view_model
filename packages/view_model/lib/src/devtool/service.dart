@@ -135,6 +135,7 @@ class DevToolsService {
   ///
   /// Returns a map containing:
   /// - `viewModels`: List of ViewModel instance data
+  /// - `bindings`: List of all observed root and dependency bindings
   /// - `stats`: Statistical summary of ViewModel usage
   ///
   /// Each ViewModel entry includes:
@@ -169,6 +170,7 @@ class DevToolsService {
 
     return {
       'viewModels': viewModels,
+      'bindings': graph.bindingInfos.values.map(_serializeBinding).toList(),
       'stats': stats,
     };
   }
@@ -180,34 +182,46 @@ class DevToolsService {
   /// between bindings and ViewModel instances.
   ///
   /// Returns a map containing:
-  /// - `nodes`: List of ViewModel instances as graph nodes
-  /// - `edges`: List of dependency relationships as graph edges
+  /// - `viewModels`: List of ViewModel instances as graph nodes
+  /// - `bindings`: Explicit binding nodes, including nodes without VM edges
+  /// - `relationships`: Typed ownership relationships between graph nodes
   ///
   /// Each node represents a ViewModel instance with:
   /// - Unique ID, type name, and display label
   /// - Activity status for visual styling
   ///
-  /// Each edge represents a binding relationship from a
-  /// binding to a ViewModel.
+  /// Relationships distinguish a binding owning a ViewModel from a parent
+  /// ViewModel generation owning its internal dependency binding.
   Map<String, dynamic> _getDependencyGraph() {
     final tracker = DevToolTracker.instance;
     final graph = tracker.dependencyGraph;
 
-    final dependencies = <Map<String, dynamic>>[];
+    final relationships = <Map<String, dynamic>>[];
 
     for (final vm in graph.viewModelInfos.values) {
       for (final bindingId in vm.watchers) {
-        dependencies.add({
-          'from': bindingId,
-          'to': vm.instanceId,
-          'type': 'binding',
+        relationships.add({
+          'source': bindingId,
+          'target': vm.instanceId,
+          'kind': 'bindingOwnsViewModel',
           'isPrimaryOwner': bindingId == vm.primaryOwner,
         });
       }
     }
 
+    for (final binding in graph.bindingInfos.values) {
+      final parentViewModelId = binding.parentViewModelId;
+      if (binding.kind != 'dependency' || parentViewModelId == null) continue;
+      relationships.add({
+        'source': parentViewModelId,
+        'target': binding.bindingId,
+        'kind': 'viewModelOwnsDependencyBinding',
+        'isPrimaryOwner': false,
+      });
+    }
+
     return {
-      'nodes': graph.viewModelInfos.values
+      'viewModels': graph.viewModelInfos.values
           .map((vm) => {
                 'id': vm.instanceId,
                 'type': vm.typeName,
@@ -220,7 +234,8 @@ class DevToolsService {
                 ),
               })
           .toList(),
-      'edges': dependencies,
+      'bindings': graph.bindingInfos.values.map(_serializeBinding).toList(),
+      'relationships': relationships,
     };
   }
 
@@ -244,7 +259,24 @@ class DevToolsService {
       'sharedInstances': stats.sharedInstances,
       'orphanedInstances': stats.orphanedInstances,
       'totalWatchers': stats.totalWatchers,
+      'totalBindings': stats.totalBindings,
+      'activeBindings': stats.activeBindings,
+      'disposedBindings': stats.disposedBindings,
       'viewModelTypes': stats.viewModelTypes,
+    };
+  }
+
+  Map<String, dynamic> _serializeBinding(BindingInfo binding) {
+    return {
+      'id': binding.bindingId,
+      'name': binding.name,
+      'kind': binding.kind,
+      'isActive': !binding.isDisposed,
+      'isDisposed': binding.isDisposed,
+      'createdAt': binding.createTime.toIso8601String(),
+      'disposeTime': binding.disposeTime?.toIso8601String(),
+      'parentViewModelId': binding.parentViewModelId,
+      'parentViewModelType': binding.parentViewModelType,
     };
   }
 

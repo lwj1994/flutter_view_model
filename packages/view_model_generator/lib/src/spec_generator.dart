@@ -101,6 +101,15 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
       }
     }
 
+    final hasExplicitNonNullKey =
+        keyExpr != null && (keyIsString || keyExpr.trim() != 'null');
+    if (aliveForever && !hasExplicitNonNullKey) {
+      throw InvalidGenerationSourceError(
+        '@GenSpec(aliveForever: true) requires an explicit non-null key.',
+        element: element,
+      );
+    }
+
     final ConstructorElement? mainCtor = element.unnamedConstructor;
     final matchingFactory = _findSpecFactory(element);
 

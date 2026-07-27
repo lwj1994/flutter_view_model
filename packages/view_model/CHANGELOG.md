@@ -1,3 +1,32 @@
+## 1.1.0
+
+- Give every ViewModel generation a stable dependency binding. Nested children
+  now live for at least as long as their parent, retain unkeyed identity across
+  root-owner handoffs, and receive the parent's root binding additions/removals
+  in real time with source-aware reference counting.
+- Add construction-lineage and runtime dependency-cycle checks, failure-atomic
+  dependency-scope rollback, and transaction-level notification deduplication
+  for diamond graphs. Every `aliveForever` ViewModel now requires an explicit
+  key at both root and nested resolution sites so retained entries remain
+  globally reachable; the Store also rejects lower-level retained factories
+  without a key before invoking their builder.
+- Extend DevTools with an explicit lifecycle registry for every observed root
+  and dependency binding, including empty initialized roots. The graph now
+  renders parent-generation ownership as
+  `parent VM → virtual binding → child VM` and uses depth-aware layout while
+  replacing the legacy edge payload with typed ownership relationships.
+- Apply parent ownership consistently to `watch`/`read`, cached lookup, and
+  tag-batch lookup. Read variants still ignore child `notifyListeners()` but
+  observe handle disposal/recycle.
+- Remove the relationship-preserving `recreate` API from bindings and the
+  instance runtime. Use a new explicit key for an independent instance, or
+  force `recycle` and re-resolve through a `watch`/`read` getter when replacing
+  the shared generation globally is intentional.
+- Remove the deprecated `ObservableValue`, `ObserverBuilder`,
+  `ObserverBuilder2`, and `ObserverBuilder3` APIs. Use Flutter's
+  `ValueNotifier` with `ValueListenableBuilder` for widget-local values, or a
+  `StateViewModel` with `ViewModelSpec` for managed state.
+
 ## 1.0.7
 
 - Restore `ViewModelConfig.equals` as the global equality fallback. Full state
@@ -44,11 +73,6 @@
   metadata.
 
 ## 1.0.5
-- Deprecate `ObservableValue` and the `ObserverBuilder` family. Use Flutter's
-  `ValueNotifier` / `ValueListenableBuilder` for widget-local values, or
-  `StateViewModel` / `ViewModelSpec` for lifecycle-managed and shared state.
-  The compatibility APIs remain available in 1.x and are scheduled for removal
-  in 2.0.0.
 - Document getter-based ViewModel dependencies and shared-parent lifecycle
   boundaries.
 - Show all package versions and Codecov coverage in the README status table.
@@ -115,7 +139,6 @@
 
 ## 0.14.0
 - Docs: Add design philosophy section emphasizing Flutter-native, class-oriented approach
-- Docs: Add fine-grained reactivity documentation (StateViewModelValueWatcher and ObservableValue)
 - Docs: Update README tagline to highlight Flutter-native style
 
 ## 0.14.0-dev.1
@@ -442,41 +465,6 @@ class _MyPageState extends State<MyPage> with ViewModelStateMixin<MyPage>, Route
   });
   ```
 - Add `StateViewModel#listenStateSelect` to listen value diff.
-
-- Add `ObserverBuilder` family of widgets for fine-grained, reactive UI
-  updates. [doc](https://github.com/lwj1994/flutter_view_model/blob/main/docs/value_observer_doc.md)
-
-```dart
-// shareKey for share value cross any widget
-final observable = ObservableValue<int>(0, shareKey: share);
-observable.value = 20;
-
-ObserverBuilder<int>(observable: observable, 
-        builder: (v) {
-          return Text(v.toString());
-        },
-      )
-
-
-// observe 2 value
-ObserverBuilder2<int>(
-        observable1: observable1,
-        observable2: observable2,
-        builder: (v1,v2) {
-          //
-        },
-)
-
-// observe 3 value
-ObserverBuilder3<int>(
-            observable1: observable1,
-            observable2: observable2,
-            observable3: observable3,
-            builder: (v1,v2,v3) {
-
-            },  
-)
-```
 
 ## 0.6.0
 

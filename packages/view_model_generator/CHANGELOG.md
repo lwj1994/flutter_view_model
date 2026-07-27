@@ -1,3 +1,7 @@
+## 1.1.0
+- Version bump for consistency with the `view_model` 1.1.0 release line.
+- Reject `@GenSpec(aliveForever: true)` when it has no explicit non-null key.
+
 ## 1.0.7
 - Version bump for consistency with `view_model` 1.0.7 release.
 

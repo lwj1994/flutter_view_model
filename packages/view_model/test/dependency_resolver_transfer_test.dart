@@ -76,7 +76,10 @@ void main() {
         dependencyHandler.ownerResolvers.contains(stateA.testBinding), isTrue);
     expect(
         dependencyHandler.ownerResolvers.contains(stateB.testBinding), isTrue);
-    expect(initialChild.refHandler.dependencyBindings, [stateA.testBinding]);
+    expect(
+      initialChild.refHandler.dependencyBindings,
+      containsAll(<ViewModelBinding>[stateA.testBinding, stateB.testBinding]),
+    );
 
     // Dispose StateA by removing its widget.
     await tester.pumpWidget(
@@ -98,15 +101,19 @@ void main() {
     expect(
         dependencyHandler.ownerResolvers.contains(stateA.testBinding), isFalse);
 
-    // The child belonged to StateA and is disposed with that root. The getter
-    // must resolve a fresh child through the remaining StateB binding instead
-    // of retaining the disposed instance.
-    expect(initialChild.isDisposed, true);
+    // Child 的 identity 属于共享 parent generation；A 退出只移除 A 的
+    // propagated owner，B 仍通过 parent 保活同一个 Child。
+    expect(initialChild.isDisposed, false);
     final transferredChild = stateB.vm.childViewModel;
-    expect(identical(transferredChild, initialChild), false);
-    expect(identical(stateB.vm.childViewModel, transferredChild), true);
+    expect(identical(transferredChild, initialChild), true);
     expect(
-        transferredChild.refHandler.dependencyBindings, [stateB.testBinding]);
+      transferredChild.refHandler.dependencyBindings,
+      contains(stateB.testBinding),
+    );
+    expect(
+      transferredChild.refHandler.dependencyBindings,
+      isNot(contains(stateA.testBinding)),
+    );
     expect(vm.isDisposed, false);
     expect(transferredChild.isDisposed, false);
     await tester.pumpWidget(

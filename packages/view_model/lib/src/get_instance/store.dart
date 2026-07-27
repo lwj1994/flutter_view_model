@@ -8,11 +8,14 @@
 library;
 
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/config.dart';
+import 'package:view_model/src/view_model/construction_transaction.dart';
+import 'package:view_model/src/view_model/update_transaction.dart';
 import 'manager.dart';
 
 /// Sentinel value for distinguishing between "not provided" and "null" in
@@ -35,7 +38,11 @@ class _Undefined {
 ///
 /// The store maintains a map of instances keyed by their unique identifiers
 /// and automatically handles cleanup when instances are no longer needed.
-class Store<T> {
+abstract interface class RecyclableInstanceStore {
+  bool tryRecycle(Object instance);
+}
+
+class Store<T> implements RecyclableInstanceStore {
   Store({void Function()? onStoreEmpty}) : _onStoreEmpty = onStoreEmpty;
 
   final void Function()? _onStoreEmpty;
@@ -115,18 +122,10 @@ class Store<T> {
   /// - [notifier]: The instance handle to monitor for disposal
   void _listenDispose(InstanceHandle<T> notifier) {
     void onNotify() {
-      switch (notifier.action) {
-        case null:
-          break;
-        case InstanceAction.dispose:
-          _instances.remove(notifier.arg.key);
-          notifier.removeListener(onNotify);
-          if (_instances.isEmpty) {
-            _onStoreEmpty?.call();
-          }
-          break;
-        case InstanceAction.recreate:
-          break;
+      _instances.remove(notifier.arg.key);
+      notifier.removeListener(onNotify);
+      if (_instances.isEmpty) {
+        _onStoreEmpty?.call();
       }
     }
 
@@ -157,7 +156,12 @@ class Store<T> {
     if (_disposed) {
       throw ViewModelError("Store<$T> has been disposed.");
     }
-    final realKey = factory.arg.key ?? Object();
+    if (factory.arg.aliveForever && factory.arg.key == null) {
+      throw ViewModelError(
+        'An aliveForever instance must use an explicit key.',
+      );
+    }
+    final realKey = factory.arg.key ?? ViewModelPrivateKey();
     final bindingId = factory.arg.bindingId;
     final arg = factory.arg.copyWith(
       key: realKey,
@@ -165,10 +169,10 @@ class Store<T> {
     // cache
     if (_instances.containsKey(realKey) && _instances[realKey] != null) {
       final notifier = _instances[realKey]!;
-      final newBind = bindingId != null && !notifier.containsBinding(bindingId);
-      if (newBind) {
-        notifier.bind(bindingId);
-      }
+      // `bind` is source-aware. Even when this id is already present through
+      // a parent dependency edge, the direct binding still needs its own
+      // source so either relationship can be released independently.
+      notifier.bind(bindingId);
       return notifier;
     }
 
@@ -176,22 +180,30 @@ class Store<T> {
       throw ViewModelError("${T} factory == null and cache is null");
     }
 
-    // create new instance
-    final instance = factory.builder!();
-    if (_disposed) {
-      _disposeUntrackedInstance(instance, arg);
-      throw ViewModelError(
-        'Cannot create $T because its Store was disposed while the factory '
-        'builder was running (for example by ViewModel.reset()). '
-        'The new instance was disposed and was not cached.',
-      );
-    }
+    // Build and initialize the handle in one construction transaction. A
+    // failed constructor/onCreate releases dependency scopes created before
+    // the error and leaves no partially cached instance behind.
+    final create = runInViewModelConstruction<InstanceHandle<T>>(
+      type: T,
+      key: realKey,
+      isImplicit: realKey is ViewModelPrivateKey,
+      body: () {
+        final instance = factory.builder!();
+        if (_disposed) {
+          _disposeUntrackedInstance(instance, arg);
+          throw ViewModelError(
+            'Cannot create $T because its Store was disposed while the factory '
+            'builder was running (for example by ViewModel.reset()). '
+            'The new instance was disposed and was not cached.',
+          );
+        }
 
-    final create = InstanceHandle<T>(
-      instance: instance,
-      arg: arg,
-      factory: factory.builder!,
-      index: _nextIndex++,
+        return InstanceHandle<T>(
+          instance: instance,
+          arg: arg,
+          index: _nextIndex++,
+        );
+      },
     );
     if (_disposed) {
       create.onDispose();
@@ -222,30 +234,33 @@ class Store<T> {
     }
   }
 
-  /// Recreates an existing instance with optional custom builder.
-  ///
-  /// This method finds the instance handle for the given instance and
-  /// triggers its recreation. The new instance will replace the old one
-  /// while maintaining the same handle and binding relationships.
-  ///
-  /// Parameters:
-  /// - [t]: The existing instance to recreate
-  /// - [builder]: Optional custom builder for the new instance
-  ///
-  /// Returns the newly created instance of type [T].
-  T recreate(
-    T t, {
-    T Function()? builder,
-  }) {
+  /// Force-recycles the handle that currently owns [t].
+  void recycle(T t) {
     if (_disposed) {
       throw ViewModelError("Store<$T> has been disposed.");
     }
     final find = _instances.values.firstWhere(
-      (e) => e.instance == t,
+      (handle) => identical(handle.instance, t),
       orElse: () => throw ViewModelError(
-          "Cannot recreate ${T} instance. Instance not found in store."),
+        'Cannot recycle $T instance. Instance not found in store.',
+      ),
     );
-    return find.recreate(builder: builder);
+    find.unbindAll(force: true);
+  }
+
+  @override
+  bool tryRecycle(Object instance) {
+    if (_disposed) return false;
+    InstanceHandle<T>? matched;
+    for (final handle in _instances.values) {
+      if (!handle.isDisposed && identical(handle.instance, instance)) {
+        matched = handle;
+        break;
+      }
+    }
+    if (matched == null) return false;
+    matched.unbindAll(force: true);
+    return true;
   }
 
   void dispose({bool force = false}) {
@@ -274,35 +289,40 @@ class Store<T> {
 /// Handle for managing a ViewModel instance and its lifecycle.
 ///
 /// This class wraps a ViewModel instance and provides lifecycle management,
-/// binding tracking, and recreation capabilities. It acts as a proxy between
+/// binding tracking, and disposal. It acts as a proxy between
 /// the store and the actual ViewModel instance.
 ///
 /// Key responsibilities:
-/// - Instance lifecycle management (creation, disposal, recreation)
+/// - Instance lifecycle management (creation and disposal)
 /// - Binding registration and removal
 /// - Automatic disposal when no bindings remain
 /// - Notification of lifecycle events
 ///
 /// The handle uses [ChangeNotifier] to notify listeners of important events
-/// like disposal and recreation.
+/// like disposal.
 class InstanceHandle<T> with ChangeNotifier {
   /// Arguments used for instance creation and identification.
   final InstanceArg arg;
 
-  /// List of binding IDs currently bound to this instance.
-  final List<String> _bindingIds = List.empty(growable: true);
+  /// Active sources grouped by their externally visible binding id.
+  ///
+  /// A binding id can reach the same instance through more than one path
+  /// (for example directly and through a parent ViewModel). Lifecycle hooks
+  /// still observe a binding id only once, while the instance remains alive
+  /// until the last source for that id is removed.
+  final Map<String, Set<Object>> _bindingSources = {};
+
+  /// Stable source tokens used by the legacy/direct [bind]/[unbind] pair.
+  final Map<String, Object> _directBindingSources = {};
 
   /// Unmodifiable view of active binding IDs.
-  List<String> get bindingIds => List.unmodifiable(_bindingIds);
+  List<String> get bindingIds => List.unmodifiable(_bindingSources.keys);
 
   /// Returns true if [id] is in the active binding list.
   ///
   /// Prefer this over `bindingIds.contains(id)` to avoid allocating
   /// an unmodifiable list wrapper on every call.
-  bool containsBinding(String id) => _bindingIds.contains(id);
-
-  /// Factory function for creating new instances of this type.
-  final T Function() factory;
+  bool containsBinding(String id) => _bindingSources.containsKey(id);
 
   /// Creation index for ordering instances by creation time.
   final int index;
@@ -329,12 +349,10 @@ class InstanceHandle<T> with ChangeNotifier {
   /// - [instance]: The ViewModel instance to wrap
   /// - [arg]: Instance arguments for identification
   /// - [index]: Creation order index
-  /// - [factory]: Factory function for recreation
   InstanceHandle({
     required T instance,
     required this.arg,
     required this.index,
-    required this.factory,
   }) : _instance = instance {
     onCreate(arg);
   }
@@ -347,9 +365,23 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Parameters:
   /// - [id]: The binding ID to add (ignored if null or already exists)
   void bind(String? id) {
-    if (_disposed || _bindingIds.contains(id) || id == null) return;
-    _bindingIds.add(id);
-    _notifyBind(id);
+    if (_disposed || id == null) return;
+    final source = _directBindingSources.putIfAbsent(id, Object.new);
+    bindFrom(id, source);
+  }
+
+  /// Adds one ownership [source] for [id].
+  ///
+  /// The first source emits `onBind`; additional sources with the same id are
+  /// retained silently and prevent an unrelated owner path from unbinding the
+  /// instance prematurely.
+  void bindFrom(String? id, Object source) {
+    if (_disposed || id == null) return;
+    final sources = _bindingSources.putIfAbsent(id, HashSet.identity);
+    if (!sources.add(source)) return;
+    if (sources.length == 1) {
+      _notifyBind(id);
+    }
   }
 
   /// Removes a binding from this instance.
@@ -361,35 +393,34 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Parameters:
   /// - [id]: The binding ID to remove
   void unbind(String id) {
-    if (_disposed) return;
-    if (_bindingIds.remove(id)) {
-      try {
-        if (_instance is InstanceLifeCycle) {
-          (_instance as InstanceLifeCycle).onUnbind(arg, id);
-        }
-      } catch (e, stack) {
-        reportViewModelError(e, stack, ErrorType.lifecycle,
-            '${_instance.runtimeType} onUnbind error');
-      }
-      if (_bindingIds.isEmpty) {
-        _recycle();
-      }
-    }
+    final source = _directBindingSources.remove(id);
+    if (source == null) return;
+    unbindFrom(id, source);
   }
 
-  /// Current action being performed on this instance.
-  InstanceAction? _action;
-  InstanceAction? _lastAction;
-
-  /// Gets the current or most recent action on this instance.
+  /// Removes one ownership [source] for [id].
   ///
-  /// During a [notifyListeners] callback, returns the in-progress action
-  /// (e.g. [InstanceAction.dispose] or [InstanceAction.recreate]).
-  /// After the callback completes, [_action] is cleared to `null`.
-  /// Once the handle is disposed, falls back to [_lastAction] so that
-  /// late readers (e.g. Store's dispose listener) can still observe what
-  /// happened.
-  InstanceAction? get action => _action ?? (_disposed ? _lastAction : null);
+  /// `onUnbind` and automatic recycling happen only after the last source for
+  /// that id has gone away.
+  void unbindFrom(String id, Object source) {
+    if (_disposed) return;
+    final sources = _bindingSources[id];
+    if (sources == null || !sources.remove(source)) return;
+    if (sources.isNotEmpty) return;
+
+    _bindingSources.remove(id);
+    try {
+      if (_instance is InstanceLifeCycle) {
+        (_instance as InstanceLifeCycle).onUnbind(arg, id);
+      }
+    } catch (e, stack) {
+      reportViewModelError(e, stack, ErrorType.lifecycle,
+          '${_instance.runtimeType} onUnbind error');
+    }
+    if (_bindingSources.isEmpty) {
+      _recycle();
+    }
+  }
 
   /// Disposes this instance and triggers cleanup.
   ///
@@ -398,10 +429,7 @@ class InstanceHandle<T> with ChangeNotifier {
   /// unusable after this call.
   void _recycle({bool force = false}) {
     if (arg.aliveForever && !force) return;
-    _action = InstanceAction.dispose;
-    _lastAction = _action;
-    notifyListeners();
-    _action = null;
+    runInViewModelUpdateTransaction(notifyListeners);
     onDispose();
   }
 
@@ -410,88 +438,19 @@ class InstanceHandle<T> with ChangeNotifier {
     // Skip onUnbind callbacks and cleanup for aliveForever instances,
     // as they should retain their bindings.
     if (arg.aliveForever && !force) return;
-    for (int i = 0; i < _bindingIds.length; i++) {
+    for (final bindingId in _bindingSources.keys.toList(growable: false)) {
       try {
         if (_instance is InstanceLifeCycle) {
-          (_instance as InstanceLifeCycle).onUnbind(arg, _bindingIds[i]);
+          (_instance as InstanceLifeCycle).onUnbind(arg, bindingId);
         }
       } catch (e, stack) {
         reportViewModelError(e, stack, ErrorType.lifecycle,
             '${_instance.runtimeType} onUnbind error');
       }
     }
-    _bindingIds.clear();
+    _bindingSources.clear();
+    _directBindingSources.clear();
     _recycle(force: force);
-  }
-
-  /// Recreates the instance with optional custom builder.
-  ///
-  /// This method disposes the current instance and creates a new one,
-  /// either using the provided builder or the original factory function.
-  /// All binding relationships are preserved.
-  ///
-  /// Parameters:
-  /// - [builder]: Optional custom builder for the new instance
-  ///
-  /// Returns the newly created instance.
-  T recreate({
-    T Function()? builder,
-  }) {
-    if (_disposed) {
-      throw ViewModelError("Cannot recreate $T instance. Handle is disposed.");
-    }
-    final previous = _instance;
-    if (previous == null) {
-      throw ViewModelError(
-          "Cannot recreate $T instance. Instance is disposed.");
-    }
-    final activeBindingIds = List<String>.of(_bindingIds);
-    final recreated = (builder?.call()) ?? factory.call();
-    if (!_isActiveWith(previous)) {
-      _abortInvalidatedRecreate(previous, recreated);
-    }
-    _tryCallInstanceDispose(previous);
-    if (!_isActiveWith(previous)) {
-      _abortInvalidatedRecreate(previous, recreated);
-    }
-    _instance = recreated;
-    _notifyCreate(arg);
-    _requireActiveRecreatedInstance(recreated);
-    for (final bindingId in activeBindingIds) {
-      _notifyBind(bindingId);
-      _requireActiveRecreatedInstance(recreated);
-    }
-    _action = InstanceAction.recreate;
-    _lastAction = _action;
-    notifyListeners();
-    _action = null;
-    return instance;
-  }
-
-  bool _isActiveWith(T expected) {
-    return !_disposed && identical(_instance, expected);
-  }
-
-  Never _abortInvalidatedRecreate(T previous, T recreated) {
-    final replacementIsManaged = _isActiveWith(recreated);
-    if (!replacementIsManaged && !identical(recreated, previous)) {
-      _tryCallInstanceDispose(recreated);
-    }
-    throw ViewModelError(
-      'Cannot recreate $T because its handle was disposed or replaced while '
-      'the builder was running (for example by '
-      'ViewModel.reset()). The detached replacement was disposed '
-      'and was not installed.',
-    );
-  }
-
-  void _requireActiveRecreatedInstance(T recreated) {
-    if (_isActiveWith(recreated)) return;
-    throw ViewModelError(
-      'Cannot recreate $T because its handle was disposed or replaced while '
-      'the replacement lifecycle was being initialized (for example by '
-      'ViewModel.reset()).',
-    );
   }
 
   @override
@@ -559,20 +518,10 @@ class InstanceHandle<T> with ChangeNotifier {
     _disposed = true;
     _tryCallInstanceDispose(_instance);
     _instance = null;
+    _bindingSources.clear();
+    _directBindingSources.clear();
     super.dispose();
   }
-}
-
-/// Actions that can be performed on ViewModel instances.
-///
-/// These actions are used to track the current state of instance operations
-/// and notify listeners of important lifecycle events.
-enum InstanceAction {
-  /// The instance is being disposed and will become unusable.
-  dispose,
-
-  /// The instance is being recreated with a new instance object.
-  recreate,
 }
 
 /// Interface for ViewModel lifecycle management.
@@ -641,7 +590,8 @@ class InstanceArg {
   ///
   /// When provided, this key is used to cache and retrieve instances.
   /// Multiple requests with the same key will return the same instance.
-  /// If null, a UUID will be generated automatically.
+  /// A framework-private key is generated when this is null and
+  /// [aliveForever] is false. Retained instances require an explicit key.
   final Object? key;
 
   /// Logical grouping identifier for related instances.
@@ -659,6 +609,7 @@ class InstanceArg {
   final String? bindingId;
 
   /// Whether the instance should live forever (never be disposed).
+  /// Requires [key] to be non-null.
   final bool aliveForever;
 
 //<editor-fold desc="Data Methods">

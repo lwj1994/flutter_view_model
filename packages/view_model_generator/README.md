@@ -84,7 +84,10 @@ Rules:
 class AuthViewModel extends ViewModel {}
 ```
 
-If the spec has arguments, `aliveForever` is generated as a closure.
+Every `aliveForever` spec must declare a non-null key. `@GenSpec` reports a
+generation error when a statically missing key is detected; dynamic null keys
+are rejected at resolution before the builder runs. If the spec has arguments,
+`aliveForever` is generated as a closure.
 
 ## Key and Tag
 

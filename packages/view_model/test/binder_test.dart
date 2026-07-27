@@ -119,7 +119,7 @@ void main() {
       binder.dispose();
     });
 
-    test('ViewModelBinding recycleViewModel forces recreation', () {
+    test('ViewModelBinding recycle forces the next read to create', () {
       final binder = TestBinder();
       final factory = TestViewModelFactory();
 

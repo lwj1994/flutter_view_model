@@ -19,7 +19,10 @@ class ViewModelInspector extends StatefulWidget {
 class _ViewModelInspectorState extends State<ViewModelInspector> {
   List<ViewModelInfo> _viewModels = [];
   DependencyStats _stats = DependencyStats.empty();
-  DependencyGraphResult _graph = DependencyGraphResult(nodes: [], edges: []);
+  DependencyGraphResult _graph = DependencyGraphResult(
+    viewModels: [],
+    relationships: [],
+  );
   Timer? _refreshTimer;
   String _filter = 'all';
   bool _realTimeUpdate = true;
@@ -98,7 +101,10 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
     try {
       graphResult = await _viewModelService.getDependencyGraph();
     } catch (e) {
-      graphResult = DependencyGraphResult(nodes: [], edges: []);
+      graphResult = DependencyGraphResult(
+        viewModels: [],
+        relationships: [],
+      );
     }
 
     if (!mounted || requestId != _loadRequestId) return;
@@ -204,7 +210,7 @@ class _ViewModelInspectorState extends State<ViewModelInspector> {
                     const SizedBox(height: 8),
                     _InfoTile(
                       title: 'Bindings',
-                      value: _graph.edges.map((e) => e.from).toSet().length,
+                      value: _graph.bindings.length,
                     ),
                     const SizedBox(height: 8),
                     _InfoTile(

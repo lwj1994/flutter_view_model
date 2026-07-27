@@ -40,23 +40,22 @@ npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
 - [ViewModelSpec](#viewmodelspec)
 - [Widget Integration](#widget-integration)
   - [ViewModelStateMixin](#viewmodelstatemixin)
-  - [ViewModelBuilder](#viewmodelbuilder)
   - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
 - [viewModelBinding API](#viewmodelbinding-api)
-  - [watch vs read](#watch-vs-read)
+  - [watch and read (recommended)](#watch-and-read-recommended)
+  - [Cached lookup (advanced)](#cached-lookup-advanced)
   - [listen / listenState / listenStateSelect](#listen--listenstate--listenstateselect)
   - [Lifecycle Control](#lifecycle-control)
 - [Instance Sharing](#instance-sharing)
   - [key-based Sharing](#key-based-sharing)
   - [tag-based Lookup](#tag-based-lookup)
   - [aliveForever Retention](#aliveforever-retention)
-  - [Static Global Access](#static-global-access)
 - [ViewModelBinding in Any Class](#viewmodelbinding-in-any-class)
 - [ViewModel-to-ViewModel Dependencies](#viewmodel-to-viewmodel-dependencies)
+  - [Child ViewModel lifecycle diagram](#child-viewmodel-lifecycle-diagram)
 - [Fine-Grained Reactivity](#fine-grained-reactivity)
   - [StateViewModelSelector](#stateviewmodelselector)
   - [StateViewModelValueWatcher](#stateviewmodelvaluewatcher)
-  - [Deprecated: ObservableValue & ObserverBuilder](#deprecated-observablevalue--observerbuilder)
 - [Pause / Resume](#pause--resume)
 - [Lifecycle Details](#lifecycle-details)
   - [Reference Counting (Binding)](#reference-counting-binding)
@@ -77,7 +76,7 @@ The library is organized in three layers:
 ```
 ┌─────────────────────────────────────────────────┐
 │              Widget / Consumer Layer            │
-│  ViewModelStateMixin, ViewModelBuilder, ...     │
+│  ViewModelStateMixin, ViewModelStatelessMixin   │
 └───────────────────┬─────────────────────────────┘
                     │ watch / read
 ┌───────────────────▼─────────────────────────────┐
@@ -91,8 +90,8 @@ The library is organized in three layers:
 ┌───────────────────▼─────────────────────────────┐
 │           Instance Management Layer             │
 │  InstanceManager ─► Store<T> ─► InstanceHandle  │
-│  Type-keyed registry. Each handle tracks a      │
-│  list of bindingIds (reference count).          │
+│  Type-keyed registry. Each handle tracks unique │
+│  bindingIds plus source-aware owner paths.      │
 │  Auto-disposes when bindingIds becomes empty.   │
 └─────────────────────────────────────────────────┘
 ```
@@ -100,10 +99,10 @@ The library is organized in three layers:
 **Key mechanics:**
 
 1. Each `ViewModelBinding` (typically one per widget) has a unique `id` string.
-2. Both `watch(spec)` and `read(spec)` obtain or create the ViewModel instance, then call `bind(id)` on the `InstanceHandle` to add the binding's `id` to the handle's `bindingIds` list. This is the **reference count**. Both methods bind; the difference is that `watch` also attaches a change listener.
-3. When the `ViewModelBinding` disposes, it calls `unbind(id)` on every handle it bound to. If a handle's `bindingIds` becomes empty (and `aliveForever` is false), the ViewModel is automatically disposed.
-4. `watch` additionally calls `_addListener`, which registers a callback on the ViewModel via `listen()`. When the ViewModel calls `notifyListeners()`, this callback invokes `onUpdate()` on the binding. For `WidgetViewModelBinding`, `onUpdate()` calls `setState()` to trigger a rebuild.
-5. ViewModel-to-ViewModel dependencies are resolved through Dart **Zones**: when a ViewModel is constructed via `_createViewModel`, the parent `ViewModelBinding` is stored in a zone value using `runWithBinding()`. Inside the new ViewModel's constructor, accessing `viewModelBinding` resolves from the zone, so nested dependencies bind to the same root binding.
+2. Both `watch(spec)` and `read(spec)` obtain or create the ViewModel instance, then bind it for lifecycle management. A visible binding id can have multiple sources (direct, or through one or more parents); `onBind` runs for the first source and `onUnbind` for the last.
+3. When the last source for every binding id is removed (and `aliveForever` is false), the ViewModel is automatically disposed.
+4. `watch` additionally registers a change listener. Synchronous propagation uses one transaction and deduplicates by binding, so a diamond graph—or a root also watching the leaf directly—updates that binding once.
+5. Every managed ViewModel generation lazily owns a stable internal dependency binding. It supplies the private default key for unkeyed children, keeps resolved children alive for at least the parent's lifetime, and mirrors the parent's current root bindings to those children in real time.
 
 ---
 
@@ -116,7 +115,7 @@ The entire library revolves around two mixins that can be applied to **any Dart 
 Any class that mixes in `ViewModel` gains:
 - Lifecycle callbacks (`onCreate`, `onBind`, `onUnbind`, `onDispose`)
 - Listener support (`notifyListeners()`, `listen()`, `update()`)
-- Access to other ViewModels via `viewModelBinding` (resolved from the parent binding through Zones)
+- Access to other ViewModels via a generation-scoped `viewModelBinding`
 - Automatic disposal registration via `addDispose()`
 
 ```dart
@@ -302,18 +301,21 @@ Calling `userSpec('abc')` returns a `ViewModelFactory<UserViewModel>` that you c
 
 An instance's identity is the combination of the resolved generic ViewModel
 type `T` and its effective `key`; the builder's runtime result type is not part
-of identity, and `tag` is only a grouping/lookup label. When factory `key()`
-returns `null`, the current `ViewModelBinding` supplies a private default key,
-so repeated `watch`/`read` calls for the same `T` reuse one instance within
-that binding while different bindings remain isolated. Set a key when you need
-to:
+of identity, and `tag` is only a grouping/lookup label. For an ordinary
+non-retained instance, when factory `key()` returns `null`, the current
+`ViewModelBinding` supplies a private default key, so repeated `watch`/`read`
+calls for the same `T` reuse one instance within that binding while different
+bindings remain isolated. Set a key when you need to:
 
 - share an instance across bindings;
 - distinguish multiple instances of the same `T` in one binding; or
 - give shared instances a stable identity across all resolving bindings.
 
 A key does not keep an instance alive; retention is controlled separately by
-`aliveForever`.
+`aliveForever`. Every `aliveForever` spec must use an explicit key, whether it
+is resolved by a root binding or another ViewModel. An unkeyed retained spec
+throws `ViewModelError` before its builder runs, and the Store enforces the
+same invariant for lower-level factories.
 
 In debug mode, resolving different specs with the same `T` and effective key
 from one binding emits a warning: instance identity ignores the builder, so the
@@ -349,26 +351,6 @@ The mixin:
 - Registers three default `PauseProvider`s (route, ticker mode, app lifecycle).
 - Disposes everything (unbinds all handles) in `State.dispose()`.
 
-### ViewModelBuilder
-
-A convenience widget that internally uses `ViewModelStateMixin`, so you don't need a custom `State` class:
-
-```dart
-ViewModelBuilder<CounterViewModel>(
-  counterSpec,
-  builder: (vm) => Text('${vm.count}'),
-)
-```
-
-For fetching an already-existing (cached) ViewModel:
-
-```dart
-CachedViewModelBuilder<CounterViewModel>(
-  shareKey: 'my-counter',
-  builder: (vm) => Text('${vm.count}'),
-)
-```
-
 ### ViewModelStatelessMixin
 
 Mix into `StatelessWidget` for lightweight usage. The mixin creates a custom `Element` that owns the `WidgetViewModelBinding`:
@@ -391,14 +373,17 @@ class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
 
 `viewModelBinding` is the accessor provided by `ViewModelStateMixin`, `ViewModelStatelessMixin`, the `ViewModel` mixin, or any class that mixes in `ViewModelBinding`. It exposes `ViewModelBindingInterface` with these methods:
 
-### watch vs read
+### watch and read (recommended)
 
-Both `watch` and `read` **bind** the current `ViewModelBinding` to the ViewModel (adding its `bindingId` to the handle's `bindingIds`). Both contribute to the reference count that keeps the ViewModel alive. The difference is only in listener registration:
+Normal application code should resolve ViewModels through a stable spec. Both
+APIs create the instance when absent, **bind** the current `ViewModelBinding`,
+and observe handle disposal (including force-recycle). `watch` additionally listens to the
+ViewModel's own `notifyListeners()`:
 
-| | Creates if absent? | Binds? | Listens for changes? | Triggers rebuild? |
+| API | Creates if absent? | Binds when found? | VM `notifyListeners()` | Handle disposal |
 |---|---|---|---|---|
 | `watch(spec)` | Yes | Yes | Yes | Yes |
-| `read(spec)` | Yes | Yes | No | No |
+| `read(spec)` | Yes | Yes | No | Yes |
 
 ```dart
 // In initState or build — want rebuilds when ViewModel changes
@@ -409,6 +394,29 @@ void _onTap() {
   viewModelBinding.read(spec).doSomething();
 }
 ```
+
+### Cached lookup (advanced)
+
+> [!CAUTION]
+> Do not use cached lookup as a substitute for spec-based dependency
+> resolution. It reaches into instances that must already have been created by
+> another path, couples the caller to cache identity/order, and cannot create a
+> missing dependency. Use it only when that cross-owner cache query is
+> intentional and you understand its lifecycle consequences.
+
+| API | Creates if absent? | Binds when found? | VM `notifyListeners()` | Handle disposal |
+|---|---|---|---|---|
+| `watchCached(key/tag)` | No | Yes | Yes | Yes |
+| `readCached(key/tag)` | No | Yes | No | Yes |
+| `maybeWatchCached(key/tag)` | No; returns `null` | Yes | Yes | Yes |
+| `maybeReadCached(key/tag)` | No; returns `null` | Yes | No | Yes |
+| `watchCachesByTag(tag)` | No; returns all matches | Yes | Yes | Yes |
+| `readCachesByTag(tag)` | No; returns all matches | Yes | No | Yes |
+
+All six APIs are lookup-only. The non-`maybe` single-result methods throw on a
+miss; `maybe*` returns `null`; tag-batch methods return every match. A
+single-result lookup by `tag` can be ambiguous and follows cache creation order,
+so use the batch APIs when several instances may share that tag.
 
 ### listen / listenState / listenStateSelect
 
@@ -454,15 +462,16 @@ lifecycle controls are:
   removes every owner and force-disposes the shared cached instance, including
   an `aliveForever` instance. Use it only when that global effect is explicitly
   intended. The next `watch`/`read` creates a fresh instance.
-- `recreate(vm, builder: ...)` replaces the instance while preserving active
-  binding relationships. Without `builder`, the original factory is reused.
+
+There is no in-place instance replacement API. To obtain a distinct instance,
+use a new explicit key. If replacing the shared cached generation globally is
+intentional, call `recycle(vm)` and let resolver getters call
+`watch(spec)`/`read(spec)` again. This creates a new handle and dependency tree
+through the normal cache-miss path instead of migrating relationships between
+objects.
 
 Custom selector equality is the optional `equals` argument on
-`listenStateSelect`. `recreate` remains a separate optional capability: a type
-that directly implements `ViewModelBindingInterface` opts in by also
-implementing `ViewModelBindingRecreateCapability`. Calling `recreate` through
-the interface extension on an unsupported implementation throws
-`UnsupportedError`.
+`listenStateSelect`.
 
 > **After `recycle`, the old object is disposed.** Every consumer—especially
 > other owners of a shared instance—must resolve the ViewModel through a
@@ -473,8 +482,6 @@ the interface extension on an unsupported implementation throws
 
 ```dart
 MyViewModel get vm => viewModelBinding.watch(mySpec); // resolve on each access
-
-MyViewModel replaceInPlace() => viewModelBinding.recreate(vm);
 
 // Advanced escape hatch only; this affects every owner:
 void resetGlobally() => viewModelBinding.recycle(vm);
@@ -488,8 +495,9 @@ void resetGlobally() => viewModelBinding.recycle(vm);
 ### key-based Sharing
 
 When a `ViewModelSpec<T>` has a `key`, any binding that resolves the same `T`
-with an equal key gets the **same instance**. Each binding adds its own
-`bindingId` to the handle — the instance stays alive until all bindings unbind.
+with an equal key gets the **same instance**. Each binding contributes a source
+to its `bindingId`; direct and parent-propagated sources can coexist. The
+instance stays alive until every source for every binding id has been removed.
 
 ```dart
 final spec = ViewModelSpec<CounterViewModel>(
@@ -504,10 +512,11 @@ viewModelBinding.watch(spec);
 viewModelBinding.watch(spec);
 ```
 
-When factory `key()` returns `null`, the binding supplies a private default
-key. This gives one instance per resolved generic ViewModel type `T` within
-that binding, isolated from other bindings. To create multiple instances of
-the same `T` in one binding, give their specs distinct keys.
+For `aliveForever: false`, when factory `key()` returns `null`, the binding
+supplies a private default key. This gives one instance per resolved generic
+ViewModel type `T` within that binding, isolated from other bindings. To create
+multiple instances of the same `T` in one binding, give their specs distinct
+keys. An `aliveForever` instance cannot use this private default.
 
 ### tag-based Lookup
 
@@ -524,7 +533,8 @@ final spec = ViewModelSpec<ItemVM>(
 
 Set `aliveForever: true` to skip automatic disposal when the handle's
 `bindingIds` becomes empty. The instance remains cached until it is explicitly
-force-disposed with `recycle` or the process ends:
+force-disposed with `recycle`, `ViewModel.reset()` is called, or the process
+ends:
 
 ```dart
 final authSpec = ViewModelSpec<AuthViewModel>(
@@ -533,6 +543,11 @@ final authSpec = ViewModelSpec<AuthViewModel>(
   aliveForever: true,
 );
 ```
+
+An `aliveForever` parent transitively retains children already resolved by its
+generation scope. Every `aliveForever` spec must use an explicit key at both
+root and nested resolution sites, giving the retained cache a globally
+reachable identity.
 
 ## ViewModelBinding in Any Class
 
@@ -597,11 +612,11 @@ You can override `onUpdate()`, `onPause()`, `onResume()` in your class. You can 
 
 ## ViewModel-to-ViewModel Dependencies
 
-Inside a ViewModel, `viewModelBinding` resolves through the owner binding
-currently selected by `refHandler`: the first remaining owner, not necessarily
-the caller's root. Expose nested ViewModels through resolver getters that call
-`watch`/`read` on every access, so each access uses that selected binding. Within
-one binding, the registry still returns the same managed instance:
+Inside a ViewModel, `viewModelBinding` is stable for that parent object
+generation. Its private default key gives unkeyed children a stable identity
+even when the parent's root owners change. Expose nested ViewModels through
+resolver getters that call `watch`/`read` on every access; this remains necessary
+after explicit `recycle` or an asynchronous lifecycle race:
 
 ```dart
 class OrderViewModel with ViewModel {
@@ -612,12 +627,12 @@ class OrderViewModel with ViewModel {
 }
 ```
 
-Prefer a getter over `late final`, a constructor-cached field, or `??=`. This
-also avoids retaining a disposed dependency after `recycle` or a root-binding
-handoff.
+Prefer a getter over `late final`, a constructor-cached field, or `??=` so the
+next access can resolve a new generation after `recycle`.
 
-Reactive dependencies use `watch`; when the dependency notifies, the selected
-root binding's `onUpdate` fires:
+Reactive dependencies use `watch`. A child update invokes
+`parent.onDependencyNotify(child)`, then notifies the parent. The propagation
+transaction updates each watching binding at most once:
 
 ```dart
 class DashboardViewModel with ViewModel {
@@ -637,20 +652,58 @@ class ChatViewModel with ViewModel {
 }
 ```
 
-When a root binding is disposed, it releases every dependency that it actually
-resolved. If no other binding holds those handles, they are disposed as well.
 Getter declarations alone create nothing; a dependency is created or reused
-only when its getter is evaluated.
+only when its getter is evaluated. Once resolved, the parent generation owns a
+dependency edge to the child, so the child's lifetime cannot be shorter than
+that parent's lifetime. When root B starts or stops owning a shared parent, B is
+also added to or removed from every already-resolved child in real time.
 
-> **Shared-parent boundary:** a keyed parent can be held by multiple root
-> bindings, but a child resolved through that parent is not automatically bound
-> to every one of them. If the root that resolved the child is disposed, the
-> child may be disposed while the parent survives. A resolver getter avoids
-> retaining that disposed child and re-resolves through the next owner selected
-> by `refHandler`, but the child may be recreated and lose its previous state.
-> Prefer an unkeyed composite parent plus keyed leaf dependencies that every
-> root resolves, or a dedicated application-level binding owner when continuity
-> is required.
+Direct and parent paths are source-aware: if one root owns the same keyed child
+both directly and through one or more parents, releasing one path cannot remove
+the others. Nested unkeyed children use the parent's private default key and do
+not switch identity during a natural root-owner handoff. This unkeyed behavior
+is only valid when `aliveForever` is false: every retained root or child must
+use an explicit key.
+
+### Child ViewModel lifecycle diagram
+
+The following example has root bindings A and B sharing one ordinary keyed
+parent (`aliveForever: false`). The `parent dependency binding` belongs to the
+current parent object generation; it does not belong to either individual root:
+
+```mermaid
+sequenceDiagram
+    participant A as Root Binding A
+    participant B as Root Binding B
+    participant P as Parent VM generation
+    participant D as Parent dependency binding
+    participant C as Child VM
+
+    A->>P: watch/read(parentSpec)
+    P->>D: Lazily create generation scope
+    P->>D: read/watch(childSpec)
+    D->>C: Add parent → child lifetime edge
+    D->>C: Mirror A binding source
+
+    B->>P: watch/read(the same keyed parent)
+    D->>C: Mirror B binding source in real time
+
+    A-->>P: dispose / unbind
+    D-->>C: Remove only the A source
+    Note over P,C: B still owns the parent; the same parent and child generations stay alive
+
+    B-->>P: dispose / last root leaves
+    P-->>D: Dispose parent generation scope
+    D-->>C: Release the parent edge and B source
+    Note over C: Dispose only if no direct or other-parent owner remains
+```
+
+A child may outlive its parent when another direct or parent owner remains, but
+it cannot die before a parent generation that owns it. Adding or removing A/B
+only updates propagated sources; it never switches the private key of an
+unkeyed child while that parent generation remains alive. If the parent itself
+is `aliveForever`, the last root only removes its propagated source: the parent
+generation keeps the child alive until `recycle` or `ViewModel.reset()`.
 
 ---
 
@@ -700,136 +753,6 @@ when the global comparator is `null`. To keep updates truly fine-grained, read
 the ViewModel with `read` and let the selector mechanism drive rebuilds instead
 of also using `watch`.
 
-### Deprecated: ObservableValue & ObserverBuilder
-
-`ObservableValue` and `ObserverBuilder` / `ObserverBuilder2` /
-`ObserverBuilder3` are deprecated and scheduled for removal in 2.0.0. They are
-convenience wrappers around a hidden `StateViewModel`, rather than a core state
-management capability.
-
-For a widget-local reactive value, use Flutter's `ValueNotifier` and
-`ValueListenableBuilder`, and dispose the notifier with its owner:
-
-```dart
-class ThemeToggle extends StatefulWidget {
-  const ThemeToggle({super.key});
-
-  @override
-  State<ThemeToggle> createState() => _ThemeToggleState();
-}
-
-class _ThemeToggleState extends State<ThemeToggle> {
-  final ValueNotifier<bool> _isDarkMode = ValueNotifier<bool>(false);
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _isDarkMode,
-      builder: (context, isDarkMode, child) {
-        return IconButton(
-          icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode),
-          onPressed: () => _isDarkMode.value = !isDarkMode,
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _isDarkMode.dispose();
-    super.dispose();
-  }
-}
-```
-
-For state that needs view_model lifecycle management, model it explicitly with
-`StateViewModel` and `ViewModelSpec`. This example uses a keyed non-widget
-binding owner so producers can read and update the state before the observing
-widget mounts or while it is unmounted:
-
-```dart
-class ThemeModeViewModel extends StateViewModel<bool> {
-  ThemeModeViewModel() : super(state: false);
-
-  void setDarkMode(bool value) => setState(value);
-}
-
-final themeModeSpec = ViewModelSpec<ThemeModeViewModel>(
-  builder: ThemeModeViewModel.new,
-  key: 'theme-dark',
-);
-
-class ThemeModeOwner with ViewModelBinding {
-  ThemeModeViewModel get themeMode =>
-      viewModelBinding.read(themeModeSpec);
-
-  void setDarkMode(bool value) => themeMode.setDarkMode(value);
-}
-
-class ThemeModeExample extends StatefulWidget {
-  const ThemeModeExample({super.key});
-
-  @override
-  State<ThemeModeExample> createState() => _ThemeModeExampleState();
-}
-
-class _ThemeModeExampleState extends State<ThemeModeExample> {
-  final ThemeModeOwner _owner = ThemeModeOwner();
-
-  @override
-  void initState() {
-    super.initState();
-    // Creates and updates the instance before the observing child mounts.
-    _owner.setDarkMode(true);
-  }
-
-  @override
-  Widget build(BuildContext context) => const ThemeModeButton();
-
-  @override
-  void dispose() {
-    _owner.dispose();
-    super.dispose();
-  }
-}
-
-class ThemeModeButton extends StatefulWidget {
-  const ThemeModeButton({super.key});
-
-  @override
-  State<ThemeModeButton> createState() => _ThemeModeButtonState();
-}
-
-class _ThemeModeButtonState extends State<ThemeModeButton>
-    with ViewModelStateMixin {
-  ThemeModeViewModel get themeMode =>
-      viewModelBinding.watch(themeModeSpec);
-
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = themeMode;
-    return IconButton(
-      icon: Icon(viewModel.state ? Icons.dark_mode : Icons.light_mode),
-      onPressed: () => viewModel.setDarkMode(!viewModel.state),
-    );
-  }
-}
-```
-
-`ThemeModeExample` demonstrates the ownership boundary: it updates the state
-before `ThemeModeButton` mounts, retains it while the child is absent, and
-disposes the non-widget owner when the scope ends. An application, service, or
-bootstrap scope follows the same pattern. The key is needed here for
-cross-binding sharing; it is also required when distinguishing multiple
-same-`T` instances inside one binding. It does not replace an owner or keep
-the instance alive by itself. Use `aliveForever` only for intentional
-process-lifetime retention when you also accept either process-end cleanup or
-the dangerous global impact of the advanced `recycle` escape hatch.
-
-When migrating `ObserverBuilder2` or `ObserverBuilder3`, prefer one state object
-that contains the related values. This keeps ownership and update boundaries
-explicit instead of assembling application state from standalone observables.
-
 ---
 
 ## Pause / Resume
@@ -870,7 +793,11 @@ viewModelBinding.addPauseProvider(myProvider);
 
 ### Reference Counting (Binding)
 
-Each `InstanceHandle` maintains a `bindingIds` list — this is the reference count. Both `watch` and `read` add the caller's `bindingId` to this list via `bind()`. The difference is only that `watch` also registers a listener.
+Each `InstanceHandle` exposes unique `bindingIds`, while internally retaining a
+source-aware set for every id. Both `watch` and `read` add an ownership source;
+`watch` additionally registers a ViewModel listener. `onBind(id)` runs only
+when the first source for an id arrives, and `onUnbind(id)` runs only when its
+last source leaves.
 
 ```
 read  from Binding A  →  bind('A#123')  →  bindingIds = ['A#123']
@@ -878,6 +805,10 @@ watch from Binding B  →  bind('B#456')  →  bindingIds = ['A#123', 'B#456']
 Binding A disposes    →  unbind('A#123') →  bindingIds = ['B#456']
 Binding B disposes    →  unbind('B#456') →  bindingIds = []  →  auto-dispose
 ```
+
+If A also reaches the same keyed instance through a parent, disposing A's
+direct path leaves the propagated A source intact. Auto-disposal requires all
+direct and parent sources to be gone.
 
 The full lifecycle sequence:
 
@@ -1009,6 +940,17 @@ should also implement matching `hashCode`.
 
 ## Testing
 
+Run ViewModel tests single-threaded and in runner order:
+
+```bash
+flutter test --concurrency=1
+```
+
+The registry, global configuration, lifecycle observers, reset state, and
+legacy spec proxies are process-global mutable state. Do not enable parallel
+test files, sharding, or concurrent test groups for this package.
+`dart_test.yaml` enforces `concurrency: 1` for repository runs.
+
 `ViewModelSpec` supports proxy overrides for testing. For scoped overrides,
 `overrideWith` returns an idempotent restore callback, and `runWithOverride`
 restores automatically after synchronous or asynchronous success/failure.
@@ -1108,7 +1050,20 @@ The generator supports ViewModels with up to 4 constructor parameters and produc
 
 ## DevTools Extension
 
-The package includes a Flutter DevTools extension for real-time ViewModel inspection. In debug mode, a `DevToolTracker` lifecycle observer is automatically registered, and a `DevToolsService` starts a VM service extension for communication with DevTools. Diagnostics expose the ordered active `owners`, the current `primaryOwner` used for nested dependency resolution, and primary-owner handoffs.
+The package includes a Flutter DevTools extension for real-time ViewModel
+inspection. In debug mode, a `DevToolTracker` lifecycle observer is
+automatically registered, and a `DevToolsService` starts a VM service extension
+for communication with DevTools.
+
+The graph lists every observed binding explicitly, including initialized root
+bindings with no ViewModel edge. Root, dependency, and low-level fallback
+bindings have distinct metadata and active/disposed state. A parent
+generation's internal scope is rendered as
+`parent VM → virtual binding → child VM`. The graph protocol uses typed
+`bindingOwnsViewModel` and `viewModelOwnsDependencyBinding` relationships
+instead of the legacy untyped edge format. Diagnostics also expose
+ordered active `owners` plus compatibility `primaryOwner` and handoff metadata
+for inbound ownership.
 
 To enable, create `devtools_options.yaml` in your project root:
 

@@ -1,0 +1,3 @@
+# ViewModel runtime tests share process-global registry/config/lifecycle state.
+# Keep suites single-threaded and in runner order.
+concurrency: 1

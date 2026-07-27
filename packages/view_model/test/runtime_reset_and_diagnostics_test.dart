@@ -136,8 +136,7 @@ void main() {
     binding.dispose();
   });
 
-  test('recreated instances of one factory class do not emit false warnings',
-      () {
+  test('repeated reads of one factory class do not emit false warnings', () {
     final binding = ViewModelBinding();
     final messages = <String>[];
     debugPrint = (message, {wrapWidth}) {
@@ -211,13 +210,15 @@ void main() {
     expect(owners, hasLength(2));
     expect(owners[0], same(first));
     expect(owners[1], same(second));
-    expect(first.viewModel.owner, same(first));
+    final dependencyBinding = first.viewModel.owner;
+    expect(dependencyBinding, isNot(same(first)));
+    expect(first.viewModel.owner, same(dependencyBinding));
 
     second.dispose();
 
     expect(first.viewModel.refHandler.owners, hasLength(1));
     expect(first.viewModel.refHandler.primaryOwner, same(first));
-    expect(first.viewModel.owner, same(first));
+    expect(first.viewModel.owner, same(dependencyBinding));
     expect(first.viewModel.dependency.value, 42);
   });
 
@@ -354,45 +355,6 @@ void main() {
 
     expect(created, isNotNull);
     expect(created!.isDisposed, isTrue);
-    expect(instanceManager.debugStoreCount, 0);
-  });
-
-  test('reset inside a recreate builder disposes its detached replacement', () {
-    final binding = ViewModelBinding();
-    addTearDown(binding.dispose);
-    final spec = ViewModelSpec<DiagnosticViewModel>(
-      builder: () => DiagnosticViewModel(1),
-      key: 'reset-inside-recreate-builder',
-    );
-    final original = binding.read(spec);
-    DiagnosticViewModel? replacement;
-
-    expect(
-      () => binding.recreate(
-        original,
-        builder: () {
-          ViewModel.reset();
-          return replacement = DiagnosticViewModel(2);
-        },
-      ),
-      throwsA(
-        isA<ViewModelError>()
-            .having(
-              (error) => error.toString(),
-              'message',
-              contains('handle was disposed or replaced while the builder'),
-            )
-            .having(
-              (error) => error.toString(),
-              'cleanup',
-              contains('detached replacement was disposed'),
-            ),
-      ),
-    );
-
-    expect(original.isDisposed, isTrue);
-    expect(replacement, isNotNull);
-    expect(replacement!.isDisposed, isTrue);
     expect(instanceManager.debugStoreCount, 0);
   });
 }

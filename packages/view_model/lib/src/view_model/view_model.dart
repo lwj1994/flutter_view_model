@@ -28,6 +28,7 @@ import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model_binding.dart';
+import 'package:view_model/src/view_model/update_transaction.dart';
 
 import 'package:view_model/src/view_model/binding_zone.dart';
 import 'state_store.dart';
@@ -92,7 +93,24 @@ mixin class ViewModel
   /// `viewModelBinding.read` syntax,
   /// consistent with the "Universal Binding" pattern.
   @protected
-  ViewModelBindingInterface get viewModelBinding => refHandler.binding;
+  ViewModelBindingInterface get viewModelBinding {
+    if (_isDisposed) {
+      throw ViewModelError(
+        'Cannot resolve dependencies from a disposed $runtimeType.',
+      );
+    }
+    final binding = _dependencyBinding ??= ViewModelDependencyBinding(
+      parent: this,
+      parentHandler: refHandler,
+      onDependencyUpdate: _handleDependencyUpdate,
+    );
+    // Accessing a dependency scope is enough to make the virtual binding
+    // visible in DevTools, even before it resolves its first child.
+    if (kDebugMode) {
+      binding.ensureDevToolsRegistration();
+    }
+    return binding;
+  }
 
   /// (Deprecated) Use [viewModelBinding] instead.
   @Deprecated('Use viewModelBinding instead.')
@@ -288,6 +306,11 @@ mixin class ViewModel
   static ViewModelConfig get config => _config;
 
   final _autoDisposeController = AutoDisposeController();
+  ViewModelDependencyBinding? _dependencyBinding;
+
+  @internal
+  ViewModelDependencyBinding? get dependencyBindingIfCreated =>
+      _dependencyBinding;
   bool _isDisposed = false;
 
   /// Returns `true` if this ViewModel has been disposed.
@@ -320,6 +343,12 @@ mixin class ViewModel
   @mustCallSuper
   @protected
   void onDependencyNotify(ViewModel vm) {}
+
+  void _handleDependencyUpdate(ViewModel dependency) {
+    if (_isDisposed) return;
+    onDependencyNotify(dependency);
+    notifyListeners();
+  }
 
   /// Adds a listener to this ViewModel.
   ///
@@ -408,16 +437,18 @@ mixin class ViewModel
       viewModelLog("$runtimeType: notifyListeners after Disposed");
       return;
     }
-    final listeners = List<VoidCallback>.of(_listeners);
-    for (final element in listeners) {
-      if (!_listeners.contains(element)) continue;
-      try {
-        element.call();
-      } catch (e, stack) {
-        reportViewModelError(
-            e, stack, ErrorType.listener, 'notifyListeners error');
+    runInViewModelUpdateTransaction(() {
+      final listeners = List<VoidCallback>.of(_listeners);
+      for (final element in listeners) {
+        if (!_listeners.contains(element)) continue;
+        try {
+          element.call();
+        } catch (e, stack) {
+          reportViewModelError(
+              e, stack, ErrorType.listener, 'notifyListeners error');
+        }
       }
-    }
+    });
   }
 
   /// Initializes the ViewModel system.
@@ -485,6 +516,34 @@ mixin class ViewModel
     }
   }
 
+  /// Registers one binding node with the built-in debug tracker.
+  ///
+  /// Kept on [ViewModel] so the binding implementation does not need another
+  /// circular import back into the DevTools layer.
+  @internal
+  static void registerBindingForDevTools({
+    required String bindingId,
+    required String name,
+    required bool isDependencyBinding,
+    ViewModel? parentViewModel,
+  }) {
+    if (!kDebugMode) return;
+    _initDevtool();
+    DevToolTracker.instance.registerBinding(
+      bindingId: bindingId,
+      name: name,
+      isDependencyBinding: isDependencyBinding,
+      parentViewModel: parentViewModel,
+    );
+  }
+
+  /// Records the end of a binding lifecycle in DevTools.
+  @internal
+  static void disposeBindingForDevTools(String bindingId) {
+    if (!kDebugMode) return;
+    DevToolTracker.instance.disposeBinding(bindingId);
+  }
+
   @override
   @protected
   @mustCallSuper
@@ -539,6 +598,12 @@ mixin class ViewModel
     } catch (e, stack) {
       reportViewModelError(e, stack, ErrorType.dispose,
           '$runtimeType _autoDisposeController dispose error');
+    }
+    try {
+      _dependencyBinding?.dispose();
+    } catch (e, stack) {
+      reportViewModelError(e, stack, ErrorType.dispose,
+          '$runtimeType dependency binding dispose error');
     }
     try {
       refHandler.dispose();
@@ -883,10 +948,11 @@ abstract mixin class ViewModelFactory<T> {
   /// Returns an explicit key for identifying ViewModel instances.
   ///
   /// Resolutions using the same generic ViewModel type `T` and equal non-null
-  /// keys share one instance across bindings. If this returns `null`, the
-  /// resolving binding supplies a private default key: repeated resolutions of
-  /// the same `T` reuse one instance in that binding, while different bindings
-  /// remain isolated.
+  /// keys share one instance across bindings. For `aliveForever: false`, if
+  /// this returns `null`, the resolving binding supplies a private default key:
+  /// repeated resolutions of the same `T` reuse one instance in that binding,
+  /// while different bindings remain isolated. Returning `true` from
+  /// [aliveForever] requires this method to return a non-null key.
   ///
   /// By default, this returns a shared key when deprecated singleton switches
   /// are enabled, otherwise `null`.
@@ -946,6 +1012,7 @@ abstract mixin class ViewModelFactory<T> {
   /// Returns `true` to keep the instance alive when no bindings remain.
   ///
   /// This is an explicit lifetime guarantee, not a best-effort cache hint.
+  /// Implementations that return `true` must also return a non-null [key].
   /// The exceptional path is a deliberate force recycle via `recycle` (or a
   /// complete test-runtime reset), which still disposes the instance.
   bool aliveForever() => false;

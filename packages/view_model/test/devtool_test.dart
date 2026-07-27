@@ -3,10 +3,42 @@ import 'package:view_model/view_model.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/devtool/tracker.dart';
 import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart'
+    show ViewModelDependencyBinding;
 
 class DevVM extends ViewModel {}
 
 class OwnerDevVM extends ViewModel {}
+
+class DevChildVM extends ViewModel {}
+
+class DevParentVM extends ViewModel {
+  DevParentVM(this.childSpec);
+
+  final ViewModelFactory<DevChildVM> childSpec;
+
+  DevChildVM get child => viewModelBinding.read(childSpec);
+}
+
+class FailingDevParentVM extends ViewModel {
+  FailingDevParentVM(ViewModelFactory<DevChildVM> childSpec) {
+    viewModelBinding.read(childSpec);
+    throw StateError('parent construction failed');
+  }
+}
+
+class EagerDevParentVM with ViewModel {
+  EagerDevParentVM() {
+    dependencyBindingId = (viewModelBinding as ViewModelDependencyBinding).id;
+  }
+
+  late final String dependencyBindingId;
+}
+
+final _eagerDevParentSpec = ViewModelSpec<EagerDevParentVM>(
+  key: 'eager-devtool-parent',
+  builder: EagerDevParentVM.new,
+);
 
 void main() {
   group('DevTools integration and tracker', () {
@@ -95,8 +127,8 @@ void main() {
       expect(list.isNotEmpty, isTrue);
     });
 
-    /// Function-level comment: Graph nodes/edges reflect watcher relations.
-    test('dependencyGraph nodes and edges correctness', () async {
+    /// Function-level comment: Graph nodes/relations reflect active ownership.
+    test('dependencyGraph nodes and relationships correctness', () async {
       final tracker = DevToolTracker.instance;
       tracker.clear();
 
@@ -159,8 +191,10 @@ void main() {
       expect(vmJson.containsKey('primaryOwnerHandoff'), isTrue);
 
       final graphData = svc.debugGetDependencyGraph();
-      expect((graphData['nodes'] as List).isNotEmpty, isTrue);
-      expect((graphData['edges'] as List).isNotEmpty, isTrue);
+      expect((graphData['viewModels'] as List).isNotEmpty, isTrue);
+      expect((graphData['relationships'] as List).isNotEmpty, isTrue);
+      expect(graphData.containsKey('nodes'), isFalse);
+      expect(graphData.containsKey('edges'), isFalse);
 
       final stats = svc.debugGetStats();
       expect(stats['totalInstances']! >= 1, isTrue);
@@ -202,17 +236,20 @@ void main() {
       expect(info.primaryOwnerHandoff, isNull);
 
       final initialGraph = DevToolsService.instance.debugGetDependencyGraph();
-      final initialEdges =
-          (initialGraph['edges'] as List<dynamic>).cast<Map<String, dynamic>>();
-      expect(initialEdges, hasLength(2));
+      final initialRelationships =
+          (initialGraph['relationships'] as List<dynamic>)
+              .cast<Map<String, dynamic>>();
+      expect(initialRelationships, hasLength(2));
       expect(
-        initialEdges
-            .singleWhere((edge) => edge['from'] == ownerA.id)['isPrimaryOwner'],
+        initialRelationships.singleWhere(
+          (relationship) => relationship['source'] == ownerA.id,
+        )['isPrimaryOwner'],
         isTrue,
       );
       expect(
-        initialEdges
-            .singleWhere((edge) => edge['from'] == ownerB.id)['isPrimaryOwner'],
+        initialRelationships.singleWhere(
+          (relationship) => relationship['source'] == ownerB.id,
+        )['isPrimaryOwner'],
         isFalse,
       );
 
@@ -239,13 +276,13 @@ void main() {
       );
 
       final graphData = DevToolsService.instance.debugGetDependencyGraph();
-      final node =
-          (graphData['nodes'] as List<dynamic>).single as Map<String, dynamic>;
+      final node = (graphData['viewModels'] as List<dynamic>).single
+          as Map<String, dynamic>;
       expect(node['owners'], [ownerB.id]);
       expect(node['primaryOwner'], ownerB.id);
-      final edge =
-          (graphData['edges'] as List<dynamic>).single as Map<String, dynamic>;
-      expect(edge['isPrimaryOwner'], isTrue);
+      final relationship = (graphData['relationships'] as List<dynamic>).single
+          as Map<String, dynamic>;
+      expect(relationship['isPrimaryOwner'], isTrue);
 
       ownerB.dispose();
 
@@ -254,6 +291,193 @@ void main() {
       expect(info.primaryOwner, isNull);
       expect(info.primaryOwnerHandoff?.from, ownerA.id);
       expect(info.primaryOwnerHandoff?.to, ownerB.id);
+    });
+
+    test('lists empty bindings and virtual parent-child relationships', () {
+      ViewModel.reset();
+
+      final emptyBinding = ViewModelBinding()..init();
+      final rootBinding = ViewModelBinding()..init();
+      addTearDown(() {
+        emptyBinding.dispose();
+        rootBinding.dispose();
+        ViewModel.reset();
+      });
+
+      final childSpec = ViewModelSpec<DevChildVM>(
+        key: 'devtool-child',
+        builder: DevChildVM.new,
+      );
+      final parentSpec = ViewModelSpec<DevParentVM>(
+        key: 'devtool-parent',
+        builder: () => DevParentVM(childSpec),
+      );
+
+      final parent = rootBinding.read(parentSpec);
+      final child = parent.child;
+      final graph = DevToolTracker.instance.dependencyGraph;
+      final parentInfo = graph.viewModelInfos.values.singleWhere(
+        (info) => info.typeName == 'DevParentVM',
+      );
+      final childInfo = graph.viewModelInfos.values.singleWhere(
+        (info) => info.typeName == 'DevChildVM',
+      );
+      final dependencyBinding = graph.bindingInfos.values.singleWhere(
+        (info) => info.kind == 'dependency',
+      );
+
+      expect(graph.bindingInfos[emptyBinding.id]?.kind, 'root');
+      expect(graph.bindingInfos[rootBinding.id]?.kind, 'root');
+      expect(dependencyBinding.parentViewModelId, parentInfo.instanceId);
+      expect(dependencyBinding.parentViewModelType, 'DevParentVM');
+      expect(childInfo.watchers, contains(dependencyBinding.bindingId));
+      expect(childInfo.watchers, contains(rootBinding.id));
+      expect(identical(child, parent.child), isTrue);
+
+      final service = DevToolsService.instance;
+      final data = service.debugGetViewModelData();
+      expect((data['bindings'] as List<dynamic>), hasLength(3));
+
+      final graphData = service.debugGetDependencyGraph();
+      final bindings =
+          (graphData['bindings'] as List<dynamic>).cast<Map<String, dynamic>>();
+      final relationships = (graphData['relationships'] as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+      expect(
+        bindings.singleWhere((item) => item['id'] == emptyBinding.id),
+        containsPair('isActive', true),
+      );
+      expect(
+        relationships,
+        contains(
+          allOf(
+            containsPair('source', parentInfo.instanceId),
+            containsPair('target', dependencyBinding.bindingId),
+            containsPair('kind', 'viewModelOwnsDependencyBinding'),
+          ),
+        ),
+      );
+      expect(
+        relationships,
+        contains(
+          allOf(
+            containsPair('source', dependencyBinding.bindingId),
+            containsPair('target', childInfo.instanceId),
+            containsPair('kind', 'bindingOwnsViewModel'),
+          ),
+        ),
+      );
+
+      emptyBinding.dispose();
+      expect(
+        DevToolTracker
+            .instance.dependencyGraph.bindingInfos[emptyBinding.id]?.isDisposed,
+        isTrue,
+      );
+    });
+
+    test('failed parent construction removes its pending virtual binding', () {
+      ViewModel.reset();
+
+      final rootBinding = ViewModelBinding()..init();
+      addTearDown(() {
+        rootBinding.dispose();
+        ViewModel.reset();
+      });
+      final childSpec = ViewModelSpec<DevChildVM>(
+        key: 'failed-devtool-child',
+        builder: DevChildVM.new,
+      );
+      final parentSpec = ViewModelSpec<FailingDevParentVM>(
+        key: 'failed-devtool-parent',
+        builder: () => FailingDevParentVM(childSpec),
+      );
+
+      expect(() => rootBinding.read(parentSpec), throwsStateError);
+
+      final graph = DevToolTracker.instance.dependencyGraph;
+      expect(
+        graph.bindingInfos.values.where(
+          (info) => info.kind == 'dependency',
+        ),
+        isEmpty,
+      );
+      expect(graph.bindingInfos.keys, [rootBinding.id]);
+    });
+
+    test('eager virtual binding metadata is enriched without duplicate events',
+        () {
+      ViewModel.reset();
+
+      final rootBinding = ViewModelBinding()..init();
+      addTearDown(() {
+        rootBinding.dispose();
+        ViewModel.reset();
+      });
+
+      final parent = rootBinding.read(_eagerDevParentSpec);
+      final tracker = DevToolTracker.instance;
+      final info =
+          tracker.dependencyGraph.bindingInfos[parent.dependencyBindingId]!;
+
+      expect(info.kind, 'dependency');
+      expect(info.parentViewModelId, isNotNull);
+      expect(info.parentViewModelType, 'EagerDevParentVM');
+
+      var notifications = 0;
+      final removeListener = tracker.addListener(() => notifications++);
+      tracker.registerBinding(
+        bindingId: info.bindingId,
+        name: info.name,
+        isDependencyBinding: true,
+      );
+      removeListener();
+
+      expect(notifications, 0);
+      expect(
+        identical(
+          tracker.dependencyGraph.bindingInfos[info.bindingId],
+          info,
+        ),
+        isTrue,
+      );
+    });
+
+    test('dispose cleanup removes a fallback binding without onUnbind', () {
+      ViewModel.reset();
+
+      final rootBinding = ViewModelBinding();
+      addTearDown(() {
+        rootBinding.dispose();
+        ViewModel.reset();
+      });
+      const key = 'dispose-before-unbind';
+      const fallbackBindingId = 'fallback-without-unbind';
+      const arg = InstanceArg(key: key);
+      final viewModel = rootBinding.read(
+        ViewModelSpec<DevVM>(
+          key: key,
+          builder: DevVM.new,
+        ),
+      );
+      final tracker = DevToolTracker.instance;
+
+      tracker.onBind(viewModel, arg, fallbackBindingId);
+      expect(
+        tracker.dependencyGraph.bindingInfos[fallbackBindingId]?.kind,
+        'unknown',
+      );
+
+      tracker.onDispose(viewModel, arg);
+
+      expect(
+        tracker.dependencyGraph.bindingInfos,
+        isNot(contains(fallbackBindingId)),
+      );
+      expect(
+        tracker.dependencyGraph.watcherToViewModels,
+        isNot(contains(fallbackBindingId)),
+      );
     });
 
     test('resetForTesting clears graph and tracker listeners silently', () {
@@ -265,6 +489,7 @@ void main() {
 
       expect(tracker.dependencyGraph.viewModelInfos, isEmpty);
       expect(tracker.dependencyGraph.watcherToViewModels, isEmpty);
+      expect(tracker.dependencyGraph.bindingInfos, isEmpty);
       expect(tracker.dependencyGraph.typeToInstances, isEmpty);
       expect(notifications, 0);
 

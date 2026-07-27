@@ -8,6 +8,7 @@
 library;
 
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:meta/meta.dart' show internal;
 import 'package:view_model/src/log.dart';
@@ -60,16 +61,52 @@ class ViewModelBindingHandler {
   @internal
   final List<ViewModelBinding> dependencyBindings = [];
 
+  /// Ownership sources for each externally visible binding.
+  ///
+  /// A root may own the same ViewModel directly and through one or more parent
+  /// dependency edges. Identity-based source tracking lets those paths leave
+  /// independently without changing the public owner list prematurely.
+  final Map<ViewModelBinding, Set<Object>> _refSources = Map.identity();
+
   final List<ViewModelOwnersChanged> _ownerChangeListeners = [];
 
   ViewModelBindingHandler();
 
   /// Ordered bindings that currently own this ViewModel.
   ///
-  /// Nested dependencies are resolved through [primaryOwner].
+  /// [primaryOwner] is retained for inbound ownership diagnostics and Zone
+  /// compatibility. Nested dependencies use the ViewModel generation's
+  /// own stable dependency binding.
   @internal
   List<ViewModelBinding> get owners =>
       List<ViewModelBinding>.unmodifiable(dependencyBindings);
+
+  /// Root/application bindings that own this ViewModel.
+  ///
+  /// Internal dependency bindings form parent-child lifecycle edges and are
+  /// deliberately excluded so they are not propagated as if they were roots.
+  @internal
+  List<ViewModelBinding> get externalOwners => List.unmodifiable(
+        dependencyBindings.where((binding) => !binding.isDependencyBinding),
+      );
+
+  /// Initial external owners visible while a ViewModel is being constructed.
+  ///
+  /// `Store` calls the builder before the resulting instance can receive its
+  /// first `addRef`, so constructor/onCreate dependency access falls back to
+  /// the binding carried by the current construction Zone.
+  @internal
+  List<ViewModelBinding> get constructionExternalOwners {
+    final current = externalOwners;
+    if (current.isNotEmpty) return current;
+    final zoneBinding = Zone.current[_bindingKey] as ViewModelBinding?;
+    if (zoneBinding == null ||
+        zoneBinding.isDisposed ||
+        zoneBinding.isDependencyBinding) {
+      return const [];
+    }
+    return <ViewModelBinding>[zoneBinding];
+  }
 
   /// The current binding used to resolve nested ViewModel dependencies.
   @internal
@@ -96,13 +133,13 @@ class ViewModelBindingHandler {
   /// - [resolver]: Function that resolves dependencies with listen parameter
   @internal
   void addRef(
-    ViewModelBinding ref,
-  ) {
+    ViewModelBinding ref, {
+    Object? source,
+  }) {
     final previousPrimaryOwner = primaryOwner?.id;
-    final alreadyOwned = dependencyBindings.any(
-      (binding) => identical(binding, ref),
-    );
-    if (!alreadyOwned) {
+    final sources = _refSources.putIfAbsent(ref, HashSet.identity);
+    if (!sources.add(source ?? ref)) return;
+    if (sources.length == 1) {
       dependencyBindings.add(ref);
       _notifyOwnerChanges(previousPrimaryOwner);
     }
@@ -110,9 +147,14 @@ class ViewModelBindingHandler {
 
   @internal
   void removeRef(
-    ViewModelBinding ref,
-  ) {
+    ViewModelBinding ref, {
+    Object? source,
+  }) {
     final previousPrimaryOwner = primaryOwner?.id;
+    final sources = _refSources[ref];
+    if (sources == null || !sources.remove(source ?? ref)) return;
+    if (sources.isNotEmpty) return;
+    _refSources.remove(ref);
     final index = dependencyBindings.indexWhere(
       (binding) => identical(binding, ref),
     );
@@ -129,6 +171,7 @@ class ViewModelBindingHandler {
   void dispose() {
     final previousPrimaryOwner = primaryOwner?.id;
     dependencyBindings.clear();
+    _refSources.clear();
     _notifyOwnerChanges(previousPrimaryOwner);
     _ownerChangeListeners.clear();
   }
