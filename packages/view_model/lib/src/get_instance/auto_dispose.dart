@@ -51,12 +51,20 @@ class AutoDisposeInstanceController {
   /// instance is recreated due to dependency changes.
   final Function() onRecreate;
 
+  /// Called when this controller starts tracking a handle.
+  final void Function(InstanceHandle handle, ViewModel viewModel)?
+      onInstanceAttached;
+
   /// Called before a tracked ViewModel is recycled or unbound.
-  final void Function(ViewModel viewModel)? onInstanceDetached;
+  final void Function(InstanceHandle handle, ViewModel viewModel)?
+      onInstanceDetached;
 
   /// Called when a handle replaces its current ViewModel object.
-  final void Function(ViewModel previous, ViewModel current)?
-      onInstanceRecreated;
+  final void Function(
+    InstanceHandle handle,
+    ViewModel previous,
+    ViewModel current,
+  )? onInstanceRecreated;
 
   /// Map tracking which notifiers already have listeners attached.
   ///
@@ -74,6 +82,7 @@ class AutoDisposeInstanceController {
   AutoDisposeInstanceController({
     required this.onRecreate,
     required this.viewModelBinding,
+    this.onInstanceAttached,
     this.onInstanceDetached,
     this.onInstanceRecreated,
   });
@@ -97,17 +106,34 @@ class AutoDisposeInstanceController {
     if (!viewModel.isDisposed) {
       viewModel.refHandler.removeRef(viewModelBinding);
     }
-    onInstanceDetached?.call(viewModel);
+    onInstanceDetached?.call(notifier, viewModel);
   }
 
   /// Attaches a recreate listener to the notifier if not already attached.
   void _attachRecreateListener(InstanceHandle notifier) {
     if (_disposed || _notifierListeners.containsKey(notifier)) return;
+    ViewModel? trackedViewModel;
+    if (!notifier.isDisposed && notifier.instance is ViewModel) {
+      trackedViewModel = notifier.instance as ViewModel;
+      try {
+        onInstanceAttached?.call(notifier, trackedViewModel);
+      } catch (_) {
+        // `getNotifier` already added this controller's direct bind/ref. Roll
+        // them back when dependency validation rejects the new edge.
+        if (!trackedViewModel.isDisposed) {
+          trackedViewModel.refHandler.removeRef(viewModelBinding);
+        }
+        if (!notifier.isDisposed) {
+          notifier.unbind(viewModelBinding.id);
+        }
+        rethrow;
+      }
+    }
     if (!_instanceNotifiers.contains(notifier)) {
       _instanceNotifiers.add(notifier);
     }
-    if (!notifier.isDisposed && notifier.instance is ViewModel) {
-      _trackedViewModels[notifier] = notifier.instance as ViewModel;
+    if (trackedViewModel != null) {
+      _trackedViewModels[notifier] = trackedViewModel;
     }
     final listener = () {
       try {
@@ -128,7 +154,7 @@ class AutoDisposeInstanceController {
               current.refHandler.addRef(viewModelBinding);
               _trackedViewModels[notifier] = current;
               if (previous != null && !identical(previous, current)) {
-                onInstanceRecreated?.call(previous, current);
+                onInstanceRecreated?.call(notifier, previous, current);
               }
             }
             if (!instanceManager.isResetting) {

@@ -21,6 +21,7 @@ class ViewModelService {
       if (response.json != null) {
         final data = response.json!;
         final viewModelList = data['viewModels'] as List<dynamic>? ?? [];
+        final bindingList = data['bindings'] as List<dynamic>? ?? [];
 
         final viewModels = viewModelList
             .map((vm) => ViewModelInfo.fromJson(vm as Map<String, dynamic>))
@@ -29,7 +30,19 @@ class ViewModelService {
         final stats = DependencyStats.fromJson(
             data['stats'] as Map<String, dynamic>? ?? {});
 
-        return ViewModelDataResult(viewModels: viewModels, stats: stats);
+        final bindings = bindingList
+            .map(
+              (binding) => BindingInfo.fromJson(
+                binding as Map<String, dynamic>,
+              ),
+            )
+            .toList();
+
+        return ViewModelDataResult(
+          viewModels: viewModels,
+          bindings: bindings,
+          stats: stats,
+        );
       } else {
         throw Exception('No data received from Flutter app');
       }
@@ -61,20 +74,39 @@ class ViewModelService {
 
       if (response.json != null) {
         final data = response.json!;
-        final nodeList = data['nodes'] as List<dynamic>? ?? [];
-        final edgeList = data['edges'] as List<dynamic>? ?? [];
+        final viewModelList = data['viewModels'] as List<dynamic>? ?? [];
+        final bindingList = data['bindings'] as List<dynamic>? ?? [];
+        final relationshipList = data['relationships'] as List<dynamic>? ?? [];
 
-        final nodes = nodeList
+        final viewModels = viewModelList
             .map(
-                (node) => DependencyNode.fromJson(node as Map<String, dynamic>))
+              (viewModel) => DependencyViewModelNode.fromJson(
+                viewModel as Map<String, dynamic>,
+              ),
+            )
             .toList();
 
-        final edges = edgeList
+        final bindings = bindingList
             .map(
-                (edge) => DependencyEdge.fromJson(edge as Map<String, dynamic>))
+              (binding) => BindingInfo.fromJson(
+                binding as Map<String, dynamic>,
+              ),
+            )
             .toList();
 
-        return DependencyGraphResult(nodes: nodes, edges: edges);
+        final relationships = relationshipList
+            .map(
+              (relationship) => DependencyRelationship.fromJson(
+                relationship as Map<String, dynamic>,
+              ),
+            )
+            .toList();
+
+        return DependencyGraphResult(
+          viewModels: viewModels,
+          bindings: bindings,
+          relationships: relationships,
+        );
       } else {
         throw Exception('No dependency graph data received from Flutter app');
       }
@@ -90,19 +122,71 @@ class ViewModelService {
 
 class ViewModelDataResult {
   final List<ViewModelInfo> viewModels;
+  final List<BindingInfo> bindings;
   final DependencyStats stats;
 
-  ViewModelDataResult({required this.viewModels, required this.stats});
+  ViewModelDataResult({
+    required this.viewModels,
+    this.bindings = const [],
+    required this.stats,
+  });
 }
 
 class DependencyGraphResult {
-  final List<DependencyNode> nodes;
-  final List<DependencyEdge> edges;
+  final List<DependencyViewModelNode> viewModels;
+  final List<BindingInfo> bindings;
+  final List<DependencyRelationship> relationships;
 
-  DependencyGraphResult({required this.nodes, required this.edges});
+  DependencyGraphResult({
+    required this.viewModels,
+    this.bindings = const [],
+    required this.relationships,
+  });
 }
 
-class DependencyNode {
+class BindingInfo {
+  final String id;
+  final String name;
+  final String kind;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime? disposeTime;
+  final String? parentViewModelId;
+  final String? parentViewModelType;
+
+  bool get isDependency => kind == 'dependency';
+
+  const BindingInfo({
+    required this.id,
+    required this.name,
+    required this.kind,
+    required this.isActive,
+    required this.createdAt,
+    this.disposeTime,
+    this.parentViewModelId,
+    this.parentViewModelType,
+  });
+
+  factory BindingInfo.fromJson(Map<String, dynamic> json) {
+    final createdAt = json['createdAt'] as String?;
+    final disposeTime = json['disposeTime'] as String?;
+    return BindingInfo(
+      id: json['id'] as String,
+      name: json['name'] as String? ?? json['id'] as String,
+      kind: json['kind'] as String? ?? 'unknown',
+      isActive:
+          json['isActive'] as bool? ?? !(json['isDisposed'] as bool? ?? false),
+      createdAt: createdAt == null
+          ? DateTime.fromMillisecondsSinceEpoch(0)
+          : DateTime.parse(createdAt),
+      disposeTime: disposeTime == null ? null : DateTime.parse(disposeTime),
+      parentViewModelId: json['parentViewModelId'] as String?,
+      parentViewModelType: json['parentViewModelType'] as String?,
+    );
+  }
+}
+
+class DependencyViewModelNode {
   final String id;
   final String type;
   final String label;
@@ -111,7 +195,7 @@ class DependencyNode {
   final String? primaryOwner;
   final PrimaryOwnerHandoffInfo? primaryOwnerHandoff;
 
-  DependencyNode({
+  DependencyViewModelNode({
     required this.id,
     required this.type,
     required this.label,
@@ -121,9 +205,9 @@ class DependencyNode {
     this.primaryOwnerHandoff,
   });
 
-  factory DependencyNode.fromJson(Map<String, dynamic> json) {
+  factory DependencyViewModelNode.fromJson(Map<String, dynamic> json) {
     final handoff = json['primaryOwnerHandoff'];
-    return DependencyNode(
+    return DependencyViewModelNode(
       id: json['id'] as String,
       type: json['type'] as String,
       label: json['label'] as String,
@@ -159,26 +243,30 @@ class PrimaryOwnerHandoffInfo {
   }
 }
 
-class DependencyEdge {
-  final String from;
-  final String to;
-  final String type;
+class DependencyRelationship {
+  final String source;
+  final String target;
+  final String kind;
   final bool isPrimaryOwner;
 
-  bool get isPrimaryOwnerBinding => type == 'binding' && isPrimaryOwner;
+  bool get isPrimaryOwnerBinding =>
+      kind == 'bindingOwnsViewModel' && isPrimaryOwner;
+  bool get isBindingOwnership => kind == 'bindingOwnsViewModel';
+  bool get isVirtualBindingOwnership =>
+      kind == 'viewModelOwnsDependencyBinding';
 
-  DependencyEdge({
-    required this.from,
-    required this.to,
-    required this.type,
+  DependencyRelationship({
+    required this.source,
+    required this.target,
+    required this.kind,
     this.isPrimaryOwner = false,
   });
 
-  factory DependencyEdge.fromJson(Map<String, dynamic> json) {
-    return DependencyEdge(
-      from: json['from'] as String,
-      to: json['to'] as String,
-      type: json['type'] as String,
+  factory DependencyRelationship.fromJson(Map<String, dynamic> json) {
+    return DependencyRelationship(
+      source: json['source'] as String,
+      target: json['target'] as String,
+      kind: json['kind'] as String,
       isPrimaryOwner: json['isPrimaryOwner'] as bool? ?? false,
     );
   }
@@ -243,11 +331,17 @@ class DependencyStats {
   final int totalViewModels;
   final int activeViewModels;
   final int disposedViewModels;
+  final int totalBindings;
+  final int activeBindings;
+  final int disposedBindings;
 
   DependencyStats({
     required this.totalViewModels,
     required this.activeViewModels,
     required this.disposedViewModels,
+    this.totalBindings = 0,
+    this.activeBindings = 0,
+    this.disposedBindings = 0,
   });
 
   factory DependencyStats.fromJson(Map<String, dynamic> json) {
@@ -255,6 +349,9 @@ class DependencyStats {
       totalViewModels: json['totalInstances'] as int? ?? 0,
       activeViewModels: json['activeInstances'] as int? ?? 0,
       disposedViewModels: json['disposedInstances'] as int? ?? 0,
+      totalBindings: json['totalBindings'] as int? ?? 0,
+      activeBindings: json['activeBindings'] as int? ?? 0,
+      disposedBindings: json['disposedBindings'] as int? ?? 0,
     );
   }
 
@@ -263,6 +360,9 @@ class DependencyStats {
       totalViewModels: 0,
       activeViewModels: 0,
       disposedViewModels: 0,
+      totalBindings: 0,
+      activeBindings: 0,
+      disposedBindings: 0,
     );
   }
 }

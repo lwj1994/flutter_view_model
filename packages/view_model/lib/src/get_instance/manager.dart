@@ -76,6 +76,21 @@ class InstanceManager {
     );
   }
 
+  /// Force-recycles an instance regardless of which binding resolved it.
+  void recycle(Object instance) {
+    _requireNotResetting();
+    final stores = _stores.values.toList(growable: false);
+    for (final store in stores) {
+      if (store is RecyclableInstanceStore && store.tryRecycle(instance)) {
+        return;
+      }
+    }
+    throw ViewModelError(
+      'Cannot recycle ${instance.runtimeType} instance. '
+      'Instance not found in store.',
+    );
+  }
+
   /// Factory constructor that returns the singleton instance.
   factory InstanceManager._get() => _instance;
 

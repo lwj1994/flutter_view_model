@@ -211,13 +211,15 @@ void main() {
     expect(owners, hasLength(2));
     expect(owners[0], same(first));
     expect(owners[1], same(second));
-    expect(first.viewModel.owner, same(first));
+    final dependencyBinding = first.viewModel.owner;
+    expect(dependencyBinding, isNot(same(first)));
+    expect(first.viewModel.owner, same(dependencyBinding));
 
     second.dispose();
 
     expect(first.viewModel.refHandler.owners, hasLength(1));
     expect(first.viewModel.refHandler.primaryOwner, same(first));
-    expect(first.viewModel.owner, same(first));
+    expect(first.viewModel.owner, same(dependencyBinding));
     expect(first.viewModel.dependency.value, 42);
   });
 

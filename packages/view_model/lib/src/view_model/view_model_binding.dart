@@ -8,11 +8,13 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/binding_zone.dart';
+import 'package:view_model/src/view_model/construction_transaction.dart';
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/pause_provider.dart';
 import 'package:view_model/src/view_model/util.dart';
 import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/src/view_model/update_transaction.dart';
 
 import 'state_store.dart';
 
@@ -301,9 +303,38 @@ abstract interface class ViewModelBindingHost {
 /// - [ViewModelBindingPauseProvider]: Interface for pause/resume providers
 mixin class ViewModelBinding
     implements ViewModelBindingInterface, ViewModelBindingRecreateCapability {
-  late final String _id = "${getName()}#${identityHashCode(this)}";
+  late final String _id = _createId();
+  bool _devToolsRegistered = false;
+
+  String _createId() {
+    final name = getName();
+    final bindingId = "$name#${identityHashCode(this)}";
+    _devToolsRegistered = true;
+    ViewModel.registerBindingForDevTools(
+      bindingId: bindingId,
+      name: name,
+      isDependencyBinding: isDependencyBinding,
+      parentViewModel: devToolsParentViewModel,
+    );
+    return bindingId;
+  }
 
   String get id => _id;
+
+  /// Ensures this binding appears as a node in DevTools even without VM edges.
+  @internal
+  void ensureDevToolsRegistration() {
+    final bindingId = id;
+    assert(bindingId.isNotEmpty);
+  }
+
+  /// Whether this binding represents a parent ViewModel dependency scope.
+  @internal
+  bool get isDependencyBinding => false;
+
+  /// Parent generation for an internal dependency binding, when applicable.
+  @internal
+  ViewModel? get devToolsParentViewModel => null;
 
   @protected
   // ignore: avoid_returning_this
@@ -324,21 +355,34 @@ mixin class ViewModelBinding
 
   late final _instanceController = AutoDisposeInstanceController(
     onRecreate: _handleInstanceChange,
+    onInstanceAttached: _handleInstanceAttached,
     onInstanceDetached: _handleInstanceDetached,
     onInstanceRecreated: _handleInstanceRecreated,
     viewModelBinding: this,
   );
   final Map<ViewModel, Function()> _stateListeners = Map.identity();
-  final _defaultViewModelKey = Object();
+  final _defaultViewModelKey = ViewModelPrivateKey();
   final List<_BindingSubscription> _subscriptions = [];
   final Map<(Type, Object), Object> _factorySources = {};
   final Map<ViewModel, (Type, Object)> _factoryIdentities = Map.identity();
 
   void _handleInstanceChange() {
-    onUpdate();
+    if (markViewModelBindingUpdated(this)) {
+      onUpdate();
+    }
   }
 
-  void _handleInstanceDetached(ViewModel viewModel) {
+  @protected
+  void _handleInstanceAttached(
+    InstanceHandle handle,
+    ViewModel viewModel,
+  ) {}
+
+  @protected
+  void _handleInstanceDetached(
+    InstanceHandle handle,
+    ViewModel viewModel,
+  ) {
     _stateListeners.remove(viewModel)?.call();
     final subscriptions = _subscriptions
         .where((subscription) => subscription.isAttachedTo(viewModel))
@@ -356,7 +400,12 @@ mixin class ViewModelBinding
     }());
   }
 
-  void _handleInstanceRecreated(ViewModel previous, ViewModel current) {
+  @protected
+  void _handleInstanceRecreated(
+    InstanceHandle handle,
+    ViewModel previous,
+    ViewModel current,
+  ) {
     final removeWatchListener = _stateListeners.remove(previous);
     if (removeWatchListener != null) {
       removeWatchListener.call();
@@ -484,8 +533,7 @@ mixin class ViewModelBinding
   /// pointing at the disposed object instead of resolving its replacement.
   @override
   void recycle<VM extends ViewModel>(VM vm) {
-    _instanceController.recycle(vm);
-    onUpdate();
+    instanceManager.recycle(vm);
   }
 
   @override
@@ -747,7 +795,16 @@ mixin class ViewModelBinding
     if (_dispose) {
       throw ViewModelError("state is disposed");
     }
-    final Object key = factory.key() ?? _defaultViewModelKey;
+    final configuredKey = factory.key();
+    final aliveForever = factory.aliveForever();
+    if (isDependencyBinding && configuredKey == null && aliveForever) {
+      throw ViewModelError(
+        'An aliveForever ViewModel resolved from another ViewModel must use '
+        'an explicit key. A parent-private default key becomes unreachable '
+        'after that parent generation is disposed.',
+      );
+    }
+    final Object key = configuredKey ?? _defaultViewModelKey;
     final tag = factory.tag();
     final res = runWithBinding(
       () {
@@ -756,7 +813,7 @@ mixin class ViewModelBinding
             arg: InstanceArg(
               key: key,
               tag: tag,
-              aliveForever: factory.aliveForever(),
+              aliveForever: aliveForever,
             ),
             builder: factory.build,
           ),
@@ -823,9 +880,17 @@ mixin class ViewModelBinding
           );
           return;
         }
-        onUpdate();
+        if (markViewModelBindingUpdated(this)) {
+          onViewModelUpdate(res);
+        }
       });
     }
+  }
+
+  /// Source-aware hook for updates emitted by a watched ViewModel.
+  @protected
+  void onViewModelUpdate(ViewModel viewModel) {
+    onUpdate();
   }
 
   /// Attempts to watch a ViewModel, returning null if not found.
@@ -870,7 +935,11 @@ mixin class ViewModelBinding
 
   /// Called when the host widget or element attaches to the tree.
   /// Reserved for future setup steps. No-op currently.
-  void init() {}
+  void init() {
+    if (kDebugMode) {
+      ensureDevToolsRegistration();
+    }
+  }
 
   void unbind(Object viewModel) {
     _instanceController.unbindInstance(viewModel);
@@ -921,6 +990,9 @@ mixin class ViewModelBinding
     } catch (e, stack) {
       reportViewModelError(e, stack, ErrorType.dispose,
           'ViewModelBinding instanceController dispose error');
+    }
+    if (_devToolsRegistered) {
+      ViewModel.disposeBindingForDevTools(_id);
     }
   }
 
@@ -976,6 +1048,196 @@ mixin class ViewModelBinding
       // Expected: ViewModel not found in cache, return null as documented.
       return null;
     }
+  }
+}
+
+/// Stable lifecycle and identity scope owned by one parent ViewModel object.
+///
+/// Its private default key gives unkeyed children a parent-generation identity.
+/// The scope itself keeps children alive for at least the parent's lifetime,
+/// while root owner additions/removals are mirrored with source-aware refs so
+/// diagnostics and lifecycle callbacks stay current without accidental
+/// unbinding across direct or multi-parent ownership paths.
+@internal
+class ViewModelDependencyBinding extends ViewModelBinding {
+  ViewModelDependencyBinding({
+    required ViewModel parent,
+    required ViewModelBindingHandler parentHandler,
+    required void Function(ViewModel dependency) onDependencyUpdate,
+  })  : _parent = parent,
+        _onDependencyUpdate = onDependencyUpdate {
+    registerViewModelConstructionRollback(dispose);
+    _propagatedOwners.addAll(parentHandler.constructionExternalOwners);
+    _removeOwnerListener = parentHandler.addOwnerChangeListener(
+      (owners, previousPrimaryOwner, primaryOwner) {
+        _syncOwners(parentHandler.externalOwners);
+      },
+    );
+  }
+
+  final ViewModel _parent;
+  final void Function(ViewModel dependency) _onDependencyUpdate;
+  final List<ViewModelBinding> _propagatedOwners = [];
+  final Map<InstanceHandle, ViewModel> _dependencies = Map.identity();
+  late final void Function() _removeOwnerListener;
+  bool _dependencyDisposed = false;
+
+  @override
+  bool get isDependencyBinding => true;
+
+  @override
+  ViewModel get devToolsParentViewModel => _parent;
+
+  @override
+  void _handleInstanceAttached(
+    InstanceHandle handle,
+    ViewModel viewModel,
+  ) {
+    _requireAcyclicDependency(viewModel);
+    super._handleInstanceAttached(handle, viewModel);
+    _dependencies[handle] = viewModel;
+    for (final owner in _propagatedOwners) {
+      _attachOwner(handle, viewModel, owner);
+    }
+  }
+
+  @override
+  void _handleInstanceDetached(
+    InstanceHandle handle,
+    ViewModel viewModel,
+  ) {
+    _dependencies.remove(handle);
+    super._handleInstanceDetached(handle, viewModel);
+    _notifyDependency(viewModel);
+  }
+
+  @override
+  void _handleInstanceRecreated(
+    InstanceHandle handle,
+    ViewModel previous,
+    ViewModel current,
+  ) {
+    super._handleInstanceRecreated(handle, previous, current);
+    _dependencies[handle] = current;
+    for (final owner in _propagatedOwners) {
+      _attachOwner(handle, current, owner);
+    }
+    _notifyDependency(current);
+  }
+
+  @override
+  void onViewModelUpdate(ViewModel viewModel) {
+    _onDependencyUpdate(viewModel);
+  }
+
+  void _notifyDependency(ViewModel viewModel) {
+    if (_dependencyDisposed ||
+        instanceManager.isResetting ||
+        !markViewModelBindingUpdated(this)) {
+      return;
+    }
+    _onDependencyUpdate(viewModel);
+  }
+
+  void _requireAcyclicDependency(ViewModel dependency) {
+    final createsCycle = identical(dependency, _parent) ||
+        (dependency.dependencyBindingIfCreated?._reaches(
+              _parent,
+              <ViewModelDependencyBinding>{},
+            ) ??
+            false);
+    if (!createsCycle) return;
+    throw ViewModelError(
+      'Circular ViewModel dependency detected: '
+      '${_parent.runtimeType} -> ${dependency.runtimeType}.',
+    );
+  }
+
+  bool _reaches(
+    ViewModel target,
+    Set<ViewModelDependencyBinding> visited,
+  ) {
+    if (!visited.add(this)) return false;
+    for (final dependency in _dependencies.values) {
+      if (identical(dependency, target)) return true;
+      if (dependency.dependencyBindingIfCreated?._reaches(target, visited) ??
+          false) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Handle lifecycle changes are reported by the source-aware callbacks above.
+  // Suppress the generic binding update to avoid notifying the parent twice.
+  @override
+  void onUpdate() {
+    super.onUpdate();
+  }
+
+  void _syncOwners(List<ViewModelBinding> currentOwners) {
+    if (_dependencyDisposed) return;
+    final removed = _propagatedOwners
+        .where(
+          (owner) => !currentOwners.any((item) => identical(item, owner)),
+        )
+        .toList(growable: false);
+    final added = currentOwners
+        .where(
+          (owner) => !_propagatedOwners.any((item) => identical(item, owner)),
+        )
+        .toList(growable: false);
+
+    for (final owner in removed) {
+      for (final entry in _dependencies.entries.toList(growable: false)) {
+        _detachOwner(entry.key, entry.value, owner);
+      }
+      _propagatedOwners.removeWhere((item) => identical(item, owner));
+    }
+    for (final owner in added) {
+      _propagatedOwners.add(owner);
+      for (final entry in _dependencies.entries.toList(growable: false)) {
+        _attachOwner(entry.key, entry.value, owner);
+      }
+    }
+  }
+
+  void _attachOwner(
+    InstanceHandle handle,
+    ViewModel viewModel,
+    ViewModelBinding owner,
+  ) {
+    if (handle.isDisposed || viewModel.isDisposed) return;
+    handle.bindFrom(owner.id, this);
+    viewModel.refHandler.addRef(owner, source: this);
+  }
+
+  void _detachOwner(
+    InstanceHandle handle,
+    ViewModel viewModel,
+    ViewModelBinding owner,
+  ) {
+    if (!viewModel.isDisposed) {
+      viewModel.refHandler.removeRef(owner, source: this);
+    }
+    if (!handle.isDisposed) {
+      handle.unbindFrom(owner.id, this);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_dependencyDisposed) return;
+    _dependencyDisposed = true;
+    _removeOwnerListener();
+    for (final owner in _propagatedOwners.toList(growable: false)) {
+      for (final entry in _dependencies.entries.toList(growable: false)) {
+        _detachOwner(entry.key, entry.value, owner);
+      }
+    }
+    _propagatedOwners.clear();
+    super.dispose();
+    _dependencies.clear();
   }
 }
 

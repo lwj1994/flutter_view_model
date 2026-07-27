@@ -49,7 +49,7 @@ class _ToolbarTitle extends StatelessWidget {
               ),
             ),
             Text(
-              'Binding ↔ VM Graph',
+              'Binding / VM Ownership Graph',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.primary,
               ),

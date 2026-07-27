@@ -65,7 +65,8 @@
 library;
 
 export "package:view_model/src/get_instance/store.dart" show InstanceArg;
-export "package:view_model/src/view_model/view_model_binding.dart";
+export "package:view_model/src/view_model/view_model_binding.dart"
+    hide ViewModelDependencyBinding;
 export "package:view_model/src/view_model/builder.dart";
 export "package:view_model/src/view_model/config.dart";
 export "package:view_model/src/view_model/spec.dart";

@@ -1,5 +1,5 @@
 name: view_model
-version: 1.0.6
+version: 1.1.0-dev.0
 issueTracker: 'https://github.com/lwj1994/flutter_view_model/issues'
 materialIconCodePoint: '0xe8f9'
 requiresConnection: true

@@ -98,17 +98,45 @@ Map<String, dynamic> _viewModelDataJson() {
         'createdAt': '2026-03-16T03:00:00.000Z',
       },
     ],
+    'bindings': <Map<String, dynamic>>[
+      <String, dynamic>{
+        'id': 'binding-1',
+        'name': 'binding-1',
+        'kind': 'root',
+        'isActive': true,
+        'createdAt': '2026-03-16T00:00:00.000Z',
+      },
+      <String, dynamic>{
+        'id': 'binding-empty',
+        'name': 'binding-empty',
+        'kind': 'root',
+        'isActive': true,
+        'createdAt': '2026-03-16T00:05:00.000Z',
+      },
+      <String, dynamic>{
+        'id': 'binding-virtual',
+        'name': 'CounterViewModel.virtual',
+        'kind': 'dependency',
+        'isActive': true,
+        'createdAt': '2026-03-16T00:10:00.000Z',
+        'parentViewModelId': 'vm-1',
+        'parentViewModelType': 'CounterViewModel',
+      },
+    ],
     'stats': <String, dynamic>{
       'totalInstances': 3,
       'activeInstances': 1,
       'disposedInstances': 1,
+      'totalBindings': 3,
+      'activeBindings': 3,
+      'disposedBindings': 0,
     },
   };
 }
 
 Map<String, dynamic> _dependencyGraphJson() {
   return <String, dynamic>{
-    'nodes': <Map<String, dynamic>>[
+    'viewModels': <Map<String, dynamic>>[
       <String, dynamic>{
         'id': 'vm-1',
         'type': 'view_model',
@@ -129,17 +157,52 @@ Map<String, dynamic> _dependencyGraphJson() {
         'isActive': false,
       },
     ],
-    'edges': <Map<String, dynamic>>[
+    'bindings': <Map<String, dynamic>>[
       <String, dynamic>{
-        'from': 'binding-1',
-        'to': 'vm-1',
-        'type': 'binding',
+        'id': 'binding-1',
+        'name': 'binding-1',
+        'kind': 'root',
+        'isActive': true,
+        'createdAt': '2026-03-16T00:00:00.000Z',
+      },
+      <String, dynamic>{
+        'id': 'binding-empty',
+        'name': 'binding-empty',
+        'kind': 'root',
+        'isActive': true,
+        'createdAt': '2026-03-16T00:05:00.000Z',
+      },
+      <String, dynamic>{
+        'id': 'binding-virtual',
+        'name': 'CounterViewModel.virtual',
+        'kind': 'dependency',
+        'isActive': true,
+        'createdAt': '2026-03-16T00:10:00.000Z',
+        'parentViewModelId': 'vm-1',
+        'parentViewModelType': 'CounterViewModel',
+      },
+    ],
+    'relationships': <Map<String, dynamic>>[
+      <String, dynamic>{
+        'source': 'binding-1',
+        'target': 'vm-1',
+        'kind': 'bindingOwnsViewModel',
         'isPrimaryOwner': true,
       },
       <String, dynamic>{
-        'from': 'binding-1',
-        'to': 'vm-2',
-        'type': 'binding',
+        'source': 'binding-1',
+        'target': 'vm-2',
+        'kind': 'bindingOwnsViewModel',
+      },
+      <String, dynamic>{
+        'source': 'vm-1',
+        'target': 'binding-virtual',
+        'kind': 'viewModelOwnsDependencyBinding',
+      },
+      <String, dynamic>{
+        'source': 'binding-virtual',
+        'target': 'vm-2',
+        'kind': 'bindingOwnsViewModel',
       },
     ],
   };
@@ -194,6 +257,10 @@ void main() {
       expect(result.stats.totalViewModels, 3);
       expect(result.stats.activeViewModels, 1);
       expect(result.stats.disposedViewModels, 1);
+      expect(result.bindings, hasLength(3));
+      expect(result.bindings[1].id, 'binding-empty');
+      expect(result.bindings[2].isDependency, isTrue);
+      expect(result.stats.totalBindings, 3);
       expect(
         serviceManager.invokedMethods,
         ['ext.view_model.getViewModelData'],
@@ -203,23 +270,31 @@ void main() {
     test('parses dependency graph data from the extension response', () async {
       final result = await ViewModelService().getDependencyGraph();
 
-      expect(result.nodes, hasLength(2));
-      expect(result.nodes.first.label, 'CounterViewModel');
-      expect(result.nodes.first.owners, ['binding-1', 'binding-2']);
-      expect(result.nodes.first.primaryOwner, 'binding-1');
-      expect(result.nodes.first.primaryOwnerHandoff?.from, 'binding-0');
-      expect(result.nodes.first.primaryOwnerHandoff?.to, 'binding-1');
+      expect(result.viewModels, hasLength(2));
+      expect(result.viewModels.first.label, 'CounterViewModel');
+      expect(result.viewModels.first.owners, ['binding-1', 'binding-2']);
+      expect(result.viewModels.first.primaryOwner, 'binding-1');
       expect(
-        result.nodes.first.primaryOwnerHandoff?.occurredAt,
+        result.viewModels.first.primaryOwnerHandoff?.from,
+        'binding-0',
+      );
+      expect(result.viewModels.first.primaryOwnerHandoff?.to, 'binding-1');
+      expect(
+        result.viewModels.first.primaryOwnerHandoff?.occurredAt,
         DateTime.utc(2026, 3, 16, 0, 30),
       );
-      expect(result.nodes[1].owners, isEmpty);
-      expect(result.nodes[1].primaryOwner, isNull);
-      expect(result.edges, hasLength(2));
-      expect(result.edges.first.from, 'binding-1');
-      expect(result.edges.first.to, 'vm-1');
-      expect(result.edges.first.isPrimaryOwner, isTrue);
-      expect(result.edges[1].isPrimaryOwner, isFalse);
+      expect(result.viewModels[1].owners, isEmpty);
+      expect(result.viewModels[1].primaryOwner, isNull);
+      expect(result.bindings, hasLength(3));
+      expect(result.bindings[1].id, 'binding-empty');
+      expect(result.bindings[2].parentViewModelId, 'vm-1');
+      expect(result.relationships, hasLength(4));
+      expect(result.relationships.first.source, 'binding-1');
+      expect(result.relationships.first.target, 'vm-1');
+      expect(result.relationships.first.isPrimaryOwner, isTrue);
+      expect(result.relationships[1].isPrimaryOwner, isFalse);
+      expect(result.relationships[2].isVirtualBindingOwnership, isTrue);
+      expect(result.relationships[3].isBindingOwnership, isTrue);
       expect(
         serviceManager.invokedMethods,
         ['ext.view_model.getDependencyGraph'],
@@ -264,7 +339,12 @@ void main() {
       expect(find.text('binding-1'), findsOneWidget);
       expect(find.text('Primary owner'), findsOneWidget);
       expect(find.text('Other owner'), findsOneWidget);
+      expect(find.text('Virtual binding'), findsOneWidget);
       expect(find.text('2 ViewModels • 1 primary'), findsOneWidget);
+      expect(find.text('binding-empty'), findsOneWidget);
+      expect(find.text('Virtual • 1 ViewModels'), findsOneWidget);
+      expect(find.text('Binding active'), findsOneWidget);
+      expect(find.text('Binding disposed'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

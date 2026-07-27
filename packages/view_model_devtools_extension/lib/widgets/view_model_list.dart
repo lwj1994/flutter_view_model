@@ -20,13 +20,23 @@ class ViewModelGraph extends StatelessWidget {
   Widget build(BuildContext context) {
     final filteredViewModels = _filterViewModels();
     final vmMap = {for (final vm in filteredViewModels) vm.id: vm};
-    final edges = graph.edges.where((edge) {
-      return vmMap.containsKey(edge.to);
+    final allVmMap = {for (final vm in viewModels) vm.id: vm};
+    final bindings = _filterBindings()..sort(_compareBindings);
+    final bindingMap = {for (final binding in bindings) binding.id: binding};
+    final relationships = graph.relationships.where((relationship) {
+      if (relationship.isBindingOwnership) {
+        return bindingMap.containsKey(relationship.source) &&
+            vmMap.containsKey(relationship.target);
+      }
+      if (relationship.isVirtualBindingOwnership) {
+        return vmMap.containsKey(relationship.source) &&
+            bindingMap.containsKey(relationship.target);
+      }
+      return false;
     }).toList();
-    final bindingIds = edges.map((edge) => edge.from).toSet().toList()..sort();
     final vmIds = filteredViewModels.map((vm) => vm.id).toList();
 
-    if (filteredViewModels.isEmpty && bindingIds.isEmpty) {
+    if (filteredViewModels.isEmpty && bindings.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -50,34 +60,17 @@ class ViewModelGraph extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const canvasMinWidth = 1200.0;
         const padding = 24.0;
-        const bindingSize = Size(220, 44);
+        const bindingSize = Size(240, 58);
         const vmSize = Size(280, 64);
-        const gap = 16.0;
-
-        final maxNodes = max(bindingIds.length, vmIds.length);
-        final canvasHeight = max(
-          constraints.maxHeight,
-          padding * 2 + maxNodes * (vmSize.height + gap),
-        );
-        final canvasWidth = max(constraints.maxWidth, canvasMinWidth);
-
-        final bindingRects = _layoutNodes(
-          ids: bindingIds,
-          nodeSize: bindingSize,
-          x: padding,
-          canvasHeight: canvasHeight,
+        final layout = _layoutGraph(
+          bindingIds: bindings.map((binding) => binding.id).toList(),
+          vmIds: vmIds,
+          relationships: relationships,
+          bindingSize: bindingSize,
+          vmSize: vmSize,
+          minimumSize: Size(constraints.maxWidth, constraints.maxHeight),
           padding: padding,
-          gap: gap,
-        );
-        final vmRects = _layoutNodes(
-          ids: vmIds,
-          nodeSize: vmSize,
-          x: canvasWidth - padding - vmSize.width,
-          canvasHeight: canvasHeight,
-          padding: padding,
-          gap: gap,
         );
 
         return InteractiveViewer(
@@ -85,46 +78,53 @@ class ViewModelGraph extends StatelessWidget {
           minScale: 0.6,
           maxScale: 2.5,
           child: SizedBox(
-            width: canvasWidth,
-            height: canvasHeight,
+            width: layout.size.width,
+            height: layout.size.height,
             child: Stack(
               children: [
                 CustomPaint(
-                  size: Size(canvasWidth, canvasHeight),
+                  size: layout.size,
                   painter: _GraphPainter(
-                    edges: edges,
-                    bindingRects: bindingRects,
-                    vmRects: vmRects,
+                    relationships: relationships,
+                    bindingRects: layout.bindingRects,
+                    vmRects: layout.vmRects,
                     vmMap: vmMap,
+                    bindingMap: bindingMap,
                     theme: Theme.of(context),
                   ),
                 ),
                 Positioned(
                   top: 12,
-                  left: canvasWidth / 2 - 118,
+                  left: max(12, layout.size.width / 2 - 190),
                   child: const _GraphLegend(),
                 ),
-                ...bindingIds.map((id) {
-                  final rect = bindingRects[id]!;
+                ...bindings.map((binding) {
+                  final rect = layout.bindingRects[binding.id]!;
                   return Positioned(
                     left: rect.left,
                     top: rect.top,
                     width: rect.width,
                     height: rect.height,
                     child: _BindingNode(
-                      bindingId: id,
-                      viewModels: _bindingViewModels(id, edges, vmMap),
-                      primaryOwnerCount: edges
+                      binding: binding,
+                      viewModels: _bindingViewModels(
+                        binding.id,
+                        relationships,
+                        vmMap,
+                      ),
+                      parentViewModel: allVmMap[binding.parentViewModelId],
+                      primaryOwnerCount: relationships
                           .where(
-                            (edge) =>
-                                edge.from == id && edge.isPrimaryOwnerBinding,
+                            (relationship) =>
+                                relationship.source == binding.id &&
+                                relationship.isPrimaryOwnerBinding,
                           )
                           .length,
                     ),
                   );
                 }),
                 ...vmIds.map((id) {
-                  final rect = vmRects[id]!;
+                  final rect = layout.vmRects[id]!;
                   final vm = vmMap[id]!;
                   return Positioned(
                     left: rect.left,
@@ -153,48 +153,143 @@ class ViewModelGraph extends StatelessWidget {
     }
   }
 
-  Map<String, Rect> _layoutNodes({
-    required List<String> ids,
-    required Size nodeSize,
-    required double x,
-    required double canvasHeight,
-    required double padding,
-    required double gap,
-  }) {
-    final rects = <String, Rect>{};
-    if (ids.isEmpty) return rects;
-
-    final totalHeight = ids.length * nodeSize.height + (ids.length - 1) * gap;
-    final startY = max(padding, (canvasHeight - totalHeight) / 2);
-
-    for (var i = 0; i < ids.length; i++) {
-      final y = startY + i * (nodeSize.height + gap);
-      rects[ids[i]] = Rect.fromLTWH(x, y, nodeSize.width, nodeSize.height);
+  List<BindingInfo> _filterBindings() {
+    switch (filter) {
+      case 'active':
+        return graph.bindings.where((binding) => binding.isActive).toList();
+      case 'disposed':
+        return graph.bindings.where((binding) => !binding.isActive).toList();
+      default:
+        return List<BindingInfo>.from(graph.bindings);
     }
-    return rects;
+  }
+
+  int _compareBindings(BindingInfo left, BindingInfo right) {
+    final kind = left.kind.compareTo(right.kind);
+    if (kind != 0) return kind;
+    return left.id.compareTo(right.id);
+  }
+
+  _GraphLayout _layoutGraph({
+    required List<String> bindingIds,
+    required List<String> vmIds,
+    required List<DependencyRelationship> relationships,
+    required Size bindingSize,
+    required Size vmSize,
+    required Size minimumSize,
+    required double padding,
+  }) {
+    const horizontalGap = 112.0;
+    const verticalSlot = 84.0;
+    final nodeIds = <String>{...bindingIds, ...vmIds};
+    final depths = {for (final id in nodeIds) id: 0};
+
+    // The owner graph is acyclic. Longest-path depth naturally lays out
+    // root binding → parent VM → virtual binding → child VM in order while
+    // still supporting direct/shared owner edges that skip a column.
+    for (var pass = 0; pass < nodeIds.length; pass++) {
+      var changed = false;
+      for (final relationship in relationships) {
+        final fromDepth = depths[relationship.source];
+        final toDepth = depths[relationship.target];
+        if (fromDepth == null || toDepth == null) continue;
+        final candidate = min(nodeIds.length - 1, fromDepth + 1);
+        if (candidate <= toDepth) continue;
+        depths[relationship.target] = candidate;
+        changed = true;
+      }
+      if (!changed) break;
+    }
+
+    final columns = <int, List<String>>{};
+    for (final id in nodeIds) {
+      columns.putIfAbsent(depths[id]!, () => []).add(id);
+    }
+    for (final column in columns.values) {
+      column.sort();
+    }
+
+    final maxDepth = depths.values.fold<int>(0, max);
+    final maxColumnCount = columns.values.fold<int>(0, (value, column) {
+      return max(value, column.length);
+    });
+    final columnWidth = max(bindingSize.width, vmSize.width);
+    final intrinsicWidth =
+        padding * 2 + (maxDepth + 1) * columnWidth + maxDepth * horizontalGap;
+    final intrinsicHeight = padding * 2 + maxColumnCount * verticalSlot;
+    final size = Size(
+      max(1100, max(minimumSize.width, intrinsicWidth)),
+      max(minimumSize.height, intrinsicHeight),
+    );
+    final bindingRects = <String, Rect>{};
+    final vmRects = <String, Rect>{};
+
+    for (var depth = 0; depth <= maxDepth; depth++) {
+      final column = columns[depth] ?? const <String>[];
+      final totalHeight = column.length * verticalSlot;
+      final startY = max(padding + 42, (size.height - totalHeight) / 2);
+      final slotX = padding + depth * (columnWidth + horizontalGap);
+      for (var index = 0; index < column.length; index++) {
+        final id = column[index];
+        final isBinding = bindingIds.contains(id);
+        final nodeSize = isBinding ? bindingSize : vmSize;
+        final x = slotX + (columnWidth - nodeSize.width) / 2;
+        final y = startY + index * verticalSlot;
+        final rect = Rect.fromLTWH(x, y, nodeSize.width, nodeSize.height);
+        if (isBinding) {
+          bindingRects[id] = rect;
+        } else {
+          vmRects[id] = rect;
+        }
+      }
+    }
+
+    return _GraphLayout(
+      size: size,
+      bindingRects: bindingRects,
+      vmRects: vmRects,
+    );
   }
 
   List<ViewModelInfo> _bindingViewModels(
     String bindingId,
-    List<DependencyEdge> edges,
+    List<DependencyRelationship> relationships,
     Map<String, ViewModelInfo> vmMap,
   ) {
-    final ids = edges
-        .where((edge) => edge.from == bindingId)
-        .map((edge) => edge.to)
+    final ids = relationships
+        .where(
+          (relationship) =>
+              relationship.isBindingOwnership &&
+              relationship.source == bindingId,
+        )
+        .map((relationship) => relationship.target)
         .toSet();
     return ids.map((id) => vmMap[id]).whereType<ViewModelInfo>().toList();
   }
 }
 
+class _GraphLayout {
+  final Size size;
+  final Map<String, Rect> bindingRects;
+  final Map<String, Rect> vmRects;
+
+  const _GraphLayout({
+    required this.size,
+    required this.bindingRects,
+    required this.vmRects,
+  });
+}
+
 class _BindingNode extends StatelessWidget {
-  final String bindingId;
+  final BindingInfo binding;
   final List<ViewModelInfo> viewModels;
+  final ViewModelInfo? parentViewModel;
   final int primaryOwnerCount;
 
   const _BindingNode({
-    required this.bindingId,
+    required this.binding,
     required this.viewModels,
+    required this.parentViewModel,
     required this.primaryOwnerCount,
   });
 
@@ -202,16 +297,19 @@ class _BindingNode extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final count = viewModels.length;
+    final color = binding.isDependency
+        ? theme.colorScheme.tertiary
+        : theme.colorScheme.secondary;
 
     return InkWell(
       onTap: () => _showBindingDetails(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: theme.colorScheme.secondaryContainer.withAlpha(160),
+          color: color.withAlpha(binding.isActive ? 28 : 14),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: theme.colorScheme.secondary.withAlpha(130),
+            color: color.withAlpha(binding.isActive ? 150 : 80),
           ),
           boxShadow: [
             BoxShadow(
@@ -225,11 +323,11 @@ class _BindingNode extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 14,
-              backgroundColor: theme.colorScheme.secondary.withAlpha(40),
+              backgroundColor: color.withAlpha(40),
               child: Icon(
-                Icons.link,
+                binding.isDependency ? Icons.account_tree : Icons.link,
                 size: 16,
-                color: theme.colorScheme.secondary,
+                color: color,
               ),
             ),
             const SizedBox(width: 8),
@@ -239,7 +337,7 @@ class _BindingNode extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    bindingId,
+                    binding.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -249,13 +347,15 @@ class _BindingNode extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    primaryOwnerCount == 0
-                        ? '$count ViewModels'
-                        : '$count ViewModels • $primaryOwnerCount primary',
+                    binding.isDependency
+                        ? 'Virtual • $count ViewModels'
+                        : primaryOwnerCount == 0
+                            ? '$count ViewModels'
+                            : '$count ViewModels • $primaryOwnerCount primary',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.secondary,
+                      color: color,
                       fontSize: 11,
                       height: 1,
                     ),
@@ -274,8 +374,9 @@ class _BindingNode extends StatelessWidget {
       context: context,
       builder: (context) {
         return BindingDetailsDialog(
-          bindingId: bindingId,
+          binding: binding,
           viewModels: viewModels,
+          parentViewModel: parentViewModel,
         );
       },
     );
@@ -312,6 +413,14 @@ class _GraphLegend extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             const Text('Other owner'),
+            const SizedBox(width: 14),
+            _LegendLine(
+              color: theme.colorScheme.tertiary,
+              thickness: 2,
+              dashed: true,
+            ),
+            const SizedBox(width: 6),
+            const Text('Virtual binding'),
           ],
         ),
       ),
@@ -322,10 +431,12 @@ class _GraphLegend extends StatelessWidget {
 class _LegendLine extends StatelessWidget {
   final Color color;
   final double thickness;
+  final bool dashed;
 
   const _LegendLine({
     required this.color,
     required this.thickness,
+    this.dashed = false,
   });
 
   @override
@@ -334,10 +445,18 @@ class _LegendLine extends StatelessWidget {
       width: 24,
       height: 8,
       child: Center(
-        child: Container(
-          height: thickness,
-          color: color,
-        ),
+        child: dashed
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(
+                  4,
+                  (_) => Container(width: 4, height: thickness, color: color),
+                ),
+              )
+            : Container(
+                height: thickness,
+                color: color,
+              ),
       ),
     );
   }
@@ -444,17 +563,19 @@ class _ViewModelNode extends StatelessWidget {
 }
 
 class _GraphPainter extends CustomPainter {
-  final List<DependencyEdge> edges;
+  final List<DependencyRelationship> relationships;
   final Map<String, Rect> bindingRects;
   final Map<String, Rect> vmRects;
   final Map<String, ViewModelInfo> vmMap;
+  final Map<String, BindingInfo> bindingMap;
   final ThemeData theme;
 
   _GraphPainter({
-    required this.edges,
+    required this.relationships,
     required this.bindingRects,
     required this.vmRects,
     required this.vmMap,
+    required this.bindingMap,
     required this.theme,
   });
 
@@ -472,38 +593,64 @@ class _GraphPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    for (final edge in edges) {
-      final fromRect = bindingRects[edge.from];
-      final toRect = vmRects[edge.to];
+    for (final relationship in relationships) {
+      final isVirtual = relationship.isVirtualBindingOwnership;
+      final fromRect = isVirtual
+          ? vmRects[relationship.source]
+          : bindingRects[relationship.source];
+      final toRect = isVirtual
+          ? bindingRects[relationship.target]
+          : vmRects[relationship.target];
       if (fromRect == null || toRect == null) continue;
 
-      final start = Offset(fromRect.right, fromRect.center.dy);
-      final end = Offset(toRect.left, toRect.center.dy);
+      final travelsRight = fromRect.center.dx <= toRect.center.dx;
+      final start = Offset(
+        travelsRight ? fromRect.right : fromRect.left,
+        fromRect.center.dy,
+      );
+      final end = Offset(
+        travelsRight ? toRect.left : toRect.right,
+        toRect.center.dy,
+      );
       final midX = (start.dx + end.dx) / 2;
 
       final path = Path()
         ..moveTo(start.dx, start.dy)
         ..cubicTo(midX, start.dy, midX, end.dy, end.dx, end.dy);
 
-      final vm = vmMap[edge.to];
+      final vm = vmMap[relationship.target];
       final isActive = vm?.status == 'active';
-      final isPrimaryOwner = edge.isPrimaryOwnerBinding;
-      final color = isPrimaryOwner
-          ? theme.colorScheme.primary
-          : isActive
-              ? Colors.green
-              : Colors.orange;
+      final bindingId = isVirtual ? relationship.target : relationship.source;
+      final bindingIsActive = bindingMap[bindingId]?.isActive ?? true;
+      final isPrimaryOwner = relationship.isPrimaryOwnerBinding;
+      final color = isVirtual
+          ? theme.colorScheme.tertiary
+          : isPrimaryOwner
+              ? theme.colorScheme.primary
+              : isActive
+                  ? Colors.green
+                  : Colors.orange;
       final edgePaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = isPrimaryOwner ? 3.2 : 1.4
+        ..strokeWidth = isVirtual ? 2 : (isPrimaryOwner ? 3.2 : 1.4)
         ..strokeCap = StrokeCap.round
-        ..color = color.withAlpha(isPrimaryOwner ? 220 : 120);
-      canvas.drawPath(path, edgePaint);
+        ..color = color.withAlpha(
+          !bindingIsActive
+              ? 80
+              : isVirtual || isPrimaryOwner
+                  ? 220
+                  : 120,
+        );
+      if (isVirtual) {
+        _drawDashedPath(canvas, path, edgePaint);
+      } else {
+        canvas.drawPath(path, edgePaint);
+      }
 
-      if (isPrimaryOwner) {
+      if (isPrimaryOwner || isVirtual) {
         canvas.drawCircle(
           end,
-          4,
+          isVirtual ? 3.5 : 4,
           Paint()
             ..style = PaintingStyle.fill
             ..color = color,
@@ -512,12 +659,26 @@ class _GraphPainter extends CustomPainter {
     }
   }
 
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    const dashLength = 8.0;
+    const gapLength = 5.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = min(distance + dashLength, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance = end + gapLength;
+      }
+    }
+  }
+
   @override
   bool shouldRepaint(covariant _GraphPainter oldDelegate) {
-    return oldDelegate.edges != edges ||
+    return oldDelegate.relationships != relationships ||
         oldDelegate.bindingRects != bindingRects ||
         oldDelegate.vmRects != vmRects ||
-        oldDelegate.vmMap != vmMap;
+        oldDelegate.vmMap != vmMap ||
+        oldDelegate.bindingMap != bindingMap;
   }
 }
 
@@ -765,21 +926,23 @@ class ViewModelDetailsDialog extends StatelessWidget {
 }
 
 class BindingDetailsDialog extends StatelessWidget {
-  final String bindingId;
+  final BindingInfo binding;
   final List<ViewModelInfo> viewModels;
+  final ViewModelInfo? parentViewModel;
 
   const BindingDetailsDialog({
     super.key,
-    required this.bindingId,
+    required this.binding,
     required this.viewModels,
+    required this.parentViewModel,
   });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       child: Container(
-        width: 520,
-        height: 420,
+        width: 560,
+        height: 500,
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -791,18 +954,33 @@ class BindingDetailsDialog extends StatelessWidget {
                   backgroundColor:
                       Theme.of(context).colorScheme.primary.withAlpha(38),
                   child: Icon(
-                    Icons.link,
+                    binding.isDependency ? Icons.account_tree : Icons.link,
                     size: 18,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    bindingId,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        binding.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      ),
+                      SelectableText(
+                        binding.id,
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                            ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -811,6 +989,61 @@ class BindingDetailsDialog extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(
+                  avatar: Icon(
+                    binding.isDependency ? Icons.account_tree : Icons.link,
+                    size: 16,
+                  ),
+                  label: Text(
+                    binding.isDependency ? 'Virtual binding' : 'Root binding',
+                  ),
+                ),
+                Chip(
+                  avatar: Icon(
+                    binding.isActive
+                        ? Icons.play_circle_fill
+                        : Icons.delete_outline,
+                    size: 16,
+                    color: binding.isActive ? Colors.green : Colors.orange,
+                  ),
+                  label: Text(binding.isActive ? 'Active' : 'Disposed'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Created: ${_formatDateTime(binding.createdAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (binding.disposeTime != null)
+              Text(
+                'Disposed: ${_formatDateTime(binding.disposeTime!)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            if (binding.isDependency) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Owned by ViewModel generation',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(
+                parentViewModel == null
+                    ? '${binding.parentViewModelType ?? 'Unknown'}\n'
+                        '${binding.parentViewModelId ?? 'Pending creation'}'
+                    : '${parentViewModel!.type}\n${parentViewModel!.id}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                    ),
+              ),
+            ],
             const SizedBox(height: 16),
             Text(
               'Connected ViewModels (${viewModels.length})',
@@ -852,5 +1085,14 @@ class BindingDetailsDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    if (dateTime.millisecondsSinceEpoch == 0) return 'Unknown';
+    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-'
+        '${dateTime.day.toString().padLeft(2, '0')} '
+        '${dateTime.hour.toString().padLeft(2, '0')}:'
+        '${dateTime.minute.toString().padLeft(2, '0')}:'
+        '${dateTime.second.toString().padLeft(2, '0')}';
   }
 }
