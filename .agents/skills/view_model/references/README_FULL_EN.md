@@ -302,19 +302,21 @@ Calling `userSpec('abc')` returns a `ViewModelFactory<UserViewModel>` that you c
 
 An instance's identity is the combination of the resolved generic ViewModel
 type `T` and its effective `key`; the builder's runtime result type is not part
-of identity, and `tag` is only a grouping/lookup label. When factory `key()`
-returns `null`, the current `ViewModelBinding` supplies a private default key,
-so repeated `watch`/`read` calls for the same `T` reuse one instance within
-that binding while different bindings remain isolated. Set a key when you need
-to:
+of identity, and `tag` is only a grouping/lookup label. For an ordinary
+non-retained instance, when factory `key()` returns `null`, the current
+`ViewModelBinding` supplies a private default key, so repeated `watch`/`read`
+calls for the same `T` reuse one instance within that binding while different
+bindings remain isolated. Set a key when you need to:
 
 - share an instance across bindings;
 - distinguish multiple instances of the same `T` in one binding; or
 - give shared instances a stable identity across all resolving bindings.
 
 A key does not keep an instance alive; retention is controlled separately by
-`aliveForever`. A nested `aliveForever` dependency must use an explicit key so
-its retained cache remains reachable after the parent generation is disposed.
+`aliveForever`. Every `aliveForever` spec must use an explicit key, whether it
+is resolved by a root binding or another ViewModel. An unkeyed retained spec
+throws `ViewModelError` before its builder runs, and the Store enforces the
+same invariant for lower-level factories.
 
 In debug mode, resolving different specs with the same `T` and effective key
 from one binding emits a warning: instance identity ignores the builder, so the
@@ -532,10 +534,11 @@ viewModelBinding.watch(spec);
 viewModelBinding.watch(spec);
 ```
 
-When factory `key()` returns `null`, the binding supplies a private default
-key. This gives one instance per resolved generic ViewModel type `T` within
-that binding, isolated from other bindings. To create multiple instances of
-the same `T` in one binding, give their specs distinct keys.
+For `aliveForever: false`, when factory `key()` returns `null`, the binding
+supplies a private default key. This gives one instance per resolved generic
+ViewModel type `T` within that binding, isolated from other bindings. To create
+multiple instances of the same `T` in one binding, give their specs distinct
+keys. An `aliveForever` instance cannot use this private default.
 
 ### tag-based Lookup
 
@@ -564,8 +567,9 @@ final authSpec = ViewModelSpec<AuthViewModel>(
 ```
 
 An `aliveForever` parent transitively retains children already resolved by its
-generation scope. A nested `aliveForever` child must use an explicit key;
-otherwise its parent-private key would be unreachable after parent disposal.
+generation scope. Every `aliveForever` spec must use an explicit key at both
+root and nested resolution sites, giving the retained cache a globally
+reachable identity.
 
 ## ViewModelBinding in Any Class
 
@@ -679,9 +683,9 @@ also added to or removed from every already-resolved child in real time.
 Direct and parent paths are source-aware: if one root owns the same keyed child
 both directly and through one or more parents, releasing one path cannot remove
 the others. Nested unkeyed children use the parent's private default key and do
-not switch identity during a natural root-owner handoff. A nested
-`aliveForever` child must use an explicit key; otherwise its parent-private key
-would become unreachable after the parent generation is disposed.
+not switch identity during a natural root-owner handoff. This unkeyed behavior
+is only valid when `aliveForever` is false: every retained root or child must
+use an explicit key.
 
 ### Child ViewModel lifecycle diagram
 

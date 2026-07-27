@@ -6,8 +6,10 @@
   in real time with source-aware reference counting.
 - Add construction-lineage and runtime dependency-cycle checks, failure-atomic
   dependency-scope rollback, and transaction-level notification deduplication
-  for diamond graphs. Nested `aliveForever` dependencies now require an
-  explicit key so retained entries remain reachable.
+  for diamond graphs. Every `aliveForever` ViewModel now requires an explicit
+  key at both root and nested resolution sites so retained entries remain
+  globally reachable; the Store also rejects lower-level retained factories
+  without a key before invoking their builder.
 - Extend DevTools with an explicit lifecycle registry for every observed root
   and dependency binding, including empty initialized roots. The graph now
   renders parent-generation ownership as
@@ -17,6 +19,9 @@
   tag-batch lookup. Read variants still ignore child `notifyListeners()` but
   observe handle recreate/dispose; a failed recreate keeps the old object and
   dependency scope unchanged.
+
+## 1.0.7
+
 - Restore `ViewModelConfig.equals` as the global equality fallback. Full state
   uses local `equals` → global `equals` → `identical()`, while selected
   values use explicit `equals` → global `equals` → `==`.

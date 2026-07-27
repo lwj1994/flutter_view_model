@@ -77,6 +77,30 @@ void main() {
       assert(b != c);
     });
 
+    test('aliveForever rejects a null key at the store boundary', () {
+      var buildCount = 0;
+
+      expect(
+        () => instanceManager.get<TestModel>(
+          factory: InstanceFactory<TestModel>(
+            builder: () {
+              buildCount++;
+              return TestModel();
+            },
+            arg: const InstanceArg(aliveForever: true),
+          ),
+        ),
+        throwsA(
+          isA<ViewModelError>().having(
+            (error) => error.message,
+            'message',
+            contains('must use an explicit key'),
+          ),
+        ),
+      );
+      expect(buildCount, 0);
+    });
+
     test('share key', () {
       final factory = InstanceFactory<TestModel>(
           builder: () => TestModel(), arg: const InstanceArg(key: "share"));

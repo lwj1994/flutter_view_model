@@ -89,8 +89,8 @@ sequenceDiagram
   unkeyed dependency tree 不迁移。
 - 跨独立 parent generation 共享 child，或同一 binding 内需要多个同类型 child
   时，应显式提供 key。
-- nested `aliveForever` child 必须显式提供 key，确保 parent generation 销毁后
-  retained cache 仍可再次命中。
+- 所有 `aliveForever` ViewModel 都必须显式提供 key；root 与 nested 解析会在
+  builder 执行前应用同一条校验，底层 Store 还会为内部 factory 再做一次兜底。
 
 ## 3. 优先使用带 spec 的 read 与 watch
 

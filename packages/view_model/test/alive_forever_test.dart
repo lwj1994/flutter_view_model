@@ -40,6 +40,52 @@ void main() {
       ref.dispose();
     });
 
+    test('aliveForever=true requires an explicit key on every binding', () {
+      final ref = TestRef();
+      addTearDown(ref.dispose);
+      var buildCount = 0;
+      final factory = AliveForeverFactory(
+        builder: () {
+          buildCount++;
+          return TestModel();
+        },
+        aliveForever: true,
+      );
+
+      expect(
+        () => ref.read(factory),
+        throwsA(
+          isA<ViewModelError>().having(
+            (error) => error.message,
+            'message',
+            contains('must use an explicit key'),
+          ),
+        ),
+      );
+      expect(buildCount, 0);
+    });
+
+    test('Arg-based aliveForever rejects a computed null key', () {
+      final ref = TestRef();
+      addTearDown(ref.dispose);
+      final provider = ViewModelSpec.arg<TestModel, int>(
+        builder: (_) => TestModel(),
+        key: (_) => null,
+        aliveForever: (_) => true,
+      );
+
+      expect(
+        () => ref.read(provider(1)),
+        throwsA(
+          isA<ViewModelError>().having(
+            (error) => error.message,
+            'message',
+            contains('must use an explicit key'),
+          ),
+        ),
+      );
+    });
+
     test(
         'aliveForever=true: ViewModel does NOT dispose when watchers drop '
         'to zero', () async {

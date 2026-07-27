@@ -197,8 +197,9 @@ watchCachesByTag/readCachesByTag
 - `watch/read`、cached/maybeCached 与 tag batch API 命中时都建立相同的 parent
   生命周期边。只有 watch 变体冒泡 child 的 `notifyListeners()`；read 变体仍感知
   handle recreate/dispose。
-- nested `aliveForever` child 必须显式 key。`aliveForever` parent 会传递性保活其
-  已解析 child，直到 `recycle` 或 `ViewModel.reset()`。
+- 所有 `aliveForever` ViewModel 都必须显式 key，root 与 nested 解析统一在
+  builder 执行前校验，底层 Store 也必须兜底。`aliveForever` parent 会传递性
+  保活其已解析 child，直到 `recycle` 或 `ViewModel.reset()`。
 - 依赖图必须无环。构造期按 construction lineage 判定 unkeyed self/indirect
   recursion，运行期在提交 owner edge 前判环；diamond graph 合法。builder、
   constructor 或 replacement builder 失败必须回滚暂存 scope，失败的 recreate

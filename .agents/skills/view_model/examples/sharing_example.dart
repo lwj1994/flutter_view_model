@@ -15,8 +15,8 @@ final authSpec = ViewModelSpec<AuthService>(
 
 class ProfileViewModel with ViewModel {
   // Resolve through this parent generation's stable dependency binding on
-  // every access. The explicit key keeps this aliveForever child reachable and
-  // shared across independent roots/parents.
+  // every access. Every aliveForever spec requires an explicit key; here it
+  // also keeps the service shared across independent roots/parents.
   AuthService get auth => viewModelBinding.read(authSpec);
 
   String get status => auth.isLoggedIn ? 'Online' : 'Offline';

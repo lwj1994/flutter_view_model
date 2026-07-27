@@ -92,8 +92,9 @@ scope or its children; they remain until `recycle` or `ViewModel.reset()`.
   scope. Its old unkeyed dependency tree is not migrated.
 - Use an explicit key to share a child across independent parent generations or
   to resolve several children of the same type in one binding.
-- A nested `aliveForever` child must have an explicit key so its retained cache
-  remains reachable after the parent generation is disposed.
+- Every `aliveForever` ViewModel must have an explicit key. The same validation
+  applies to root and nested resolution before the builder runs, with a second
+  invariant check at the Store boundary for lower-level factories.
 
 ## 3. Prefer spec-based read and watch
 

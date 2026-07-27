@@ -138,6 +138,7 @@ class ViewModelSpec<T extends ViewModel> extends ViewModelFactory<T>
 
     /// Whether the instance remains alive when no bindings remain.
     /// A deliberate force recycle through `recycle` still disposes it.
+    /// An explicit non-null [key] is required when this is `true`.
     bool aliveForever = false,
   })  : _aliveForever = aliveForever,
         _debugSource = debugSource {

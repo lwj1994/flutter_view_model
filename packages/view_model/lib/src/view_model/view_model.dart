@@ -948,10 +948,11 @@ abstract mixin class ViewModelFactory<T> {
   /// Returns an explicit key for identifying ViewModel instances.
   ///
   /// Resolutions using the same generic ViewModel type `T` and equal non-null
-  /// keys share one instance across bindings. If this returns `null`, the
-  /// resolving binding supplies a private default key: repeated resolutions of
-  /// the same `T` reuse one instance in that binding, while different bindings
-  /// remain isolated.
+  /// keys share one instance across bindings. For `aliveForever: false`, if
+  /// this returns `null`, the resolving binding supplies a private default key:
+  /// repeated resolutions of the same `T` reuse one instance in that binding,
+  /// while different bindings remain isolated. Returning `true` from
+  /// [aliveForever] requires this method to return a non-null key.
   ///
   /// By default, this returns a shared key when deprecated singleton switches
   /// are enabled, otherwise `null`.
@@ -1011,6 +1012,7 @@ abstract mixin class ViewModelFactory<T> {
   /// Returns `true` to keep the instance alive when no bindings remain.
   ///
   /// This is an explicit lifetime guarantee, not a best-effort cache hint.
+  /// Implementations that return `true` must also return a non-null [key].
   /// The exceptional path is a deliberate force recycle via `recycle` (or a
   /// complete test-runtime reset), which still disposes the instance.
   bool aliveForever() => false;

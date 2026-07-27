@@ -115,12 +115,16 @@ class CheckoutViewModel with ViewModel {
   mirrored to already-resolved children in real time.
 - A ViewModel's identity is the resolved generic VM type `T` plus its effective
   `key`; the builder's runtime result type is not part of identity, and `tag`
-  is only a grouping label. When factory `key()` returns `null`, the binding
-  supplies a private default key, so the same `T` is reused within one binding
-  and is isolated across bindings. Add a key to share across bindings,
+  is only a grouping label. For `aliveForever: false`, when factory `key()`
+  returns `null`, the binding supplies a private default key, so the same `T`
+  is reused within one binding and is isolated across bindings. Add a key to
+  share across bindings,
   distinguish multiple instances of the same `T` in one binding, or provide
-  stable keyed cached lookup. A key does not keep an instance alive. A nested
-  `aliveForever` dependency must use an explicit key.
+  stable keyed cached lookup. A key does not keep an instance alive. Every
+  `aliveForever` instance, whether resolved by a root or another ViewModel,
+  must use an explicit key; binding resolution rejects an unkeyed retained
+  spec before construction, and the Store enforces the same invariant for
+  lower-level factories.
 
 ### App composed from ViewModel modules (pseudo-code)
 
@@ -206,9 +210,10 @@ identity and state while its propagated A source is removed.
 
 Ownership is source-aware. A root may own the same keyed child directly and
 through multiple parents; releasing one path cannot remove another. Use an
-explicit key when a leaf must be shared across independent parent generations,
-and always use one for a nested `aliveForever` child so its retained cache stays
-reachable. Never cache a nested ViewModel in `late final`, `final`, or `??=`;
+explicit key when a leaf must be shared across independent parent generations.
+Every `aliveForever` instance must also use an explicit key, at both root and
+nested resolution sites, so its retained cache has a globally reachable
+identity. Never cache a nested ViewModel in `late final`, `final`, or `??=`;
 explicit recycle/recreate and asynchronous disposal still require getter-based
 re-resolution.
 
@@ -224,13 +229,15 @@ re-resolution.
 - `ViewModelSpec.arg/arg2/arg3/arg4` for parameterized construction.
 - Identity is resolved generic VM type `T` + effective `key`; `tag` and the
   builder's runtime result type do not participate in identity.
-- When factory `key()` returns `null`, repeated access to the same `T` reuses
-  one instance within a binding and remains isolated across bindings.
+- With `aliveForever: false`, when factory `key()` returns `null`, repeated
+  access to the same `T` reuses one instance within a binding and remains
+  isolated across bindings.
 - Use `key` for cross-binding sharing or multiple same-`T` instances in one
   binding. It does not keep an instance alive.
 - Use `tag` for grouped lookup.
-- Use `aliveForever: true` only for intentional long-lived retention. It skips
-  automatic disposal at zero binding references; `recycle` still force-disposes.
+- Use `aliveForever: true` only for intentional long-lived retention and pair
+  it with an explicit key. It skips automatic disposal at zero binding
+  references; `recycle` still force-disposes.
 
 3. Integrate with host
 - Widget page: `State<T> with ViewModelStateMixin`.
@@ -284,10 +291,12 @@ re-resolution.
   lifecycle edge and mirror the parent's current root bindings.
 - Resolve nested ViewModels through non-caching getters; do not retain them in
   `late final`, `final`, or `??=` fields.
-- With `key() == null`: one instance per resolved generic VM type `T` per binding.
+- With `aliveForever: false` and `key() == null`: one instance per resolved
+  generic VM type `T` per binding.
 - With same `T` + same `key`: shared identity across bindings.
 - Multiple instances of the same `T` in one binding need distinct keys.
-- Nested `aliveForever` instances require an explicit key.
+- Every `aliveForever` instance requires an explicit key, regardless of
+  whether it is resolved by a root binding or another ViewModel.
 
 6. Lifecycle and cleanup
 - Lifecycle hooks: `onCreate`, `onBind`, `onUnbind`, `onDispose`.

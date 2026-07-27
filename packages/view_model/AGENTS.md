@@ -34,6 +34,9 @@ This file supplements the repository root `AGENTS.md` for `packages/view_model`.
 - A child resolved through a ViewModel belongs to that parent object generation:
   its lifetime cannot be shorter than the parent, and the parent's external
   root bindings must be mirrored to it with source-aware references.
+- Every `aliveForever` ViewModel must have an explicit key. Root and nested
+  resolution apply the same validation before invoking the builder, and Store
+  creation must enforce the invariant for lower-level factories.
 - Keep the child lifecycle diagrams and API matrices in both READMEs and both
   architecture guides synchronized with runtime behavior.
 - Keep `view_model_annotation` version aligned when doing release work.

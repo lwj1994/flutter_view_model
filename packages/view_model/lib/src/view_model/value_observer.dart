@@ -6,50 +6,28 @@ import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 
-/// A class that holds a value and can be observed by an [ObserverBuilder].
-///
-/// It allows reading the current value and setting a new one, which will
-/// trigger a rebuild in any listening [ObserverBuilder].
-///
-/// The data can be shared and identified by [shareKey].
-///
-/// Deprecated. For widget-local reactive state, use Flutter's
-/// `ValueNotifier<T>` with `ValueListenableBuilder<T>`. For state managed by
-/// this package, use `StateViewModel<T>` with `ViewModelSpec`.
-///
-/// This compatibility API is scheduled for removal in 2.0.0.
+/// @nodoc
 @Deprecated(
   'Use ValueNotifier with ValueListenableBuilder for widget-local state, '
   'or StateViewModel with ViewModelSpec for managed state. '
   'Scheduled for removal in 2.0.0.',
 )
 class ObservableValue<T> {
-  /// A key to identify and share this value across different
-  /// [ObserverBuilder]s. If not provided, a unique key is
-  /// automatically created, making the value local.
   final Object shareKey;
 
   final T initialValue;
 
-  /// Returns the current value proxied from the underlying
-  /// shared StateViewModel. The value is sourced from the
-  /// shared instance identified by `shareKey`.
   T get value {
     return _ensureViewModel().state;
   }
 
   _ObserveDataViewModel<T>? _vm;
 
-  /// Updates the underlying shared StateViewModel state and notifies observers.
   set value(T newValue) {
     // ignore: invalid_use_of_protected_member
     _ensureViewModel().setState(newValue);
   }
 
-  /// Creates an observable value.
-  ///
-  /// If a [shareKey] is provided, it will be used to identify this value.
-  /// Otherwise, a unique key is automatically created, making this value local.
   ObservableValue(this.initialValue, {Object? shareKey})
       : this.shareKey = shareKey ?? Object() {
     _ensureViewModel();
@@ -102,12 +80,7 @@ class _ObserveDataViewModel<T> extends StateViewModel<T> {
   _ObserveDataViewModel({required super.state});
 }
 
-/// A widget that listens to an [ObservableValue] and rebuilds whenever the
-/// value changes.
-///
-/// Deprecated. Use Flutter's `ValueListenableBuilder<T>` for widget-local
-/// state, or resolve a `StateViewModel<T>` from a `ViewModelSpec` for managed
-/// state.
+/// @nodoc
 @Deprecated(
   'Use ValueListenableBuilder for widget-local state, or StateViewModel '
   'with ViewModelSpec for managed state. Scheduled for removal in 2.0.0.',
@@ -115,7 +88,6 @@ class _ObserveDataViewModel<T> extends StateViewModel<T> {
 class ObserverBuilder<T> extends StatefulWidget {
   final ObservableValue<T> observable;
 
-  /// Builder that receives the latest value; `BuildContext` is not required.
   final Widget Function(T value) builder;
 
   const ObserverBuilder({
@@ -156,11 +128,7 @@ class _ObserverBuilderState<T> extends State<ObserverBuilder<T>>
   }
 }
 
-/// A widget that listens to two [ObservableValue]s and rebuilds whenever either
-/// value changes.
-///
-/// Deprecated. Use Flutter's `ValueListenableBuilder` for widget-local state,
-/// or one `StateViewModel` containing both values for managed state.
+/// @nodoc
 @Deprecated(
   'Use ValueListenableBuilder for widget-local state, or one StateViewModel '
   'containing both values. Scheduled for removal in 2.0.0.',
@@ -169,8 +137,6 @@ class ObserverBuilder2<T1, T2> extends StatefulWidget {
   final ObservableValue<T1> observable1;
   final ObservableValue<T2> observable2;
 
-  /// Builder that receives latest values from two observables;
-  /// no `BuildContext` needed.
   final Widget Function(T1 value1, T2 value2) builder;
 
   const ObserverBuilder2({
@@ -219,11 +185,7 @@ class _ObserverBuilder2State<T1, T2> extends State<ObserverBuilder2<T1, T2>>
   }
 }
 
-/// A widget that listens to three [ObservableValue]s and rebuilds whenever any
-/// value changes.
-///
-/// Deprecated. Use Flutter's `ValueListenableBuilder` for widget-local state,
-/// or one `StateViewModel` containing all values for managed state.
+/// @nodoc
 @Deprecated(
   'Use ValueListenableBuilder for widget-local state, or one StateViewModel '
   'containing all values. Scheduled for removal in 2.0.0.',
@@ -233,8 +195,6 @@ class ObserverBuilder3<T1, T2, T3> extends StatefulWidget {
   final ObservableValue<T2> observable2;
   final ObservableValue<T3> observable3;
 
-  /// Builder that receives latest values from three observables;
-  /// no `BuildContext` needed.
   final Widget Function(T1 value1, T2 value2, T3 value3) builder;
 
   const ObserverBuilder3({

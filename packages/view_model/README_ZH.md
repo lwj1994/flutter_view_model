@@ -222,8 +222,10 @@ getter 声明本身不会创建任何对象。
 > 因此 child 的生命周期不会短于 parent。带 key 的 parent 被 A/B 多个 root
 > 共同持有时，已解析 child 会实时增加或移除 A/B 的 binding；A 退出但 B 仍在
 > 时，unkeyed child 的 identity 与状态保持连续。direct 与多个 parent 路径按
-> source 分别计数，释放一条路径不会误删其他路径。nested `aliveForever` child
-> 必须显式提供 key，避免 parent-private key 在 parent 销毁后变成孤儿缓存。
+> source 分别计数，释放一条路径不会误删其他路径。所有 `aliveForever` spec，
+> 无论从 root 还是另一个 ViewModel 解析，都必须显式提供 key；无 key 时会在
+> builder 执行前抛出 `ViewModelError`，底层 Store 也会对内部 factory 执行
+> 同一条兜底校验。
 
 ### 子 ViewModel 生命周期示意图
 
@@ -329,12 +331,13 @@ unkeyed child 在存活的 parent 内切换 private key。若 parent 本身是
 - 做字段级更新时，优先用 `read` 拿到 ViewModel，再交给 `listenStateSelect` 或 `StateViewModelValueWatcher` 驱动更新；不要再对同一个 ViewModel 额外 `watch`。
 - 实例身份由“解析时使用的泛型 ViewModel 类型 `T` + effective key”共同
   决定；builder 返回对象的运行时具体类型不参与身份，`tag` 也只用于分组
-  检索。factory 的 `key()` 返回 `null` 时，同一 binding 内同一 `T` 只会
-  复用一个实例，不同 binding 默认隔离。跨 binding 共享、同一 binding 内
-  区分多个同 `T` 实例，
+  检索。当 `aliveForever: false` 且 factory 的 `key()` 返回 `null` 时，同一
+  binding 内同一 `T` 只会复用一个实例，不同 binding 默认隔离。跨 binding
+  共享、同一 binding 内区分多个同 `T` 实例，
   或需要稳定的 keyed cached lookup 时，应显式设置 key。key 本身不负责
   保活；`aliveForever` 只跳过引用归零时的自动回收，但显式 `recycle` 仍会
-  解除全部 owners 并强制销毁。nested `aliveForever` 必须显式设置 key。
+  解除全部 owners 并强制销毁。所有 `aliveForever` spec 都必须显式设置 key，
+  root 与 nested 解析规则一致。
 - 同一个 binding 中若两个不同 spec 使用相同的 `T` 与 effective key，第二个
   builder 不会执行；debug 模式会发出提示。逻辑上不同的 spec 应使用不同 key。
 
@@ -393,7 +396,8 @@ class CounterViewModel with ViewModel { ... }
 ```
 
 一行命令，生成的 Spec 自动处理参数注入、key 与 retention 配置。`aliveForever`
-仍可被 `recycle`/`ViewModel.reset()` 强制销毁；nested `aliveForever` 必须显式 key。
+仍可被 `recycle`/`ViewModel.reset()` 强制销毁；任何 `aliveForever` spec 都必须
+显式设置 key。
 
 ---
 

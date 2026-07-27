@@ -12,6 +12,7 @@ class GenSpec {
   final Object? tag;
 
   /// Whether the instance should live forever (never be disposed).
+  /// Requires [key] to be explicitly configured and non-null.
   final bool aliveForever;
 
   /// Create a `GenSpec` annotation instance.

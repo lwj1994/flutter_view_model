@@ -438,10 +438,11 @@ class NullArg2 {
 @ShouldGenerate(r'''
 final liveForeverArg1Spec = ViewModelSpec.arg<LiveForeverArg1, int>(
   builder: (int id) => LiveForeverArg1(id),
+  key: (int id) => id,
   aliveForever: (int id) => true,
 );
 ''')
-@GenSpec(aliveForever: true)
+@GenSpec(key: Expression('id'), aliveForever: true)
 class LiveForeverArg1 {
   final int id;
   LiveForeverArg1(this.id);
@@ -451,10 +452,11 @@ class LiveForeverArg1 {
 @ShouldGenerate(r'''
 final liveForeverArg2Spec = ViewModelSpec.arg2<LiveForeverArg2, int, String>(
   builder: (int id, String name) => LiveForeverArg2(id, name),
+  key: (int id, String name) => id,
   aliveForever: (int id, String name) => true,
 );
 ''')
-@GenSpec(aliveForever: true)
+@GenSpec(key: Expression('id'), aliveForever: true)
 class LiveForeverArg2 {
   final int id;
   final String name;
@@ -467,10 +469,11 @@ final liveForeverArg3Spec =
     ViewModelSpec.arg3<LiveForeverArg3, int, String, bool>(
       builder: (int id, String name, bool active) =>
           LiveForeverArg3(id, name, active),
+      key: (int id, String name, bool active) => id,
       aliveForever: (int id, String name, bool active) => true,
     );
 ''')
-@GenSpec(aliveForever: true)
+@GenSpec(key: Expression('id'), aliveForever: true)
 class LiveForeverArg3 {
   final int id;
   final String name;
@@ -484,16 +487,25 @@ final liveForeverArg4Spec =
     ViewModelSpec.arg4<LiveForeverArg4, int, String, bool, double>(
       builder: (int id, String name, bool active, double score) =>
           LiveForeverArg4(id, name, active, score),
+      key: (int id, String name, bool active, double score) => id,
       aliveForever: (int id, String name, bool active, double score) => true,
     );
 ''')
-@GenSpec(aliveForever: true)
+@GenSpec(key: Expression('id'), aliveForever: true)
 class LiveForeverArg4 {
   final int id;
   final String name;
   final bool active;
   final double score;
   LiveForeverArg4(this.id, this.name, this.active, this.score);
+}
+
+@ShouldThrow(
+  '@GenSpec(aliveForever: true) requires an explicit non-null key.',
+)
+@GenSpec(aliveForever: true)
+class InvalidUnkeyedAliveForever {
+  InvalidUnkeyedAliveForever();
 }
 
 // 30. plain string literals keep escapes valid in generated code

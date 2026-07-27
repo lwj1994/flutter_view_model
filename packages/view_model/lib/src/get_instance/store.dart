@@ -164,6 +164,11 @@ class Store<T> implements RecyclableInstanceStore {
     if (_disposed) {
       throw ViewModelError("Store<$T> has been disposed.");
     }
+    if (factory.arg.aliveForever && factory.arg.key == null) {
+      throw ViewModelError(
+        'An aliveForever instance must use an explicit key.',
+      );
+    }
     final realKey = factory.arg.key ?? ViewModelPrivateKey();
     final bindingId = factory.arg.bindingId;
     final arg = factory.arg.copyWith(
@@ -729,7 +734,8 @@ class InstanceArg {
   ///
   /// When provided, this key is used to cache and retrieve instances.
   /// Multiple requests with the same key will return the same instance.
-  /// If null, a UUID will be generated automatically.
+  /// A framework-private key is generated when this is null and
+  /// [aliveForever] is false. Retained instances require an explicit key.
   final Object? key;
 
   /// Logical grouping identifier for related instances.
@@ -747,6 +753,7 @@ class InstanceArg {
   final String? bindingId;
 
   /// Whether the instance should live forever (never be disposed).
+  /// Requires [key] to be non-null.
   final bool aliveForever;
 
 //<editor-fold desc="Data Methods">

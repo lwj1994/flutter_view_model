@@ -414,7 +414,7 @@ void main() {
     owner.dispose();
   });
 
-  test('nested aliveForever requires an explicit reachable key', () {
+  test('nested aliveForever also requires an explicit key', () {
     final owner = ViewModelBinding();
     final parent = owner.read(_parentSpec);
 
