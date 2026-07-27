@@ -17,8 +17,15 @@
   replacing the legacy edge payload with typed ownership relationships.
 - Apply parent ownership consistently to `watch`/`read`, cached lookup, and
   tag-batch lookup. Read variants still ignore child `notifyListeners()` but
-  observe handle recreate/dispose; a failed recreate keeps the old object and
-  dependency scope unchanged.
+  observe handle disposal/recycle.
+- Remove the relationship-preserving `recreate` API from bindings and the
+  instance runtime. Use a new explicit key for an independent instance, or
+  force `recycle` and re-resolve through a `watch`/`read` getter when replacing
+  the shared generation globally is intentional.
+- Remove the deprecated `ObservableValue`, `ObserverBuilder`,
+  `ObserverBuilder2`, and `ObserverBuilder3` APIs. Use Flutter's
+  `ValueNotifier` with `ValueListenableBuilder` for widget-local values, or a
+  `StateViewModel` with `ViewModelSpec` for managed state.
 
 ## 1.0.7
 

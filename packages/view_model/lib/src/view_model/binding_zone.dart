@@ -74,8 +74,8 @@ class ViewModelBindingHandler {
 
   /// Ordered bindings that currently own this ViewModel.
   ///
-  /// [primaryOwner] is retained for inbound ownership diagnostics and recreate
-  /// Zone compatibility. Nested dependencies use the ViewModel generation's
+  /// [primaryOwner] is retained for inbound ownership diagnostics and Zone
+  /// compatibility. Nested dependencies use the ViewModel generation's
   /// own stable dependency binding.
   @internal
   List<ViewModelBinding> get owners =>

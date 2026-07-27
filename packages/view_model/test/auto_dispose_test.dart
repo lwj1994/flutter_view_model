@@ -24,23 +24,6 @@ class MutableHashBinding with ViewModelBinding {
   bool operator ==(Object other) => identical(this, other);
 }
 
-class LifecycleAwareViewModel with ViewModel {
-  int onCreateCalls = 0;
-  final List<String> boundIds = <String>[];
-
-  @override
-  void onCreate(InstanceArg arg) {
-    super.onCreate(arg);
-    onCreateCalls++;
-  }
-
-  @override
-  void onBind(InstanceArg arg, String bindingId) {
-    super.onBind(arg, bindingId);
-    boundIds.add(bindingId);
-  }
-}
-
 void main() {
   group('AutoDisposeInstanceController', () {
     late AutoDisposeInstanceController controller;
@@ -50,7 +33,7 @@ void main() {
       ViewModel.initialize(config: ViewModelConfig(isLoggingEnabled: true));
       mockRef = MockViewModelBinding();
       controller = AutoDisposeInstanceController(
-        onRecreate: () {},
+        onHandleDisposing: () {},
         viewModelBinding: mockRef,
       );
     });
@@ -84,202 +67,41 @@ void main() {
         arg: const InstanceArg(key: 'dispose_test'),
       );
 
-      controller.getInstance<TestStatelessViewModel>(factory: factory);
+      final viewModel =
+          controller.getInstance<TestStatelessViewModel>(factory: factory);
 
       controller.dispose();
 
-      final handle =
-          instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
-      // Should be removed from binders, and since it was the only one, it might be disposed/recycled.
-      // However, getNotifier might recreate it if recycled?
-      // If recycled, instanceManager might return a new handle with new
-      // instance if called again with factory?
-      // Or if we check existing handle state?
-
-      // If we check the handle retrieved BEFORE dispose:
-      // It should have been disposed.
-
+      expect(viewModel.isDisposed, isTrue);
       expect(controller.instanceNotifiers, isEmpty);
     });
 
-    test('recycle forces recreation', () {
-      final factory = InstanceFactory<TestStatelessViewModel>(
-        builder: () => TestStatelessViewModel(),
-        arg: const InstanceArg(key: 'recycle_test'),
-      );
-
-      final vm1 =
-          controller.getInstance<TestStatelessViewModel>(factory: factory);
-
-      controller.recycle(vm1);
-
-      // vm1 should be disposed
-      expect(vm1.isDisposed, isTrue);
-
-      // Getting again should create new instance
-      final vm2 =
-          controller.getInstance<TestStatelessViewModel>(factory: factory);
-      expect(vm1, isNot(equals(vm2)));
-    });
-
-    test('recreate callback', () {
-      final factory = InstanceFactory<TestStatelessViewModel>(
-        builder: () => TestStatelessViewModel(),
-        arg: const InstanceArg(key: 'recreate_callback_test'),
-      );
-
-      controller.getInstance<TestStatelessViewModel>(factory: factory);
-
-      final handle =
-          instanceManager.getNotifier<TestStatelessViewModel>(factory: factory);
-
-      // Verify no recreate action (requires explicit recreate call)
-      expect(handle.action, isNull);
-    });
-
-    test('recreate functionality - via InstanceManager', () {
-      // Test the recreate functionality using the public InstanceManager API
-      final factory = InstanceFactory<TestViewModel>(
-        builder: () => TestViewModel(state: 'initial'),
-        arg: const InstanceArg(key: 'recreate_test'),
-      );
-
-      // Create initial instance
-      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
-      final initialHashCode = vm1.hashCode;
-
-      // Get the handle to monitor action changes
-      final handle =
-          instanceManager.getNotifier<TestViewModel>(factory: factory);
-
-      // Track action changes
-      InstanceAction? capturedAction;
-      handle.addListener(() {
-        capturedAction = handle.action;
-      });
-
-      // Recreate the instance via InstanceManager
-      final vm2 = instanceManager.recreate(vm1);
-
-      // Verify new instance was created
-      expect(vm2, isNotNull);
-      expect(vm2.hashCode, isNot(equals(initialHashCode)),
-          reason: 'Recreate should create a new instance');
-
-      // Verify recreate action was triggered
-      expect(capturedAction, equals(InstanceAction.recreate),
-          reason: 'Recreate action should be set when instance is recreated');
-
-      // Verify the handle now points to the new instance
-      expect(handle.instance, equals(vm2));
-    });
-
-    test('recreate functionality - with custom builder', () {
-      // Test recreate with a custom builder
-      int createCount = 0;
-      final factory = InstanceFactory<TestViewModel>(
-        builder: () {
-          createCount++;
-          return TestViewModel(state: 'initial');
+    test('external recycle invokes the handle-disposing callback once', () {
+      var disposalNotifications = 0;
+      bool? wasDisposedDuringCallback;
+      late TestStatelessViewModel vm;
+      final observingController = AutoDisposeInstanceController(
+        onHandleDisposing: () {
+          disposalNotifications++;
+          wasDisposedDuringCallback = vm.isDisposed;
         },
-        arg: const InstanceArg(key: 'recreate_custom_builder'),
+        viewModelBinding: mockRef,
+      );
+      final factory = InstanceFactory<TestStatelessViewModel>(
+        builder: TestStatelessViewModel.new,
+        arg: const InstanceArg(key: 'handle_disposed_callback_test'),
+      );
+      vm = observingController.getInstance<TestStatelessViewModel>(
+        factory: factory,
       );
 
-      // Create initial instance
-      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
-      expect(createCount, equals(1));
+      instanceManager.recycle(vm);
 
-      // Recreate with custom builder
-      int customBuilderCalled = 0;
-      final vm2 = instanceManager.recreate(
-        vm1,
-        builder: () {
-          customBuilderCalled++;
-          return TestViewModel(state: 'recreated');
-        },
-      );
-
-      // Verify custom builder was used instead of original factory builder
-      expect(customBuilderCalled, equals(1));
-      expect(createCount, equals(1),
-          reason: 'Original builder should not be called during recreate');
-
-      // Verify new instance was created
-      expect(vm2, isNotNull);
-      expect(vm2, isNot(equals(vm1)));
-    });
-
-    test('recreate keeps old instance when builder throws', () {
-      final factory = InstanceFactory<TestViewModel>(
-        builder: () => TestViewModel(state: 'initial'),
-        arg: const InstanceArg(key: 'recreate_builder_throw'),
-      );
-
-      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
-      final handle =
-          instanceManager.getNotifier<TestViewModel>(factory: factory);
-
-      expect(
-        () => instanceManager.recreate<TestViewModel>(vm1, builder: () {
-          throw StateError('recreate failure');
-        }),
-        throwsA(isA<StateError>()),
-      );
-
-      expect(identical(handle.instance, vm1), isTrue);
-      expect(vm1.isDisposed, isFalse);
-      expect(handle.action, isNull);
-    });
-
-    test('recreate preserves watchers and bindings', () {
-      // Test that recreate preserves watcher relationships
-      final factory = InstanceFactory<TestViewModel>(
-        builder: () => TestViewModel(state: 'with_watcher'),
-        arg: const InstanceArg(
-          key: 'recreate_preserve_watchers',
-          bindingId: 'test_watcher_1',
-        ),
-      );
-
-      // Create instance with watcher
-      final vm1 = controller.getInstance<TestViewModel>(factory: factory);
-      final handle =
-          instanceManager.getNotifier<TestViewModel>(factory: factory);
-
-      // Verify initial watcher
-      expect(handle.bindingIds, contains('test_watcher_1'));
-      final initialWatcherCount = handle.bindingIds.length;
-
-      // Recreate instance
-      final vm2 = instanceManager.recreate(vm1);
-
-      // Verify watchers are preserved after recreate
-      expect(handle.bindingIds, contains('test_watcher_1'),
-          reason: 'Watchers should be preserved after recreate');
-      expect(handle.bindingIds.length, equals(initialWatcherCount),
-          reason: 'Watcher count should remain the same');
-
-      // Verify the handle points to new instance
-      expect(handle.instance, equals(vm2));
-    });
-
-    test('recreate replays lifecycle binds onto the new instance', () {
-      final factory = InstanceFactory<LifecycleAwareViewModel>(
-        builder: () => LifecycleAwareViewModel(),
-        arg: const InstanceArg(
-          key: 'recreate_replay_bindings',
-        ),
-      );
-
-      final vm1 =
-          controller.getInstance<LifecycleAwareViewModel>(factory: factory);
-      expect(vm1.onCreateCalls, 1);
-      expect(vm1.boundIds, [mockRef.id]);
-
-      final vm2 = instanceManager.recreate(vm1);
-
-      expect(vm2.onCreateCalls, 1);
-      expect(vm2.boundIds, [mockRef.id]);
+      expect(disposalNotifications, 1);
+      expect(wasDisposedDuringCallback, isFalse);
+      expect(vm.isDisposed, isTrue);
+      expect(observingController.instanceNotifiers, isEmpty);
+      observingController.dispose();
     });
 
     test('performForAllInstances', () {
@@ -415,7 +237,7 @@ void main() {
     test('dispose still unbinds when host hashCode changes', () {
       final flakyBinding = MutableHashBinding();
       final flakyController = AutoDisposeInstanceController(
-        onRecreate: () {},
+        onHandleDisposing: () {},
         viewModelBinding: flakyBinding,
       );
       final factory = InstanceFactory<TestStatelessViewModel>(
@@ -430,26 +252,6 @@ void main() {
       flakyController.dispose();
 
       expect(vm.isDisposed, isTrue);
-    });
-
-    test('getInstancesByTag replays refs onto recreated instances', () {
-      const tag = 'recreate_tag_refs';
-      final factory = InstanceFactory<LifecycleAwareViewModel>(
-        builder: () => LifecycleAwareViewModel(),
-        arg: const InstanceArg(key: 'tagged_vm', tag: tag),
-      );
-
-      instanceManager.getNotifier<LifecycleAwareViewModel>(factory: factory);
-
-      final vm1 =
-          controller.getInstancesByTag<LifecycleAwareViewModel>(tag).single;
-      expect(vm1.boundIds, [mockRef.id]);
-      expect(vm1.refHandler.dependencyBindings.contains(mockRef), isTrue);
-
-      final vm2 = instanceManager.recreate(vm1);
-
-      expect(vm2.boundIds, [mockRef.id]);
-      expect(vm2.refHandler.dependencyBindings.contains(mockRef), isTrue);
     });
   });
 }

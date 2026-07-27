@@ -114,7 +114,7 @@ If a skill file is missing or blocked:
 
 #### 推荐的 spec-based 解析
 
-| 方法 | 创建实例 | bind | addRef | ViewModel listener | recreate listener |
+| 方法 | 创建实例 | bind | addRef | ViewModel listener | handle dispose listener |
 |------|---------|------|--------|-------------------|------------------|
 | `watch(factory)` | 是 | 是 | 是 | 是（root 更新 / parent 冒泡） | 是 |
 | `read(factory)` | 是 | 是 | 是 | 否 | 是 |
@@ -123,7 +123,7 @@ If a skill file is missing or blocked:
 
 这些 API 只查询已由其他路径创建的缓存，不能替代 spec-based 依赖解析。
 
-| 方法 | 创建实例 | bind | addRef | ViewModel listener | recreate listener |
+| 方法 | 创建实例 | bind | addRef | ViewModel listener | handle dispose listener |
 |------|---------|------|--------|-------------------|------------------|
 | `watchCached(key/tag)` | 否 | 是 | 是 | 是 | 是 |
 | `maybeWatchCached(key/tag)` | 否 | 命中时是 | 命中时是 | 命中时是 | 命中时是 |
@@ -136,14 +136,19 @@ If a skill file is missing or blocked:
 
 - **watch vs read**：watch 注册 ViewModel listener（`_addListener`）；root/widget
   binding 会触发 `onUpdate`/rebuild，dependency binding 会向 parent 冒泡。read
-  不响应 ViewModel 自身通知，但仍感知 handle recreate/dispose。
+  不响应 ViewModel 自身通知，但仍感知 handle dispose/recycle。
 - **有 factory vs Cached**：有 factory 时可以创建新实例；Cached 只查找已有缓存。
 - **Cached API 是高级查询入口**：正常模块依赖应保留 spec，并通过
   `watch(spec)`/`read(spec)` 解析。不要绕过 spec 去捞“恰好存在”的缓存；只有
   明确需要跨 owner 查询，并理解 cache identity、创建顺序、未命中、tag 多匹配
   与生命周期耦合时才使用 cached/maybe/tag batch API。
-- **recreate listener**：注册在 `InstanceHandle`（ChangeNotifier）上，仅在实例被 recreate/dispose 时触发，不响应 ViewModel 自身的 `notifyListeners()`。
-- **`readCachesByTag` 是批量版 `read`**：它不会响应 ViewModel 自身的 `notifyListeners()`，但会注册 recreate listener，因此实例被 recreate/dispose 时仍会触发 binding 更新；同时它也会执行 `bind + addRef`，并在 binding dispose 时自动 `unbind/removeRef`。
+- **handle dispose listener**：注册在 `InstanceHandle`（ChangeNotifier）上，仅在
+  handle 被 dispose（包括强制 `recycle`）时触发，不响应 ViewModel 自身的
+  `notifyListeners()`。
+- **`readCachesByTag` 是批量版 `read`**：它不会响应 ViewModel 自身的
+  `notifyListeners()`，但会注册 handle dispose listener，因此实例被回收时仍会
+  触发 binding 更新；同时它也会执行 `bind + addRef`，并在 binding dispose 时
+  自动 `unbind/removeRef`。
 
 ### 内部调用链
 
@@ -158,7 +163,7 @@ watch/read/watchCached/readCached
 watchCachesByTag/readCachesByTag
   → AutoDisposeInstanceController.getInstancesByTag(tag)
     → bind + addRef（始终执行）
-    → 追加 _attachRecreateListener
+    → 追加 _attachHandleListener
   → listen=true 时追加 _addListener（仅 watchCachesByTag）
 ```
 
@@ -169,13 +174,14 @@ watchCachesByTag/readCachesByTag
    - 缓存命中：直接返回已有 handle，并添加当前 binding source
    - 缓存未命中：调用 `factory.builder()` 创建实例，包装为 `InstanceHandle`，触发 `onCreate` + `bind`
 3. `addRef(viewModelBinding)` — 将 binding 加入 ViewModel 的 refHandler（依赖追踪）
-4. `_attachRecreateListener(notifier)` — 在 InstanceHandle 上注册 listener，仅响应 recreate/dispose 事件
+4. `_attachHandleListener(notifier)` — 在 InstanceHandle 上注册 listener，仅响应
+   dispose/recycle 事件
 
 ### 注意事项
 
-- `getInstance` 内部无条件注册 recreate listener，`listen` 参数只在
+- `getInstance` 内部无条件注册 handle dispose listener，`listen` 参数只在
   ViewModelBinding 层控制 ViewModel listener（`_addListener`）。
-  `getInstancesByTag(tag)` 同样为每个命中 handle 注册 recreate listener；
+  `getInstancesByTag(tag)` 同样为每个命中 handle 注册 dispose listener；
   `watchCachesByTag` 与 `readCachesByTag` 的差别只在于前者会额外追加
   `_addListener` 响应 ViewModel 自身的 `notifyListeners()`。
 - 修改 `listen` 传参时必须理解 watch/read 语义差异，不可随意将 `false` 改为 `true`。
@@ -192,18 +198,20 @@ watchCachesByTag/readCachesByTag
   区分 direct、parent 及多 parent 路径：首 source 触发 `onBind(id)`，最后 source
   才触发 `onUnbind(id)`。
 - unkeyed child 使用 parent generation dependency binding 的私有 default key；
-  root owner 切换不会换 key。parent 成功 recreate 后，新对象获得新的 binding/key
-  与 dependency tree，不迁移旧 unkeyed child。
+  root owner 切换不会换 key。parent 被 `recycle` 后，旧 dependency tree 会随旧
+  generation 释放；下一次按 spec 解析的新 parent 获得新的 binding/key。
 - `watch/read`、cached/maybeCached 与 tag batch API 命中时都建立相同的 parent
   生命周期边。只有 watch 变体冒泡 child 的 `notifyListeners()`；read 变体仍感知
-  handle recreate/dispose。
+  handle dispose/recycle。
 - 所有 `aliveForever` ViewModel 都必须显式 key，root 与 nested 解析统一在
   builder 执行前校验，底层 Store 也必须兜底。`aliveForever` parent 会传递性
   保活其已解析 child，直到 `recycle` 或 `ViewModel.reset()`。
 - 依赖图必须无环。构造期按 construction lineage 判定 unkeyed self/indirect
-  recursion，运行期在提交 owner edge 前判环；diamond graph 合法。builder、
-  constructor 或 replacement builder 失败必须回滚暂存 scope，失败的 recreate
-  必须保留旧对象及旧 dependency scope。
+  recursion，运行期在提交 owner edge 前判环；diamond graph 合法。builder 或
+  constructor 失败必须回滚暂存 scope。
+- 不提供原位替换实例的 `recreate` API。需要新实例时，使用显式新 key；若明确
+  接受影响所有 owners，也可先 `recycle`，再由 getter 通过 `watch/read(spec)`
+  重新解析。
 - 同步通知使用 propagation transaction 并按 binding 去重；异步 microtask/Future
   通知必须开启新事务。
 

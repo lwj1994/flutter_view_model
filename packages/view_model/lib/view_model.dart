@@ -72,7 +72,6 @@ export "package:view_model/src/view_model/config.dart";
 export "package:view_model/src/view_model/spec.dart";
 export "package:view_model/src/view_model/pause_provider.dart";
 
-export "package:view_model/src/view_model/value_observer.dart";
 export "package:view_model/src/view_model/value_watcher.dart";
 export "package:view_model/src/view_model/view_model.dart";
 export "package:view_model/src/view_model/widget_mixin/stateful_extension.dart";

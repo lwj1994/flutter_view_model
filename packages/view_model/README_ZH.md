@@ -67,7 +67,7 @@ npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
 
 为了实现极致的灵活性，我们将系统拆分为三层：
 
-1.  **消费者层 (Widget/Consumer)**: 提供 `ViewModelStateMixin`、`ViewModelBuilder` 等贴心的工具。
+1.  **消费者层 (Widget/Consumer)**: 提供 `ViewModelStateMixin`、`ViewModelStatelessMixin` 等工具。
 2.  **绑定层 (ViewModelBinding)**: 核心桥梁。它负责记录谁（哪个 BindingID）在使用哪个 ViewModel。它还掌管着 Zone 依赖注入和 暂停/恢复 状态。
 3.  **实例管理层 (InstanceManager)**: 一个高效的底盘。它维护实例池，并按 source-aware 引用计数决定实例的死活；同一个 BindingID 的 direct/parent 路径互不覆盖。
 
@@ -215,7 +215,7 @@ class OrderViewModel with ViewModel {
 ```
 
 优先 getter，不要用 `late final`、构造时缓存或 `??=` 持有嵌套 ViewModel，
-这样显式 `recycle`、parent recreate 或异步生命周期竞争后仍能解析 replacement。
+这样显式 `recycle` 或异步生命周期竞争后仍能解析新的 generation。
 getter 声明本身不会创建任何对象。
 
 > **共享父模块边界：** parent generation 会建立 `parent → child` 生命周期边，
@@ -279,7 +279,11 @@ unkeyed child 在存活的 parent 内切换 private key。若 parent 本身是
 | **`read(spec)`** | 事件回调、只需调用方法时 | **非响应式**：不监听 VM 自身通知。若 VM 不存在则创建。 |
 | **`listenStateSelect(...)`**| 针对性监听某个字段 | 可选局部 `equals` 优先，其次使用全局 `ViewModelConfig.equals`，最后使用 `==`。 |
 | **`recycle(vm)`** | 危险的全局强制回收 | 解除所有 owners 并销毁共享实例，`aliveForever` 也不例外；下次 `watch/read` 创建新实例。 |
-| **`recreate(vm)`** | 原位替换实例 | 保留现有 binding 关系；可传 `builder`，不传则复用原 factory。 |
+
+不提供原位替换实例的 API。需要独立的新实例时应使用新的显式 key；若明确接受
+所有共享 owners 都受影响，则先 `recycle(vm)`，再让解析型 getter 通过
+`watch(spec)`/`read(spec)` 走正常的 cache miss 创建新 handle 与 dependency tree，
+不在两个对象之间迁移 binding 关系。
 
 ### 高级缓存查询（通常不推荐）
 
@@ -289,7 +293,7 @@ unkeyed child 在存活的 parent 内切换 private key。若 parent 本身是
 > owner 的生命周期，而且缓存缺失时不能创建依赖。只有明确需要跨 owner 查询
 > 已有缓存，并且理解这些影响时才使用。
 
-| API | 缺失时创建 | 命中后 bind | VM 自身通知 | Handle recreate/dispose |
+| API | 缺失时创建 | 命中后 bind | VM 自身通知 | Handle dispose/recycle |
 | :--- | :---: | :---: | :---: | :---: |
 | `watchCached(key/tag)` | 否 | 是 | 是 | 是 |
 | `readCached(key/tag)` | 否 | 是 | 否 | 是 |
@@ -310,11 +314,7 @@ unkeyed child 在存活的 parent 内切换 private key。若 parent 本身是
 - ViewModel 内的 `watch` 会先调用 `parent.onDependencyNotify(child)`，再通知
   parent；同步传播事务按 binding 去重，diamond graph 或 root 同时直接 watch
   leaf 时也只更新一次。
-- selector 自定义比较直接通过 `listenStateSelect` 的可选 `equals`
-  传入。`recreate` 仍是独立可选能力；直接
-  `implements ViewModelBindingInterface` 的类型如需支持它，再实现
-  `ViewModelBindingRecreateCapability`。通过接口 extension 对不支持的实现
-  调用 `recreate` 时会抛出 `UnsupportedError`。
+- selector 自定义比较直接通过 `listenStateSelect` 的可选 `equals` 传入。
 - `recycle` 是高级 escape hatch，具有危险的全局影响；只有明确需要解除全部
   owners、销毁共享实例时才使用，不应作为常规清理路径。
 - `recycle` 后旧对象已经 dispose。所有使用方，尤其共享实例的其他 owner，

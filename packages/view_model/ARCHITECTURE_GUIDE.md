@@ -26,8 +26,8 @@ class UserRepository with ViewModel {
 ```
 
 Prefer a getter over `late final`, a constructor-cached field, or `??=`. Each
-access can then resolve a replacement after explicit `recycle`, successful
-parent recreation, or an asynchronous lifecycle race.
+access can then resolve a new generation after explicit child `recycle` or an
+asynchronous lifecycle race.
 
 ## 2. Parent-owned child lifecycle
 
@@ -88,8 +88,9 @@ scope or its children; they remain until `recycle` or `ViewModel.reset()`.
 - An unkeyed root uses that root binding's private default key.
 - An unkeyed child uses its parent generation's private default key. The key is
   stable while that parent object is alive, even when roots A/B join or leave.
-- A successfully recreated parent is a new generation with a new private child
-  scope. Its old unkeyed dependency tree is not migrated.
+- After a parent is recycled, a later spec-based resolution creates a new
+  generation with a new private child scope. The old unkeyed dependency tree
+  is not migrated.
 - Use an explicit key to share a child across independent parent generations or
   to resolve several children of the same type in one binding.
 - Every `aliveForever` ViewModel must have an explicit key. The same validation
@@ -101,9 +102,9 @@ scope or its children; they remain until `recycle` or `ViewModel.reset()`.
 Normal module dependencies should use a stable spec. Both APIs create the
 instance when absent and establish lifecycle ownership. `read` means “do not
 listen to the ViewModel's own `notifyListeners()`”; it does **not** mean
-“unbound”. Handle recreation/disposal is still observed.
+“unbound”. Handle disposal, including force-recycle, is still observed.
 
-| API | Creates | Binds | VM notifications | Recreate/dispose |
+| API | Creates | Binds | VM notifications | Handle disposal |
 | --- | --- | --- | --- | --- |
 | `watch(spec)` | Yes | Yes | Yes | Yes |
 | `read(spec)` | Yes | Yes | No | Yes |
@@ -126,7 +127,7 @@ call in a repeatedly evaluated getter.
 > it only for an intentional cross-owner cache query whose lifecycle you fully
 > understand.
 
-| API | Creates | Binds when found | VM notifications | Recreate/dispose |
+| API | Creates | Binds when found | VM notifications | Handle disposal |
 | --- | --- | --- | --- | --- |
 | `watchCached(key/tag)` | No | Yes | Yes | Yes |
 | `readCached(key/tag)` | No | Yes | No | Yes |
@@ -138,7 +139,7 @@ call in a repeatedly evaluated getter.
 Single-result tag lookup can be ambiguous and follows cache creation order;
 use a tag-batch method when several instances may share the same tag.
 
-## 4. Construction, cycles, and recreation
+## 4. Construction and cycles
 
 The managed dependency graph must remain acyclic:
 
@@ -149,9 +150,8 @@ The managed dependency graph must remain acyclic:
 - A diamond is valid and is not treated as a cycle.
 
 Builder or constructor failure is atomic: tentative dependency scopes,
-children, listeners, and owner paths are rolled back. If `recreate` fails, the
-old object and its old dependency scope remain unchanged. An `onCreate`
-exception keeps the existing lifecycle policy: it is reported through
+children, listeners, and owner paths are rolled back. An `onCreate` exception
+keeps the existing lifecycle policy: it is reported through
 `ViewModelConfig.onError`, and creation continues.
 
 ## 5. Lifetime controls
@@ -162,9 +162,10 @@ exception keeps the existing lifecycle policy: it is reported through
 - `recycle(vm)` is a global force-dispose escape hatch. It removes every owner,
   including owners in other roots or parents, and also disposes
   `aliveForever` instances.
-- `recreate(vm)` preserves incoming bindings on success. Recreating a parent
-  starts a new generation-scoped dependency binding; recreating a child keeps
-  the parent edge attached to the child handle.
+- There is no in-place replacement API. Use a new explicit key for an
+  independent instance. If a global replacement is intentional, call
+  `recycle(vm)` and let getter-based `watch(spec)`/`read(spec)` create a new
+  handle and dependency tree on the next access.
 - Do not resolve new dependencies from `dispose()`.
 
 ## 6. Standalone binding hosts

@@ -245,6 +245,40 @@ void main() {
     owner.dispose();
   });
 
+  test('recycling a parent creates new parent and private child generations',
+      () {
+    final owner = _CountingBinding();
+    final parent = owner.watch(_parentSpec);
+    final child = parent.child;
+    final dependencyBindingId = child.boundIds.singleWhere(
+      (id) => id != owner.id,
+    );
+    owner.updates = 0;
+
+    owner.recycle(parent);
+
+    expect(parent.isDisposed, isTrue);
+    expect(child.isDisposed, isTrue);
+    expect(owner.updates, 1);
+    expect(() => parent.child, throwsA(isA<ViewModelError>()));
+
+    final nextParent = owner.watch(_parentSpec);
+    final nextChild = nextParent.child;
+    final nextDependencyBindingId = nextChild.boundIds.singleWhere(
+      (id) => id != owner.id,
+    );
+
+    expect(nextParent, isNot(same(parent)));
+    expect(nextChild, isNot(same(child)));
+    expect(nextDependencyBindingId, isNot(dependencyBindingId));
+    expect(owner.watch(_parentSpec), same(nextParent));
+    expect(nextParent.child, same(nextChild));
+
+    owner.dispose();
+    expect(nextParent.isDisposed, isTrue);
+    expect(nextChild.isDisposed, isTrue);
+  });
+
   test('cached and tag batch APIs establish the same parent ownership', () {
     final creator = ViewModelBinding();
     final shared = creator.read(_sharedChildSpec);
@@ -373,43 +407,6 @@ void main() {
 
     expect(parent.dependencyNotifications, 2);
     expect(owner.updates, 2);
-
-    owner.dispose();
-  });
-
-  test('recreate of a read child is still observed by its parent once', () {
-    final owner = _CountingBinding();
-    final parent = owner.watch(_parentSpec);
-    final child = parent.child;
-    owner.updates = 0;
-
-    final recreated = owner.recreate(child);
-
-    expect(child.isDisposed, isTrue);
-    expect(recreated, isNot(same(child)));
-    expect(parent.child, same(recreated));
-    expect(recreated.refHandler.owners, contains(owner));
-    expect(parent.dependencyNotifications, 1);
-    expect(owner.updates, 1);
-
-    owner.dispose();
-  });
-
-  test('recreate parent starts a new private child generation', () {
-    final owner = _CountingBinding();
-    final parent = owner.watch(_parentSpec);
-    final child = parent.child;
-    owner.updates = 0;
-
-    final recreatedParent = owner.recreate(parent);
-
-    expect(parent.isDisposed, isTrue);
-    expect(child.isDisposed, isTrue);
-    expect(() => parent.child, throwsA(isA<ViewModelError>()));
-    expect(recreatedParent, isNot(same(parent)));
-    expect(owner.read(_parentSpec), same(recreatedParent));
-    expect(recreatedParent.child, isNot(same(child)));
-    expect(owner.updates, 1);
 
     owner.dispose();
   });

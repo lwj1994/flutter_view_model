@@ -101,8 +101,8 @@ class CheckoutViewModel with ViewModel {
 - Prefer a getter over `late final`, a constructor-cached field, or `??=`.
   Each parent object generation owns a stable internal dependency binding, so
   unkeyed child identity does not switch when root owners change. A getter still
-  allows replacement resolution after explicit recycle, parent recreation, or
-  an asynchronous lifecycle race.
+  allows a new generation to be resolved after explicit recycle or an
+  asynchronous lifecycle race.
 - Use `read` when a module only needs to call another module.
 - Use `watch` when dependency notifications must also notify the parent
   ViewModel. Synchronous propagation is transaction-based and deduplicated per
@@ -214,7 +214,7 @@ explicit key when a leaf must be shared across independent parent generations.
 Every `aliveForever` instance must also use an explicit key, at both root and
 nested resolution sites, so its retained cache has a globally reachable
 identity. Never cache a nested ViewModel in `late final`, `final`, or `??=`;
-explicit recycle/recreate and asynchronous disposal still require getter-based
+explicit recycle and asynchronous disposal still require getter-based
 re-resolution.
 
 ## Implementation workflow
@@ -242,9 +242,6 @@ re-resolution.
 3. Integrate with host
 - Widget page: `State<T> with ViewModelStateMixin`.
 - Simple widget case: `StatelessWidget with ViewModelStatelessMixin`.
-- No-custom-state option: `ViewModelBuilder<T>(spec, builder: ...)`.
-- Advanced cached-only builder option (normally avoid):
-  `CachedViewModelBuilder<T>(shareKey: ... | tag: ..., builder: ...)`.
 - Non-widget classes (bootstrap/service/test): `with ViewModelBinding` and call `dispose()` manually when done.
 
 4. Choose the primary access API
@@ -262,11 +259,11 @@ re-resolution.
   - `watchCached`/`maybeWatchCached`: a hit establishes the same ownership and
     ViewModel listener as `watch`; the `maybe` variant returns `null` on a miss.
   - `readCached`/`maybeReadCached`: a hit establishes the same ownership as
-    `read`, without a ViewModel listener; handle recreate/dispose is still
+    `read`, without a ViewModel listener; handle disposal/recycle is still
     observed.
   - `watchCachesByTag`/`readCachesByTag`: every matched instance is bound; only
     the watch variant listens to ViewModel notifications, while both variants
-    observe handle recreate/dispose.
+    observe handle disposal/recycle.
 - `listen/listenState/listenStateSelect`: side-effect listeners, auto-cleaned on binding dispose.
 - Equality priority is local full-state `equals` → global
   `ViewModelConfig.equals` → `identical`, and explicit selector `equals` →
@@ -274,13 +271,11 @@ re-resolution.
   `null`.
 - Pass the optional typed `equals` directly to `listenStateSelect` when a
   selector needs a local rule that overrides the global fallback.
-- `recreate(vm, builder: ...)`: replace an instance while preserving active
-  binding relationships; omit `builder` to reuse the original factory.
 - `recycle(vm)`: force unbind all and dispose; next `watch/read` gets fresh instance.
-- The built-in `ViewModelBinding` implements the optional recreate capability.
-  A direct `ViewModelBindingInterface` implementation opts in via
-  `ViewModelBindingRecreateCapability`; otherwise the interface extension
-  throws `UnsupportedError`.
+- There is no in-place replacement capability. Use a new explicit key for an
+  independent instance. If global replacement is intentional, call `recycle`
+  and let getter-based `watch(spec)`/`read(spec)` create a new handle and
+  dependency tree on the next access.
 
 5. Handle dependencies and sharing
 - Model each independent functional capability as a ViewModel when it benefits
@@ -366,7 +361,7 @@ Don't:
 - Pair selector-level rebuild tools with `watch`; this usually causes broader
   rebuilds than intended.
 - Cache a ViewModel dependency in `late final`, `final`, or `??=`; the active
-  object can be replaced after recycle/recreate or disposed across an async gap.
+  object can be disposed after recycle or across an async gap.
 - Use cached APIs as a substitute for spec-based dependency resolution, or
   expect them to create a missing instance.
 - Overuse `aliveForever` for page-scoped state.

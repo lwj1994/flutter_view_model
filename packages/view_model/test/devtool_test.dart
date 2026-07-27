@@ -3,6 +3,8 @@ import 'package:view_model/view_model.dart';
 import 'package:view_model/src/devtool/service.dart';
 import 'package:view_model/src/devtool/tracker.dart';
 import 'package:view_model/src/get_instance/manager.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart'
+    show ViewModelDependencyBinding;
 
 class DevVM extends ViewModel {}
 
@@ -24,6 +26,19 @@ class FailingDevParentVM extends ViewModel {
     throw StateError('parent construction failed');
   }
 }
+
+class EagerDevParentVM with ViewModel {
+  EagerDevParentVM() {
+    dependencyBindingId = (viewModelBinding as ViewModelDependencyBinding).id;
+  }
+
+  late final String dependencyBindingId;
+}
+
+final _eagerDevParentSpec = ViewModelSpec<EagerDevParentVM>(
+  key: 'eager-devtool-parent',
+  builder: EagerDevParentVM.new,
+);
 
 void main() {
   group('DevTools integration and tracker', () {
@@ -388,6 +403,81 @@ void main() {
         isEmpty,
       );
       expect(graph.bindingInfos.keys, [rootBinding.id]);
+    });
+
+    test('eager virtual binding metadata is enriched without duplicate events',
+        () {
+      ViewModel.reset();
+
+      final rootBinding = ViewModelBinding()..init();
+      addTearDown(() {
+        rootBinding.dispose();
+        ViewModel.reset();
+      });
+
+      final parent = rootBinding.read(_eagerDevParentSpec);
+      final tracker = DevToolTracker.instance;
+      final info =
+          tracker.dependencyGraph.bindingInfos[parent.dependencyBindingId]!;
+
+      expect(info.kind, 'dependency');
+      expect(info.parentViewModelId, isNotNull);
+      expect(info.parentViewModelType, 'EagerDevParentVM');
+
+      var notifications = 0;
+      final removeListener = tracker.addListener(() => notifications++);
+      tracker.registerBinding(
+        bindingId: info.bindingId,
+        name: info.name,
+        isDependencyBinding: true,
+      );
+      removeListener();
+
+      expect(notifications, 0);
+      expect(
+        identical(
+          tracker.dependencyGraph.bindingInfos[info.bindingId],
+          info,
+        ),
+        isTrue,
+      );
+    });
+
+    test('dispose cleanup removes a fallback binding without onUnbind', () {
+      ViewModel.reset();
+
+      final rootBinding = ViewModelBinding();
+      addTearDown(() {
+        rootBinding.dispose();
+        ViewModel.reset();
+      });
+      const key = 'dispose-before-unbind';
+      const fallbackBindingId = 'fallback-without-unbind';
+      const arg = InstanceArg(key: key);
+      final viewModel = rootBinding.read(
+        ViewModelSpec<DevVM>(
+          key: key,
+          builder: DevVM.new,
+        ),
+      );
+      final tracker = DevToolTracker.instance;
+
+      tracker.onBind(viewModel, arg, fallbackBindingId);
+      expect(
+        tracker.dependencyGraph.bindingInfos[fallbackBindingId]?.kind,
+        'unknown',
+      );
+
+      tracker.onDispose(viewModel, arg);
+
+      expect(
+        tracker.dependencyGraph.bindingInfos,
+        isNot(contains(fallbackBindingId)),
+      );
+      expect(
+        tracker.dependencyGraph.watcherToViewModels,
+        isNot(contains(fallbackBindingId)),
+      );
     });
 
     test('resetForTesting clears graph and tracker listeners silently', () {

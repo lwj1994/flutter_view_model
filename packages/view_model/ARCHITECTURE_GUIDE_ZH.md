@@ -26,8 +26,8 @@ class UserRepository with ViewModel {
 ```
 
 优先使用 getter，不要通过 `late final`、构造函数字段或 `??=` 长期缓存子
-ViewModel。这样显式 `recycle`、成功的 parent recreate 或异步生命周期竞争后，
-下一次访问仍能解析 replacement。
+ViewModel。这样显式 `recycle`、child disposal 或异步生命周期竞争后，下一次
+访问仍能解析新的 generation。
 
 ## 2. Parent 持有的子 ViewModel 生命周期
 
@@ -85,8 +85,8 @@ sequenceDiagram
 - root 内的 unkeyed VM 使用该 root binding 的私有 default key。
 - unkeyed child 使用 parent generation 的私有 default key。只要 parent 对象仍
   存活，即使 A/B root 加入或离开，该 key 也保持稳定。
-- parent 成功 recreate 后是新的 generation，并获得新的 child 私有作用域；旧的
-  unkeyed dependency tree 不迁移。
+- parent 被 `recycle` 后，下一次按 spec 解析会创建新的 generation，并获得新的
+  child 私有作用域；旧的 unkeyed dependency tree 不迁移。
 - 跨独立 parent generation 共享 child，或同一 binding 内需要多个同类型 child
   时，应显式提供 key。
 - 所有 `aliveForever` ViewModel 都必须显式提供 key；root 与 nested 解析会在
@@ -96,9 +96,9 @@ sequenceDiagram
 
 正常模块依赖应使用稳定 spec。两个 API 都能在缺失时创建实例并建立生命周期
 所有权。`read` 的含义是“不监听 ViewModel 自身的 `notifyListeners()`”，不是
-“不 bind”；它仍会感知 handle 的 recreate/dispose。
+“不 bind”；它仍会感知 handle 的 dispose/recycle。
 
-| API | 创建实例 | bind | VM 自身通知 | Recreate/dispose |
+| API | 创建实例 | bind | VM 自身通知 | Handle dispose/recycle |
 | --- | --- | --- | --- | --- |
 | `watch(spec)` | 是 | 是 | 是 | 是 |
 | `read(spec)` | 是 | 是 | 否 | 是 |
@@ -117,7 +117,7 @@ sequenceDiagram
 > owner 先创建实例，会让调用方耦合缓存 identity/顺序，而且不能创建缺失的
 > 依赖。只有明确需要跨 owner 查询缓存，并完全理解其生命周期时才使用。
 
-| API | 缺失时创建 | 命中后 bind | VM 自身通知 | Recreate/dispose |
+| API | 缺失时创建 | 命中后 bind | VM 自身通知 | Handle dispose/recycle |
 | --- | --- | --- | --- | --- |
 | `watchCached(key/tag)` | 否 | 是 | 是 | 是 |
 | `readCached(key/tag)` | 否 | 是 | 否 | 是 |
@@ -129,7 +129,7 @@ sequenceDiagram
 按 tag 获取单个实例可能有歧义，并依赖缓存创建顺序；多个实例可能共用 tag 时，
 应使用 tag 批量 API。
 
-## 4. 构造、判环与 recreate
+## 4. 构造与判环
 
 受管理的依赖图必须保持无环：
 
@@ -139,8 +139,7 @@ sequenceDiagram
 - diamond graph 合法，不会被误判为环。
 
 builder 或 constructor 失败具有原子性：期间暂存的 dependency scope、children、
-listeners 与 owner paths 都会回滚。`recreate` 失败时，旧对象及其旧 dependency
-scope 保持原样。`onCreate` 异常继续沿用现有策略：交给
+listeners 与 owner paths 都会回滚。`onCreate` 异常继续沿用现有策略：交给
 `ViewModelConfig.onError`，实例继续完成创建。
 
 ## 5. 生命周期控制
@@ -150,9 +149,9 @@ scope 保持原样。`onCreate` 异常继续沿用现有策略：交给
   直到显式 `recycle` 或 `ViewModel.reset()`。
 - `recycle(vm)` 是全局强制销毁 escape hatch。它会移除所有 root/parent owner，
   其他使用方和 `aliveForever` 实例也会受影响。
-- `recreate(vm)` 成功时保留 incoming bindings。recreate parent 会启动新的
-  generation-scoped dependency binding；recreate child 时，parent edge 仍连接到
-  child handle。
+- 不提供原位替换 API。独立的新实例应使用新的显式 key；若明确要全局替换，先
+  `recycle(vm)`，再让解析型 getter 在下次访问时通过 `watch(spec)`/`read(spec)`
+  创建新的 handle 与 dependency tree。
 - 不要在 `dispose()` 中重新解析依赖。
 
 ## 6. 独立 Binding Host

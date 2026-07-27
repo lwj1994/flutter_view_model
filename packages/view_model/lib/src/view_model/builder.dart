@@ -7,6 +7,8 @@ import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/view_model.dart';
 import 'package:view_model/src/view_model/widget_mixin/stateful_extension.dart';
 
+/// @nodoc
+///
 /// A convenient widget that does not require mixing
 /// `ViewModelStateMixin` into `State`.
 ///
@@ -36,6 +38,8 @@ class _ViewModelState<T extends ViewModel> extends State<ViewModelBuilder<T>>
   }
 }
 
+/// @nodoc
+///
 /// Listens to and uses a `ViewModel` that already exists in the cache.
 ///
 /// Behavior: internally uses `watchCachedViewModel`. When the `ViewModel` calls

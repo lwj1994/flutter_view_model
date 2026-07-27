@@ -136,8 +136,7 @@ void main() {
     binding.dispose();
   });
 
-  test('recreated instances of one factory class do not emit false warnings',
-      () {
+  test('repeated reads of one factory class do not emit false warnings', () {
     final binding = ViewModelBinding();
     final messages = <String>[];
     debugPrint = (message, {wrapWidth}) {
@@ -356,45 +355,6 @@ void main() {
 
     expect(created, isNotNull);
     expect(created!.isDisposed, isTrue);
-    expect(instanceManager.debugStoreCount, 0);
-  });
-
-  test('reset inside a recreate builder disposes its detached replacement', () {
-    final binding = ViewModelBinding();
-    addTearDown(binding.dispose);
-    final spec = ViewModelSpec<DiagnosticViewModel>(
-      builder: () => DiagnosticViewModel(1),
-      key: 'reset-inside-recreate-builder',
-    );
-    final original = binding.read(spec);
-    DiagnosticViewModel? replacement;
-
-    expect(
-      () => binding.recreate(
-        original,
-        builder: () {
-          ViewModel.reset();
-          return replacement = DiagnosticViewModel(2);
-        },
-      ),
-      throwsA(
-        isA<ViewModelError>()
-            .having(
-              (error) => error.toString(),
-              'message',
-              contains('handle was disposed or replaced while the builder'),
-            )
-            .having(
-              (error) => error.toString(),
-              'cleanup',
-              contains('detached replacement was disposed'),
-            ),
-      ),
-    );
-
-    expect(original.isDisposed, isTrue);
-    expect(replacement, isNotNull);
-    expect(replacement!.isDisposed, isTrue);
     expect(instanceManager.debugStoreCount, 0);
   });
 }

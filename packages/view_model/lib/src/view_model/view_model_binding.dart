@@ -21,24 +21,16 @@ import 'state_store.dart';
 class _BindingSubscription {
   _BindingSubscription({
     required ViewModel viewModel,
-    required this.attach,
+    required Function() Function(ViewModel viewModel) attach,
   }) : _viewModel = viewModel {
     _remove = attach(viewModel);
   }
 
-  ViewModel _viewModel;
-  final Function() Function(ViewModel viewModel) attach;
+  final ViewModel _viewModel;
   late Function() _remove;
   bool _disposed = false;
 
   bool isAttachedTo(ViewModel viewModel) => identical(_viewModel, viewModel);
-
-  void moveTo(ViewModel viewModel) {
-    if (_disposed || identical(_viewModel, viewModel)) return;
-    _remove.call();
-    _viewModel = viewModel;
-    _remove = attach(viewModel);
-  }
 
   void dispose() {
     if (_disposed) return;
@@ -170,41 +162,6 @@ abstract interface class ViewModelBindingInterface {
   void recycle<VM extends ViewModel>(VM viewModel);
 }
 
-/// Optional capability for replacing a [ViewModel] instance while preserving
-/// its existing binding relationships.
-///
-/// This capability is separate from [ViewModelBindingInterface] to avoid
-/// adding an abstract member to existing custom binding implementations.
-/// Callers can still use [ViewModelBindingCapabilityExtension.recreate];
-/// custom bindings that do not support this capability throw
-/// [UnsupportedError].
-abstract interface class ViewModelBindingRecreateCapability {
-  VM recreate<VM extends ViewModel>(
-    VM viewModel, {
-    VM Function()? builder,
-  });
-}
-
-/// Accesses new optional capabilities through the base binding interface.
-extension ViewModelBindingCapabilityExtension on ViewModelBindingInterface {
-  /// Replaces [viewModel] while preserving its active binding relationships.
-  VM recreate<VM extends ViewModel>(
-    VM viewModel, {
-    VM Function()? builder,
-  }) {
-    final binding = this;
-    if (binding is ViewModelBindingRecreateCapability) {
-      // Use the capability's static type to invoke the instance member and
-      // avoid resolving back to this extension.
-      final capability = binding as ViewModelBindingRecreateCapability;
-      return capability.recreate<VM>(viewModel, builder: builder);
-    }
-    throw UnsupportedError(
-      '${binding.runtimeType} does not support ViewModel recreation.',
-    );
-  }
-}
-
 /// Common host interface for types exposing a [viewModelBinding] accessor.
 ///
 /// This enables shared extension methods across different host types, such as
@@ -301,8 +258,7 @@ abstract interface class ViewModelBindingHost {
 /// - [WidgetViewModelBinding]: Specialized implementation for Flutter widgets
 /// - [ViewModelStateMixin]: Mixin that uses ViewModelBinding for StatefulWidget
 /// - [ViewModelBindingPauseProvider]: Interface for pause/resume providers
-mixin class ViewModelBinding
-    implements ViewModelBindingInterface, ViewModelBindingRecreateCapability {
+mixin class ViewModelBinding implements ViewModelBindingInterface {
   late final String _id = _createId();
   bool _devToolsRegistered = false;
 
@@ -354,10 +310,9 @@ mixin class ViewModelBinding
   bool get isDisposed => _dispose;
 
   late final _instanceController = AutoDisposeInstanceController(
-    onRecreate: _handleInstanceChange,
+    onHandleDisposing: _handleInstanceChange,
     onInstanceAttached: _handleInstanceAttached,
     onInstanceDetached: _handleInstanceDetached,
-    onInstanceRecreated: _handleInstanceRecreated,
     viewModelBinding: this,
   );
   final Map<ViewModel, Function()> _stateListeners = Map.identity();
@@ -395,31 +350,6 @@ mixin class ViewModelBinding
       final identity = _factoryIdentities.remove(viewModel);
       if (identity != null) {
         _factorySources.remove(identity);
-      }
-      return true;
-    }());
-  }
-
-  @protected
-  void _handleInstanceRecreated(
-    InstanceHandle handle,
-    ViewModel previous,
-    ViewModel current,
-  ) {
-    final removeWatchListener = _stateListeners.remove(previous);
-    if (removeWatchListener != null) {
-      removeWatchListener.call();
-      _addListener(current);
-    }
-    for (final subscription in _subscriptions.where(
-      (subscription) => subscription.isAttachedTo(previous),
-    )) {
-      subscription.moveTo(current);
-    }
-    assert(() {
-      final identity = _factoryIdentities.remove(previous);
-      if (identity != null) {
-        _factoryIdentities[current] = identity;
       }
       return true;
     }());
@@ -511,7 +441,7 @@ mixin class ViewModelBinding
   /// Force-recycles a ViewModel and removes it from cache for every owner.
   ///
   /// This method manually disposes a ViewModel instance and triggers owner
-  /// updates. Do not use it as a routine recreation or cleanup mechanism.
+  /// updates. Do not use it as a routine reset or cleanup mechanism.
   /// Call it only when you explicitly understand and accept that every owner
   /// of the shared instance will lose the old object at once.
   ///
@@ -534,18 +464,6 @@ mixin class ViewModelBinding
   @override
   void recycle<VM extends ViewModel>(VM vm) {
     instanceManager.recycle(vm);
-  }
-
-  @override
-  VM recreate<VM extends ViewModel>(
-    VM viewModel, {
-    VM Function()? builder,
-  }) {
-    final owner = viewModel.refHandler.primaryOwner ?? viewModelBinding;
-    return runWithBinding(
-      () => _instanceController.recreate(viewModel, builder: builder),
-      owner,
-    );
   }
 
   /// Gets an existing ViewModel by key or throws an error if not found.
@@ -1112,20 +1030,6 @@ class ViewModelDependencyBinding extends ViewModelBinding {
   }
 
   @override
-  void _handleInstanceRecreated(
-    InstanceHandle handle,
-    ViewModel previous,
-    ViewModel current,
-  ) {
-    super._handleInstanceRecreated(handle, previous, current);
-    _dependencies[handle] = current;
-    for (final owner in _propagatedOwners) {
-      _attachOwner(handle, current, owner);
-    }
-    _notifyDependency(current);
-  }
-
-  @override
   void onViewModelUpdate(ViewModel viewModel) {
     _onDependencyUpdate(viewModel);
   }
@@ -1293,13 +1197,6 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
   /// errors.
   void recycleViewModel<VM extends ViewModel>(VM viewModel) {
     viewModelBinding.recycle<VM>(viewModel);
-  }
-
-  VM recreateViewModel<VM extends ViewModel>(
-    VM viewModel, {
-    VM Function()? builder,
-  }) {
-    return viewModelBinding.recreate<VM>(viewModel, builder: builder);
   }
 
   VM readViewModel<VM extends ViewModel>(

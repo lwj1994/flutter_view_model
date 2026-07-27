@@ -40,7 +40,6 @@ npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
 - [ViewModelSpec](#viewmodelspec)
 - [Widget Integration](#widget-integration)
   - [ViewModelStateMixin](#viewmodelstatemixin)
-  - [ViewModelBuilder](#viewmodelbuilder)
   - [ViewModelStatelessMixin](#viewmodelstatelessmixin)
 - [viewModelBinding API](#viewmodelbinding-api)
   - [watch and read (recommended)](#watch-and-read-recommended)
@@ -77,7 +76,7 @@ The library is organized in three layers:
 ```
 ┌─────────────────────────────────────────────────┐
 │              Widget / Consumer Layer            │
-│  ViewModelStateMixin, ViewModelBuilder, ...     │
+│  ViewModelStateMixin, ViewModelStatelessMixin   │
 └───────────────────┬─────────────────────────────┘
                     │ watch / read
 ┌───────────────────▼─────────────────────────────┐
@@ -352,26 +351,6 @@ The mixin:
 - Registers three default `PauseProvider`s (route, ticker mode, app lifecycle).
 - Disposes everything (unbinds all handles) in `State.dispose()`.
 
-### ViewModelBuilder
-
-A convenience widget that internally uses `ViewModelStateMixin`, so you don't need a custom `State` class:
-
-```dart
-ViewModelBuilder<CounterViewModel>(
-  counterSpec,
-  builder: (vm) => Text('${vm.count}'),
-)
-```
-
-For fetching an already-existing (cached) ViewModel:
-
-```dart
-CachedViewModelBuilder<CounterViewModel>(
-  shareKey: 'my-counter',
-  builder: (vm) => Text('${vm.count}'),
-)
-```
-
 ### ViewModelStatelessMixin
 
 Mix into `StatelessWidget` for lightweight usage. The mixin creates a custom `Element` that owns the `WidgetViewModelBinding`:
@@ -398,10 +377,10 @@ class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
 
 Normal application code should resolve ViewModels through a stable spec. Both
 APIs create the instance when absent, **bind** the current `ViewModelBinding`,
-and observe handle recreation/disposal. `watch` additionally listens to the
+and observe handle disposal (including force-recycle). `watch` additionally listens to the
 ViewModel's own `notifyListeners()`:
 
-| API | Creates if absent? | Binds when found? | VM `notifyListeners()` | Handle recreate/dispose |
+| API | Creates if absent? | Binds when found? | VM `notifyListeners()` | Handle disposal |
 |---|---|---|---|---|
 | `watch(spec)` | Yes | Yes | Yes | Yes |
 | `read(spec)` | Yes | Yes | No | Yes |
@@ -425,7 +404,7 @@ void _onTap() {
 > missing dependency. Use it only when that cross-owner cache query is
 > intentional and you understand its lifecycle consequences.
 
-| API | Creates if absent? | Binds when found? | VM `notifyListeners()` | Handle recreate/dispose |
+| API | Creates if absent? | Binds when found? | VM `notifyListeners()` | Handle disposal |
 |---|---|---|---|---|
 | `watchCached(key/tag)` | No | Yes | Yes | Yes |
 | `readCached(key/tag)` | No | Yes | No | Yes |
@@ -483,15 +462,16 @@ lifecycle controls are:
   removes every owner and force-disposes the shared cached instance, including
   an `aliveForever` instance. Use it only when that global effect is explicitly
   intended. The next `watch`/`read` creates a fresh instance.
-- `recreate(vm, builder: ...)` replaces the instance while preserving active
-  binding relationships. Without `builder`, the original factory is reused.
+
+There is no in-place instance replacement API. To obtain a distinct instance,
+use a new explicit key. If replacing the shared cached generation globally is
+intentional, call `recycle(vm)` and let resolver getters call
+`watch(spec)`/`read(spec)` again. This creates a new handle and dependency tree
+through the normal cache-miss path instead of migrating relationships between
+objects.
 
 Custom selector equality is the optional `equals` argument on
-`listenStateSelect`. `recreate` remains a separate optional capability: a type
-that directly implements `ViewModelBindingInterface` opts in by also
-implementing `ViewModelBindingRecreateCapability`. Calling `recreate` through
-the interface extension on an unsupported implementation throws
-`UnsupportedError`.
+`listenStateSelect`.
 
 > **After `recycle`, the old object is disposed.** Every consumer—especially
 > other owners of a shared instance—must resolve the ViewModel through a
@@ -502,8 +482,6 @@ the interface extension on an unsupported implementation throws
 
 ```dart
 MyViewModel get vm => viewModelBinding.watch(mySpec); // resolve on each access
-
-MyViewModel replaceInPlace() => viewModelBinding.recreate(vm);
 
 // Advanced escape hatch only; this affects every owner:
 void resetGlobally() => viewModelBinding.recycle(vm);
@@ -638,7 +616,7 @@ Inside a ViewModel, `viewModelBinding` is stable for that parent object
 generation. Its private default key gives unkeyed children a stable identity
 even when the parent's root owners change. Expose nested ViewModels through
 resolver getters that call `watch`/`read` on every access; this remains necessary
-after explicit `recycle`, parent recreation, or an asynchronous lifecycle race:
+after explicit `recycle` or an asynchronous lifecycle race:
 
 ```dart
 class OrderViewModel with ViewModel {
@@ -650,7 +628,7 @@ class OrderViewModel with ViewModel {
 ```
 
 Prefer a getter over `late final`, a constructor-cached field, or `??=` so the
-next access can resolve a replacement after `recycle` or parent recreation.
+next access can resolve a new generation after `recycle`.
 
 Reactive dependencies use `watch`. A child update invokes
 `parent.onDependencyNotify(child)`, then notifies the parent. The propagation

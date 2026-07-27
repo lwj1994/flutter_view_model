@@ -61,6 +61,28 @@ class AutoCleanupModel {}
 
 class AutoCleanupModelB {}
 
+class DirectRecycleModel {}
+
+class ThrowingUnbindModel implements InstanceLifeCycle {
+  int disposeCount = 0;
+
+  @override
+  void onBind(InstanceArg arg, String bindingId) {}
+
+  @override
+  void onCreate(InstanceArg arg) {}
+
+  @override
+  void onDispose(InstanceArg arg) {
+    disposeCount++;
+  }
+
+  @override
+  void onUnbind(InstanceArg arg, String bindingId) {
+    throw StateError('unbind failure');
+  }
+}
+
 void main() {
   group('get_instance', () {
     setUp(() {
@@ -136,26 +158,6 @@ void main() {
       final InstanceHandle<TestModel> a1 =
           instanceManager.getNotifier<TestModel>(factory: factory);
       assert(a != a1);
-    });
-
-    test('recreate', () {
-      final factory = InstanceFactory<TestModel>(
-          builder: () => TestModel(), arg: const InstanceArg(key: "share"));
-      final a = instanceManager.get<TestModel>(factory: factory);
-      final a1 = instanceManager.recreate<TestModel>(a);
-      assert(a != a1);
-    });
-
-    test('recreate with new builder', () {
-      final factory = InstanceFactory<TestModel>(
-          builder: () => TestModel(), arg: const InstanceArg(key: "share"));
-      final a = instanceManager.get<TestModel>(factory: factory);
-      final newT = TestModel();
-      final a1 = instanceManager.recreate<TestModel>(a, builder: () {
-        return newT;
-      });
-      assert(a != a1);
-      assert(newT == a1);
     });
 
     test('get existing instance', () {
@@ -320,8 +322,83 @@ void main() {
 
       // Should not throw exception but log error
       handle.unbindAll();
-      expect(handle.action, InstanceAction.dispose);
+      expect(handle.isDisposed, isTrue);
       expect(() => handle.instance, throwsA(isA<Error>()));
+    });
+
+    test('lifecycle unbind error is reported without blocking recycle', () {
+      final handle = instanceManager.getNotifier<ThrowingUnbindModel>(
+        factory: InstanceFactory<ThrowingUnbindModel>(
+          builder: ThrowingUnbindModel.new,
+          arg: const InstanceArg(
+            key: 'error_unbind',
+            bindingId: 'error_unbind_binding',
+          ),
+        ),
+      );
+      final model = handle.instance;
+
+      expect(
+        () => handle.unbind('error_unbind_binding'),
+        returnsNormally,
+      );
+      expect(model.disposeCount, 1);
+      expect(handle.isDisposed, isTrue);
+    });
+
+    test('Store.recycle covers found, missing, and disposed states', () {
+      final store = Store<DirectRecycleModel>();
+      final handle = store.getNotifier(
+        factory: InstanceFactory<DirectRecycleModel>(
+          builder: DirectRecycleModel.new,
+          arg: const InstanceArg(
+            key: 'direct_store_recycle',
+            bindingId: 'direct_store_binding',
+          ),
+        ),
+      );
+      final model = handle.instance;
+
+      expect(handle.containsBinding('direct_store_binding'), isTrue);
+      store.recycle(model);
+      expect(handle.isDisposed, isTrue);
+      expect(store.isEmpty, isTrue);
+
+      expect(
+        () => store.recycle(model),
+        throwsA(
+          isA<ViewModelError>().having(
+            (error) => error.message,
+            'message',
+            contains('Instance not found in store'),
+          ),
+        ),
+      );
+
+      store.dispose();
+      expect(
+        () => store.recycle(model),
+        throwsA(
+          isA<ViewModelError>().having(
+            (error) => error.message,
+            'message',
+            contains('has been disposed'),
+          ),
+        ),
+      );
+    });
+
+    test('InstanceManager.recycle rejects an unmanaged instance', () {
+      expect(
+        () => instanceManager.recycle(Object()),
+        throwsA(
+          isA<ViewModelError>().having(
+            (error) => error.message,
+            'message',
+            contains('Instance not found in store'),
+          ),
+        ),
+      );
     });
 
     test('InstanceArg equality', () {

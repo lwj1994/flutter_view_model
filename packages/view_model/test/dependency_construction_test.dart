@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model/src/view_model/state_store.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart'
+    show ViewModelDependencyBinding;
 import 'package:view_model/view_model.dart';
 
 class _SelfRecursiveViewModel with ViewModel {
@@ -10,6 +12,17 @@ class _SelfRecursiveViewModel with ViewModel {
 
 final _selfRecursiveSpec = ViewModelSpec<_SelfRecursiveViewModel>(
   builder: _SelfRecursiveViewModel.new,
+);
+
+class _KeyedSelfRecursiveViewModel with ViewModel {
+  _KeyedSelfRecursiveViewModel() {
+    viewModelBinding.read(_keyedSelfRecursiveSpec);
+  }
+}
+
+final _keyedSelfRecursiveSpec = ViewModelSpec<_KeyedSelfRecursiveViewModel>(
+  builder: _KeyedSelfRecursiveViewModel.new,
+  key: 'keyed-self-recursive',
 );
 
 class _OnCreateRecursiveViewModel with ViewModel {
@@ -76,13 +89,6 @@ final _throwingParentSpec = ViewModelSpec<_ThrowingParentViewModel>(
 );
 
 class _AtomicParentViewModel with ViewModel {
-  _AtomicParentViewModel({bool fail = false}) {
-    if (fail) {
-      viewModelBinding.read(_rollbackChildSpec);
-      throw StateError('replacement construction failed');
-    }
-  }
-
   _RollbackChildViewModel get child =>
       viewModelBinding.read(_rollbackChildSpec);
 }
@@ -111,6 +117,57 @@ final _runtimeCycleBSpec = ViewModelSpec<_RuntimeCycleBViewModel>(
   builder: _RuntimeCycleBViewModel.new,
   key: 'runtime-cycle-b',
 );
+
+class _LongCycleAViewModel with ViewModel {
+  _LongCycleBViewModel get dependency => viewModelBinding.read(_longCycleBSpec);
+}
+
+class _LongCycleBViewModel with ViewModel {
+  _LongCycleCViewModel get dependency => viewModelBinding.read(_longCycleCSpec);
+}
+
+class _LongCycleCViewModel with ViewModel {
+  _LongCycleAViewModel get dependency => viewModelBinding.read(_longCycleASpec);
+}
+
+final _longCycleASpec = ViewModelSpec<_LongCycleAViewModel>(
+  builder: _LongCycleAViewModel.new,
+  key: 'long-runtime-cycle-a',
+);
+
+final _longCycleBSpec = ViewModelSpec<_LongCycleBViewModel>(
+  builder: _LongCycleBViewModel.new,
+  key: 'long-runtime-cycle-b',
+);
+
+final _longCycleCSpec = ViewModelSpec<_LongCycleCViewModel>(
+  builder: _LongCycleCViewModel.new,
+  key: 'long-runtime-cycle-c',
+);
+
+class _DependencyUpdateParentViewModel with ViewModel {
+  void invokeGenericBindingUpdate() {
+    final binding = viewModelBinding as ViewModelDependencyBinding;
+    // ignore: invalid_use_of_protected_member
+    binding.onUpdate();
+  }
+}
+
+final _dependencyUpdateParentSpec =
+    ViewModelSpec<_DependencyUpdateParentViewModel>(
+  builder: _DependencyUpdateParentViewModel.new,
+  key: 'dependency-update-parent',
+);
+
+class _ThrowingIdBinding extends ViewModelBinding {
+  bool throwOnId = false;
+
+  @override
+  String get id {
+    if (throwOnId) throw StateError('binding id failure');
+    return super.id;
+  }
+}
 
 void main() {
   setUp(() {
@@ -148,6 +205,26 @@ void main() {
           'message',
           allOf(
               contains('_IndirectAViewModel'), contains('_IndirectBViewModel')),
+        ),
+      ),
+    );
+
+    owner.dispose();
+  });
+
+  test('keyed self recursion compares the explicit construction key', () {
+    final owner = ViewModelBinding();
+
+    expect(
+      () => owner.read(_keyedSelfRecursiveSpec),
+      throwsA(
+        isA<ViewModelError>().having(
+          (error) => error.toString(),
+          'message',
+          allOf(
+            contains('Circular ViewModel construction'),
+            contains('keyed-self-recursive'),
+          ),
         ),
       ),
     );
@@ -197,30 +274,6 @@ void main() {
     owner.dispose();
   });
 
-  test('failed recreate preserves old parent and dependency scope', () {
-    final owner = ViewModelBinding();
-    final parent = owner.read(_atomicParentSpec);
-    final child = parent.child;
-
-    expect(
-      () => owner.recreate(
-        parent,
-        builder: () => _AtomicParentViewModel(fail: true),
-      ),
-      throwsA(isA<StateError>()),
-    );
-
-    expect(owner.read(_atomicParentSpec), same(parent));
-    expect(parent.isDisposed, isFalse);
-    expect(parent.child, same(child));
-    expect(child.isDisposed, isFalse);
-    expect(_RollbackChildViewModel.created, 2);
-    expect(_RollbackChildViewModel.disposed, 1);
-
-    owner.dispose();
-    expect(_RollbackChildViewModel.disposed, 2);
-  });
-
   test('runtime indirect ownership cycle is rejected atomically', () {
     final owner = ViewModelBinding();
     final a = owner.read(_runtimeCycleASpec);
@@ -243,5 +296,92 @@ void main() {
     owner.dispose();
     expect(a.isDisposed, isTrue);
     expect(b.isDisposed, isTrue);
+  });
+
+  test('runtime cycle detection traverses multiple dependency bindings', () {
+    final owner = ViewModelBinding();
+    final a = owner.read(_longCycleASpec);
+    final b = owner.read(_longCycleBSpec);
+    final c = owner.read(_longCycleCSpec);
+
+    expect(a.dependency, same(b));
+    expect(b.dependency, same(c));
+    expect(
+      () => c.dependency,
+      throwsA(
+        isA<ViewModelError>().having(
+          (error) => error.toString(),
+          'message',
+          contains('Circular ViewModel dependency'),
+        ),
+      ),
+    );
+
+    owner.dispose();
+    expect(a.isDisposed, isTrue);
+    expect(b.isDisposed, isTrue);
+    expect(c.isDisposed, isTrue);
+  });
+
+  test('generic dependency binding updates remain a no-op', () {
+    final owner = ViewModelBinding();
+    final parent = owner.read(_dependencyUpdateParentSpec);
+
+    expect(parent.invokeGenericBindingUpdate, returnsNormally);
+    expect(parent.isDisposed, isFalse);
+
+    owner.dispose();
+    expect(parent.isDisposed, isTrue);
+  });
+
+  test('recycle prevents the disposed parent from resolving dependencies', () {
+    final owner = ViewModelBinding();
+    final parent = owner.read(_atomicParentSpec);
+    parent.child;
+
+    owner.recycle(parent);
+
+    expect(parent.isDisposed, isTrue);
+    expect(
+      () => parent.child,
+      throwsA(
+        isA<ViewModelError>().having(
+          (error) => error.toString(),
+          'message',
+          contains('Cannot resolve dependencies from a disposed'),
+        ),
+      ),
+    );
+
+    owner.dispose();
+  });
+
+  test('dependency binding dispose errors use the dispose error channel', () {
+    final reportedErrors = <(Object, ErrorType)>[];
+    ViewModel.initialize(
+      config: ViewModelConfig(
+        onError: (error, stackTrace, type) {
+          reportedErrors.add((error, type));
+        },
+      ),
+    );
+    final owner = _ThrowingIdBinding();
+    final parent = owner.read(_atomicParentSpec);
+    final child = parent.child;
+    expect(child.isDisposed, isFalse);
+
+    owner.throwOnId = true;
+    owner.recycle(parent);
+    owner.throwOnId = false;
+
+    expect(parent.isDisposed, isTrue);
+    expect(
+      reportedErrors.any(
+        (entry) => entry.$1 is StateError && entry.$2 == ErrorType.dispose,
+      ),
+      isTrue,
+    );
+
+    owner.dispose();
   });
 }

@@ -122,18 +122,10 @@ class Store<T> implements RecyclableInstanceStore {
   /// - [notifier]: The instance handle to monitor for disposal
   void _listenDispose(InstanceHandle<T> notifier) {
     void onNotify() {
-      switch (notifier.action) {
-        case null:
-          break;
-        case InstanceAction.dispose:
-          _instances.remove(notifier.arg.key);
-          notifier.removeListener(onNotify);
-          if (_instances.isEmpty) {
-            _onStoreEmpty?.call();
-          }
-          break;
-        case InstanceAction.recreate:
-          break;
+      _instances.remove(notifier.arg.key);
+      notifier.removeListener(onNotify);
+      if (_instances.isEmpty) {
+        _onStoreEmpty?.call();
       }
     }
 
@@ -209,7 +201,6 @@ class Store<T> implements RecyclableInstanceStore {
         return InstanceHandle<T>(
           instance: instance,
           arg: arg,
-          factory: factory.builder!,
           index: _nextIndex++,
         );
       },
@@ -241,32 +232,6 @@ class Store<T> implements RecyclableInstanceStore {
         'Untracked $T instance dispose error',
       );
     }
-  }
-
-  /// Recreates an existing instance with optional custom builder.
-  ///
-  /// This method finds the instance handle for the given instance and
-  /// triggers its recreation. The new instance will replace the old one
-  /// while maintaining the same handle and binding relationships.
-  ///
-  /// Parameters:
-  /// - [t]: The existing instance to recreate
-  /// - [builder]: Optional custom builder for the new instance
-  ///
-  /// Returns the newly created instance of type [T].
-  T recreate(
-    T t, {
-    T Function()? builder,
-  }) {
-    if (_disposed) {
-      throw ViewModelError("Store<$T> has been disposed.");
-    }
-    final find = _instances.values.firstWhere(
-      (e) => e.instance == t,
-      orElse: () => throw ViewModelError(
-          "Cannot recreate ${T} instance. Instance not found in store."),
-    );
-    return find.recreate(builder: builder);
   }
 
   /// Force-recycles the handle that currently owns [t].
@@ -324,17 +289,17 @@ class Store<T> implements RecyclableInstanceStore {
 /// Handle for managing a ViewModel instance and its lifecycle.
 ///
 /// This class wraps a ViewModel instance and provides lifecycle management,
-/// binding tracking, and recreation capabilities. It acts as a proxy between
+/// binding tracking, and disposal. It acts as a proxy between
 /// the store and the actual ViewModel instance.
 ///
 /// Key responsibilities:
-/// - Instance lifecycle management (creation, disposal, recreation)
+/// - Instance lifecycle management (creation and disposal)
 /// - Binding registration and removal
 /// - Automatic disposal when no bindings remain
 /// - Notification of lifecycle events
 ///
 /// The handle uses [ChangeNotifier] to notify listeners of important events
-/// like disposal and recreation.
+/// like disposal.
 class InstanceHandle<T> with ChangeNotifier {
   /// Arguments used for instance creation and identification.
   final InstanceArg arg;
@@ -358,9 +323,6 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Prefer this over `bindingIds.contains(id)` to avoid allocating
   /// an unmodifiable list wrapper on every call.
   bool containsBinding(String id) => _bindingSources.containsKey(id);
-
-  /// Factory function for creating new instances of this type.
-  final T Function() factory;
 
   /// Creation index for ordering instances by creation time.
   final int index;
@@ -387,12 +349,10 @@ class InstanceHandle<T> with ChangeNotifier {
   /// - [instance]: The ViewModel instance to wrap
   /// - [arg]: Instance arguments for identification
   /// - [index]: Creation order index
-  /// - [factory]: Factory function for recreation
   InstanceHandle({
     required T instance,
     required this.arg,
     required this.index,
-    required this.factory,
   }) : _instance = instance {
     onCreate(arg);
   }
@@ -462,20 +422,6 @@ class InstanceHandle<T> with ChangeNotifier {
     }
   }
 
-  /// Current action being performed on this instance.
-  InstanceAction? _action;
-  InstanceAction? _lastAction;
-
-  /// Gets the current or most recent action on this instance.
-  ///
-  /// During a [notifyListeners] callback, returns the in-progress action
-  /// (e.g. [InstanceAction.dispose] or [InstanceAction.recreate]).
-  /// After the callback completes, [_action] is cleared to `null`.
-  /// Once the handle is disposed, falls back to [_lastAction] so that
-  /// late readers (e.g. Store's dispose listener) can still observe what
-  /// happened.
-  InstanceAction? get action => _action ?? (_disposed ? _lastAction : null);
-
   /// Disposes this instance and triggers cleanup.
   ///
   /// This method marks the instance for disposal, notifies listeners,
@@ -483,10 +429,7 @@ class InstanceHandle<T> with ChangeNotifier {
   /// unusable after this call.
   void _recycle({bool force = false}) {
     if (arg.aliveForever && !force) return;
-    _action = InstanceAction.dispose;
-    _lastAction = _action;
     runInViewModelUpdateTransaction(notifyListeners);
-    _action = null;
     onDispose();
   }
 
@@ -508,81 +451,6 @@ class InstanceHandle<T> with ChangeNotifier {
     _bindingSources.clear();
     _directBindingSources.clear();
     _recycle(force: force);
-  }
-
-  /// Recreates the instance with optional custom builder.
-  ///
-  /// This method disposes the current instance and creates a new one,
-  /// either using the provided builder or the original factory function.
-  /// All binding relationships are preserved.
-  ///
-  /// Parameters:
-  /// - [builder]: Optional custom builder for the new instance
-  ///
-  /// Returns the newly created instance.
-  T recreate({
-    T Function()? builder,
-  }) {
-    if (_disposed) {
-      throw ViewModelError("Cannot recreate $T instance. Handle is disposed.");
-    }
-    final previous = _instance;
-    if (previous == null) {
-      throw ViewModelError(
-          "Cannot recreate $T instance. Instance is disposed.");
-    }
-    final activeBindingIds = List<String>.of(_bindingSources.keys);
-    final recreated = runInViewModelConstruction<T>(
-      type: T,
-      key: arg.key!,
-      isImplicit: arg.key is ViewModelPrivateKey,
-      body: builder ?? factory,
-    );
-    if (!_isActiveWith(previous)) {
-      _abortInvalidatedRecreate(previous, recreated);
-    }
-    _tryCallInstanceDispose(previous);
-    if (!_isActiveWith(previous)) {
-      _abortInvalidatedRecreate(previous, recreated);
-    }
-    _instance = recreated;
-    _notifyCreate(arg);
-    _requireActiveRecreatedInstance(recreated);
-    for (final bindingId in activeBindingIds) {
-      _notifyBind(bindingId);
-      _requireActiveRecreatedInstance(recreated);
-    }
-    _action = InstanceAction.recreate;
-    _lastAction = _action;
-    runInViewModelUpdateTransaction(notifyListeners);
-    _action = null;
-    return instance;
-  }
-
-  bool _isActiveWith(T expected) {
-    return !_disposed && identical(_instance, expected);
-  }
-
-  Never _abortInvalidatedRecreate(T previous, T recreated) {
-    final replacementIsManaged = _isActiveWith(recreated);
-    if (!replacementIsManaged && !identical(recreated, previous)) {
-      _tryCallInstanceDispose(recreated);
-    }
-    throw ViewModelError(
-      'Cannot recreate $T because its handle was disposed or replaced while '
-      'the builder was running (for example by '
-      'ViewModel.reset()). The detached replacement was disposed '
-      'and was not installed.',
-    );
-  }
-
-  void _requireActiveRecreatedInstance(T recreated) {
-    if (_isActiveWith(recreated)) return;
-    throw ViewModelError(
-      'Cannot recreate $T because its handle was disposed or replaced while '
-      'the replacement lifecycle was being initialized (for example by '
-      'ViewModel.reset()).',
-    );
   }
 
   @override
@@ -654,18 +522,6 @@ class InstanceHandle<T> with ChangeNotifier {
     _directBindingSources.clear();
     super.dispose();
   }
-}
-
-/// Actions that can be performed on ViewModel instances.
-///
-/// These actions are used to track the current state of instance operations
-/// and notify listeners of important lifecycle events.
-enum InstanceAction {
-  /// The instance is being disposed and will become unusable.
-  dispose,
-
-  /// The instance is being recreated with a new instance object.
-  recreate,
 }
 
 /// Interface for ViewModel lifecycle management.

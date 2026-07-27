@@ -2,7 +2,7 @@
 ///
 /// This file provides the core instance management functionality
 /// for ViewModels,
-/// including creation, caching, recreation, and binding management. The system
+/// including creation, caching, disposal, and binding management. The system
 /// ensures efficient resource usage and proper lifecycle management.
 ///
 /// @author luwenjie on 2025/3/25 12:23:33
@@ -30,7 +30,7 @@ final instanceManager = InstanceManager._get();
 /// Key responsibilities:
 /// - ViewModel instance creation and caching
 /// - Binding registration and management
-/// - Instance recreation and cleanup
+/// - Instance recycling and cleanup
 /// - Type-safe instance retrieval
 ///
 /// The manager uses a store-per-type architecture where each ViewModel type
@@ -45,35 +45,9 @@ class InstanceManager {
   void _requireNotResetting() {
     if (_isResetting) {
       throw ViewModelError(
-        'Cannot resolve or recreate ViewModels while the runtime is resetting.',
+        'Cannot resolve ViewModels while the runtime is resetting.',
       );
     }
-  }
-
-  /// Recreates an existing ViewModel instance.
-  ///
-  /// This method forces the recreation of a ViewModel instance, optionally
-  /// using a custom builder function. The new instance will replace the
-  /// existing one in the store.
-  ///
-  /// Parameters:
-  /// - [t]: The existing instance to recreate
-  /// - [builder]: Optional custom builder function for the new instance
-  ///
-  /// Returns the newly created instance of type [T].
-  T recreate<T>(
-    T t, {
-    T Function()? builder,
-  }) {
-    _requireNotResetting();
-    final store = _stores[T];
-    if (store is! Store<T>) {
-      throw ViewModelError("Cannot recreate $T instance. Store not found.");
-    }
-    return store.recreate(
-      t,
-      builder: builder,
-    );
   }
 
   /// Force-recycles an instance regardless of which binding resolved it.
