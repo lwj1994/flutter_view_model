@@ -17,6 +17,9 @@ Use this skill when tasks involve Flutter `view_model` architecture, migration, 
   - `packages/view_model/README.md`
   - `packages/view_model/README_ZH.md`
 - Skill-local examples: `examples/counter_example.dart`, `examples/state_view_model_example.dart`, `examples/sharing_example.dart`
+- Architecture example: `examples/instagram_architecture/README.md` — a
+  multi-file Instagram-style app composed from API, repository, user, feed,
+  post-detail, comment, and startup-coordinator ViewModels.
 
 If examples conflict with README, follow README.
 
