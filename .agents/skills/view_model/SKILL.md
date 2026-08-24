@@ -17,6 +17,9 @@ Use this skill when tasks involve Flutter `view_model` architecture, migration, 
   - `packages/view_model/README.md`
   - `packages/view_model/README_ZH.md`
 - Skill-local examples: `examples/counter_example.dart`, `examples/state_view_model_example.dart`, `examples/sharing_example.dart`
+- Architecture example: `examples/instagram_architecture/README.md` — a
+  multi-file Instagram-style app composed from API, repository, user, feed,
+  post-detail, comment, and startup-coordinator ViewModels.
 
 If examples conflict with README, follow README.
 
@@ -217,6 +220,66 @@ identity. Never cache a nested ViewModel in `late final`, `final`, or `??=`;
 explicit recycle and asynchronous disposal still require getter-based
 re-resolution.
 
+### Local scope: sharing one instance across pages
+
+A common case is for page A to display data and page B to edit it. Page A must
+see B's changes when B closes; if both pages are visible, A should react to the
+changes immediately. Prefer the same spec with an explicit key and default
+auto-disposal. Do not set `aliveForever: true` merely to share across pages:
+
+```dart
+class DraftViewModel with ViewModel {
+  DraftViewModel(this.documentId);
+
+  final String documentId;
+  String title = '';
+
+  void updateTitle(String value) => update(() => title = value);
+}
+
+final draftViewModelSpec = ViewModelSpec.arg<DraftViewModel, String>(
+  builder: DraftViewModel.new,
+  key: (documentId) => ('draft', documentId),
+);
+
+class _PageAState extends State<PageA> with ViewModelStateMixin<PageA> {
+  DraftViewModel get draft =>
+      viewModelBinding.watch(draftViewModelSpec(widget.documentId));
+
+  @override
+  Widget build(BuildContext context) => Text(draft.title);
+}
+
+class _PageBState extends State<PageB> with ViewModelStateMixin<PageB> {
+  DraftViewModel get draft =>
+      viewModelBinding.watch(draftViewModelSpec(widget.documentId));
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+        initialValue: draft.title,
+        onChanged: draft.updateTitle,
+      );
+}
+```
+
+- A and B resolve the same instance because they use the same resolved VM type
+  and key. There is no need to use a cached API to retrieve an instance created
+  by the other page.
+- Both `watch(spec)` and `read(spec)` bind the instance to the current page. Use
+  `watch` when the page must react to VM notifications; use `read` when it only
+  invokes methods.
+- While A and B both exist, each binding owns the instance. Disposing B removes
+  only B's bind, so A keeps the instance alive. When A is also disposed, the
+  final bind is removed and the instance is automatically reclaimed.
+- A `key` defines shared identity; it does not retain the instance forever. If
+  multiple edit flows can coexist, include a document or session ID in the key
+  to prevent unrelated flows from sharing state.
+- The resulting lifetime is the union of all participating page scopes. This
+  is usually more appropriate than `aliveForever: true`. Use `aliveForever`
+  with an explicit key only when the instance must survive with zero bindings.
+
+See `examples/sharing_example.dart` for the complete example.
+
 ## Implementation workflow
 
 1. Choose ViewModel style
@@ -289,6 +352,10 @@ re-resolution.
 - With `aliveForever: false` and `key() == null`: one instance per resolved
   generic VM type `T` per binding.
 - With same `T` + same `key`: shared identity across bindings.
+- For temporary sharing across sibling pages or independent bindings, let every
+  participant resolve the same keyed spec with `watch/read`. Their bindings
+  collectively define the local lifetime; the instance auto-disposes after
+  the final participant unbinds.
 - Multiple instances of the same `T` in one binding need distinct keys.
 - Every `aliveForever` instance requires an explicit key, regardless of
   whether it is resolved by a root binding or another ViewModel.
@@ -349,6 +416,8 @@ Do:
   selector-based rebuilds), read the ViewModel with `read` and let the
   selector mechanism drive updates; avoid `watch` on the same ViewModel.
 - Set explicit `key` whenever instance sharing is a requirement.
+- Prefer keyed, binding-scoped sharing over `aliveForever` when the instance
+  only needs to live while one or more participating pages are alive.
 - Dispose non-widget bindings explicitly.
 - Use `listenStateSelect` for side effects on selected state fields; pass its
   optional typed `equals` when the selected value needs a local rule that

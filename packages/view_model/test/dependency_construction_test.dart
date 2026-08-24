@@ -159,15 +159,27 @@ final _dependencyUpdateParentSpec =
   key: 'dependency-update-parent',
 );
 
-class _ThrowingIdBinding extends ViewModelBinding {
-  bool throwOnId = false;
-
+class _ThrowingUnbindChildViewModel with ViewModel {
   @override
-  String get id {
-    if (throwOnId) throw StateError('binding id failure');
-    return super.id;
+  void onUnbind(InstanceArg arg, String bindingId) {
+    super.onUnbind(arg, bindingId);
+    throw StateError('child onUnbind failed');
   }
 }
+
+final _throwingUnbindChildSpec = ViewModelSpec<_ThrowingUnbindChildViewModel>(
+  builder: _ThrowingUnbindChildViewModel.new,
+);
+
+class _ThrowingUnbindParentViewModel with ViewModel {
+  _ThrowingUnbindChildViewModel get child =>
+      viewModelBinding.read(_throwingUnbindChildSpec);
+}
+
+final _throwingUnbindParentSpec = ViewModelSpec<_ThrowingUnbindParentViewModel>(
+  builder: _ThrowingUnbindParentViewModel.new,
+  key: 'throwing-unbind-parent',
+);
 
 void main() {
   setUp(() {
@@ -356,7 +368,7 @@ void main() {
     owner.dispose();
   });
 
-  test('dependency binding dispose errors use the dispose error channel', () {
+  test('child onUnbind errors do not interrupt dependency disposal', () {
     final reportedErrors = <(Object, ErrorType)>[];
     ViewModel.initialize(
       config: ViewModelConfig(
@@ -365,23 +377,26 @@ void main() {
         },
       ),
     );
-    final owner = _ThrowingIdBinding();
-    final parent = owner.read(_atomicParentSpec);
+    final owner = ViewModelBinding();
+    addTearDown(owner.dispose);
+    final parent = owner.read(_throwingUnbindParentSpec);
     final child = parent.child;
+
+    expect(parent.isDisposed, isFalse);
     expect(child.isDisposed, isFalse);
 
-    owner.throwOnId = true;
-    owner.recycle(parent);
-    owner.throwOnId = false;
+    expect(() => owner.recycle(parent), returnsNormally);
 
     expect(parent.isDisposed, isTrue);
+    expect(child.isDisposed, isTrue);
     expect(
       reportedErrors.any(
-        (entry) => entry.$1 is StateError && entry.$2 == ErrorType.dispose,
+        (entry) =>
+            entry.$1 is StateError &&
+            entry.$1.toString().contains('child onUnbind failed') &&
+            entry.$2 == ErrorType.lifecycle,
       ),
       isTrue,
     );
-
-    owner.dispose();
   });
 }
