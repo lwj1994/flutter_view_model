@@ -1,35 +1,82 @@
+import 'package:flutter/material.dart';
 import 'package:view_model/view_model.dart';
 
-class AuthService with ViewModel {
-  bool isLoggedIn = false;
+class DraftViewModel with ViewModel {
+  DraftViewModel(this.documentId);
 
-  void login() => update(() => isLoggedIn = true);
-  void logout() => update(() => isLoggedIn = false);
+  final String documentId;
+  String title = '';
+
+  void updateTitle(String value) => update(() => title = value);
 }
 
-final authSpec = ViewModelSpec<AuthService>(
-  builder: () => AuthService(),
-  key: 'auth_service',
-  aliveForever: true, // Keep it alive globally
+/// The explicit key lets bindings on different pages resolve the same instance.
+///
+/// `aliveForever` remains false, so the instance is automatically reclaimed
+/// after the final page unbinds. The document ID identifies the shared scope
+/// and prevents concurrent edits of different documents from sharing state.
+final draftViewModelSpec = ViewModelSpec.arg<DraftViewModel, String>(
+  builder: DraftViewModel.new,
+  key: (documentId) => ('draft', documentId),
 );
 
-class ProfileViewModel with ViewModel {
-  // Resolve through this parent generation's stable dependency binding on
-  // every access. Every aliveForever spec requires an explicit key; here it
-  // also keeps the service shared across independent roots/parents.
-  AuthService get auth => viewModelBinding.read(authSpec);
+class PageA extends StatefulWidget {
+  const PageA({required this.documentId, super.key});
 
-  String get status => auth.isLoggedIn ? 'Online' : 'Offline';
+  final String documentId;
+
+  @override
+  State<PageA> createState() => _PageAState();
 }
 
-final profileSpec = ViewModelSpec<ProfileViewModel>(
-  builder: () => ProfileViewModel(),
-);
+class _PageAState extends State<PageA> with ViewModelStateMixin<PageA> {
+  DraftViewModel get draft =>
+      viewModelBinding.watch(draftViewModelSpec(widget.documentId));
 
-// Usage in logic (outside Widgets)
-class AppInitializer with ViewModelBinding {
-  void checkStatus() {
-    final auth = viewModelBinding.read(authSpec);
-    print('Initial login status: ${auth.isLoggedIn}');
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Preview')),
+      body: Column(
+        children: [
+          Text(draft.title),
+          FilledButton(
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => PageB(documentId: widget.documentId),
+              ),
+            ),
+            child: const Text('Edit'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PageB extends StatefulWidget {
+  const PageB({required this.documentId, super.key});
+
+  final String documentId;
+
+  @override
+  State<PageB> createState() => _PageBState();
+}
+
+class _PageBState extends State<PageB> with ViewModelStateMixin<PageB> {
+  /// Use `read` instead if this page only writes and never reacts to VM
+  /// updates.
+  DraftViewModel get draft =>
+      viewModelBinding.watch(draftViewModelSpec(widget.documentId));
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Edit')),
+      body: TextFormField(
+        initialValue: draft.title,
+        onChanged: draft.updateTitle,
+      ),
+    );
   }
 }
