@@ -690,7 +690,7 @@ sequenceDiagram
 
     A-->>P: dispose / unbind
     D-->>C: Remove only the A source
-    Note over P,C: B still owns the parent; the same parent and child generations stay alive
+    Note over P,C: B still owns the parent, so the same parent and child generations stay alive
 
     B-->>P: dispose / last root leaves
     P-->>D: Dispose parent generation scope
