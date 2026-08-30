@@ -65,6 +65,11 @@ Use this skill for requests like:
 - **ViewModel modules can inject each other.** Resolve module dependencies with
   non-caching `viewModelBinding.read/watch` getters. This forms a demand-driven
   module-to-module DI graph managed by binding-based reference counting.
+- **Never pass resolved ViewModel instances between lifecycle owners.** A raw
+  reference does not establish binding ownership and can escape the lifetime of
+  the binding that resolved it. Give each owner a stable spec and resolve it
+  through that owner's `viewModelBinding`; pass plain data, IDs, value objects,
+  or narrow callbacks across non-ViewModel boundaries instead.
 - **Prefer managed instances over singletons.** Do not make a module static,
   global, keyed, or `aliveForever` by default. Let the first `read/watch`
   create it and let `ViewModelBinding` dispose it automatically.
@@ -175,7 +180,13 @@ class _AppShellState extends State<AppShell> with ViewModelStateMixin {
   AppViewModel get app => viewModelBinding.watch(appSpec);
 
   @override
-  Widget build(BuildContext context) => AppView(viewModel: app);
+  Widget build(BuildContext context) {
+    final app = this.app;
+    return AppView(
+      isSignedIn: app.session.isSignedIn,
+      onCheckout: app.checkout.submit,
+    );
+  }
 }
 ```
 
@@ -349,6 +360,9 @@ See `examples/sharing_example.dart` for the complete example.
   lifecycle edge and mirror the parent's current root bindings.
 - Resolve nested ViewModels through non-caching getters; do not retain them in
   `late final`, `final`, or `??=` fields.
+- Do not constructor-inject or otherwise hand a resolved ViewModel instance to
+  another lifecycle owner. Let the receiving owner resolve a stable spec using
+  its own binding. For shared identity, use the same keyed spec at both owners.
 - With `aliveForever: false` and `key() == null`: one instance per resolved
   generic VM type `T` per binding.
 - With same `T` + same `key`: shared identity across bindings.
@@ -424,6 +438,9 @@ Do:
   overrides the global fallback.
 
 Don't:
+- Pass resolved ViewModel instances between owners through constructors,
+  widget/route arguments, service fields, or similar hand-offs; this bypasses
+  binding ownership and can retain a disposed or recycled generation.
 - Introduce a global singleton or service locator for ViewModel modules by
   default; compose modules through `viewModelBinding` instead.
 - Claim `read` is "non-binding" (it still binds and affects lifecycle).

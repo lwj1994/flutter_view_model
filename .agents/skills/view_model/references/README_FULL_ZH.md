@@ -218,6 +218,20 @@ class OrderViewModel with ViewModel {
 这样显式 `recycle` 或异步生命周期竞争后仍能解析新的 generation。
 getter 声明本身不会创建任何对象。
 
+### 不要让 ViewModel 实例越过 binding 边界
+
+禁止通过构造参数、Widget 或路由参数、service 字段等方式，在不同 owner 之间
+直接传递已经解析出的 ViewModel 实例。裸实例引用不会建立 binding ownership
+边；接收方可能活得比解析该实例的 binding 更久，继续持有已 dispose 或已
+recycle 的旧 generation，并绕过 `watch`/`read` 约定的通知与生命周期语义。
+这种做法也会把模块内部实现暴露到 ViewModel 边界之外。
+
+每个生命周期 owner 都应持有稳定的 `ViewModelSpec`，并通过自己的
+`viewModelBinding.watch/read` 解析依赖。多个 owner 需要共享同一实例时，把共享
+identity 编码进 spec 的 `key`，再让每个 owner 分别解析同一个 keyed spec。
+跨越非 ViewModel 边界时，只传普通数据、ID、value object 或职责收窄的回调，
+不要传 ViewModel 实例。
+
 > **共享父模块边界：** parent generation 会建立 `parent → child` 生命周期边，
 > 因此 child 的生命周期不会短于 parent。带 key 的 parent 被 A/B 多个 root
 > 共同持有时，已解析 child 会实时增加或移除 A/B 的 binding；A 退出但 B 仍在

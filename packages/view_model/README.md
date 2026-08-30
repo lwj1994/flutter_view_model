@@ -630,6 +630,21 @@ class OrderViewModel with ViewModel {
 Prefer a getter over `late final`, a constructor-cached field, or `??=` so the
 next access can resolve a new generation after `recycle`.
 
+### Keep ViewModel instances inside their binding boundary
+
+Do not pass a resolved ViewModel instance between owners through constructors,
+widget or route arguments, service fields, or similar hand-offs. A raw instance
+reference does not establish a binding ownership edge. The receiver can then
+outlive the binding that resolved the instance, retain a disposed or recycled
+generation, and bypass the intended `watch`/`read` notification and lifecycle
+semantics. It also exposes module internals across the ViewModel boundary.
+
+Give each lifecycle owner the stable `ViewModelSpec` and let it resolve the
+dependency through its own `viewModelBinding.watch/read`. When owners must share
+one instance, encode that identity in the spec's `key` and let every owner
+resolve the same keyed spec. Across a non-ViewModel boundary, pass plain data,
+IDs, value objects, or narrowly scoped callbacks instead of the ViewModel.
+
 Reactive dependencies use `watch`. A child update invokes
 `parent.onDependencyNotify(child)`, then notifies the parent. The propagation
 transaction updates each watching binding at most once:
