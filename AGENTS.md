@@ -12,6 +12,7 @@ Packages under `packages/`:
 - `view_model_annotation`: annotation package for code generation
 - `view_model_generator`: source_gen/build package for `@GenSpec`
 - `view_model_devtools_extension`: local DevTools extension, not published
+- `view_model_benchmark`: local runtime and widget/frame benchmark app, not published
 
 Examples under `example/`:
 
@@ -105,6 +106,13 @@ If a skill file is missing or blocked:
 - Local DevTools extension
 - `publish_to: none`
 - Depends on local path `../view_model`
+
+### `packages/view_model_benchmark`
+
+- Local runtime and widget/frame benchmark app
+- `publish_to: none`
+- Depends on local path `../view_model`
+- Run physical-device benchmarks in profile mode
 
 ## getInstance 获取逻辑
 

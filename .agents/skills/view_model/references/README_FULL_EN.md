@@ -21,6 +21,12 @@ dependencies:
   view_model: ^1.0.0
 ```
 
+## 🤝 Sibling ViewModel Implementations
+
+1. [apple_view_model](https://github.com/lwj1994/apple_view_model) — For SwiftUI, UIKit, and Apple platform lifecycles.
+2. [android_view_model](https://github.com/lwj1994/android_view_model) — For Compose, Activity, Fragment, View, and plain Kotlin classes.
+3. [js_view_model](https://github.com/lwj1994/js_view_model) — For React Native, Electron, and plain TypeScript hosts.
+
 ## Install Skill
 
 ```bash
