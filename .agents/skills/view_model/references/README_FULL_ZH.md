@@ -18,6 +18,12 @@ dependencies:
   view_model: ^1.0.0
 ```
 
+## 🤝 兄弟姊妹 ViewModel
+
+1. [apple_view_model](https://github.com/lwj1994/apple_view_model) — 面向 SwiftUI、UIKit 和 Apple 平台生命周期的实现。
+2. [android_view_model](https://github.com/lwj1994/android_view_model) — 面向 Compose、Activity、Fragment、View 和普通 Kotlin 类的实现。
+3. [js_view_model](https://github.com/lwj1994/js_view_model) — 面向 React Native、Electron 和普通 TypeScript host 的实现。
+
 ## 🤖 Skill 安装
 
 ```bash
