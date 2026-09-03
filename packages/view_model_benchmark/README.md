@@ -20,11 +20,15 @@ Widget/frame 基准另外覆盖 100 个消费者的五种场景：空帧、broad
 
 ## 在 iPhone 7 上运行
 
+先列出已连接设备，从输出中复制目标 iPhone 的 device ID，并用它替换下方的
+`DEVICE_ID`：
+
 ```shell
 cd packages/view_model_benchmark
 zsh -ic 'ff pub get'
+zsh -ic 'ff devices'
 zsh -ic 'ff drive --profile --no-dds \
-  -d a31facd61bb5b2705b21fb8f170eaabbdd973e24 \
+  -d DEVICE_ID \
   --driver=test_driver/perf_driver.dart \
   --target=integration_test/runtime_benchmark_test.dart'
 ```
@@ -36,7 +40,7 @@ Widget/frame 基准单独运行：
 
 ```shell
 zsh -ic 'ff drive --profile --no-dds \
-  -d a31facd61bb5b2705b21fb8f170eaabbdd973e24 \
+  -d DEVICE_ID \
   --driver=test_driver/frame_perf_driver.dart \
   --target=integration_test/widget_frame_benchmark_test.dart'
 ```
