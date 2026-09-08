@@ -65,7 +65,7 @@ jobs:
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
           dart analyze --fatal-infos --fatal-warnings lib
-          cat lib/example.vm.dart
+          git diff --exit-code -- lib/example.vm.dart
 
       - name: Check view_model_devtools_extension
         timeout-minutes: 5
