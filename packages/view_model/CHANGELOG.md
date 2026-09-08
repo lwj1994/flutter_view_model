@@ -1,3 +1,14 @@
+## Unreleased
+
+- Remove the `onDependencyNotify` override hook. Register explicit binding
+  `listen` / `listenState` / `listenStateSelect` subscriptions for business
+  reactions; `watch` continues forwarding notifications automatically.
+- Coalesce root refresh requests without dropping dependency notifications,
+  and deliver reentrant state listener events in transition order.
+- Preserve Stateless binding and ViewModel identity across parent rebuilds.
+- Reject tag batch lookups after binding disposal and run constructor resource
+  cleanup on construction rollback.
+
 ## 1.1.0
 
 - Give every ViewModel generation a stable dependency binding. Nested children

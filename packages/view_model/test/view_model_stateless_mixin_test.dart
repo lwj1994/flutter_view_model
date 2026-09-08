@@ -81,8 +81,115 @@ class SharedCountersStateless extends StatelessWidget
   }
 }
 
+class _ReplacementCounterViewModel extends StateViewModel<int> {
+  _ReplacementCounterViewModel({
+    required this.generation,
+    required this.onDisposed,
+  }) : super(state: 0);
+
+  final int generation;
+  final VoidCallback onDisposed;
+
+  void increment() => setState(state + 1);
+
+  @override
+  void dispose() {
+    onDisposed();
+    super.dispose();
+  }
+}
+
+class _ReplacementCounter extends StatelessWidget with ViewModelStatelessMixin {
+  _ReplacementCounter({required this.spec, required this.revision, super.key});
+
+  final ViewModelSpec<_ReplacementCounterViewModel> spec;
+  final int revision;
+
+  _ReplacementCounterViewModel get vm => viewModelBinding.watch(spec);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('Revision: $revision'),
+        Text('Generation: ${vm.generation}'),
+        Text('Count: ${vm.state}'),
+        TextButton(onPressed: vm.increment, child: const Text('Increment')),
+      ],
+    );
+  }
+}
+
 void main() {
   group('ViewModelStatelessMixin', () {
+    testWidgets(
+      'parent rebuilds retain the VM, keep updates working, and dispose once',
+      (tester) async {
+        ViewModel.reset();
+        addTearDown(ViewModel.reset);
+        var created = 0;
+        var disposed = 0;
+        var revision = 0;
+        final spec = ViewModelSpec<_ReplacementCounterViewModel>(
+          builder: () => _ReplacementCounterViewModel(
+            generation: ++created,
+            onDisposed: () => disposed++,
+          ),
+        );
+        late StateSetter rebuildParent;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  rebuildParent = setState;
+                  return _ReplacementCounter(
+                    key: const ValueKey('counter'),
+                    spec: spec,
+                    revision: revision,
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        final originalElement = tester.element(
+          find.byType(_ReplacementCounter),
+        );
+
+        await tester.tap(find.text('Increment'));
+        await tester.pump();
+        expect(find.text('Count: 1'), findsOneWidget);
+
+        rebuildParent(() => revision++);
+        await tester.pump();
+        expect(
+          tester.element(find.byType(_ReplacementCounter)),
+          same(originalElement),
+        );
+        expect(find.text('Revision: 1'), findsOneWidget);
+        expect(find.text('Generation: 1'), findsOneWidget);
+        expect(find.text('Count: 1'), findsOneWidget);
+        expect(created, 1);
+        expect(disposed, 0);
+
+        await tester.tap(find.text('Increment'));
+        await tester.pump();
+        expect(find.text('Count: 2'), findsOneWidget);
+
+        rebuildParent(() => revision++);
+        await tester.pump();
+        expect(find.text('Revision: 2'), findsOneWidget);
+        expect(find.text('Generation: 1'), findsOneWidget);
+        expect(find.text('Count: 2'), findsOneWidget);
+        expect(created, 1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(disposed, 1);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     testWidgets('rebuilds when ViewModel state changes', (tester) async {
       await tester.pumpWidget(
         MaterialApp(home: CounterStatelessWidget()),

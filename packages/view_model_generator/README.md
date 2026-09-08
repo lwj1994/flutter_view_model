@@ -55,7 +55,8 @@ The spec variable name is derived from the class name:
 
 ## Arguments
 
-Required constructor parameters become `arg`, `arg2`, `arg3`, or `arg4`.
+Required constructor parameters, including required `super` parameters, become
+`arg`, `arg2`, `arg3`, or `arg4`.
 
 ```dart
 @GenSpec
@@ -76,6 +77,10 @@ Rules:
 - Up to 4 required parameters are supported
 - If `factory spec(...)` exists, it is used instead of the constructor
 - For `spec(...)`, required and optional parameters are included
+- Optional parameters of the unnamed constructor keep their defaults
+
+A `spec` factory can supply required parent parameters itself. Only the
+factory's parameters then become inputs of the generated spec.
 
 ## Keep Alive
 

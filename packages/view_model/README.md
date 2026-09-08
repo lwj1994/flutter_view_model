@@ -107,7 +107,7 @@ The library is organized in three layers:
 1. Each `ViewModelBinding` (typically one per widget) has a unique `id` string.
 2. Both `watch(spec)` and `read(spec)` obtain or create the ViewModel instance, then bind it for lifecycle management. A visible binding id can have multiple sources (direct, or through one or more parents); `onBind` runs for the first source and `onUnbind` for the last.
 3. When the last source for every binding id is removed (and `aliveForever` is false), the ViewModel is automatically disposed.
-4. `watch` additionally registers a change listener. Synchronous propagation uses one transaction and deduplicates by binding, so a diamond graph—or a root also watching the leaf directly—updates that binding once.
+4. `watch` additionally registers a change listener. Synchronous propagation coalesces root binding refresh requests within one transaction. Dependency bindings forward every notification so explicit business listeners can observe the final value through a diamond graph.
 5. Every managed ViewModel generation lazily owns a stable internal dependency binding. It supplies the private default key for unkeyed children, keeps resolved children alive for at least the parent's lifetime, and mirrors the parent's current root bindings to those children in real time.
 
 ---
@@ -426,7 +426,12 @@ so use the batch APIs when several instances may share that tag.
 
 ### listen / listenState / listenStateSelect
 
-Fire-and-forget listeners that are automatically cleaned up when the binding disposes. These use `read` internally (bind without triggering widget rebuild) and then attach custom callbacks:
+Listeners are automatically cleaned up when the binding disposes. These use
+`read` internally (bind without triggering widget rebuild) and then attach
+custom callbacks. `listenState` and `listenStateSelect` deliver transitions in
+order: if a callback sets another state, its event waits until the current
+event has reached the remaining listeners. The state itself changes
+immediately, so `vm.state` can already be newer than the callback event:
 
 ```dart
 // General change callback
@@ -651,9 +656,14 @@ one instance, encode that identity in the spec's `key` and let every owner
 resolve the same keyed spec. Across a non-ViewModel boundary, pass plain data,
 IDs, value objects, or narrowly scoped callbacks instead of the ViewModel.
 
-Reactive dependencies use `watch`. A child update invokes
-`parent.onDependencyNotify(child)`, then notifies the parent. The propagation
-transaction updates each watching binding at most once:
+Reactive dependencies use `watch`: child notification → parent notification →
+refresh request for bindings watching the parent. `read` holds the same child
+without forwarding its state notifications.
+Dependency notifications are forwarded without deduplication; only root
+binding refresh requests are coalesced within the synchronous transaction.
+`onUpdate` requests the refresh at the first notification; the next widget build
+reads the latest values. Use explicit listeners for business computations that
+must process later notifications in that transaction.
 
 ```dart
 class DashboardViewModel with ViewModel {
@@ -661,7 +671,11 @@ class DashboardViewModel with ViewModel {
 }
 ```
 
-Side-effect dependencies with `listen`:
+Use explicit `listen` / `listenState` / `listenStateSelect` subscriptions for
+business reactions. Register them once during initialization, not in a getter.
+These callbacks are independent of root refresh coalescing; they can observe
+intermediate values while multiple dependencies update. There is no
+`onDependencyNotify` override hook. For example:
 
 ```dart
 class ChatViewModel with ViewModel {
@@ -860,7 +874,9 @@ ViewModelFactory.build()
 
 ### Resource Cleanup
 
-Register cleanup callbacks with `addDispose`. They run in order during `onDispose`:
+Register cleanup callbacks with `addDispose`. They run in order during
+`onDispose`. Callbacks registered during construction also run if the builder
+or constructor fails, even before an instance handle exists:
 
 ```dart
 class StreamViewModel with ViewModel {

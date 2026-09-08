@@ -121,14 +121,14 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
       );
     }
 
-    // Collect class-owned params.
+    // Collect the parameters needed by the generated constructor call.
     // Priority: factory 'spec' (all params), then main constructor
     // (required only).
     // Factory spec collects ALL params (including optional) to give full
     // control. Main constructor only collects REQUIRED params for simplicity.
     final effectiveParams = matchingFactory != null
         ? _ownParams(matchingFactory)
-        : _requiredOwnParams(mainCtor!);
+        : _requiredParams(mainCtor!);
 
     final argCount = effectiveParams.length;
 
@@ -681,13 +681,13 @@ class ViewModelSpecGenerator extends GeneratorForAnnotation<GenSpec> {
         .toList();
   }
 
-  /// Collect only required class-owned params (exclude super-forwarded).
+  /// Collect all required constructor parameters, including super formals.
   ///
-  /// Used for main constructor to only include required parameters.
-  List<FormalParameterElement> _requiredOwnParams(ExecutableElement exec) {
+  /// A required super parameter still has to be supplied when calling the
+  /// subclass constructor. Optional parameters keep their constructor defaults.
+  List<FormalParameterElement> _requiredParams(ExecutableElement exec) {
     return exec.formalParameters
         .where((p) => p.isRequiredPositional || p.isRequiredNamed)
-        .where((p) => p is! SuperFormalParameterElement)
         .cast<FormalParameterElement>()
         .toList();
   }

@@ -194,6 +194,12 @@ class AutoDisposeInstanceController {
   }
 
   List<T> getInstancesByTag<T>(Object tag) {
+    if (_disposed) {
+      throw ViewModelError(
+        'AutoDisposeInstanceController.getInstancesByTag() called after '
+        'dispose.',
+      );
+    }
     final notifiers = instanceManager.getNotifiersByTag<T>(tag);
     final List<T> result = [];
     for (final notifier in notifiers) {

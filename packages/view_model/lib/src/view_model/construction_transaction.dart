@@ -54,9 +54,9 @@ _ConstructionTransaction? _activeConstructionTransaction;
 
 /// Registers cleanup owned by the currently building ViewModel object.
 ///
-/// This is used by dependency scopes created from constructors/onCreate. If
-/// the enclosing builder throws, their children and listeners are released
-/// before the original error escapes.
+/// This is used by resource cleanup controllers and dependency scopes created
+/// from constructors/onCreate. If the enclosing builder throws, their cleanup
+/// callbacks, children and listeners are released before the error escapes.
 void registerViewModelConstructionRollback(void Function() rollback) {
   _activeConstructionTransaction?.register(rollback);
 }

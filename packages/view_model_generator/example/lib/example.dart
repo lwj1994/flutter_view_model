@@ -35,6 +35,37 @@ class UserKeyViewModel extends ViewModel {
   UserKeyViewModel(this.repo);
 }
 
+// Required super parameters are inputs of the generated spec too.
+@GenSpec()
+class SeededCounterViewModel extends StateViewModel<int> {
+  SeededCounterViewModel({required super.state, required this.step});
+
+  final int step;
+
+  void increment() => setState(state + step);
+}
+
+class ItemViewModel extends ViewModel {
+  ItemViewModel(this.id);
+
+  final String id;
+}
+
+@GenSpec()
+class ItemDetailViewModel extends ItemViewModel {
+  ItemDetailViewModel(super.id, this.title);
+
+  final String title;
+}
+
+// A custom spec factory can supply the parent state itself.
+@GenSpec()
+class DefaultCounterViewModel extends StateViewModel<int> {
+  DefaultCounterViewModel({required super.state});
+
+  factory DefaultCounterViewModel.spec() => DefaultCounterViewModel(state: 0);
+}
+
 void main() {
   // Access the generated specs
   // final counterSpec = counterSpec;

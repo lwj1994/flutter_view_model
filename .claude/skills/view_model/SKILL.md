@@ -105,6 +105,25 @@ class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
 | `listenStateSelect(spec, selector: ..., onChanged: ...)` | 针对性地监听某个字段。 |
 | `recycle(vm)` | 强制销毁实例，解绑所有连接。 |
 
+### ViewModel 内的 read、watch 与 listen
+
+| 用法 | child 变化时的行为 |
+| --- | --- |
+| `viewModelBinding.read(childSpec)` | 持有 child，不转发其普通状态通知。 |
+| `viewModelBinding.watch(childSpec)` | child 通知 → parent 通知 → 监听 parent 的 binding 请求刷新。 |
+| `viewModelBinding.listen*` | 执行显式业务回调，例如更新 parent 自身状态或触发副作用。 |
+
+`read` 与 `watch` 的依赖持有、释放规则相同，区别在通知传播。`watch` 的目的
+是最终触发 binding 刷新，不负责执行自定义业务逻辑；不再提供
+`onDependencyNotify` 钩子。业务响应使用 `listen`、`listenState` 或
+`listenStateSelect`，在初始化时注册一次，不要放入反复访问的 getter。
+绑定持有的监听会在 binding 释放时自动清理。
+
+同步事务只合并 root binding 的刷新请求，dependency 通知和业务回调逐条
+交付。root `onUpdate` 在首条通知时请求刷新，后续 Widget build 读取最终值；
+业务计算应放在显式监听中。多依赖更新可能产生中间值；状态监听内再次设置
+状态时，状态立即生效，新事件等当前事件派发完毕后按顺序交付。
+
 ## 5. 状态管理进阶
 
 ### `StateViewModel<T>`

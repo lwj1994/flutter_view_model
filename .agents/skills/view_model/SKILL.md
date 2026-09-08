@@ -147,12 +147,17 @@ class CheckoutViewModel with ViewModel {
   allows a new generation to be resolved after explicit recycle or an
   asynchronous lifecycle race.
 - Use `read` when a module only needs to call another module.
-- Use `watch` when dependency notifications must also notify the parent
-  ViewModel. Synchronous propagation is transaction-based and deduplicated per
-  binding, including diamond graphs. Do not put `listen` in a repeatedly
-  evaluated getter because every
-  evaluation can register another side-effect listener; register it explicitly
-  in the binding owner instead.
+- Use `watch` to forward dependency notifications to the parent. Synchronous
+  transactions coalesce root refresh requests, not dependency notifications.
+  The chain is child notification → parent notification → refresh request for
+  bindings watching the parent. `read` holds the child without forwarding its
+  state notifications. Root `onUpdate` requests a refresh at the first event;
+  perform business computations in explicit listeners, not in `onUpdate`.
+  Use `listen` / `listenState` / `listenStateSelect` for explicit business
+  reactions; register once during initialization, not in a getter. Do not
+  override the removed `onDependencyNotify` hook. Business listeners may see
+  intermediate values as dependencies update. State listener events remain in
+  transition order even when a callback synchronously sets another state.
 - Keep dependency access inside `viewModelBinding` so each resolved module is
   owned by the parent generation. The parent's current root bindings are also
   mirrored to already-resolved children in real time.
