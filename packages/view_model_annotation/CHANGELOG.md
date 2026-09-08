@@ -1,3 +1,7 @@
+## 1.1.1
+
+- Version bump for consistency with the `view_model` 1.1.1 release.
+
 ## 1.1.0
 - Version bump for consistency with the `view_model` 1.1.0 release line.
 - Document that `aliveForever` declarations require an explicit non-null key.

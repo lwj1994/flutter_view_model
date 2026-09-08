@@ -1,7 +1,7 @@
-## Unreleased
+## 1.1.1
 
-- Remove the `onDependencyNotify` override hook. Register explicit binding
-  `listen` / `listenState` / `listenStateSelect` subscriptions for business
+- **Breaking:** Remove the `onDependencyNotify` override hook. Register explicit
+  binding `listen` / `listenState` / `listenStateSelect` subscriptions for business
   reactions; `watch` continues forwarding notifications automatically.
 - Coalesce root refresh requests without dropping dependency notifications,
   and deliver reentrant state listener events in transition order.

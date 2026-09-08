@@ -1,3 +1,9 @@
+## 1.1.1
+
+- Include required named and positional `super` parameters in generated specs;
+  preserve constructor defaults for optional parameters.
+- Update `view_model_annotation` to 1.1.1.
+
 ## 1.1.0
 - Version bump for consistency with the `view_model` 1.1.0 release line.
 - Reject `@GenSpec(aliveForever: true)` when it has no explicit non-null key.
