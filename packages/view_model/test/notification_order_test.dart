@@ -86,6 +86,7 @@ void main() {
   test('reentrant state listeners receive transitions in order', () {
     final binding = _TestBinding();
     addTearDown(binding.dispose);
+    binding.watch(_counterSpec);
     final events = <(int?, int)>[];
     final selected = <int>[];
     binding.listenState(
@@ -103,12 +104,93 @@ void main() {
       selector: (state) => state,
       onChanged: (previous, current) => selected.add(current),
     );
+    binding.updates = 0;
 
     binding.counter.set(1);
 
     expect(binding.counter.state, 2);
     expect(events, [(0, 1), (1, 2)]);
     expect(selected, [1, 2]);
+    expect(binding.updates, 1);
+  });
+
+  test('reentrant listen coalesces every root without dropping events', () {
+    final binding = _TestBinding();
+    final otherBinding = _TestBinding();
+    addTearDown(binding.dispose);
+    addTearDown(otherBinding.dispose);
+    binding.watch(_counterSpec);
+    otherBinding.watch(_counterSpec);
+    final notifications = <int>[];
+    final events = <(int?, int)>[];
+    final selected = <int>[];
+    binding.listenState<_CounterViewModel, int>(
+      _counterSpec,
+      onChanged: (previous, current) => events.add((previous, current)),
+    );
+    binding.listenStateSelect<_CounterViewModel, int, int>(
+      _counterSpec,
+      selector: (state) => state,
+      onChanged: (previous, current) => selected.add(current),
+    );
+    binding.listen(
+      _counterSpec,
+      onChanged: () {
+        notifications.add(binding.counter.state);
+        if (binding.counter.state == 1) binding.counter.set(2);
+      },
+    );
+    binding.updates = 0;
+    otherBinding.updates = 0;
+
+    binding.counter.set(1);
+
+    expect(binding.counter.state, 2);
+    expect(notifications, [1, 2]);
+    expect(events, [(0, 1), (1, 2)]);
+    expect(selected, [1, 2]);
+    expect(binding.updates, 1);
+    expect(otherBinding.updates, 1);
+
+    // An independent synchronous call must start a fresh transaction.
+    binding.counter.set(3);
+
+    expect(notifications, [1, 2, 3]);
+    expect(events, [(0, 1), (1, 2), (2, 3)]);
+    expect(selected, [1, 2, 3]);
+    expect(binding.updates, 2);
+    expect(otherBinding.updates, 2);
+  });
+
+  test('microtask state updates start a fresh refresh transaction', () async {
+    final binding = _TestBinding();
+    addTearDown(binding.dispose);
+    binding.watch(_counterSpec);
+    final notifications = <int>[];
+    Future<void>? followUp;
+    binding.listen(
+      _counterSpec,
+      onChanged: () {
+        notifications.add(binding.counter.state);
+        if (binding.counter.state == 1) {
+          followUp = Future<void>.microtask(() => binding.counter.set(2));
+        }
+      },
+    );
+    binding.updates = 0;
+
+    binding.counter.set(1);
+
+    expect(binding.counter.state, 1);
+    expect(notifications, [1]);
+    expect(binding.updates, 1);
+    expect(followUp, isNotNull);
+
+    await followUp!;
+
+    expect(binding.counter.state, 2);
+    expect(notifications, [1, 2]);
+    expect(binding.updates, 2);
   });
 
   testWidgets('selector renders the latest state after a reentrant update', (

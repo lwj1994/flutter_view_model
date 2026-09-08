@@ -214,7 +214,8 @@ mixin class ViewModel
   /// not create new instances.
   ///
   /// Normal application code should prefer
-  /// `ViewModelBinding.read/watch(spec)` for explicit resolution. A specific
+  /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
+  /// A specific
   /// [key] uniquely identifies a cached instance. A [tag] can match several
   /// instances; use the binding's `readCachesByTag` for that case. With neither
   /// [key] nor [tag], multiple matches are resolved by creation order and the
@@ -780,29 +781,34 @@ abstract class StateViewModel<T> with ViewModel {
     if (_dispatchingStateEvents) return;
     _dispatchingStateEvents = true;
     try {
-      while (_pendingStateEvents.isNotEmpty && !_isDisposed) {
-        final current = _pendingStateEvents.removeFirst();
-        final stateListeners = List<Function(T? previous, T state)>.of(
-          _stateListeners,
-        );
-        for (final element in stateListeners) {
-          if (_isDisposed) break;
-          if (!_stateListeners.contains(element)) continue;
-          try {
-            element.call(current.previousState, current.currentState);
-          } catch (e, stack) {
-            reportViewModelError(
-              e,
-              stack,
-              ErrorType.listener,
-              'stateListener error',
-            );
+      // Reentrant events drain after the current notification returns. Keep
+      // the whole drain in one transaction so root refreshes stay coalesced
+      // while state events and business notifications are delivered in full.
+      runInViewModelUpdateTransaction(() {
+        while (_pendingStateEvents.isNotEmpty && !_isDisposed) {
+          final current = _pendingStateEvents.removeFirst();
+          final stateListeners = List<Function(T? previous, T state)>.of(
+            _stateListeners,
+          );
+          for (final element in stateListeners) {
+            if (_isDisposed) break;
+            if (!_stateListeners.contains(element)) continue;
+            try {
+              element.call(current.previousState, current.currentState);
+            } catch (e, stack) {
+              reportViewModelError(
+                e,
+                stack,
+                ErrorType.listener,
+                'stateListener error',
+              );
+            }
+          }
+          if (!_isDisposed) {
+            super.notifyListeners();
           }
         }
-        if (!_isDisposed) {
-          super.notifyListeners();
-        }
-      }
+      });
     } finally {
       _dispatchingStateEvents = false;
       _pendingStateEvents.clear();
