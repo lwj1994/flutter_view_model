@@ -39,7 +39,7 @@ jobs:
           flutter pub get
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib
-          flutter test --coverage test
+          flutter test --concurrency=1 --coverage test
 
       - name: Check view_model_annotation
         timeout-minutes: 3
@@ -58,6 +58,15 @@ jobs:
           dart analyze --fatal-infos --fatal-warnings lib test
           dart test
 
+      - name: Check generated specs against view_model runtime
+        timeout-minutes: 5
+        working-directory: packages/view_model_generator/example
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          dart analyze --fatal-infos --fatal-warnings lib
+          git diff --exit-code -- lib/example.vm.dart
+
       - name: Check view_model_devtools_extension
         timeout-minutes: 5
         working-directory: packages/view_model_devtools_extension
@@ -65,7 +74,7 @@ jobs:
           flutter pub get
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib test
-          flutter test
+          flutter test --concurrency=1
 
       - name: Check example counter
         timeout-minutes: 4
@@ -74,7 +83,7 @@ jobs:
           flutter pub get
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib test
-          flutter test
+          flutter test --concurrency=1
 
       - name: Check example todo_list
         timeout-minutes: 4
@@ -83,7 +92,7 @@ jobs:
           flutter pub get
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib test
-          flutter test
+          flutter test --concurrency=1
 
       - name: Upload coverage to Codecov
         timeout-minutes: 1

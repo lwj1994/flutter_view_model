@@ -109,14 +109,17 @@ listen to the ViewModel's own `notifyListeners()`”; it does **not** mean
 | `watch(spec)` | Yes | Yes | Yes | Yes |
 | `read(spec)` | Yes | Yes | No | Yes |
 
-Use `watch` inside a parent only when child updates should bubble through
-`parent.onDependencyNotify(child)` and then notify the parent. Synchronous
-propagation uses one transaction and updates each binding at most once, even in
-a diamond graph. Use `read` for imperative calls that should not bubble child
-state notifications.
+Use `watch` inside a parent when child updates should notify the parent.
+Dependency bindings forward every notification; synchronous transactions only
+coalesce root binding refresh requests. Use `read` for imperative calls that
+should not bubble child state notifications.
 
-Register `listen*` explicitly once for side effects. Do not put a `listen*`
-call in a repeatedly evaluated getter.
+Use `listen*` for business reactions instead of the removed
+`onDependencyNotify` hook. Register subscriptions once, not in a repeatedly
+evaluated getter. Business callbacks are not coalesced with root refreshes and
+can observe intermediate values as dependencies update. Reentrant state
+transitions are delivered in order after the current event reaches all
+remaining listeners; the state value itself changes immediately.
 
 ### Cached lookup is an advanced escape hatch
 

@@ -54,6 +54,41 @@ Use this skill for requests like:
   advanced, lookup-only escape hatches for intentionally querying an instance
   already created by another owner. Do not suggest them by default.
 
+## Instance identity: choose keys deliberately
+
+**Instance identity is the resolved generic VM type `T` plus the effective
+`key`.** A spec declares construction; the spec object, constructor arguments,
+builder's runtime result type, and `tag` do not independently define identity.
+On a cache hit, the existing instance is returned without running the builder.
+
+| Resolution pattern | Instance behavior |
+| --- | --- |
+| Same `T`, same binding, no explicit key | Reuses one instance, even with different specs or arguments. |
+| Same `T`, different bindings, no explicit key | Separate instances, including dependencies of different parent generations. |
+| Same `T`, equal explicit keys | Shares one instance across bindings while it remains alive. |
+| Different `T`, equal explicit keys | Separate instances. |
+
+Keep ordinary modules unkeyed when one instance per binding is intended. Set a
+key when owners must share an instance or when one binding needs distinct
+instances of the same `T`. For argument-based specs, encode the arguments that
+identify the entity in the key:
+
+```dart
+final userSpec = ViewModelSpec.arg<UserViewModel, String>(
+  builder: UserViewModel.new,
+  key: (userId) => ('user', userId),
+);
+```
+
+Here `userSpec('A')` and `userSpec('B')` resolve different instances. Without
+the key callback, both resolve the first-created `UserViewModel` in the same
+binding. New arguments with an unchanged key do not reconfigure that instance.
+Calling the same unkeyed spec from two different parents does not share a child.
+
+A key controls identity, not retention. Shared instances still auto-dispose
+after their final owner leaves. Use `aliveForever: true` only when the instance
+must survive with no owners, and always pair it with an explicit key.
+
 ## Core model (must stay accurate)
 
 - **Primary resolution uses `watch(spec)` / `read(spec)`.** Generated examples,
@@ -112,38 +147,39 @@ class CheckoutViewModel with ViewModel {
   allows a new generation to be resolved after explicit recycle or an
   asynchronous lifecycle race.
 - Use `read` when a module only needs to call another module.
-- Use `watch` when dependency notifications must also notify the parent
-  ViewModel. Synchronous propagation is transaction-based and deduplicated per
-  binding, including diamond graphs. Do not put `listen` in a repeatedly
-  evaluated getter because every
-  evaluation can register another side-effect listener; register it explicitly
-  in the binding owner instead.
+- Use `watch` to forward dependency notifications to the parent. Synchronous
+  transactions coalesce root refresh requests, not dependency notifications.
+  The chain is child notification → parent notification → refresh request for
+  bindings watching the parent. `read` holds the child without forwarding its
+  state notifications. Root `onUpdate` requests a refresh at the first event;
+  perform business computations in explicit listeners, not in `onUpdate`.
+  Use `listen` / `listenState` / `listenStateSelect` for explicit business
+  reactions; register once during initialization, not in a getter. Do not
+  override the removed `onDependencyNotify` hook. Business listeners may see
+  intermediate values as dependencies update. State listener events remain in
+  transition order even when a callback synchronously sets another state.
 - Keep dependency access inside `viewModelBinding` so each resolved module is
   owned by the parent generation. The parent's current root bindings are also
   mirrored to already-resolved children in real time.
-- A ViewModel's identity is the resolved generic VM type `T` plus its effective
-  `key`; the builder's runtime result type is not part of identity, and `tag`
-  is only a grouping label. For `aliveForever: false`, when factory `key()`
-  returns `null`, the binding supplies a private default key, so the same `T`
-  is reused within one binding and is isolated across bindings. Add a key to
-  share across bindings,
-  distinguish multiple instances of the same `T` in one binding, or provide
-  stable keyed cached lookup. A key does not keep an instance alive. Every
-  `aliveForever` instance, whether resolved by a root or another ViewModel,
-  must use an explicit key; binding resolution rejects an unkeyed retained
-  spec before construction, and the Store enforces the same invariant for
-  lower-level factories.
+- Apply the instance identity rules above when composing modules: each parent
+  generation owns a distinct dependency binding, so shared children need keys.
 
 ### App composed from ViewModel modules (pseudo-code)
 
-An app can be a graph of many small ViewModel modules. Specs below deliberately
-have no `key` and no `aliveForever`; they are managed instances, not
-singletons:
+An app can be a graph of many small ViewModel modules. App and Checkout both
+need the same session and cart, so those two specs have explicit keys. The
+other specs remain unkeyed. All specs use the default automatic disposal:
 
 ```dart
-final sessionSpec = ViewModelSpec(builder: SessionViewModel.new);
+final sessionSpec = ViewModelSpec(
+  builder: SessionViewModel.new,
+  key: 'session',
+);
 final catalogSpec = ViewModelSpec(builder: CatalogViewModel.new);
-final cartSpec = ViewModelSpec(builder: CartViewModel.new);
+final cartSpec = ViewModelSpec(
+  builder: CartViewModel.new,
+  key: 'cart',
+);
 final paymentSpec = ViewModelSpec(builder: PaymentViewModel.new);
 final checkoutSpec = ViewModelSpec(builder: CheckoutViewModel.new);
 final appSpec = ViewModelSpec(builder: AppViewModel.new);
@@ -170,7 +206,8 @@ class CheckoutViewModel with ViewModel {
 }
 
 class AppViewModel with ViewModel {
-  SessionViewModel get session => viewModelBinding.read(sessionSpec);
+  // AppShell displays session state, so session notifications must bubble up.
+  SessionViewModel get session => viewModelBinding.watch(sessionSpec);
   CatalogViewModel get catalog => viewModelBinding.read(catalogSpec);
   CartViewModel get cart => viewModelBinding.read(cartSpec);
   CheckoutViewModel get checkout => viewModelBinding.read(checkoutSpec);
@@ -190,7 +227,9 @@ class _AppShellState extends State<AppShell> with ViewModelStateMixin {
 }
 ```
 
-The getter declarations create nothing by themselves. `AppViewModel` is
+The explicit session/cart keys make App and Checkout resolve the same
+instances; using the same spec variable alone would not do so. The getter
+declarations create nothing by themselves. `AppViewModel` is
 created or reused when `_AppShellState.build` evaluates `app`; each child is
 resolved only when its corresponding getter is evaluated. After every getter
 above has been accessed, the conceptual dependency graph is:
@@ -202,8 +241,8 @@ AppShell ViewModelBinding
     ├── CatalogViewModel
     ├── CartViewModel
     └── CheckoutViewModel
-        ├── SessionViewModel (same binding-managed instance)
-        ├── CartViewModel (same binding-managed instance)
+        ├── SessionViewModel (same keyed instance as App.session)
+        ├── CartViewModel (same keyed instance as App.cart)
         └── PaymentViewModel
 ```
 
@@ -301,6 +340,8 @@ See `examples/sharing_example.dart` for the complete example.
 2. Define `ViewModelSpec`
 - `ViewModelSpec<T>(builder: ...)` for no args.
 - `ViewModelSpec.arg/arg2/arg3/arg4` for parameterized construction.
+- Arguments only affect identity through the explicit key callback; choose a
+  stable key from the entity ID when different arguments need different VMs.
 - Identity is resolved generic VM type `T` + effective `key`; `tag` and the
   builder's runtime result type do not participate in identity.
 - With `aliveForever: false`, when factory `key()` returns `null`, repeated

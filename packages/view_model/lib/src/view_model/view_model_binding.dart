@@ -369,9 +369,11 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
 
   /// Called when any watched ViewModel notifies changes.
   ///
-  /// Override this method to respond to ViewModel state changes. For example,
-  /// [WidgetViewModelBinding] overrides this to call `setState()` and trigger
-  /// widget rebuilds.
+  /// Override this method to request a refresh. [WidgetViewModelBinding]
+  /// calls `setState()` so the next build reads the latest values. Synchronous
+  /// root refresh requests are coalesced at the first notification, so use
+  /// `listen`, `listenState`, or `listenStateSelect` for business reactions
+  /// that must observe subsequent changes in the same transaction.
   ///
   /// This method is called automatically when:
   /// - A watched ViewModel calls `notifyListeners()`
@@ -382,7 +384,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// @override
   /// void onUpdate() {
   ///   super.onUpdate();
-  ///   // Custom logic, e.g., update UI, send notifications
+  ///   // Request a refresh; read current values when that refresh runs.
   ///   print("ViewModel updated");
   /// }
   /// ```
@@ -798,7 +800,10 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
           );
           return;
         }
-        if (markViewModelBindingUpdated(this)) {
+        // Dependency notifications can drive explicit business listeners on
+        // the parent. Only coalesce root invalidations; dropping a dependency
+        // path here can leave those listeners with an intermediate value.
+        if (isDependencyBinding || markViewModelBindingUpdated(this)) {
           onViewModelUpdate(res);
         }
       });
@@ -1035,9 +1040,7 @@ class ViewModelDependencyBinding extends ViewModelBinding {
   }
 
   void _notifyDependency(ViewModel viewModel) {
-    if (_dependencyDisposed ||
-        instanceManager.isResetting ||
-        !markViewModelBindingUpdated(this)) {
+    if (_dependencyDisposed || instanceManager.isResetting) {
       return;
     }
     _onDependencyUpdate(viewModel);

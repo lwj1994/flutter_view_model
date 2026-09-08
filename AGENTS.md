@@ -220,8 +220,10 @@ watchCachesByTag/readCachesByTag
 - 不提供原位替换实例的 `recreate` API。需要新实例时，使用显式新 key；若明确
   接受影响所有 owners，也可先 `recycle`，再由 getter 通过 `watch/read(spec)`
   重新解析。
-- 同步通知使用 propagation transaction 并按 binding 去重；异步 microtask/Future
-  通知必须开启新事务。
+- 同步通知使用 propagation transaction，仅合并 root binding 的刷新请求；
+  dependency binding 逐条转发通知，业务响应使用显式 `listen*`。状态事件按
+  发生顺序派发，包括监听回调中再次设置状态。异步 microtask/Future 通知必须
+  开启新事务。
 
 ## Publishing Notes
 

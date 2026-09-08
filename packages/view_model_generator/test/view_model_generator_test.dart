@@ -64,10 +64,10 @@ class VmWithArg2 {
   VmWithArg2(this.name, this.age); // Main constructor
 }
 
-// 6. Test ignoring super parameters: only recognize class-owned params
+// 6. Required super parameters must be supplied to the subclass constructor.
 @ShouldGenerate(r'''
-final postSpec = ViewModelSpec.arg<PostViewModel, String>(
-  builder: (String args) => PostViewModel(args: args),
+final postSpec = ViewModelSpec.arg2<PostViewModel, int, String>(
+  builder: (int state, String args) => PostViewModel(state: state, args: args),
 );
 ''')
 @genSpec
@@ -79,6 +79,36 @@ class PostViewModel extends _BaseVM {
 class _BaseVM {
   final int state;
   _BaseVM({required this.state});
+}
+
+@ShouldGenerate(r'''
+final positionalChildSpec = ViewModelSpec.arg2<PositionalChild, int, String>(
+  builder: (int state, String label) => PositionalChild(state, label),
+);
+''')
+@genSpec
+class PositionalChild extends _PositionalBase {
+  PositionalChild(super.state, this.label);
+
+  final String label;
+}
+
+class _PositionalBase {
+  _PositionalBase(this.state);
+
+  final int state;
+}
+
+@ShouldGenerate(r'''
+final optionalChildSpec = ViewModelSpec.arg<OptionalChild, String>(
+  builder: (String label) => OptionalChild(label: label),
+);
+''')
+@genSpec
+class OptionalChild extends _BaseVM {
+  OptionalChild({super.state = 0, required this.label});
+
+  final String label;
 }
 
 // 7. StateViewModel special case: auto compute state via fromArgs
@@ -109,7 +139,7 @@ class FeedState {
   static FeedState fromArgs(Repository repo, int page) => FeedState();
 }
 
-// 8. Prefer factory named 'spec' when it matches main ctor (excluding super)
+// 8. A spec factory can supply the constructor's required parent state.
 @ShouldGenerate(r'''
 final aSpec = ViewModelSpec.arg<A, P>(builder: (P p) => A.spec(p: p));
 ''')

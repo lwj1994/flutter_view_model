@@ -10,9 +10,9 @@ _ViewModelUpdateTransaction? _activeUpdateTransaction;
 
 /// Runs [body] in one synchronous ViewModel propagation transaction.
 ///
-/// Nested notifications reuse the current transaction, allowing each binding
-/// to update at most once even when a diamond dependency graph reaches it
-/// through multiple paths.
+/// Nested notifications reuse the current transaction so root bindings can
+/// coalesce refresh requests from a diamond graph. Dependency bindings and
+/// explicit business listeners continue to receive each notification.
 R runInViewModelUpdateTransaction<R>(R Function() body) {
   if (_activeUpdateTransaction != null) {
     return body();

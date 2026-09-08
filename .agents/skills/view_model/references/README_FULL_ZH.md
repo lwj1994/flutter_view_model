@@ -331,9 +331,16 @@ unkeyed child 在存活的 parent 内切换 private key。若 parent 本身是
 - `watch*` 和 `read*` 都会建立 binding，都会影响实例生命周期；差别主要在于是否监听 ViewModel 自身的变化。
 - 正常业务代码优先使用稳定 spec 的 `watch/read`，不要把 cached API 当作
   spec-based 依赖解析的替代品。
-- ViewModel 内的 `watch` 会先调用 `parent.onDependencyNotify(child)`，再通知
-  parent；同步传播事务按 binding 去重，diamond graph 或 root 同时直接 watch
-  leaf 时也只更新一次。
+- ViewModel 内的 `watch` 将 child 通知转发给 parent，最终让监听 parent 的
+  binding 请求刷新；`read` 同样持有 child，但不转发其状态通知。依赖通知逐条
+  向上传播，同步事务只合并 root binding 的刷新请求。
+- root `onUpdate` 在首条通知时请求刷新，Widget 在后续 build 中读取最新值。
+  需要处理同一事务后续变化的业务计算，应使用显式监听。
+- 业务响应使用 `listen` / `listenState` / `listenStateSelect`，在初始化时注册
+  一次，不放进 getter；不再提供 `onDependencyNotify` 钩子。业务监听不参与
+  root 刷新去重，多个依赖更新时可能观察到中间值。
+- 状态监听中再次设置状态时，新状态立即生效，新的事件等待当前事件派发完成
+  后再交付，避免后续监听者先收到新事件、再收到旧事件。
 - selector 自定义比较直接通过 `listenStateSelect` 的可选 `equals` 传入。
 - `recycle` 是高级 escape hatch，具有危险的全局影响；只有明确需要解除全部
   owners、销毁共享实例时才使用，不应作为常规清理路径。

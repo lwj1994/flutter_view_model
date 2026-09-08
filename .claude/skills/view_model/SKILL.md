@@ -33,6 +33,25 @@ This skill provides comprehensive instructions for using the `view_model` state 
 
 `ViewModelSpec` 是 ViewModel 的工厂定义。
 
+**实例身份 = 解析泛型类型 `T` + 有效 `key`。** Spec 对象、构造参数、builder
+返回对象的运行时类型和 `tag` 都不会独立区分实例。缓存命中时复用已有实例，
+不会重新执行 builder。
+
+| 用法 | 实例行为 |
+| --- | --- |
+| 同一 Binding、同一 `T`、未设置 key | 复用一个实例，即使使用不同 Spec 或传入不同参数。 |
+| 不同 Binding、同一 `T`、未设置 key | 各自创建实例；不同父 ViewModel 的依赖也遵循此规则。 |
+| 同一 `T`、相等的显式 key | 在实例存活期间跨 Binding 共享。 |
+| 不同 `T`、相等的显式 key | 各自独立。 |
+
+普通模块需要每个 Binding 一份实例时，保持无 key 即可。需要共享或按实体 ID
+区分实例时，显式设置 key。参数不会自动成为 key：同一 Binding 中，无 key 的
+`userSpec('A')` 和 `userSpec('B')` 会返回第一次创建的实例；不同父模块使用同一个
+无 key Spec，也不会共享子实例。参数改变但 key 不变时，不会重新配置已有实例。
+
+key 只决定身份，不决定永久保活。共享实例默认在最后一个 owner 离开后释放；
+只有需要在没有 owner 时继续存活，才设置带显式 key 的 `aliveForever: true`。
+
 ```dart
 // 1. 无参数，单例共享
 final authSpec = ViewModelSpec<AuthViewModel>(
@@ -85,6 +104,25 @@ class MyWidget extends StatelessWidget with ViewModelStatelessMixin {
 | `listenState(spec, onChanged: ...)` | 监听 StateViewModel 的完整状态变化。 |
 | `listenStateSelect(spec, selector: ..., onChanged: ...)` | 针对性地监听某个字段。 |
 | `recycle(vm)` | 强制销毁实例，解绑所有连接。 |
+
+### ViewModel 内的 read、watch 与 listen
+
+| 用法 | child 变化时的行为 |
+| --- | --- |
+| `viewModelBinding.read(childSpec)` | 持有 child，不转发其普通状态通知。 |
+| `viewModelBinding.watch(childSpec)` | child 通知 → parent 通知 → 监听 parent 的 binding 请求刷新。 |
+| `viewModelBinding.listen*` | 执行显式业务回调，例如更新 parent 自身状态或触发副作用。 |
+
+`read` 与 `watch` 的依赖持有、释放规则相同，区别在通知传播。`watch` 的目的
+是最终触发 binding 刷新，不负责执行自定义业务逻辑；不再提供
+`onDependencyNotify` 钩子。业务响应使用 `listen`、`listenState` 或
+`listenStateSelect`，在初始化时注册一次，不要放入反复访问的 getter。
+绑定持有的监听会在 binding 释放时自动清理。
+
+同步事务只合并 root binding 的刷新请求，dependency 通知和业务回调逐条
+交付。root `onUpdate` 在首条通知时请求刷新，后续 Widget build 读取最终值；
+业务计算应放在显式监听中。多依赖更新可能产生中间值；状态监听内再次设置
+状态时，状态立即生效，新事件等当前事件派发完毕后按顺序交付。
 
 ## 5. 状态管理进阶
 

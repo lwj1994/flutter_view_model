@@ -19,11 +19,6 @@ class ErrorThrowingStateViewModel extends StateViewModel<int> {
 }
 
 class TestNotifyVM extends ViewModel {
-  void testDependencyNotify(ViewModel vm) {
-    // ignore: invalid_use_of_protected_member
-    onDependencyNotify(vm);
-  }
-
   void addThrowingDispose() {
     // ignore: invalid_use_of_protected_member
     addDispose(() {
@@ -79,12 +74,6 @@ void main() {
         throwsA(isA<Error>()
             .having((e) => e.toString(), 'toString', contains('is disposed'))),
       );
-    });
-
-    test('onDependencyNotify is reachable', () {
-      final vm1 = TestNotifyVM();
-      final vm2 = ErrorThrowingViewModel();
-      vm1.testDependencyNotify(vm2);
     });
 
     test('onError config works for regular ViewModel listener', () {

@@ -56,7 +56,11 @@ final _aliveKeyedChildSpec = ViewModelSpec<_ChildViewModel>(
 );
 
 class _ParentViewModel with ViewModel {
-  int dependencyNotifications = 0;
+  _ParentViewModel() {
+    listen(onChanged: () => notifications++);
+  }
+
+  int notifications = 0;
   int listenCallbacks = 0;
 
   _ChildViewModel get child => viewModelBinding.read(_childSpec);
@@ -86,12 +90,6 @@ class _ParentViewModel with ViewModel {
 
   _ChildViewModel get aliveKeyedChild =>
       viewModelBinding.read(_aliveKeyedChildSpec);
-
-  @override
-  void onDependencyNotify(ViewModel vm) {
-    super.onDependencyNotify(vm);
-    dependencyNotifications++;
-  }
 }
 
 final _parentSpec = ViewModelSpec<_ParentViewModel>(
@@ -121,15 +119,13 @@ final _diamondLeafSpec = ViewModelSpec<_ChildViewModel>(
 );
 
 class _DiamondBranchViewModel with ViewModel {
-  int dependencyNotifications = 0;
+  _DiamondBranchViewModel() {
+    listen(onChanged: () => notifications++);
+  }
+
+  int notifications = 0;
 
   _ChildViewModel get leaf => viewModelBinding.watch(_diamondLeafSpec);
-
-  @override
-  void onDependencyNotify(ViewModel vm) {
-    super.onDependencyNotify(vm);
-    dependencyNotifications++;
-  }
 }
 
 final _leftBranchSpec = ViewModelSpec<_DiamondBranchViewModel>(
@@ -143,17 +139,15 @@ final _rightBranchSpec = ViewModelSpec<_DiamondBranchViewModel>(
 );
 
 class _DiamondRootViewModel with ViewModel {
-  int dependencyNotifications = 0;
+  _DiamondRootViewModel() {
+    listen(onChanged: () => notifications++);
+  }
+
+  int notifications = 0;
 
   _DiamondBranchViewModel get left => viewModelBinding.watch(_leftBranchSpec);
 
   _DiamondBranchViewModel get right => viewModelBinding.watch(_rightBranchSpec);
-
-  @override
-  void onDependencyNotify(ViewModel vm) {
-    super.onDependencyNotify(vm);
-    dependencyNotifications++;
-  }
 }
 
 final _diamondRootSpec = ViewModelSpec<_DiamondRootViewModel>(
@@ -238,7 +232,7 @@ void main() {
     owner.recycle(childAsBase);
 
     expect(child.isDisposed, isTrue);
-    expect(parent.dependencyNotifications, 1);
+    expect(parent.notifications, 1);
     expect(owner.updates, 1);
     expect(parent.child, isNot(same(child)));
 
@@ -319,7 +313,7 @@ void main() {
 
     child.emit();
 
-    expect(parent.dependencyNotifications, 1);
+    expect(parent.notifications, 1);
     expect(owner.updates, 1);
 
     owner.dispose();
@@ -333,13 +327,13 @@ void main() {
     owner.updates = 0;
     child.emit();
 
-    expect(parent.dependencyNotifications, 0);
+    expect(parent.notifications, 0);
     expect(owner.updates, 0);
 
     expect(parent.watchedChild, same(child));
     child.emit();
 
-    expect(parent.dependencyNotifications, 1);
+    expect(parent.notifications, 1);
     expect(owner.updates, 1);
 
     owner.dispose();
@@ -359,7 +353,7 @@ void main() {
 
     child.emit();
 
-    expect(parent.dependencyNotifications, 1);
+    expect(parent.notifications, 1);
     expect(parent.listenCallbacks, 1);
     expect(ownerA.updates, 1);
     expect(ownerB.updates, 1);
@@ -368,7 +362,8 @@ void main() {
     ownerB.dispose();
   });
 
-  test('diamond propagation updates each binding once per transaction', () {
+  test('diamond forwards dependency notifications and coalesces root updates',
+      () {
     final owner = _CountingBinding();
     final root = owner.watch(_diamondRootSpec);
     final left = root.left;
@@ -382,9 +377,9 @@ void main() {
 
     leaf.emit();
 
-    expect(left.dependencyNotifications, 1);
-    expect(right.dependencyNotifications, 1);
-    expect(root.dependencyNotifications, 1);
+    expect(left.notifications, 1);
+    expect(right.notifications, 1);
+    expect(root.notifications, 2);
     expect(owner.updates, 1);
 
     owner.dispose();
@@ -405,7 +400,7 @@ void main() {
     child.emit();
     await Future<void>.delayed(Duration.zero);
 
-    expect(parent.dependencyNotifications, 2);
+    expect(parent.notifications, 2);
     expect(owner.updates, 2);
 
     owner.dispose();

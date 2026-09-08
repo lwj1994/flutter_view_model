@@ -820,13 +820,6 @@ class TestViewModelLifecycle extends ViewModelLifecycle {
 
 class TestModel extends ViewModel {}
 
-/// Exposed wrapper to call protected onDependencyNotify for coverage.
-class ExposedViewModel extends ViewModel {
-  void callOnDependencyNotify(ViewModel vm) {
-    onDependencyNotify(vm);
-  }
-}
-
 class DisposeTestVM extends ViewModel {
   void addDisposeCallback(VoidCallback callback) {
     addDispose(callback);

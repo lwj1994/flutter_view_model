@@ -14,18 +14,17 @@ import 'package:view_model/src/view_model/widget_mixin/view_model_binding.dart';
 /// > **Warning**: This mixin intercepts Element lifecycle and may conflict
 /// > with other mixins. Prefer StatefulWidget with [ViewModelStateMixin].
 ///
-/// > **Limitation**: Due to Flutter's @immutable constraint on StatelessWidget,
-/// > each widget instance creates exactly one Element. If the same widget
-/// > instance is mounted multiple times (e.g., via GlobalKey migration),
-/// > behavior may be unexpected. For complex use cases, use StatefulWidget.
+/// > **Limitation**: Each widget instance can refer to only one Element. Do not
+/// > mount the same widget instance in multiple locations simultaneously.
+/// > Ordinary parent rebuilds reuse the existing Element and its binding.
 mixin ViewModelStatelessMixin on StatelessWidget
     implements ViewModelBindingHost {
-  /// The cached element for this widget.
-  ///
-  /// Using late final ensures consistent element-to-widget binding.
-  /// Note: This means a widget instance should not be mounted multiple times.
-  late final _StatelessViewModelElement _viewModelElement =
-      _StatelessViewModelElement(this);
+  // The final holder lets replacement widgets adopt the mounted Element without
+  // introducing mutable fields on the immutable Widget configuration.
+  final _elementReference = _ViewModelElementReference();
+
+  _StatelessViewModelElement get _viewModelElement =>
+      _elementReference.element ??= _StatelessViewModelElement(this);
 
   /// Returns true if the widget is currently considered paused.
   ///
@@ -53,6 +52,10 @@ mixin ViewModelStatelessMixin on StatelessWidget
   String getViewModelBindingName() => _viewModelElement._binding.getName();
 }
 
+class _ViewModelElementReference {
+  _StatelessViewModelElement? element;
+}
+
 /// Custom Element for `ViewModelStatelessMixin`.
 /// Owns `WidgetViewModelBinding` and binds its rebuild callback to
 /// `markNeedsBuild`. Manages attach and dispose with element
@@ -72,6 +75,14 @@ class _StatelessViewModelElement extends StatelessElement {
     super.mount(parent, newSlot);
     _binding.init();
     _binding.addPauseProvider(_appPauseProvider);
+  }
+
+  @override
+  void update(covariant StatelessWidget newWidget) {
+    // StatelessElement.update immediately rebuilds with the new Widget, so its
+    // context-free binding accessor must already refer to this mounted Element.
+    (newWidget as ViewModelStatelessMixin)._elementReference.element = this;
+    super.update(newWidget);
   }
 
   void _rebuildState() {

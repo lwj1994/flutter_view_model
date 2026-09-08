@@ -103,12 +103,14 @@ sequenceDiagram
 | `watch(spec)` | 是 | 是 | 是 | 是 |
 | `read(spec)` | 是 | 是 | 否 | 是 |
 
-只有 child 更新需要通过 `parent.onDependencyNotify(child)` 冒泡并通知 parent
-时，才在 parent 内使用 `watch`。同步传播使用一次事务，即使是 diamond graph，
-每个 binding 也最多更新一次。只需命令式调用且不希望 child 状态通知冒泡时，
-使用 `read`。
+child 更新需要通知 parent 时，在 parent 内使用 `watch`。依赖通知逐条向上
+传播，同步事务只合并 root binding 的刷新请求。只需命令式调用且不希望 child
+状态通知冒泡时，使用 `read`。
 
-副作用监听应显式注册一次。不要把 `listen*` 放进会重复求值的 getter。
+业务响应使用 `listen*`，不再覆写已移除的 `onDependencyNotify`。在初始化时
+注册一次，不放进会重复求值的 getter。业务监听不参与 root 刷新去重，多个
+依赖更新时可能观察到中间值。状态监听中再次设置状态时，新状态立即生效，
+新的事件等待当前事件交付给所有剩余监听者后再派发。
 
 ### Cached lookup 是高级 escape hatch
 
@@ -139,7 +141,7 @@ sequenceDiagram
 - diamond graph 合法，不会被误判为环。
 
 builder 或 constructor 失败具有原子性：期间暂存的 dependency scope、children、
-listeners 与 owner paths 都会回滚。`onCreate` 异常继续沿用现有策略：交给
+listeners、owner paths 与 `addDispose` 注册的资源清理回调都会回滚。`onCreate` 异常继续沿用现有策略：交给
 `ViewModelConfig.onError`，实例继续完成创建。
 
 ## 5. 生命周期控制

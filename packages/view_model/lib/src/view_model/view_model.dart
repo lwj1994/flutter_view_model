@@ -16,6 +16,7 @@
 library;
 
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -27,6 +28,7 @@ import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/log.dart';
 import 'package:view_model/src/view_model/config.dart';
+import 'package:view_model/src/view_model/construction_transaction.dart';
 import 'package:view_model/src/view_model/view_model_binding.dart';
 import 'package:view_model/src/view_model/update_transaction.dart';
 
@@ -212,7 +214,8 @@ mixin class ViewModel
   /// not create new instances.
   ///
   /// Normal application code should prefer
-  /// `ViewModelBinding.read/watch(spec)` for explicit resolution. A specific
+  /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
+  /// A specific
   /// [key] uniquely identifies a cached instance. A [tag] can match several
   /// instances; use the binding's `readCachesByTag` for that case. With neither
   /// [key] nor [tag], multiple matches are resolved by creation order and the
@@ -332,21 +335,8 @@ mixin class ViewModel
   @internal
   final ViewModelBindingHandler refHandler = ViewModelBindingHandler();
 
-  /// Called when a dependency ViewModel notifies changes.
-  ///
-  /// This method is called when a dependency ViewModel that this ViewModel is
-  /// listening to notifies changes. By default, this is a no-op. Override it
-  /// to react to dependency changes.
-  ///
-  /// Parameters:
-  /// - [vm]: The dependency ViewModel that notified changes
-  @mustCallSuper
-  @protected
-  void onDependencyNotify(ViewModel vm) {}
-
-  void _handleDependencyUpdate(ViewModel dependency) {
+  void _handleDependencyUpdate(ViewModel _) {
     if (_isDisposed) return;
-    onDependencyNotify(dependency);
     notifyListeners();
   }
 
@@ -661,6 +651,8 @@ mixin class ViewModel
 abstract class StateViewModel<T> with ViewModel {
   late final ViewModelStateStore<T> _store;
   final List<Function(T? previous, T state)> _stateListeners = [];
+  final Queue<DiffState<T>> _pendingStateEvents = Queue();
+  bool _dispatchingStateEvents = false;
 
   /// Adds a state-specific listener that receives both previous and
   /// current state.
@@ -778,28 +770,49 @@ abstract class StateViewModel<T> with ViewModel {
     );
   }
 
-  /// Handles state changes synchronously.
+  /// Delivers state changes synchronously in transition order.
   ///
-  /// This method is called immediately when state changes, ensuring
-  /// synchronous notification consistent with ViewModel behavior.
+  /// A listener may set another state immediately. Its event is queued until
+  /// the current event has reached every remaining listener, so later
+  /// listeners cannot receive a newer transition before an older one.
   void _handleStateChanged(DiffState<T> event) {
     if (_isDisposed) return;
-
-    // Phase 1: Notify state listeners with previous and current state
-    final stateListeners =
-        List<Function(T? previous, T state)>.of(_stateListeners);
-    for (final element in stateListeners) {
-      if (!_stateListeners.contains(element)) continue;
-      try {
-        element.call(event.previousState, event.currentState);
-      } catch (e, stack) {
-        reportViewModelError(
-            e, stack, ErrorType.listener, 'stateListener error');
-      }
+    _pendingStateEvents.addLast(event);
+    if (_dispatchingStateEvents) return;
+    _dispatchingStateEvents = true;
+    try {
+      // Reentrant events drain after the current notification returns. Keep
+      // the whole drain in one transaction so root refreshes stay coalesced
+      // while state events and business notifications are delivered in full.
+      runInViewModelUpdateTransaction(() {
+        while (_pendingStateEvents.isNotEmpty && !_isDisposed) {
+          final current = _pendingStateEvents.removeFirst();
+          final stateListeners = List<Function(T? previous, T state)>.of(
+            _stateListeners,
+          );
+          for (final element in stateListeners) {
+            if (_isDisposed) break;
+            if (!_stateListeners.contains(element)) continue;
+            try {
+              element.call(current.previousState, current.currentState);
+            } catch (e, stack) {
+              reportViewModelError(
+                e,
+                stack,
+                ErrorType.listener,
+                'stateListener error',
+              );
+            }
+          }
+          if (!_isDisposed) {
+            super.notifyListeners();
+          }
+        }
+      });
+    } finally {
+      _dispatchingStateEvents = false;
+      _pendingStateEvents.clear();
     }
-
-    // Phase 2: Notify general listeners (delegate to ViewModel.notifyListeners)
-    super.notifyListeners();
   }
 
   /// Removes a state-specific listener.
@@ -882,6 +895,7 @@ abstract class StateViewModel<T> with ViewModel {
   @override
   void dispose() {
     _store.dispose();
+    _pendingStateEvents.clear();
     _listeners.clear();
     _stateListeners.clear();
     super.dispose();
@@ -894,6 +908,13 @@ abstract class StateViewModel<T> with ViewModel {
 /// [dispose] is called. It's used internally by ViewModels to ensure
 /// proper cleanup of resources.
 class AutoDisposeController {
+  AutoDisposeController() {
+    // The ViewModel constructor may fail before a handle can own its cleanup.
+    // A successful construction commits this registration; normal disposal
+    // still owns the callbacks retained below.
+    registerViewModelConstructionRollback(dispose);
+  }
+
   final _disposeSet = <Function()>[];
 
   /// Adds a disposal callback to be executed when [dispose] is called.
@@ -911,7 +932,11 @@ class AutoDisposeController {
   /// handler is provided, errors are logged. This prevents one callback from
   /// affecting others.
   void dispose() {
-    for (final element in _disposeSet) {
+    // A failed build can roll back after untracked-instance disposal has
+    // already run. Clear first so repeated or reentrant disposal is harmless.
+    final callbacks = List<Function()>.of(_disposeSet);
+    _disposeSet.clear();
+    for (final element in callbacks) {
       try {
         element.call();
       } catch (e, stack) {
@@ -919,7 +944,6 @@ class AutoDisposeController {
             e, stack, ErrorType.dispose, 'AutoDisposeMixin error');
       }
     }
-    _disposeSet.clear();
   }
 }
 

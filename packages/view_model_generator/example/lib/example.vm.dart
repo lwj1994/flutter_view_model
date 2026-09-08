@@ -20,3 +20,16 @@ final userKeySpec = ViewModelSpec.arg<UserKeyViewModel, Repository>(
   key: (Repository repo) => repo,
   tag: (Repository repo) => 'user_key',
 );
+
+final seededCounterSpec = ViewModelSpec.arg2<SeededCounterViewModel, int, int>(
+  builder: (int state, int step) =>
+      SeededCounterViewModel(state: state, step: step),
+);
+
+final itemDetailSpec = ViewModelSpec.arg2<ItemDetailViewModel, String, String>(
+  builder: (String id, String title) => ItemDetailViewModel(id, title),
+);
+
+final defaultCounterSpec = ViewModelSpec<DefaultCounterViewModel>(
+  builder: () => DefaultCounterViewModel.spec(),
+);
