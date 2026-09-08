@@ -33,6 +33,25 @@ This skill provides comprehensive instructions for using the `view_model` state 
 
 `ViewModelSpec` 是 ViewModel 的工厂定义。
 
+**实例身份 = 解析泛型类型 `T` + 有效 `key`。** Spec 对象、构造参数、builder
+返回对象的运行时类型和 `tag` 都不会独立区分实例。缓存命中时复用已有实例，
+不会重新执行 builder。
+
+| 用法 | 实例行为 |
+| --- | --- |
+| 同一 Binding、同一 `T`、未设置 key | 复用一个实例，即使使用不同 Spec 或传入不同参数。 |
+| 不同 Binding、同一 `T`、未设置 key | 各自创建实例；不同父 ViewModel 的依赖也遵循此规则。 |
+| 同一 `T`、相等的显式 key | 在实例存活期间跨 Binding 共享。 |
+| 不同 `T`、相等的显式 key | 各自独立。 |
+
+普通模块需要每个 Binding 一份实例时，保持无 key 即可。需要共享或按实体 ID
+区分实例时，显式设置 key。参数不会自动成为 key：同一 Binding 中，无 key 的
+`userSpec('A')` 和 `userSpec('B')` 会返回第一次创建的实例；不同父模块使用同一个
+无 key Spec，也不会共享子实例。参数改变但 key 不变时，不会重新配置已有实例。
+
+key 只决定身份，不决定永久保活。共享实例默认在最后一个 owner 离开后释放；
+只有需要在没有 owner 时继续存活，才设置带显式 key 的 `aliveForever: true`。
+
 ```dart
 // 1. 无参数，单例共享
 final authSpec = ViewModelSpec<AuthViewModel>(
