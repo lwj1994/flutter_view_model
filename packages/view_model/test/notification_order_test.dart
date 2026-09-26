@@ -83,6 +83,68 @@ void main() {
   setUp(ViewModel.reset);
   tearDown(ViewModel.reset);
 
+  test('removing one duplicate listener preserves the remaining registration',
+      () {
+    final binding = _TestBinding();
+    addTearDown(binding.dispose);
+    var calls = 0;
+    void callback() => calls++;
+
+    binding.counter.addListener(callback);
+    binding.counter.addListener(callback);
+    binding.counter.notifyListeners();
+    expect(calls, 2);
+
+    binding.counter.removeListener(callback);
+    binding.counter.notifyListeners();
+    expect(calls, 3);
+    expect(binding.counter.hasListeners, isTrue);
+
+    binding.counter.removeListener(callback);
+    binding.counter.notifyListeners();
+    expect(calls, 3);
+    expect(binding.counter.hasListeners, isFalse);
+  });
+
+  test('cancelling listen preserves a duplicate addListener registration', () {
+    final binding = _TestBinding();
+    addTearDown(binding.dispose);
+    var calls = 0;
+    void callback() => calls++;
+
+    final cancel = binding.counter.listen(onChanged: callback);
+    binding.counter.addListener(callback);
+    cancel();
+    binding.counter.notifyListeners();
+    expect(calls, 1);
+    expect(binding.counter.hasListeners, isTrue);
+
+    binding.counter.removeListener(callback);
+    binding.counter.notifyListeners();
+    expect(calls, 1);
+    expect(binding.counter.hasListeners, isFalse);
+  });
+
+  test('duplicate removal during notification preserves snapshot delivery', () {
+    final binding = _TestBinding();
+    addTearDown(binding.dispose);
+    final events = <String>[];
+    void callback() => events.add('duplicate');
+    binding.counter.addListener(() {
+      events.add('remove');
+      binding.counter.removeListener(callback);
+    });
+    binding.counter.addListener(callback);
+    binding.counter.addListener(callback);
+
+    binding.counter.notifyListeners();
+    expect(events, ['remove', 'duplicate', 'duplicate']);
+
+    events.clear();
+    binding.counter.notifyListeners();
+    expect(events, ['remove']);
+  });
+
   test('reentrant state listeners receive transitions in order', () {
     final binding = _TestBinding();
     addTearDown(binding.dispose);

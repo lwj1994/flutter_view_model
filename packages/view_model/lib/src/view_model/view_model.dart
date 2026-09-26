@@ -300,6 +300,11 @@ mixin class ViewModel
   }
 
   final List<VoidCallback> _listeners = [];
+
+  /// Mirrors [_listeners] membership for O(1) liveness checks inside
+  /// [notifyListeners]. Kept in sync at every mutation site; the list itself
+  /// stays the source of truth for iteration order and duplicates.
+  final Set<VoidCallback> _listenerSet = {};
   static ViewModelConfig _config = ViewModelConfig();
 
   /// Gets the current ViewModel configuration.
@@ -351,6 +356,7 @@ mixin class ViewModel
   @override
   void addListener(VoidCallback listener) {
     _listeners.add(listener);
+    _listenerSet.add(listener);
   }
 
   /// Removes a listener from this ViewModel.
@@ -362,6 +368,10 @@ mixin class ViewModel
   @override
   void removeListener(VoidCallback listener) {
     _listeners.remove(listener);
+    // Removing one registration must not silence remaining duplicates.
+    if (!_listeners.contains(listener)) {
+      _listenerSet.remove(listener);
+    }
   }
 
   /// Adds a dispose callback that will be executed when this ViewModel is
@@ -408,8 +418,12 @@ mixin class ViewModel
   /// ```
   Function() listen({required VoidCallback onChanged}) {
     _listeners.add(onChanged);
+    _listenerSet.add(onChanged);
     return () {
       _listeners.remove(onChanged);
+      if (!_listeners.contains(onChanged)) {
+        _listenerSet.remove(onChanged);
+      }
     };
   }
 
@@ -430,7 +444,8 @@ mixin class ViewModel
     runInViewModelUpdateTransaction(() {
       final listeners = List<VoidCallback>.of(_listeners);
       for (final element in listeners) {
-        if (!_listeners.contains(element)) continue;
+        // O(1) liveness check: skip listeners removed mid-notification.
+        if (!_listenerSet.contains(element)) continue;
         try {
           element.call();
         } catch (e, stack) {
@@ -621,6 +636,7 @@ mixin class ViewModel
   @mustCallSuper
   void dispose() {
     _listeners.clear();
+    _listenerSet.clear();
   }
 }
 
@@ -897,6 +913,7 @@ abstract class StateViewModel<T> with ViewModel {
     _store.dispose();
     _pendingStateEvents.clear();
     _listeners.clear();
+    _listenerSet.clear();
     _stateListeners.clear();
     super.dispose();
   }
