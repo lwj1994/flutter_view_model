@@ -1,3 +1,11 @@
+## Unreleased
+
+- Fix O(n²) listener fan-out in `notifyListeners`: the per-listener liveness
+  check against the live listener list is now an O(1) set lookup. Notifying
+  1000 listeners drops from ~35ms to under 0.5ms (debug/JIT); notification
+  order, duplicate-listener behavior, and mid-notification removal semantics
+  are unchanged.
+
 ## 1.1.1
 
 - **Breaking:** Remove the `onDependencyNotify` override hook. Register explicit
