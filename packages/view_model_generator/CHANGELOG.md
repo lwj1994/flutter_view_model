@@ -1,3 +1,7 @@
+## 1.1.2
+
+- Update `view_model_annotation` to 1.1.2 for release consistency.
+
 ## 1.1.1
 
 - Include required named and positional `super` parameters in generated specs;

@@ -1,4 +1,4 @@
-## Unreleased
+## 1.1.2
 
 - Fix O(n²) listener fan-out in `notifyListeners`: the per-listener liveness
   check against the live listener list is now an O(1) set lookup. Notifying
