@@ -8,6 +8,8 @@
 /// @author luwenjie on 2025/3/25 12:23:33
 library;
 
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 
@@ -201,15 +203,19 @@ class InstanceManager {
     return _getStore<T>().getInstancesByTag(tag);
   }
 
-  /// (Type, tag) pairs that already printed an implicit-lookup warning.
-  final Set<(Type, Object?)> _implicitLookupWarnings = {};
+  /// 按类型和 tag 对象身份记录提示，避免要求 tag 提供可用的 hashCode。
+  final Map<Type, Set<Object?>> _implicitLookupWarnings = {};
 
-  /// Warns, once per type/tag, when a cached lookup picks the newest instance
+  /// Warns, once per type/tag identity, when a lookup picks the newest instance
   /// implicitly: either no key/tag was given, or a tag matched several
   /// instances. Debug-only; the lookup result itself is unchanged.
   void _warnImplicitNewestLookup<T>(Object? tag) {
+    final warnedTags = _implicitLookupWarnings.putIfAbsent(
+      T,
+      HashSet<Object?>.identity,
+    );
     if (tag == null) {
-      if (!_implicitLookupWarnings.add((T, null))) return;
+      if (!warnedTags.add(null)) return;
       debugPrint(
         'view_model deprecation: a cached lookup of $T without key or tag '
         'returned the most recently created instance. This implicit "newest '
@@ -219,7 +225,7 @@ class InstanceManager {
       return;
     }
     final matches = _getStore<T>().countInstances(tag: tag);
-    if (matches < 2 || !_implicitLookupWarnings.add((T, tag))) return;
+    if (matches < 2 || !warnedTags.add(tag)) return;
     debugPrint(
       'view_model warning: a single-result cached lookup of $T by tag '
       '${Error.safeToString(tag)} matched $matches instances and returned the '

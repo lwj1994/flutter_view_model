@@ -8,9 +8,10 @@
   debug factory-source diagnostics are unchanged.
 - **Deprecated:** single-result cached lookups without `key` or `tag` that
   implicitly return the newest instance. Debug builds print a one-time warning
-  per type, plus a one-time ambiguity warning when a single-result `tag`
-  lookup matches several instances. Results are unchanged; removal is planned
-  for the next major version.
+  per type, plus an ambiguity warning when a single-result `tag` lookup
+  matches several instances. Tag warnings are deduplicated by type and object
+  identity without calling the tag's `hashCode`. Results are unchanged;
+  removal is planned for the next major version.
 - Newest-instance lookup is now a single O(n) scan instead of a sort.
 - **Breaking (types):** `listenState` / `listenStateSelect` callbacks are now
   `void Function(T previous, T current)`. Every dispatched callback has a

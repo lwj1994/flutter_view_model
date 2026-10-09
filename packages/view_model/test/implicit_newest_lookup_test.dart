@@ -6,6 +6,19 @@ class _TaggedVM with ViewModel {}
 
 class _Binding with ViewModelBinding {}
 
+class _EqualityOnlyTag {
+  _EqualityOnlyTag(this.value);
+
+  final String value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _EqualityOnlyTag && other.value == value;
+
+  @override
+  int get hashCode => throw StateError('tag.hashCode must not be called');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -74,5 +87,39 @@ void main() {
     binding.readCached<_TaggedVM>(key: 'a');
 
     expect(lookupWarnings(), isEmpty);
+  });
+
+  test('tag warnings preserve equality-only lookup without hashing tags', () {
+    final binding = _Binding();
+    addTearDown(binding.dispose);
+    final queryTag = _EqualityOnlyTag('shared');
+    final newestSpec = ViewModelSpec<_TaggedVM>(
+      builder: _TaggedVM.new,
+      key: 'newest',
+      tag: _EqualityOnlyTag('shared'),
+    );
+    _TaggedVM newest() => binding.read(newestSpec);
+
+    binding.read(ViewModelSpec<_TaggedVM>(
+      builder: _TaggedVM.new,
+      key: 'older',
+      tag: _EqualityOnlyTag('shared'),
+    ));
+    newest();
+
+    expect(ViewModel.readCached<_TaggedVM>(tag: queryTag), same(newest()));
+    expect(ViewModel.maybeReadCached<_TaggedVM>(tag: queryTag), same(newest()));
+    expect(binding.readCached<_TaggedVM>(tag: queryTag), same(newest()));
+    expect(binding.maybeReadCached<_TaggedVM>(tag: queryTag), same(newest()));
+    expect(binding.watchCached<_TaggedVM>(tag: queryTag), same(newest()));
+    expect(binding.maybeWatchCached<_TaggedVM>(tag: queryTag), same(newest()));
+    expect(lookupWarnings(), hasLength(1));
+    expect(lookupWarnings().single, contains('matched 2 instances'));
+
+    // 值相等的另一个 tag 仍匹配同一批实例，但提示按对象身份独立去重。
+    final equalTag = _EqualityOnlyTag('shared');
+    expect(binding.readCached<_TaggedVM>(tag: equalTag), same(newest()));
+    expect(binding.readCached<_TaggedVM>(tag: equalTag), same(newest()));
+    expect(lookupWarnings(), hasLength(2));
   });
 }
