@@ -1,3 +1,25 @@
+## 1.3.0
+
+- Speed up repeated `watch(spec)` / `read(spec)` cache hits. A binding now
+  remembers handles it already owns directly and returns them without entering
+  a resolution Zone or the Store; recycle, unbind, handle disposal and
+  `ViewModel.reset()` invalidate the entry. The redundant second `addRef` per
+  resolution is removed. Identity, ownership, `aliveForever` key validation and
+  debug factory-source diagnostics are unchanged.
+- **Deprecated:** single-result cached lookups without `key` or `tag` that
+  implicitly return the newest instance. Debug builds print a one-time warning
+  per type, plus a one-time ambiguity warning when a single-result `tag`
+  lookup matches several instances. Results are unchanged; removal is planned
+  for the next major version.
+- Newest-instance lookup is now a single O(n) scan instead of a sort.
+- **Breaking (types):** `listenState` / `listenStateSelect` callbacks are now
+  `void Function(T previous, T current)`. Every dispatched callback has a
+  previous state; it is now typed `T` (nullable only when `T` is). Existing
+  callbacks that declare `T?` still compile; only classes that override or
+  implement these methods must update their parameter types.
+- Docs: call out that the spec object, builder and arguments are not part of
+  instance identity (`T` + effective key).
+
 ## 1.1.2
 
 - Fix O(n²) listener fan-out in `notifyListeners`: the per-listener liveness

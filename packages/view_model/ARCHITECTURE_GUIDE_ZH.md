@@ -81,7 +81,8 @@ sequenceDiagram
 ### Identity 规则
 
 - 实例 identity 是解析泛型 ViewModel 类型 `T` 加 effective `key`；`tag` 只用于
-  分组。
+  分组。spec 对象、builder、构造参数都不参与身份：同一 binding 内两个不同的
+  无 key spec 只要 `T` 相同，就解析到同一个实例。
 - root 内的 unkeyed VM 使用该 root binding 的私有 default key。
 - unkeyed child 使用 parent generation 的私有 default key。只要 parent 对象仍
   存活，即使 A/B root 加入或离开，该 key 也保持稳定。

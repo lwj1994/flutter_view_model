@@ -1,3 +1,8 @@
+## 1.3.0
+
+- 版本与 `view_model` 1.3.0 同步，更新 `view_model_annotation` 依赖至 1.3.0。
+- 代码生成行为保持不变。
+
 ## 1.1.2
 
 - Update `view_model_annotation` to 1.1.2 for release consistency.

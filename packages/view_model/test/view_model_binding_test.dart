@@ -22,7 +22,7 @@ class SelectorOverrideVM extends StateViewModel<SimpleState> {
   Function() listenStateSelect<R>({
     required R Function(SimpleState state) selector,
     bool Function(R previous, R current)? equals,
-    required void Function(R? previous, R current) onChanged,
+    required void Function(R previous, R current) onChanged,
   }) {
     return super.listenStateSelect(
       selector: selector,

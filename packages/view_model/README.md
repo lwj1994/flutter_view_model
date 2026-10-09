@@ -327,6 +327,29 @@ In debug mode, resolving different specs with the same `T` and effective key
 from one binding emits a warning: instance identity ignores the builder, so the
 second builder will not run. Give logically different specs distinct keys.
 
+> [!IMPORTANT]
+> The spec object, its builder, and its constructor arguments are **not** part
+> of identity. Within one binding, two *different* unkeyed specs with the same
+> `T` resolve the **same** instance, and so do two calls of one unkeyed
+> arg-spec with different arguments:
+>
+> ```dart
+> final a = ViewModelSpec<UserViewModel>(builder: () => UserViewModel('A'));
+> final b = ViewModelSpec<UserViewModel>(builder: () => UserViewModel('B'));
+> viewModelBinding.read(a); // creates UserViewModel('A')
+> viewModelBinding.read(b); // same instance; b's builder never runs
+> ```
+>
+> Encode the distinguishing value in the key, e.g.
+> `key: (userId) => ('user', userId)`.
+
+| Resolution pattern | Instance behavior |
+| --- | --- |
+| Same `T`, same binding, no explicit key | One instance, even with different specs or arguments. |
+| Same `T`, different bindings, no explicit key | Separate instances. |
+| Same `T`, equal explicit keys | Shared across bindings while alive. |
+| Different `T`, equal explicit keys | Separate instances. |
+
 Internally, `ViewModelSpec` extends `ViewModelFactory<T>`, which defines:
 - `build()` — creates the instance
 - `key()` — cache key (same resolved `T` + same key = same identity)
@@ -424,6 +447,14 @@ miss; `maybe*` returns `null`; tag-batch methods return every match. A
 single-result lookup by `tag` can be ambiguous and follows cache creation order,
 so use the batch APIs when several instances may share that tag.
 
+> [!WARNING]
+> **Deprecated:** a single-result cached lookup with neither `key` nor `tag`
+> (for example `readCached<T>()` or `ViewModel.readCached<T>()`) implicitly
+> returns the most recently created `T`. This behavior will be removed in the
+> next major version. In debug mode it prints a one-time deprecation warning
+> per type, and a single-result `tag` lookup that matches several instances
+> prints a one-time ambiguity warning. Results are unchanged.
+
 ### listen / listenState / listenStateSelect
 
 Listeners are automatically cleaned up when the binding disposes. These use
@@ -431,7 +462,9 @@ Listeners are automatically cleaned up when the binding disposes. These use
 custom callbacks. `listenState` and `listenStateSelect` deliver transitions in
 order: if a callback sets another state, its event waits until the current
 event has reached the remaining listeners. The state itself changes
-immediately, so `vm.state` can already be newer than the callback event:
+immediately, so `vm.state` can already be newer than the callback event.
+Callbacks only run for a real transition, so `previous` is typed `T` (the
+replaced state), not `T?`:
 
 ```dart
 // General change callback
@@ -440,7 +473,7 @@ viewModelBinding.listen(authSpec, onChanged: () {
 });
 
 // StateViewModel: full state diff
-viewModelBinding.listenState(userSpec, onChanged: (UserState? prev, UserState curr) {
+viewModelBinding.listenState(userSpec, onChanged: (UserState prev, UserState curr) {
   print('user state changed');
 });
 
@@ -449,7 +482,7 @@ viewModelBinding.listenStateSelect(
   userSpec,
   selector: (UserState s) => s.name,
   equals: (previous, current) => previous == current,
-  onChanged: (String? prevName, String currName) {
+  onChanged: (String prevName, String currName) {
     print('name changed to $currName');
   },
 );

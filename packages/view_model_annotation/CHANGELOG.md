@@ -1,3 +1,7 @@
+## 1.3.0
+
+- 版本与 `view_model` 1.3.0 同步，注解 API 保持不变。
+
 ## 1.1.2
 
 - Version bump for consistency with the `view_model` 1.1.2 release.

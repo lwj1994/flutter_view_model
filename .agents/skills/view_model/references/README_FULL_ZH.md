@@ -326,6 +326,12 @@ unkeyed child 在存活的 parent 内切换 private key。若 parent 本身是
 未命中时返回 `null`；tag 批量 API 返回全部匹配。按 tag 获取单个实例可能有
 歧义，并依赖缓存创建顺序；多个实例可能共用 tag 时应使用批量 API。
 
+> [!WARNING]
+> **已弃用：** 既不传 `key` 也不传 `tag` 的单实例 cached 查询（如
+> `readCached<T>()`、`ViewModel.readCached<T>()`）会隐式返回最近创建的 `T`，
+> 该行为将在下一个大版本移除。debug 模式下每个类型首次触发时打印弃用提示；
+> 单实例 `tag` 查询命中多个实例时也会打印一次歧义提示。返回结果不变。
+
 补充说明：
 
 - `watch*` 和 `read*` 都会建立 binding，都会影响实例生命周期；差别主要在于是否监听 ViewModel 自身的变化。
@@ -367,6 +373,25 @@ unkeyed child 在存活的 parent 内切换 private key。若 parent 本身是
   root 与 nested 解析规则一致。
 - 同一个 binding 中若两个不同 spec 使用相同的 `T` 与 effective key，第二个
   builder 不会执行；debug 模式会发出提示。逻辑上不同的 spec 应使用不同 key。
+- **易错点：spec 对象、builder、构造参数都不参与身份。** 同一 binding 内，两个
+  *不同的* 无 key spec 只要 `T` 相同，就解析到**同一个**实例；同一个无 key
+  arg-spec 传入不同参数也一样：
+
+  ```dart
+  final a = ViewModelSpec<UserViewModel>(builder: () => UserViewModel('A'));
+  final b = ViewModelSpec<UserViewModel>(builder: () => UserViewModel('B'));
+  viewModelBinding.read(a); // 创建 UserViewModel('A')
+  viewModelBinding.read(b); // 同一个实例；b 的 builder 不会执行
+  ```
+
+  需要区分时把区分值编码进 key，例如 `key: (userId) => ('user', userId)`。
+
+  | 解析方式 | 实例行为 |
+  | --- | --- |
+  | 同 `T`、同 binding、无显式 key | 同一个实例，即使 spec 或参数不同 |
+  | 同 `T`、不同 binding、无显式 key | 各自独立 |
+  | 同 `T`、相同显式 key | 存活期间跨 binding 共享 |
+  | 不同 `T`、相同显式 key | 各自独立 |
 
 ---
 

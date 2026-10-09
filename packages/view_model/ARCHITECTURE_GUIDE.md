@@ -84,7 +84,9 @@ scope or its children; they remain until `recycle` or `ViewModel.reset()`.
 ### Identity rules
 
 - Instance identity is resolved generic ViewModel type `T` plus effective
-  `key`; `tag` is only a grouping label.
+  `key`; `tag` is only a grouping label. The spec object, builder, and
+  constructor arguments do not participate: two different unkeyed specs of the
+  same `T` resolve one instance within a binding.
 - An unkeyed root uses that root binding's private default key.
 - An unkeyed child uses its parent generation's private default key. The key is
   stable while that parent object is alive, even when roots A/B join or leave.

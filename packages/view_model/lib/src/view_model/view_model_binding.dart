@@ -136,7 +136,7 @@ abstract interface class ViewModelBindingInterface {
 
   void listenState<VM extends StateViewModel<S>, S>(
     ViewModelFactory<VM> factory, {
-    required Function(S? previous, S state) onChanged,
+    required void Function(S previous, S state) onChanged,
   });
 
   /// Listens to a selected state value.
@@ -148,7 +148,7 @@ abstract interface class ViewModelBindingInterface {
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
     bool Function(R previous, R current)? equals,
-    required Function(R? previous, R current) onChanged,
+    required void Function(R previous, R current) onChanged,
   });
 
   /// Danger: force-disposes the shared instance and removes every owner,
@@ -321,6 +321,13 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   final Map<(Type, Object), Object> _factorySources = {};
   final Map<ViewModel, (Type, Object)> _factoryIdentities = Map.identity();
 
+  /// Handles this binding already owns directly, by resolved type and key.
+  ///
+  /// A spec resolution that hits this map skips the Zone and Store round trip:
+  /// the direct bind, ref and handle listener it would add already exist.
+  /// Entries are removed when the handle is detached, recycled or disposed.
+  final Map<(Type, Object), InstanceHandle> _resolvedHandles = {};
+
   void _handleInstanceChange() {
     if (markViewModelBindingUpdated(this)) {
       onUpdate();
@@ -339,6 +346,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     ViewModel viewModel,
   ) {
     _stateListeners.remove(viewModel)?.call();
+    _resolvedHandles.removeWhere((_, value) => identical(value, handle));
     final subscriptions = _subscriptions
         .where((subscription) => subscription.isAttachedTo(viewModel))
         .toList(growable: false);
@@ -725,26 +733,38 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       );
     }
     final Object key = configuredKey ?? _defaultViewModelKey;
-    final tag = factory.tag();
-    final res = runWithBinding(
-      () {
-        return _instanceController.getInstance<VM>(
-          factory: InstanceFactory<VM>(
-            arg: InstanceArg(
-              key: key,
-              tag: tag,
-              aliveForever: aliveForever,
+    final identity = (VM, key);
+    final VM res;
+    final cached = _resolvedHandles[identity];
+    if (cached != null && _ownsResolvedHandle(cached)) {
+      // Cache hit already owned by this binding: the Store would only repeat
+      // idempotent bind/addRef/listener registration, so skip it.
+      res = cached.instance as VM;
+    } else {
+      final tag = factory.tag();
+      final handle = runWithBinding(
+        () {
+          // The controller performs bind + addRef + handle listener.
+          return _instanceController.getHandle<VM>(
+            factory: InstanceFactory<VM>(
+              arg: InstanceArg(
+                key: key,
+                tag: tag,
+                aliveForever: aliveForever,
+              ),
+              builder: factory.build,
             ),
-            builder: factory.build,
-          ),
-        )..refHandler.addRef(viewModelBinding);
-      },
-      viewModelBinding,
-    );
+          );
+        },
+        viewModelBinding,
+      );
+      res = handle.instance;
+      _resolvedHandles[identity] = handle;
+    }
 
     assert(() {
       _recordFactoryResolution<VM>(factory, key);
-      _factoryIdentities[res] = (VM, key);
+      _factoryIdentities[res] = identity;
       return true;
     }());
 
@@ -752,6 +772,15 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       _addListener(res);
     }
     return res;
+  }
+
+  bool _ownsResolvedHandle(InstanceHandle handle) {
+    if (handle.isDisposed || instanceManager.isResetting) return false;
+    if (!handle.containsDirectBinding(id)) return false;
+    final instance = handle.instance;
+    return instance is ViewModel &&
+        !instance.isDisposed &&
+        instance.refHandler.hasDirectRef(this);
   }
 
   void _recordFactoryResolution<VM extends ViewModel>(
@@ -889,6 +918,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       }
     }
     _stateListeners.clear();
+    _resolvedHandles.clear();
     _factorySources.clear();
     _factoryIdentities.clear();
     // Run listener cleanup callbacks before disposing the instance controller,
@@ -931,7 +961,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   @override
   void listenState<VM extends StateViewModel<S>, S>(
     ViewModelFactory<VM> factory, {
-    required Function(S? previous, S state) onChanged,
+    required void Function(S previous, S state) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
     _addSubscription(vm, (value) => value.listenState(onChanged: onChanged));
@@ -942,7 +972,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
     bool Function(R previous, R current)? equals,
-    required Function(R? previous, R current) onChanged,
+    required void Function(R previous, R current) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
     _addSubscription(
@@ -1163,7 +1193,7 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
 
   void listenViewModelState<VM extends StateViewModel<S>, S>({
     required ViewModelFactory<VM> factory,
-    required Function(S? previous, S state) onChanged,
+    required void Function(S previous, S state) onChanged,
   }) {
     viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
   }
@@ -1172,7 +1202,7 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     required ViewModelFactory<VM> factory,
     required R Function(S state) selector,
     bool Function(R previous, R current)? equals,
-    required Function(R? previous, R current) onChanged,
+    required void Function(R previous, R current) onChanged,
   }) {
     viewModelBinding.listenStateSelect<VM, S, R>(
       factory,

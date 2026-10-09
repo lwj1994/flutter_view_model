@@ -169,6 +169,10 @@ class InstanceManager {
       if (find == null) {
         throw ViewModelError("no $T instance found");
       }
+      assert(() {
+        _warnImplicitNewestLookup<T>(tag);
+        return true;
+      }());
 
       // if bindingId is not null, add binding
       if (bindingId != null) {
@@ -197,6 +201,33 @@ class InstanceManager {
     return _getStore<T>().getInstancesByTag(tag);
   }
 
+  /// (Type, tag) pairs that already printed an implicit-lookup warning.
+  final Set<(Type, Object?)> _implicitLookupWarnings = {};
+
+  /// Warns, once per type/tag, when a cached lookup picks the newest instance
+  /// implicitly: either no key/tag was given, or a tag matched several
+  /// instances. Debug-only; the lookup result itself is unchanged.
+  void _warnImplicitNewestLookup<T>(Object? tag) {
+    if (tag == null) {
+      if (!_implicitLookupWarnings.add((T, null))) return;
+      debugPrint(
+        'view_model deprecation: a cached lookup of $T without key or tag '
+        'returned the most recently created instance. This implicit "newest '
+        'instance" lookup is deprecated and will be removed in the next major '
+        'version. Resolve through watch/read(spec), or pass an explicit key.',
+      );
+      return;
+    }
+    final matches = _getStore<T>().countInstances(tag: tag);
+    if (matches < 2 || !_implicitLookupWarnings.add((T, tag))) return;
+    debugPrint(
+      'view_model warning: a single-result cached lookup of $T by tag '
+      '${Error.safeToString(tag)} matched $matches instances and returned the '
+      'most recently created one. Use readCachesByTag/watchCachesByTag for a '
+      'shared tag, or an explicit key for one instance.',
+    );
+  }
+
   /// Force-disposes every cached instance and clears all type stores.
   ///
   /// This is primarily used by `ViewModel.reset()` to guarantee
@@ -205,6 +236,7 @@ class InstanceManager {
   void disposeAll({bool force = true}) {
     if (_isResetting) return;
     _isResetting = true;
+    _implicitLookupWarnings.clear();
     try {
       final stores = _stores.values.cast<Store<dynamic>>().toList(
             growable: false,

@@ -85,16 +85,26 @@ class Store<T> implements RecyclableInstanceStore {
     if (_disposed) {
       throw ViewModelError("Store<$T> has been disposed.");
     }
-    if (_instances.isEmpty) return null;
-    if (tag != null) {
-      return getInstancesByTag(tag).firstOrNull;
+    // Single O(n) scan for the highest creation index. Deliberately not a
+    // cached maximum: removing the newest handle would invalidate it.
+    InstanceHandle<T>? newest;
+    for (final handle in _instances.values) {
+      if (tag != null && handle.arg.tag != tag) continue;
+      if (newest == null || handle.index > newest.index) {
+        newest = handle;
+      }
     }
-    final l = _instances.values.toList();
-    l.sort((InstanceHandle<T> a, InstanceHandle<T> b) {
-      // desc
-      return b.index.compareTo(a.index);
-    });
-    return l.firstOrNull;
+    return newest;
+  }
+
+  /// Counts cached instances, optionally filtered by [tag].
+  int countInstances({Object? tag}) {
+    if (tag == null) return _instances.length;
+    var count = 0;
+    for (final handle in _instances.values) {
+      if (handle.arg.tag == tag) count++;
+    }
+    return count;
   }
 
   List<InstanceHandle<T>> getInstancesByTag(Object tag) {
@@ -323,6 +333,11 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Prefer this over `bindingIds.contains(id)` to avoid allocating
   /// an unmodifiable list wrapper on every call.
   bool containsBinding(String id) => _bindingSources.containsKey(id);
+
+  /// Returns true if [id] currently owns this handle through the direct
+  /// [bind]/[unbind] path, independently of parent-propagated sources.
+  bool containsDirectBinding(String id) =>
+      _directBindingSources.containsKey(id);
 
   /// Creation index for ordering instances by creation time.
   final int index;

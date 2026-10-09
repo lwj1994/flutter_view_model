@@ -67,7 +67,7 @@ class _StateViewModelSelectorState<T, R>
   }
 
   void _subscribe() {
-    void onChanged(R? _, R current) {
+    void onChanged(R _, R current) {
       _selected = current;
       _scheduleRebuild();
     }
