@@ -33,14 +33,30 @@ jobs:
           flutter --version
 
       - name: Use local annotation package
+        shell: bash
         run: |
-          # 发布前验证当前 checkout，避免依赖 pub.dev 上尚未发布的版本。
-          for package in \
-            packages/view_model \
-            packages/view_model_generator \
-            packages/view_model_devtools_extension \
-            example/counter \
+          packages=(
+            packages/view_model
+            packages/view_model_generator
+            packages/view_model_devtools_extension
+            example/counter
             example/todo_list
+          )
+
+          # Check every target before writing any temporary override files.
+          for package in "${packages[@]}"
+          do
+            overrides="$package/pubspec_overrides.yaml"
+            if [[ -e "$overrides" || -L "$overrides" ]]; then
+              echo "::error file=$overrides::Existing overrides detected. Update this CI setup to merge the local annotation entry explicitly; refusing to overwrite this file."
+              exit 1
+            fi
+          done
+
+          # CI-only files: leave the published pubspec.yaml dependencies intact.
+          # Also reject a file created between the preflight and this write.
+          set -o noclobber
+          for package in "${packages[@]}"
           do
             printf 'dependency_overrides:\n  view_model_annotation:\n    path: "%s"\n' \
               "$GITHUB_WORKSPACE/packages/view_model_annotation" \
