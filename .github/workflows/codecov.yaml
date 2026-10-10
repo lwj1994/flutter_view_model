@@ -24,6 +24,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Test publish warning gate
+        run: python3 -m unittest discover -s .github/scripts/tests -v
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:

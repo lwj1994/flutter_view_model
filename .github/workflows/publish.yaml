@@ -124,7 +124,12 @@ jobs:
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib test
           dart test --concurrency=1
-          dart pub publish --dry-run
+          log_file="$(mktemp)"
+          exit_code=0
+          dart pub publish --dry-run > "$log_file" 2>&1 || exit_code=$?
+          cat "$log_file"
+          python3 "$GITHUB_WORKSPACE/.github/scripts/check_pub_publish.py" \
+            --package view_model_generator --exit-code "$exit_code" "$log_file"
       - name: Publish generator
         run: dart pub publish --force
 
@@ -160,6 +165,11 @@ jobs:
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib
           flutter test --concurrency=1
-          flutter pub publish --dry-run
+          log_file="$(mktemp)"
+          exit_code=0
+          flutter pub publish --dry-run > "$log_file" 2>&1 || exit_code=$?
+          cat "$log_file"
+          python3 "$GITHUB_WORKSPACE/.github/scripts/check_pub_publish.py" \
+            --package view_model --exit-code "$exit_code" "$log_file"
       - name: Publish view_model
         run: flutter pub publish --force
