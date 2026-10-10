@@ -447,6 +447,49 @@ void main() {
     });
   });
 
+  group('Store', () {
+    test('countInstances counts cached handles and excludes recycled instances',
+        () {
+      final store = Store<Object>();
+      addTearDown(store.dispose);
+
+      InstanceHandle<Object> resolve(String key, {Object? tag}) {
+        return store.getNotifier(
+          factory: InstanceFactory<Object>(
+            builder: Object.new,
+            arg: InstanceArg(key: key, tag: tag),
+          ),
+        );
+      }
+
+      expect(store.countInstances(), 0);
+      expect(store.countInstances(tag: 'shared'), 0);
+
+      final first = resolve('first', tag: 'shared');
+      final untagged = resolve('untagged');
+      final second = resolve('second', tag: 'shared');
+
+      expect(store.countInstances(), 3);
+      expect(store.countInstances(tag: 'shared'), 2);
+      expect(store.countInstances(tag: 'missing'), 0);
+      expect(resolve('first', tag: 'shared'), same(first));
+      expect(store.countInstances(), 3);
+      expect(store.countInstances(tag: 'shared'), 2);
+
+      store.recycle(second.instance);
+      expect(store.countInstances(), 2);
+      expect(store.countInstances(tag: 'shared'), 1);
+
+      store.recycle(untagged.instance);
+      expect(store.countInstances(), 1);
+      expect(store.countInstances(tag: 'shared'), 1);
+
+      store.recycle(first.instance);
+      expect(store.countInstances(), 0);
+      expect(store.countInstances(tag: 'shared'), 0);
+    });
+  });
+
   group('InstanceManager Extended', () {
     test('findNewlyInstance returns latest', () {
       // Create multiple instances of TestModel
