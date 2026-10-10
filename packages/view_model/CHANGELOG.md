@@ -1,4 +1,4 @@
-## 1.3.0
+## 1.2.0
 
 - Speed up repeated `watch(spec)` / `read(spec)` cache hits. A binding now
   remembers handles it already owns directly and returns them without entering

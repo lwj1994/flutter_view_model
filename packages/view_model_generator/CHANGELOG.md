@@ -1,7 +1,7 @@
-## 1.3.0
+## 1.2.0
 
-- Align the version with `view_model` 1.3.0 and update the
-  `view_model_annotation` dependency to 1.3.0.
+- Align the version with `view_model` 1.2.0 and update the
+  `view_model_annotation` dependency to 1.2.0.
 - Code generation behavior is unchanged.
 
 ## 1.1.2
