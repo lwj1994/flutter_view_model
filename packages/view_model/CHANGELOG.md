@@ -6,12 +6,12 @@
   `ViewModel.reset()` invalidate the entry. The redundant second `addRef` per
   resolution is removed. Identity, ownership, `aliveForever` key validation and
   debug factory-source diagnostics are unchanged.
-- **Deprecated:** single-result cached lookups without `key` or `tag` that
-  implicitly return the newest instance. Debug builds print a one-time warning
-  per type, plus an ambiguity warning when a single-result `tag` lookup
-  matches several instances. Tag warnings are deduplicated by type and object
-  identity without calling the tag's `hashCode`. Results are unchanged;
-  removal is planned for the next major version.
+- Document that single-result cached lookups without `key` or `tag` return
+  the newest instance still in the cache, by creation order rather than last
+  access time. This behavior remains supported without a deprecation warning.
+  Debug builds warn only when a single-result `tag` lookup matches several
+  instances. Tag warnings are deduplicated by type and object identity without
+  calling the tag's `hashCode`. Lookup results are unchanged.
 - Newest-instance lookup is now a single O(n) scan instead of a sort.
 - **Breaking (types):** `listenState` / `listenStateSelect` callbacks are now
   `void Function(T previous, T current)`. Every dispatched callback has a

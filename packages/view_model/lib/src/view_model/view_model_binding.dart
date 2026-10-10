@@ -57,6 +57,8 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Does not create new instances. The widget will rebuild when the
   /// ViewModel notifies listeners.
+  ///
+  /// 查询规则与 [readCached] 相同；无参时返回该类型当前缓存中的最新创建实例。
   VM watchCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -73,12 +75,12 @@ abstract interface class ViewModelBindingInterface {
   /// Does not create new instances and does not cause the widget to
   /// rebuild when the ViewModel changes.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified `key` uniquely identifies a cached instance;
-  /// a `tag` may match multiple instances, so use [readCachesByTag]. If neither
-  /// `key` nor `tag` is provided, a multi-instance lookup returns the most
-  /// recently created instance. Use this only when you fully understand that
-  /// behavior.
+  /// 正常依赖解析优先使用带 spec 的 [read] / [watch]。
+  /// [key] 优先定位实例；未命中且提供 [tag] 时，返回 tag 匹配中最新创建的实例。
+  /// 不传 [key] 和 [tag] 时，返回该 VM 类型共享缓存中仍存在的最新创建实例。
+  /// “最新”按创建顺序判断，访问旧实例不会改变顺序；后续新建或回收实例可能
+  /// 改变下一次查询结果。无参查询是受支持的行为，不打印弃用警告。
+  /// tag 命中多个实例时会打印 debug 歧义提示；需要全部匹配时用 [readCachesByTag]。
   VM readCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -103,6 +105,8 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Useful when a ViewModel might be optional and absence should not
   /// throw.
+  ///
+  /// 查询规则与 [readCached] 相同；无参时返回该类型当前缓存中的最新创建实例。
   VM? maybeWatchCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -114,12 +118,8 @@ abstract interface class ViewModelBindingInterface {
   /// Reads the cached ViewModel without listening and avoids throwing
   /// when the instance does not exist.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified `key` uniquely identifies a cached instance;
-  /// use [readCachesByTag] when a `tag` may match multiple instances. If
-  /// neither `key` nor `tag` is provided, a multi-instance lookup returns the
-  /// most recently created instance based on creation order. Use this only
-  /// when you fully understand that behavior.
+  /// 查询规则与 [readCached] 相同；不传 [key] 和 [tag] 时，按创建顺序返回
+  /// 该类型当前缓存中的最新实例，不打印弃用警告。
   VM? maybeReadCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -549,6 +549,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// its [key] or [tag]. It does not create new instances.
   ///
   /// The widget will rebuild whenever the ViewModel notifies its listeners.
+  /// 查询规则与 [readCached] 相同；无参时返回该类型当前缓存中的最新创建实例。
   ///
   /// Parameters:
   /// - [key]: The unique key used to find the ViewModel.
@@ -613,12 +614,12 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// its [key] or [tag]. It does not create new instances and does not cause
   /// the widget to rebuild when the ViewModel changes.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified [key] uniquely identifies a cached instance;
-  /// a [tag] may match multiple instances, so use [readCachesByTag] for a
-  /// batch lookup. If neither [key] nor [tag] is provided, a multi-instance
-  /// lookup returns the most recently created instance based on creation
-  /// order. Use this only when you fully understand that behavior.
+  /// 正常依赖解析优先使用带 spec 的 [read] / [watch]。
+  /// [key] 优先定位实例；未命中且提供 [tag] 时，返回 tag 匹配中最新创建的实例。
+  /// 不传 [key] 和 [tag] 时，返回该 VM 类型共享缓存中仍存在的最新创建实例。
+  /// “最新”按创建顺序判断，访问旧实例不会改变顺序；后续新建或回收实例可能
+  /// 改变下一次查询结果。无参查询是受支持的行为，不打印弃用警告。
+  /// tag 命中多个实例时会打印 debug 歧义提示；需要全部匹配时用 [readCachesByTag]。
   ///
   /// Parameters:
   /// - [key]: The unique key used to find the ViewModel.
@@ -987,12 +988,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
 
   /// Safely queries the existing cache and returns `null` when not found.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified [key] uniquely identifies a cached instance;
-  /// use [readCachesByTag] when a [tag] may match multiple instances. If
-  /// neither [key] nor [tag] is provided, a multi-instance lookup returns the
-  /// most recently created instance based on creation order. Use this only
-  /// when you fully understand that behavior.
+  /// 查询规则与 [readCached] 相同；不传 [key] 和 [tag] 时，按创建顺序返回
+  /// 该类型当前缓存中的最新实例，不打印弃用警告。
   @override
   VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) {
     try {
@@ -1239,12 +1236,8 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
 
   /// Queries the existing cache without listening for changes.
   ///
-  /// Regular application code should prefer `readViewModel` /
-  /// `watchViewModel` with a spec for precise lookup. A specified [key]
-  /// uniquely identifies a cached instance; a [tag] may match multiple
-  /// instances, so use `viewModelBinding.readCachesByTag`. If neither [key]
-  /// nor [tag] is provided, a multi-instance lookup returns the most recently
-  /// created instance. Use this only when you fully understand that behavior.
+  /// 查询规则与 [ViewModelBindingInterface.readCached] 相同；无参时返回
+  /// 该类型当前缓存中的最新创建实例，访问顺序不影响结果。
   VM readCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -1277,13 +1270,8 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
 
   /// Safely queries the existing cache and returns `null` when not found.
   ///
-  /// Regular application code should prefer `readViewModel` /
-  /// `watchViewModel` with a spec for precise lookup. A specified [key]
-  /// uniquely identifies a cached instance; use
-  /// `viewModelBinding.readCachesByTag` when a [tag] may match multiple
-  /// instances. If neither [key] nor [tag] is provided, a multi-instance
-  /// lookup returns the most recently created instance based on creation
-  /// order. Use this only when you fully understand that behavior.
+  /// 查询规则与 [ViewModelBindingInterface.readCached] 相同；无参时返回
+  /// 该类型当前缓存中的最新创建实例，访问顺序不影响结果。
   VM? maybeReadCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,

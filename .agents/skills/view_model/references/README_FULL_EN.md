@@ -447,13 +447,18 @@ miss; `maybe*` returns `null`; tag-batch methods return every match. A
 single-result lookup by `tag` can be ambiguous and follows cache creation order,
 so use the batch APIs when several instances may share that tag.
 
-> [!WARNING]
-> **Deprecated:** a single-result cached lookup with neither `key` nor `tag`
-> (for example `readCached<T>()` or `ViewModel.readCached<T>()`) implicitly
-> returns the most recently created `T`. This behavior will be removed in the
-> next major version. In debug mode it prints a one-time deprecation warning
-> per type, and a single-result `tag` lookup that matches several instances
-> prints a one-time ambiguity warning. Results are unchanged.
+A single-result cached lookup with neither `key` nor `tag` (for example
+`readCached<T>()` or `ViewModel.readCached<T>()`) returns the most recently
+created `T` still present in the shared cache. Creation order is used, not last
+access time: reading an older instance does not make it the newest. Creating
+or recycling instances can change the result of the next lookup. This is
+supported behavior and does not print a deprecation warning.
+
+A single-result `tag` lookup also returns the most recently created matching
+instance. In debug mode, multiple matches print an ambiguity warning once per
+type and tag object identity; the query still matches tags by equality and
+returns the same result. Use an explicit `key` to select a specific instance,
+or a tag-batch API to retrieve all matches.
 
 ### listen / listenState / listenStateSelect
 

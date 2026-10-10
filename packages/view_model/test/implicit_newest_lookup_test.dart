@@ -42,19 +42,37 @@ void main() {
       .where((log) => log.contains('cached lookup of _TaggedVM'))
       .toList(growable: false);
 
-  test('unkeyed untagged cached lookup warns once per type', () {
+  test('unkeyed untagged cached lookup returns newest without warning', () {
     final binding = _Binding();
     addTearDown(binding.dispose);
-    final vm = binding.read(
-      ViewModelSpec<_TaggedVM>(builder: _TaggedVM.new, key: 'a'),
+    final olderSpec = ViewModelSpec<_TaggedVM>(
+      builder: _TaggedVM.new,
+      key: 'older',
     );
+    final newerSpec = ViewModelSpec<_TaggedVM>(
+      builder: _TaggedVM.new,
+      key: 'newer',
+    );
+    _TaggedVM older() => binding.read(olderSpec);
+    _TaggedVM newer() => binding.read(newerSpec);
 
-    expect(ViewModel.readCached<_TaggedVM>(), same(vm));
-    expect(binding.readCached<_TaggedVM>(), same(vm));
+    older();
+    expect(ViewModel.readCached<_TaggedVM>(), same(older()));
 
-    final warnings = lookupWarnings();
-    expect(warnings, hasLength(1));
-    expect(warnings.single, contains('deprecation'));
+    newer();
+    // 再次访问旧实例不会改变创建顺序。
+    older();
+    expect(ViewModel.readCached<_TaggedVM>(), same(newer()));
+    expect(ViewModel.maybeReadCached<_TaggedVM>(), same(newer()));
+    expect(binding.readCached<_TaggedVM>(), same(newer()));
+    expect(binding.maybeReadCached<_TaggedVM>(), same(newer()));
+    expect(binding.watchCached<_TaggedVM>(), same(newer()));
+    expect(binding.maybeWatchCached<_TaggedVM>(), same(newer()));
+
+    binding.recycle(newer());
+    expect(ViewModel.readCached<_TaggedVM>(), same(older()));
+    expect(binding.readCached<_TaggedVM>(), same(older()));
+    expect(lookupWarnings(), isEmpty);
   });
 
   test('tag lookup warns only when it is ambiguous', () {

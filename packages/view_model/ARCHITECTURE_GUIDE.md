@@ -141,8 +141,12 @@ remaining listeners; the state value itself changes immediately.
 | `watchCachesByTag(tag)` | No; returns all matches | Yes | Yes | Yes |
 | `readCachesByTag(tag)` | No; returns all matches | Yes | No | Yes |
 
-Single-result tag lookup can be ambiguous and follows cache creation order;
-use a tag-batch method when several instances may share the same tag.
+With neither `key` nor `tag`, a single-result lookup returns the most recently
+created instance of the requested type still in the shared cache. Reading an
+older instance does not change creation order; creating or recycling instances
+can change the next lookup result. Single-result tag lookup returns the newest
+matching instance and prints a debug ambiguity warning when several match.
+Use a tag-batch method when all matching instances are needed.
 
 ## 4. Construction and cycles
 

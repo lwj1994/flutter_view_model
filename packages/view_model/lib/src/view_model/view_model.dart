@@ -143,11 +143,8 @@ mixin class ViewModel
   /// Normal application code should prefer
   /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
   ///
-  /// This method only queries the existing cache. A specific [key] uniquely
-  /// identifies an instance. A [tag] can match several instances; use the
-  /// binding's `readCachesByTag` for that case. With neither [key] nor [tag],
-  /// multiple matches are resolved by creation order and the newest instance
-  /// is returned. Use that behavior only when you understand and intend it.
+  /// 查询规则与 [readCached] 相同；不传 [key] 和 [tag] 时，按创建顺序返回
+  /// 该类型当前缓存中的最新实例，不打印弃用警告。
   ///
   /// This method is useful for safely accessing a cached ViewModel without
   /// causing
@@ -215,12 +212,13 @@ mixin class ViewModel
   ///
   /// Normal application code should prefer
   /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
-  /// A specific
-  /// [key] uniquely identifies a cached instance. A [tag] can match several
-  /// instances; use the binding's `readCachesByTag` for that case. With neither
-  /// [key] nor [tag], multiple matches are resolved by creation order and the
-  /// newest instance is returned. Use that behavior only when you understand
-  /// and intend it.
+  ///
+  /// [key] 优先定位实例；未命中且提供 [tag] 时，返回 tag 匹配中最新创建的实例。
+  /// 不传 [key] 和 [tag] 时，返回该 T 类型共享缓存中仍存在的最新创建实例。
+  /// “最新”按创建顺序判断，访问旧实例不会改变顺序；后续新建或回收实例可能
+  /// 改变下一次查询结果。无参查询是受支持的行为，不打印弃用警告。
+  /// tag 命中多个实例时会打印 debug 歧义提示；需要全部匹配时用 binding 的
+  /// `readCachesByTag`。
   ///
   /// Parameters:
   /// - [key]: The unique key from [ViewModelFactory.key].

@@ -172,7 +172,7 @@ class InstanceManager {
         throw ViewModelError("no $T instance found");
       }
       assert(() {
-        _warnImplicitNewestLookup<T>(tag);
+        if (tag != null) _warnAmbiguousTagLookup<T>(tag);
         return true;
       }());
 
@@ -204,26 +204,15 @@ class InstanceManager {
   }
 
   /// 按类型和 tag 对象身份记录提示，避免要求 tag 提供可用的 hashCode。
-  final Map<Type, Set<Object?>> _implicitLookupWarnings = {};
+  final Map<Type, Set<Object>> _ambiguousTagLookupWarnings = {};
 
-  /// Warns, once per type/tag identity, when a lookup picks the newest instance
-  /// implicitly: either no key/tag was given, or a tag matched several
-  /// instances. Debug-only; the lookup result itself is unchanged.
-  void _warnImplicitNewestLookup<T>(Object? tag) {
-    final warnedTags = _implicitLookupWarnings.putIfAbsent(
+  /// 仅在 tag 命中多个实例时提示，每个类型/tag 对象身份只提示一次。
+  /// 无 key/tag 的查询按约定返回最新实例，不打印警告。
+  void _warnAmbiguousTagLookup<T>(Object tag) {
+    final warnedTags = _ambiguousTagLookupWarnings.putIfAbsent(
       T,
-      HashSet<Object?>.identity,
+      HashSet<Object>.identity,
     );
-    if (tag == null) {
-      if (!warnedTags.add(null)) return;
-      debugPrint(
-        'view_model deprecation: a cached lookup of $T without key or tag '
-        'returned the most recently created instance. This implicit "newest '
-        'instance" lookup is deprecated and will be removed in the next major '
-        'version. Resolve through watch/read(spec), or pass an explicit key.',
-      );
-      return;
-    }
     final matches = _getStore<T>().countInstances(tag: tag);
     if (matches < 2 || !warnedTags.add(tag)) return;
     debugPrint(
@@ -242,7 +231,7 @@ class InstanceManager {
   void disposeAll({bool force = true}) {
     if (_isResetting) return;
     _isResetting = true;
-    _implicitLookupWarnings.clear();
+    _ambiguousTagLookupWarnings.clear();
     try {
       final stores = _stores.values.cast<Store<dynamic>>().toList(
             growable: false,
