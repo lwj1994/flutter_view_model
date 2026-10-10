@@ -1,0 +1,165 @@
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-pub-dev
+  cancel-in-progress: false
+
+env:
+  PUB_HOSTED_URL: https://pub.dev
+
+jobs:
+  validate-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install YAML parser
+        run: python3 -m pip install PyYAML==6.0.3
+      - name: Validate release tag and published pubspecs
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          import yaml
+
+          tag = os.environ['GITHUB_REF_NAME']
+          if not re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', tag):
+              raise SystemExit(f'Expected a stable release tag vX.Y.Z, got {tag}')
+          version = tag[1:]
+          packages = ('view_model_annotation', 'view_model_generator', 'view_model')
+          for name in packages:
+              root = Path('packages') / name
+              overrides = root / 'pubspec_overrides.yaml'
+              if overrides.exists() or overrides.is_symlink():
+                  raise SystemExit(f'{overrides}: release must not use overrides')
+              pubspec = yaml.safe_load((root / 'pubspec.yaml').read_text())
+              if pubspec['name'] != name or pubspec['version'] != version:
+                  raise SystemExit(f'{root}: package name/version must match {name} {version}')
+              if any(key in pubspec for key in ('dependency_overrides', 'workspace', 'resolution', 'publish_to')):
+                  raise SystemExit(f'{root}: expected a standalone pub.dev package without overrides')
+              for section in ('dependencies', 'dev_dependencies'):
+                  for dep, constraint in pubspec.get(section, {}).items():
+                      if isinstance(constraint, dict) and ('path' in constraint or 'git' in constraint):
+                          raise SystemExit(f'{root}: {dep} must use a hosted or SDK dependency')
+              if name != 'view_model_annotation':
+                  if pubspec.get('dependencies', {}).get('view_model_annotation') != version:
+                      raise SystemExit(f'{root}: annotation dependency must be exactly {version}')
+              print(f'Validated {name} {version}')
+          PY
+
+  # Local overrides belong only to this CI job's disposable checkout.
+  test:
+    needs: validate-release
+    uses: ./.github/workflows/codecov.yaml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  publish-annotation:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/view_model_annotation
+    steps:
+      - uses: actions/checkout@v4
+      # setup-dart configures the temporary pub.dev OIDC credential.
+      - uses: dart-lang/setup-dart@v1
+      - name: Validate annotation
+        run: |
+          dart pub get --no-example
+          dart format --set-exit-if-changed -l 80 -o none lib
+          dart analyze --fatal-infos --fatal-warnings lib
+          dart pub publish --dry-run
+      - name: Publish annotation
+        run: dart pub publish --force
+
+  publish-generator:
+    needs: publish-annotation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/view_model_generator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - name: Wait for annotation propagation
+        run: sleep 300
+      - name: Resolve hosted dependencies
+        run: |
+          for attempt in {1..10}; do
+            if dart pub get --no-example; then
+              exit 0
+            fi
+            echo "Dependency resolution attempt $attempt/10 failed; waiting for pub.dev."
+            sleep 30
+          done
+          exit 1
+      - name: Verify hosted annotation
+        run: |
+          dart pub deps --json | python3 -c '
+          import json, os, sys
+          annotation = next(p for p in json.load(sys.stdin)["packages"] if p["name"] == "view_model_annotation")
+          if annotation["source"] != "hosted" or annotation["version"] != os.environ["GITHUB_REF_NAME"][1:]:
+              raise SystemExit(f"Expected the released hosted annotation, got {annotation}")
+          '
+      - name: Validate generator
+        run: |
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib test
+          dart test --concurrency=1
+          dart pub publish --dry-run
+      - name: Publish generator
+        run: dart pub publish --force
+
+  publish-view-model:
+    needs: publish-generator
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/view_model
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      # Use Flutter's bundled Dart for validation and publishing this package.
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Resolve hosted dependencies
+        run: flutter pub get --no-example
+      - name: Verify hosted annotation
+        run: |
+          dart pub deps --json | python3 -c '
+          import json, os, sys
+          annotation = next(p for p in json.load(sys.stdin)["packages"] if p["name"] == "view_model_annotation")
+          if annotation["source"] != "hosted" or annotation["version"] != os.environ["GITHUB_REF_NAME"][1:]:
+              raise SystemExit(f"Expected the released hosted annotation, got {annotation}")
+          '
+      - name: Validate view_model
+        run: |
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib
+          flutter test --concurrency=1
+          flutter pub publish --dry-run
+      - name: Publish view_model
+        run: flutter pub publish --force

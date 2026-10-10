@@ -26,19 +26,52 @@ description: Workflow for publishing view_model packages (annotation, generator,
 参考：[pubspec_overrides.yaml](https://dart.dev/tools/pub/dependencies#pubspec_overridesyaml)、
 [发布 dry-run](https://dart.dev/tools/pub/publishing#test-publishing-your-package)。
 
-## 发布步骤
+## 一次性配置 pub.dev
 
-1. 先运行每个模块的 test， 保证 pass all.
-1. 先更新版本号。只改动 version: xxx 。其他的依赖版本不要改
-2. view_model_generator 和 view_model 需要更新 view_model_annotation 的版本
-2. 始终保持 "stack_trace: " 版本为空， “meta” 版本为空
-2. 编写 changelog 时只写 1 个正式版本条目（例如 `15.0.0`），不区分 `-dev.0`、`-dev.1`、`-dev.2`
-3. 按顺序发布 
-	a. view_model_annotation
-	b. view_model_generator
-	c. view_model
-4. 发布代码： fd pub publish  然后执行后等待一会 输入 y
-4. 发布 view_model_annotation 后等待 5分钟，然后发布 view_model_generator 和 view_model
-5. 发布结束后，执行 git add . && git commit -m "publish version:x.x.x"
-6. 将提交 push 到远程分支（用于远程分发）
-7. 打 tag：`vX.X.X`（例如 `v15.0.0`），并 push 该 tag 到远程
+三个已存在的发布包分别在 pub.dev 的 Admin → Automated publishing 中启用
+GitHub Actions 发布：
+
+- Repository：`lwj1994/flutter_view_model`
+- Tag pattern：`v{{version}}`
+- 当前 workflow 不使用 GitHub Environment，不勾选要求 Environment。
+
+本仓库三个包统一版本，共用一个 release tag。workflow 使用
+`dart-lang/setup-dart@v1` 配置 GitHub OIDC 临时凭据，无需保存长期发布 token。
+缺少上述 pub.dev 配置时，workflow 的上传步骤会失败；仅添加 YAML 不会自动
+修改 pub.dev 的授权设置。
+
+参考：[Dart 官方自动发布说明](https://dart.dev/tools/pub/automated-publishing)。
+
+## 发布步骤：推送 release tag
+
+1. 更新三个包的 `version: X.Y.Z`，同时将 generator 和主包的
+   `view_model_annotation` 依赖更新为相同的精确版本。其他依赖版本不变；
+   `stack_trace:` 和 `meta:` 继续保持空版本约束。
+2. 编写英文 changelog，每个包只写一个正式版本条目，不拆分 `-dev.N`。
+3. 提交并 push 发布代码，确认所有模块的 CI 通过。发布 tag 必须指向包含
+   `.github/workflows/publish.yaml` 的待发布提交。
+4. 创建 `vX.Y.Z` tag 并推送：`git tag vX.Y.Z`、`git push origin vX.Y.Z`。
+   **推送 tag 即开始正式发布**，不再等发布完成后才打 tag。
+5. 查看 `Publish to pub.dev` workflow：
+   - 校验 tag、三个包的版本和 annotation 依赖一致，发布包没有 overrides
+     或 path/git 依赖。
+   - 复用完整 CI 验证所有模块；该 job 内可以使用临时本地 overrides。
+   - 在独立、干净的 job 中验证并发布 annotation。
+   - 等待 5 分钟后，解析 pub.dev 上的 annotation；若解析失败，最多重试
+     10 次、间隔 30 秒。确认来源为 hosted 且版本与 tag 相同后，测试并
+     dry-run，再发布 generator。
+   - 在另一个干净 job 中解析正式依赖、确认 annotation 来源和版本，运行
+     主包串行测试、dry-run，最后发布 view_model。
+6. 三个发布 job 全部成功后，在 pub.dev 核对对应版本。DevTools 扩展与
+   benchmark 不发布。
+
+发布 job 的 `pub get --no-example` 只解析发布包本身；示例和生成代码一致性
+由前置完整 CI 验证。发布 job 不复用测试 job 的 workspace、overrides 或
+解析结果，且不使用 `--skip-validation`。
+
+如果 annotation 或 generator 已发布而后续 job 失败，修复外部配置后使用
+GitHub Actions 的 **Re-run failed jobs**，保留已成功的发布 job。不要对同一
+版本重复上传或移动 release tag。若必须修改代码，创建新版本和新 tag。
+
+需要手动排障时，在干净检出中遵循相同发布顺序与验证规则，本机使用
+`zsh -ic 'fd ...'` / `zsh -ic 'ff ...'`；手动发布不是默认流程。

@@ -1,6 +1,10 @@
 name: view_model Workflow
 
 on:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
   push:
     branches:
       - main
