@@ -1,0 +1,17 @@
+Publishing view_model_generator 1.2.0 to https://pub.dev:
+Validating package...
+Package validation found the following potential issue:
+* Your dependency on "view_model_annotation" should allow more than one version. For example:
+
+  dependencies:
+    view_model_annotation: ^1.2.0
+
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "view_model_annotation".
+
+Package validation found the following hint:
+* The latest published version is 15.0.0-dev.5.
+  Your version 1.2.0 is earlier than that.
+The server may enforce additional checks.
+
+Package has 1 warning and 1 hint.

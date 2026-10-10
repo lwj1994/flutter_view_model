@@ -1,0 +1,28 @@
+Publishing view_model 1.2.0 to https://pub.dev:
+Validating package...
+Package validation found the following 3 potential issues:
+* Your dependency on "meta" should have a version constraint. For example:
+
+  dependencies:
+    meta: ^1.17.0
+
+  Without a constraint, you're promising to support all future versions of "meta".
+
+* Your dependency on "view_model_annotation" should allow more than one version. For example:
+
+  dependencies:
+    view_model_annotation: ^1.2.0
+
+  Constraints that are too tight will make it difficult for people to use your package
+  along with other packages that also depend on "view_model_annotation".
+
+* Your dependency on "stack_trace" should have a version constraint. For example:
+
+  dependencies:
+    stack_trace: ^1.12.1
+
+  Without a constraint, you're promising to support all future versions of "stack_trace".
+The server may enforce additional checks.
+
+Package has 3 warnings.
+Failed to update packages.
