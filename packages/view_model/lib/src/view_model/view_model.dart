@@ -143,8 +143,9 @@ mixin class ViewModel
   /// Normal application code should prefer
   /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
   ///
-  /// 查询规则与 [readCached] 相同；不传 [key] 和 [tag] 时，按创建顺序返回
-  /// 该类型当前缓存中的最新实例，不打印弃用警告。
+  /// Uses the same lookup rules as [readCached]. With neither [key] nor [tag],
+  /// returns the newest instance of this type still in the cache, by creation
+  /// order. This supported lookup does not print a deprecation warning.
   ///
   /// This method is useful for safely accessing a cached ViewModel without
   /// causing
@@ -213,12 +214,16 @@ mixin class ViewModel
   /// Normal application code should prefer
   /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
   ///
-  /// [key] 优先定位实例；未命中且提供 [tag] 时，返回 tag 匹配中最新创建的实例。
-  /// 不传 [key] 和 [tag] 时，返回该 T 类型共享缓存中仍存在的最新创建实例。
-  /// “最新”按创建顺序判断，访问旧实例不会改变顺序；后续新建或回收实例可能
-  /// 改变下一次查询结果。无参查询是受支持的行为，不打印弃用警告。
-  /// tag 命中多个实例时会打印 debug 歧义提示；需要全部匹配时用 binding 的
-  /// `readCachesByTag`。
+  /// A [key] takes priority. If it misses and a [tag] is provided, returns the
+  /// newest matching instance. With neither [key] nor [tag], returns the newest
+  /// instance of type [T] still present in the shared cache.
+  ///
+  /// Newest means most recently created, not most recently accessed. Reading
+  /// an older instance does not change the order; creating or recycling an
+  /// instance can change the next lookup result. Lookups without a key or tag
+  /// remain supported and do not print a deprecation warning.
+  /// A tag with multiple matches triggers a debug ambiguity warning; use the
+  /// binding's `readCachesByTag` to retrieve all matches.
   ///
   /// Parameters:
   /// - [key]: The unique key from [ViewModelFactory.key].

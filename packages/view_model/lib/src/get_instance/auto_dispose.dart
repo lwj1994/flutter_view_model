@@ -180,7 +180,7 @@ class AutoDisposeInstanceController {
   }) {
     if (_disposed) {
       throw ViewModelError(
-          "AutoDisposeInstanceController.getInstance() called after dispose.");
+          "AutoDisposeInstanceController.getHandle() called after dispose.");
     }
     if (T == dynamic) {
       throw ViewModelError("T must extends ViewModel");

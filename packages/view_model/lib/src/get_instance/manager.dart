@@ -203,11 +203,13 @@ class InstanceManager {
     return _getStore<T>().getInstancesByTag(tag);
   }
 
-  /// 按类型和 tag 对象身份记录提示，避免要求 tag 提供可用的 hashCode。
+  /// Tracks warnings by type and tag identity without calling the tag's
+  /// custom hashCode.
   final Map<Type, Set<Object>> _ambiguousTagLookupWarnings = {};
 
-  /// 仅在 tag 命中多个实例时提示，每个类型/tag 对象身份只提示一次。
-  /// 无 key/tag 的查询按约定返回最新实例，不打印警告。
+  /// Warns only when a tag matches multiple instances, once per type and tag
+  /// object identity. Lookups without a key or tag return the newest instance
+  /// as documented and do not print a warning.
   void _warnAmbiguousTagLookup<T>(Object tag) {
     final warnedTags = _ambiguousTagLookupWarnings.putIfAbsent(
       T,
