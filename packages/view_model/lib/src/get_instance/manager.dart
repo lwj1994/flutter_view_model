@@ -8,6 +8,8 @@
 /// @author luwenjie on 2025/3/25 12:23:33
 library;
 
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 
@@ -169,6 +171,10 @@ class InstanceManager {
       if (find == null) {
         throw ViewModelError("no $T instance found");
       }
+      assert(() {
+        if (tag != null) _warnAmbiguousTagLookup<T>(tag);
+        return true;
+      }());
 
       // if bindingId is not null, add binding
       if (bindingId != null) {
@@ -197,6 +203,28 @@ class InstanceManager {
     return _getStore<T>().getInstancesByTag(tag);
   }
 
+  /// Tracks warnings by type and tag identity without calling the tag's
+  /// custom hashCode.
+  final Map<Type, Set<Object>> _ambiguousTagLookupWarnings = {};
+
+  /// Warns only when a tag matches multiple instances, once per type and tag
+  /// object identity. Lookups without a key or tag return the newest instance
+  /// as documented and do not print a warning.
+  void _warnAmbiguousTagLookup<T>(Object tag) {
+    final warnedTags = _ambiguousTagLookupWarnings.putIfAbsent(
+      T,
+      HashSet<Object>.identity,
+    );
+    final matches = _getStore<T>().countInstances(tag: tag);
+    if (matches < 2 || !warnedTags.add(tag)) return;
+    debugPrint(
+      'view_model warning: a single-result cached lookup of $T by tag '
+      '${Error.safeToString(tag)} matched $matches instances and returned the '
+      'most recently created one. Use readCachesByTag/watchCachesByTag for a '
+      'shared tag, or an explicit key for one instance.',
+    );
+  }
+
   /// Force-disposes every cached instance and clears all type stores.
   ///
   /// This is primarily used by `ViewModel.reset()` to guarantee
@@ -205,6 +233,7 @@ class InstanceManager {
   void disposeAll({bool force = true}) {
     if (_isResetting) return;
     _isResetting = true;
+    _ambiguousTagLookupWarnings.clear();
     try {
       final stores = _stores.values.cast<Store<dynamic>>().toList(
             growable: false,

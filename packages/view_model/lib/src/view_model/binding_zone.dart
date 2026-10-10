@@ -145,6 +145,11 @@ class ViewModelBindingHandler {
     }
   }
 
+  /// Whether [ref] owns this ViewModel through its own direct source.
+  @internal
+  bool hasDirectRef(ViewModelBinding ref) =>
+      _refSources[ref]?.contains(ref) ?? false;
+
   @internal
   void removeRef(
     ViewModelBinding ref, {

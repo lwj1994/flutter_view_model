@@ -57,6 +57,9 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Does not create new instances. The widget will rebuild when the
   /// ViewModel notifies listeners.
+  ///
+  /// Uses the same lookup rules as [readCached]. Without a key or tag, returns
+  /// the most recently created instance of this type still in the cache.
   VM watchCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -73,12 +76,17 @@ abstract interface class ViewModelBindingInterface {
   /// Does not create new instances and does not cause the widget to
   /// rebuild when the ViewModel changes.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified `key` uniquely identifies a cached instance;
-  /// a `tag` may match multiple instances, so use [readCachesByTag]. If neither
-  /// `key` nor `tag` is provided, a multi-instance lookup returns the most
-  /// recently created instance. Use this only when you fully understand that
-  /// behavior.
+  /// Prefer [read] or [watch] with a spec for normal dependency resolution.
+  /// A [key] takes priority. If it misses and a [tag] is provided, returns the
+  /// newest matching instance. With neither [key] nor [tag], returns the newest
+  /// instance of this VM type still present in the shared cache.
+  ///
+  /// Newest means most recently created, not most recently accessed. Reading
+  /// an older instance does not change the order; creating or recycling an
+  /// instance can change the next lookup result. Lookups without a key or tag
+  /// remain supported and do not print a deprecation warning.
+  /// A tag with multiple matches triggers a debug ambiguity warning; use
+  /// [readCachesByTag] to retrieve all matches.
   VM readCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -103,6 +111,9 @@ abstract interface class ViewModelBindingInterface {
   ///
   /// Useful when a ViewModel might be optional and absence should not
   /// throw.
+  ///
+  /// Uses the same lookup rules as [readCached]. Without a key or tag, returns
+  /// the most recently created instance of this type still in the cache.
   VM? maybeWatchCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -114,12 +125,9 @@ abstract interface class ViewModelBindingInterface {
   /// Reads the cached ViewModel without listening and avoids throwing
   /// when the instance does not exist.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified `key` uniquely identifies a cached instance;
-  /// use [readCachesByTag] when a `tag` may match multiple instances. If
-  /// neither `key` nor `tag` is provided, a multi-instance lookup returns the
-  /// most recently created instance based on creation order. Use this only
-  /// when you fully understand that behavior.
+  /// Uses the same lookup rules as [readCached]. With neither [key] nor [tag],
+  /// returns the newest instance of this type still in the cache, by creation
+  /// order. This supported lookup does not print a deprecation warning.
   VM? maybeReadCached<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -136,7 +144,7 @@ abstract interface class ViewModelBindingInterface {
 
   void listenState<VM extends StateViewModel<S>, S>(
     ViewModelFactory<VM> factory, {
-    required Function(S? previous, S state) onChanged,
+    required void Function(S previous, S state) onChanged,
   });
 
   /// Listens to a selected state value.
@@ -148,7 +156,7 @@ abstract interface class ViewModelBindingInterface {
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
     bool Function(R previous, R current)? equals,
-    required Function(R? previous, R current) onChanged,
+    required void Function(R previous, R current) onChanged,
   });
 
   /// Danger: force-disposes the shared instance and removes every owner,
@@ -321,6 +329,13 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   final Map<(Type, Object), Object> _factorySources = {};
   final Map<ViewModel, (Type, Object)> _factoryIdentities = Map.identity();
 
+  /// Handles this binding already owns directly, by resolved type and key.
+  ///
+  /// A spec resolution that hits this map skips the Zone and Store round trip:
+  /// the direct bind, ref and handle listener it would add already exist.
+  /// Entries are removed when the handle is detached, recycled or disposed.
+  final Map<(Type, Object), InstanceHandle> _resolvedHandles = {};
+
   void _handleInstanceChange() {
     if (markViewModelBindingUpdated(this)) {
       onUpdate();
@@ -339,6 +354,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     ViewModel viewModel,
   ) {
     _stateListeners.remove(viewModel)?.call();
+    _resolvedHandles.removeWhere((_, value) => identical(value, handle));
     final subscriptions = _subscriptions
         .where((subscription) => subscription.isAttachedTo(viewModel))
         .toList(growable: false);
@@ -541,6 +557,8 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// its [key] or [tag]. It does not create new instances.
   ///
   /// The widget will rebuild whenever the ViewModel notifies its listeners.
+  /// Uses the same lookup rules as [readCached]. Without a key or tag, returns
+  /// the most recently created instance of this type still in the cache.
   ///
   /// Parameters:
   /// - [key]: The unique key used to find the ViewModel.
@@ -605,12 +623,17 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   /// its [key] or [tag]. It does not create new instances and does not cause
   /// the widget to rebuild when the ViewModel changes.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified [key] uniquely identifies a cached instance;
-  /// a [tag] may match multiple instances, so use [readCachesByTag] for a
-  /// batch lookup. If neither [key] nor [tag] is provided, a multi-instance
-  /// lookup returns the most recently created instance based on creation
-  /// order. Use this only when you fully understand that behavior.
+  /// Prefer [read] or [watch] with a spec for normal dependency resolution.
+  /// A [key] takes priority. If it misses and a [tag] is provided, returns the
+  /// newest matching instance. With neither [key] nor [tag], returns the newest
+  /// instance of this VM type still present in the shared cache.
+  ///
+  /// Newest means most recently created, not most recently accessed. Reading
+  /// an older instance does not change the order; creating or recycling an
+  /// instance can change the next lookup result. Lookups without a key or tag
+  /// remain supported and do not print a deprecation warning.
+  /// A tag with multiple matches triggers a debug ambiguity warning; use
+  /// [readCachesByTag] to retrieve all matches.
   ///
   /// Parameters:
   /// - [key]: The unique key used to find the ViewModel.
@@ -725,26 +748,38 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       );
     }
     final Object key = configuredKey ?? _defaultViewModelKey;
-    final tag = factory.tag();
-    final res = runWithBinding(
-      () {
-        return _instanceController.getInstance<VM>(
-          factory: InstanceFactory<VM>(
-            arg: InstanceArg(
-              key: key,
-              tag: tag,
-              aliveForever: aliveForever,
+    final identity = (VM, key);
+    final VM res;
+    final cached = _resolvedHandles[identity];
+    if (cached != null && _ownsResolvedHandle(cached)) {
+      // Cache hit already owned by this binding: the Store would only repeat
+      // idempotent bind/addRef/listener registration, so skip it.
+      res = cached.instance as VM;
+    } else {
+      final tag = factory.tag();
+      final handle = runWithBinding(
+        () {
+          // The controller performs bind + addRef + handle listener.
+          return _instanceController.getHandle<VM>(
+            factory: InstanceFactory<VM>(
+              arg: InstanceArg(
+                key: key,
+                tag: tag,
+                aliveForever: aliveForever,
+              ),
+              builder: factory.build,
             ),
-            builder: factory.build,
-          ),
-        )..refHandler.addRef(viewModelBinding);
-      },
-      viewModelBinding,
-    );
+          );
+        },
+        viewModelBinding,
+      );
+      res = handle.instance;
+      _resolvedHandles[identity] = handle;
+    }
 
     assert(() {
       _recordFactoryResolution<VM>(factory, key);
-      _factoryIdentities[res] = (VM, key);
+      _factoryIdentities[res] = identity;
       return true;
     }());
 
@@ -752,6 +787,15 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       _addListener(res);
     }
     return res;
+  }
+
+  bool _ownsResolvedHandle(InstanceHandle handle) {
+    if (handle.isDisposed || instanceManager.isResetting) return false;
+    if (!handle.containsDirectBinding(id)) return false;
+    final instance = handle.instance;
+    return instance is ViewModel &&
+        !instance.isDisposed &&
+        instance.refHandler.hasDirectRef(this);
   }
 
   void _recordFactoryResolution<VM extends ViewModel>(
@@ -889,6 +933,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       }
     }
     _stateListeners.clear();
+    _resolvedHandles.clear();
     _factorySources.clear();
     _factoryIdentities.clear();
     // Run listener cleanup callbacks before disposing the instance controller,
@@ -931,7 +976,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   @override
   void listenState<VM extends StateViewModel<S>, S>(
     ViewModelFactory<VM> factory, {
-    required Function(S? previous, S state) onChanged,
+    required void Function(S previous, S state) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
     _addSubscription(vm, (value) => value.listenState(onChanged: onChanged));
@@ -942,7 +987,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     ViewModelFactory<VM> factory, {
     required R Function(S state) selector,
     bool Function(R previous, R current)? equals,
-    required Function(R? previous, R current) onChanged,
+    required void Function(R previous, R current) onChanged,
   }) {
     final VM vm = viewModelBinding.read<VM>(factory);
     _addSubscription(
@@ -957,12 +1002,9 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
 
   /// Safely queries the existing cache and returns `null` when not found.
   ///
-  /// Regular application code should prefer [read] or [watch] with a spec for
-  /// precise lookup. A specified [key] uniquely identifies a cached instance;
-  /// use [readCachesByTag] when a [tag] may match multiple instances. If
-  /// neither [key] nor [tag] is provided, a multi-instance lookup returns the
-  /// most recently created instance based on creation order. Use this only
-  /// when you fully understand that behavior.
+  /// Uses the same lookup rules as [readCached]. With neither [key] nor [tag],
+  /// returns the newest instance of this type still in the cache, by creation
+  /// order. This supported lookup does not print a deprecation warning.
   @override
   VM? maybeReadCached<VM extends ViewModel>({Object? key, Object? tag}) {
     try {
@@ -1163,7 +1205,7 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
 
   void listenViewModelState<VM extends StateViewModel<S>, S>({
     required ViewModelFactory<VM> factory,
-    required Function(S? previous, S state) onChanged,
+    required void Function(S previous, S state) onChanged,
   }) {
     viewModelBinding.listenState<VM, S>(factory, onChanged: onChanged);
   }
@@ -1172,7 +1214,7 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
     required ViewModelFactory<VM> factory,
     required R Function(S state) selector,
     bool Function(R previous, R current)? equals,
-    required Function(R? previous, R current) onChanged,
+    required void Function(R previous, R current) onChanged,
   }) {
     viewModelBinding.listenStateSelect<VM, S, R>(
       factory,
@@ -1209,12 +1251,9 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
 
   /// Queries the existing cache without listening for changes.
   ///
-  /// Regular application code should prefer `readViewModel` /
-  /// `watchViewModel` with a spec for precise lookup. A specified [key]
-  /// uniquely identifies a cached instance; a [tag] may match multiple
-  /// instances, so use `viewModelBinding.readCachesByTag`. If neither [key]
-  /// nor [tag] is provided, a multi-instance lookup returns the most recently
-  /// created instance. Use this only when you fully understand that behavior.
+  /// Uses the same lookup rules as [ViewModelBindingInterface.readCached].
+  /// With neither [key] nor [tag], returns the newest instance of this type
+  /// still in the cache. Creation order, rather than access order, is used.
   VM readCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,
@@ -1247,13 +1286,9 @@ extension ViewModelBindingHostExtension on ViewModelBindingHost {
 
   /// Safely queries the existing cache and returns `null` when not found.
   ///
-  /// Regular application code should prefer `readViewModel` /
-  /// `watchViewModel` with a spec for precise lookup. A specified [key]
-  /// uniquely identifies a cached instance; use
-  /// `viewModelBinding.readCachesByTag` when a [tag] may match multiple
-  /// instances. If neither [key] nor [tag] is provided, a multi-instance
-  /// lookup returns the most recently created instance based on creation
-  /// order. Use this only when you fully understand that behavior.
+  /// Uses the same lookup rules as [ViewModelBindingInterface.readCached].
+  /// With neither [key] nor [tag], returns the newest instance of this type
+  /// still in the cache. Creation order, rather than access order, is used.
   VM? maybeReadCachedViewModel<VM extends ViewModel>({
     Object? key,
     Object? tag,

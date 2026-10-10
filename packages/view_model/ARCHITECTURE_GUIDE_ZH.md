@@ -81,7 +81,8 @@ sequenceDiagram
 ### Identity 规则
 
 - 实例 identity 是解析泛型 ViewModel 类型 `T` 加 effective `key`；`tag` 只用于
-  分组。
+  分组。spec 对象、builder、构造参数都不参与身份：同一 binding 内两个不同的
+  无 key spec 只要 `T` 相同，就解析到同一个实例。
 - root 内的 unkeyed VM 使用该 root binding 的私有 default key。
 - unkeyed child 使用 parent generation 的私有 default key。只要 parent 对象仍
   存活，即使 A/B root 加入或离开，该 key 也保持稳定。
@@ -128,8 +129,10 @@ child 更新需要通知 parent 时，在 parent 内使用 `watch`。依赖通�
 | `watchCachesByTag(tag)` | 否；返回全部命中 | 是 | 是 | 是 |
 | `readCachesByTag(tag)` | 否；返回全部命中 | 是 | 否 | 是 |
 
-按 tag 获取单个实例可能有歧义，并依赖缓存创建顺序；多个实例可能共用 tag 时，
-应使用 tag 批量 API。
+不传 `key` 和 `tag` 时，单实例查询返回该类型共享缓存中仍存在的、创建时间最新的
+实例。访问旧实例不会改变创建顺序；后续新建或回收实例可能改变下一次查询结果。
+按 tag 查询单个实例时返回匹配实例中最新创建的一个，命中多个实例时打印 debug
+歧义提示。需要所有匹配实例时使用 tag 批量 API。
 
 ## 4. 构造与判环
 

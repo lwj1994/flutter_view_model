@@ -84,7 +84,9 @@ scope or its children; they remain until `recycle` or `ViewModel.reset()`.
 ### Identity rules
 
 - Instance identity is resolved generic ViewModel type `T` plus effective
-  `key`; `tag` is only a grouping label.
+  `key`; `tag` is only a grouping label. The spec object, builder, and
+  constructor arguments do not participate: two different unkeyed specs of the
+  same `T` resolve one instance within a binding.
 - An unkeyed root uses that root binding's private default key.
 - An unkeyed child uses its parent generation's private default key. The key is
   stable while that parent object is alive, even when roots A/B join or leave.
@@ -139,8 +141,12 @@ remaining listeners; the state value itself changes immediately.
 | `watchCachesByTag(tag)` | No; returns all matches | Yes | Yes | Yes |
 | `readCachesByTag(tag)` | No; returns all matches | Yes | No | Yes |
 
-Single-result tag lookup can be ambiguous and follows cache creation order;
-use a tag-batch method when several instances may share the same tag.
+With neither `key` nor `tag`, a single-result lookup returns the most recently
+created instance of the requested type still in the shared cache. Reading an
+older instance does not change creation order; creating or recycling instances
+can change the next lookup result. Single-result tag lookup returns the newest
+matching instance and prints a debug ambiguity warning when several match.
+Use a tag-batch method when all matching instances are needed.
 
 ## 4. Construction and cycles
 

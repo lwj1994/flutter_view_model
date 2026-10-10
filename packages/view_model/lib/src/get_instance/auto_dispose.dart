@@ -168,9 +168,19 @@ class AutoDisposeInstanceController {
   T getInstance<T>({
     InstanceFactory<T>? factory,
   }) {
+    return getHandle<T>(factory: factory).instance;
+  }
+
+  /// Same as [getInstance], but returns the tracked [InstanceHandle].
+  ///
+  /// The binding uses the handle to recognize later cache hits without
+  /// re-entering the Store.
+  InstanceHandle<T> getHandle<T>({
+    InstanceFactory<T>? factory,
+  }) {
     if (_disposed) {
       throw ViewModelError(
-          "AutoDisposeInstanceController.getInstance() called after dispose.");
+          "AutoDisposeInstanceController.getHandle() called after dispose.");
     }
     if (T == dynamic) {
       throw ViewModelError("T must extends ViewModel");
@@ -190,7 +200,7 @@ class AutoDisposeInstanceController {
       (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
     }
     _attachHandleListener(notifier);
-    return notifier.instance;
+    return notifier;
   }
 
   List<T> getInstancesByTag<T>(Object tag) {

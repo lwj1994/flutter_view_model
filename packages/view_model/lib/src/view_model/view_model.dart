@@ -143,11 +143,9 @@ mixin class ViewModel
   /// Normal application code should prefer
   /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
   ///
-  /// This method only queries the existing cache. A specific [key] uniquely
-  /// identifies an instance. A [tag] can match several instances; use the
-  /// binding's `readCachesByTag` for that case. With neither [key] nor [tag],
-  /// multiple matches are resolved by creation order and the newest instance
-  /// is returned. Use that behavior only when you understand and intend it.
+  /// Uses the same lookup rules as [readCached]. With neither [key] nor [tag],
+  /// returns the newest instance of this type still in the cache, by creation
+  /// order. This supported lookup does not print a deprecation warning.
   ///
   /// This method is useful for safely accessing a cached ViewModel without
   /// causing
@@ -215,12 +213,17 @@ mixin class ViewModel
   ///
   /// Normal application code should prefer
   /// `ViewModelBinding.read/watch(spec)` for explicit resolution.
-  /// A specific
-  /// [key] uniquely identifies a cached instance. A [tag] can match several
-  /// instances; use the binding's `readCachesByTag` for that case. With neither
-  /// [key] nor [tag], multiple matches are resolved by creation order and the
-  /// newest instance is returned. Use that behavior only when you understand
-  /// and intend it.
+  ///
+  /// A [key] takes priority. If it misses and a [tag] is provided, returns the
+  /// newest matching instance. With neither [key] nor [tag], returns the newest
+  /// instance of type [T] still present in the shared cache.
+  ///
+  /// Newest means most recently created, not most recently accessed. Reading
+  /// an older instance does not change the order; creating or recycling an
+  /// instance can change the next lookup result. Lookups without a key or tag
+  /// remain supported and do not print a deprecation warning.
+  /// A tag with multiple matches triggers a debug ambiguity warning; use the
+  /// binding's `readCachesByTag` to retrieve all matches.
   ///
   /// Parameters:
   /// - [key]: The unique key from [ViewModelFactory.key].
@@ -666,7 +669,7 @@ mixin class ViewModel
 /// ```
 abstract class StateViewModel<T> with ViewModel {
   late final ViewModelStateStore<T> _store;
-  final List<Function(T? previous, T state)> _stateListeners = [];
+  final List<void Function(T previous, T state)> _stateListeners = [];
   final Queue<DiffState<T>> _pendingStateEvents = Queue();
   bool _dispatchingStateEvents = false;
 
@@ -675,7 +678,9 @@ abstract class StateViewModel<T> with ViewModel {
   ///
   /// Unlike the general [listen] method, this provides access to both the
   /// previous state and the new state, allowing for more granular
-  /// change detection.
+  /// change detection. Callbacks only run for a real state transition, so
+  /// [previous] is always the state that was replaced (typed `T`, which is
+  /// itself nullable only when `T` is).
   ///
   /// Parameters:
   /// - [onChanged]: Callback that receives (previousState, currentState)
@@ -686,13 +691,15 @@ abstract class StateViewModel<T> with ViewModel {
   /// ```dart
   /// final removeListener = viewModel.listenState(
   ///   onChanged: (previous, current) {
-  ///     if (previous?.count != current.count) {
-  ///       print('Count changed from ${previous?.count} to ${current.count}');
+  ///     if (previous.count != current.count) {
+  ///       print('Count changed from ${previous.count} to ${current.count}');
   ///     }
   ///   },
   /// );
   /// ```
-  Function() listenState({required Function(T? previous, T state) onChanged}) {
+  Function() listenState({
+    required void Function(T previous, T state) onChanged,
+  }) {
     _stateListeners.add(onChanged);
     return () {
       _stateListeners.remove(onChanged);
@@ -729,7 +736,7 @@ abstract class StateViewModel<T> with ViewModel {
   Function() listenStateSelect<S>({
     required S Function(T state) selector,
     bool Function(S previous, S current)? equals,
-    required void Function(S? previous, S current) onChanged,
+    required void Function(S previous, S current) onChanged,
   }) {
     final globalEquals = ViewModel.config.equals;
     final effectiveEquals = equals ??
@@ -739,11 +746,8 @@ abstract class StateViewModel<T> with ViewModel {
 
     // Wrap into a full-state listener to reuse the existing dispatch path.
     // ignore: prefer_final_locals
-    Function(T? previous, T state) wrapper = (prevState, currState) {
-      // State listeners are only dispatched for a real setState transition,
-      // so a previous state always exists. The cast also preserves a nullable
-      // T: in that case null is a valid previous state passed to the selector.
-      final S prevSel = selector(prevState as T);
+    void Function(T previous, T state) wrapper = (prevState, currState) {
+      final S prevSel = selector(prevState);
       final S currSel = selector(currState);
       if (!effectiveEquals(prevSel, currSel)) {
         onChanged(prevSel, currSel);
@@ -803,14 +807,18 @@ abstract class StateViewModel<T> with ViewModel {
       runInViewModelUpdateTransaction(() {
         while (_pendingStateEvents.isNotEmpty && !_isDisposed) {
           final current = _pendingStateEvents.removeFirst();
-          final stateListeners = List<Function(T? previous, T state)>.of(
+          final stateListeners = List<void Function(T previous, T state)>.of(
             _stateListeners,
           );
+          // A dispatched event is always a real setState transition, so a
+          // previous state exists. The cast preserves a nullable T, where null
+          // is a valid previous state.
+          final previous = current.previousState as T;
           for (final element in stateListeners) {
             if (_isDisposed) break;
             if (!_stateListeners.contains(element)) continue;
             try {
-              element.call(current.previousState, current.currentState);
+              element.call(previous, current.currentState);
             } catch (e, stack) {
               reportViewModelError(
                 e,
@@ -835,7 +843,7 @@ abstract class StateViewModel<T> with ViewModel {
   ///
   /// Parameters:
   /// - [listener]: The listener function to remove
-  void removeStateListener(Function(T? previous, T state) listener) {
+  void removeStateListener(void Function(T previous, T state) listener) {
     _stateListeners.remove(listener);
   }
 
