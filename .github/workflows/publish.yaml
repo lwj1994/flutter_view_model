@@ -124,7 +124,9 @@ jobs:
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib test
           dart test --concurrency=1
-          dart pub publish --dry-run
+          # The exact annotation version intentionally produces a warning.
+          # Keep warnings visible; validation errors must still fail the job.
+          dart pub publish --dry-run --ignore-warnings
       - name: Publish generator
         run: dart pub publish --force
 
@@ -160,6 +162,8 @@ jobs:
           dart format --set-exit-if-changed -l 80 -o none lib test
           dart analyze --fatal-infos --fatal-warnings lib
           flutter test --concurrency=1
-          flutter pub publish --dry-run
+          # Exact annotation and unconstrained meta/stack_trace are intentional.
+          # Keep warnings visible; validation errors must still fail the job.
+          flutter pub publish --dry-run --ignore-warnings
       - name: Publish view_model
         run: flutter pub publish --force

@@ -69,9 +69,18 @@ GitHub Actions 发布：
 由前置完整 CI 验证。发布 job 不复用测试 job 的 workspace、overrides 或
 解析结果，且不使用 `--skip-validation`。
 
+generator 和主包的 dry-run 使用 `--ignore-warnings`：精确锁定 annotation
+会产生版本约束警告，主包刻意保留空约束的 `meta` / `stack_trace` 也会产生
+警告。该选项保留警告输出，并仍让校验错误导致失败；不要改用
+`--skip-validation`，也不要通过 `|| true` 忽略任意失败。发布前仍须审阅
+dry-run 输出中的新增警告。
+
 如果 annotation 或 generator 已发布而后续 job 失败，修复外部配置后使用
 GitHub Actions 的 **Re-run failed jobs**，保留已成功的发布 job。不要对同一
 版本重复上传或移动 release tag。若必须修改代码，创建新版本和新 tag。
 
 需要手动排障时，在干净检出中遵循相同发布顺序与验证规则，本机使用
 `zsh -ic 'fd ...'` / `zsh -ic 'ff ...'`；手动发布不是默认流程。
+若失败只涉及 workflow 的预期警告处理，可从原 release tag 的干净检出
+完成上述验证并补发尚未发布的包；单独提交 workflow 修复，不修改 tag，
+不重复上传已发布的包，也不将修复后的其他包内容混入当前版本。
