@@ -12,6 +12,8 @@ import 'dart:collection';
 
 import 'package:flutter/widgets.dart';
 import 'package:view_model/src/log.dart';
+import 'package:view_model/src/view_model/view_model.dart';
+import 'package:view_model/src/view_model/view_model_binding.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/src/view_model/config.dart';
 import 'package:view_model/src/view_model/construction_transaction.dart';
@@ -132,7 +134,9 @@ class Store<T> implements RecyclableInstanceStore {
   /// - [notifier]: The instance handle to monitor for disposal
   void _listenDispose(InstanceHandle<T> notifier) {
     void onNotify() {
-      _instances.remove(notifier.arg.key);
+      if (identical(_instances[notifier.arg.key], notifier)) {
+        _instances.remove(notifier.arg.key);
+      }
       notifier.removeListener(onNotify);
       if (_instances.isEmpty) {
         _onStoreEmpty?.call();
@@ -162,7 +166,10 @@ class Store<T> implements RecyclableInstanceStore {
   ///
   /// Throws [ViewModelError] if no cached instance exists and no
   /// builder is provided.
-  InstanceHandle<T> getNotifier({required InstanceFactory<T> factory}) {
+  InstanceHandle<T> getNotifier({
+    required InstanceFactory<T> factory,
+    void Function(InstanceHandle<T>)? onResolve,
+  }) {
     if (_disposed) {
       throw ViewModelError("Store<$T> has been disposed.");
     }
@@ -182,7 +189,11 @@ class Store<T> implements RecyclableInstanceStore {
       // `bind` is source-aware. Even when this id is already present through
       // a parent dependency edge, the direct binding still needs its own
       // source so either relationship can be released independently.
-      notifier.bind(bindingId);
+      if (onResolve != null) {
+        onResolve(notifier);
+      } else {
+        notifier.bind(bindingId);
+      }
       return notifier;
     }
 
@@ -212,6 +223,7 @@ class Store<T> implements RecyclableInstanceStore {
           instance: instance,
           arg: arg,
           index: _nextIndex++,
+          bindOnCreate: onResolve == null,
         );
       },
     );
@@ -227,6 +239,16 @@ class Store<T> implements RecyclableInstanceStore {
     _instances[realKey] = create;
     _streamController.add(create);
     _listenDispose(create);
+    try {
+      onResolve?.call(create);
+    } catch (_) {
+      // Only this cache-miss generation is tentative. Existing shared handles
+      // and sources installed by a reentrant owner must remain intact.
+      if (!create.isDisposed && create.bindingIds.isEmpty) {
+        create.unbindAll(force: true);
+      }
+      rethrow;
+    }
     return create;
   }
 
@@ -355,8 +377,11 @@ class InstanceHandle<T> with ChangeNotifier {
   /// The actual ViewModel instance (null when disposed).
   late T? _instance;
   bool _disposed = false;
+  bool _recycling = false;
+  void Function()? _pendingOwnerChange;
 
   bool get isDisposed => _disposed;
+  bool get isRecycling => _recycling;
 
   /// Creates a new instance handle.
   ///
@@ -368,8 +393,13 @@ class InstanceHandle<T> with ChangeNotifier {
     required T instance,
     required this.arg,
     required this.index,
+    bool bindOnCreate = true,
   }) : _instance = instance {
-    onCreate(arg);
+    if (bindOnCreate) {
+      onCreate(arg);
+    } else {
+      _notifyCreate(arg);
+    }
   }
 
   /// Adds a binding to this instance.
@@ -380,7 +410,7 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Parameters:
   /// - [id]: The binding ID to add (ignored if null or already exists)
   void bind(String? id) {
-    if (_disposed || id == null) return;
+    if (_disposed || _recycling || id == null) return;
     final source = _directBindingSources.putIfAbsent(id, Object.new);
     bindFrom(id, source);
   }
@@ -391,12 +421,52 @@ class InstanceHandle<T> with ChangeNotifier {
   /// retained silently and prevent an unrelated owner path from unbinding the
   /// instance prematurely.
   void bindFrom(String? id, Object source) {
-    if (_disposed || id == null) return;
+    if (_disposed || _recycling || id == null) return;
     final sources = _bindingSources.putIfAbsent(id, HashSet.identity);
     if (!sources.add(source)) return;
     if (sources.length == 1) {
       _notifyBind(id);
     }
+  }
+
+  /// The single writer for managed ownership. Both ledgers are committed
+  /// before onBind/owner listeners can reenter resolution or disposal.
+  void bindOwner(ViewModelBinding owner, {Object? source}) {
+    if (_disposed || _recycling || owner.isDisposed) {
+      throw ViewModelError('Cannot bind a disposed owner or instance.');
+    }
+    final id = owner.id;
+    final token = source ?? _directBindingSources.putIfAbsent(id, Object.new);
+    final sources = _bindingSources.putIfAbsent(id, HashSet.identity);
+    final first = sources.add(token) && sources.length == 1;
+    final target = _instance;
+    final publish = target is ViewModel
+        ? target.refHandler.addRef(owner, source: source, notify: false)
+        : null;
+    if (first) _notifyBind(id);
+    publish?.call();
+  }
+
+  /// Releases exactly one managed source, retaining other direct/parent paths.
+  void unbindOwner(ViewModelBinding owner, {Object? source}) {
+    if (_disposed) return;
+    final id = owner.id;
+    final token = source ?? _directBindingSources.remove(id);
+    final sources = _bindingSources[id];
+    final removed = token != null && (sources?.remove(token) ?? false);
+    final last = removed && sources!.isEmpty;
+    if (last) _bindingSources.remove(id);
+    final target = _instance;
+    final publish = target is ViewModel
+        ? target.refHandler.removeRef(owner, source: source, notify: false)
+        : null;
+    publish?.call();
+    _publishPendingOwnerChange();
+    // Owner propagation can rebind this ID before the old release resumes.
+    if (last && !_disposed && !_bindingSources.containsKey(id)) {
+      _notifyUnbind(id);
+    }
+    if (removed && _bindingSources.isEmpty) _recycle();
   }
 
   /// Removes a binding from this instance.
@@ -424,6 +494,11 @@ class InstanceHandle<T> with ChangeNotifier {
     if (sources.isNotEmpty) return;
 
     _bindingSources.remove(id);
+    _notifyUnbind(id);
+    if (_bindingSources.isEmpty) _recycle();
+  }
+
+  void _notifyUnbind(String id) {
     try {
       if (_instance is InstanceLifeCycle) {
         (_instance as InstanceLifeCycle).onUnbind(arg, id);
@@ -432,40 +507,47 @@ class InstanceHandle<T> with ChangeNotifier {
       reportViewModelError(e, stack, ErrorType.lifecycle,
           '${_instance.runtimeType} onUnbind error');
     }
-    if (_bindingSources.isEmpty) {
-      _recycle();
-    }
   }
 
-  /// Disposes this instance and triggers cleanup.
-  ///
-  /// This method marks the instance for disposal, notifies listeners,
-  /// and calls the disposal lifecycle methods. The instance becomes
-  /// unusable after this call.
   void _recycle({bool force = false}) {
-    if (arg.aliveForever && !force) return;
-    runInViewModelUpdateTransaction(notifyListeners);
-    onDispose();
+    if (_disposed || _recycling || (arg.aliveForever && !force)) return;
+    _recycling = true;
+    _finishRecycle();
+  }
+
+  void _publishPendingOwnerChange() {
+    final publish = _pendingOwnerChange;
+    _pendingOwnerChange = null;
+    publish?.call();
+  }
+
+  void _finishRecycle() {
+    try {
+      runInViewModelUpdateTransaction(() {
+        // The Store listener removes this generation before controllers release
+        // owners and invalidate their hosts. Preserve that re-resolution order.
+        notifyListeners();
+        _publishPendingOwnerChange();
+      });
+    } finally {
+      onDispose();
+    }
   }
 
   void unbindAll({bool force = false}) {
-    if (_disposed) return;
-    // Skip onUnbind callbacks and cleanup for aliveForever instances,
-    // as they should retain their bindings.
-    if (arg.aliveForever && !force) return;
-    for (final bindingId in _bindingSources.keys.toList(growable: false)) {
-      try {
-        if (_instance is InstanceLifeCycle) {
-          (_instance as InstanceLifeCycle).onUnbind(arg, bindingId);
-        }
-      } catch (e, stack) {
-        reportViewModelError(e, stack, ErrorType.lifecycle,
-            '${_instance.runtimeType} onUnbind error');
-      }
-    }
+    if (_disposed || _recycling || (arg.aliveForever && !force)) return;
+    _recycling = true;
+    final ids = _bindingSources.keys.toList(growable: false);
     _bindingSources.clear();
     _directBindingSources.clear();
-    _recycle(force: force);
+    final target = _instance;
+    final publish =
+        target is ViewModel ? target.refHandler.clearRefs(notify: false) : null;
+    _pendingOwnerChange = publish;
+    for (final id in ids) {
+      _notifyUnbind(id);
+    }
+    _finishRecycle();
   }
 
   @override

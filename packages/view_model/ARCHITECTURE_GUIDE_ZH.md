@@ -147,6 +147,13 @@ builder 或 constructor 失败具有原子性：期间暂存的 dependency scope
 listeners、owner paths 与 `addDispose` 注册的资源清理回调都会回滚。`onCreate` 异常继续沿用现有策略：交给
 `ViewModelConfig.onError`，实例继续完成创建。
 
+所有权写入统一通过 handle 的 `bindOwner` / `unbindOwner`。解析先验证依赖边，
+登记依赖关系与销毁跟踪，再提交 handle sources 和 ViewModel refs，之后才调用
+`onBind`。owner 传播读取已提交的状态；重入释放不会留下迟到的 ref，也不会误删
+重新建立的依赖边。绑定失败只回滚本次增加的 sources；没有 owner 的新 generation
+即使声明了 retention 也会销毁，已有共享 generation 的 owners 和订阅保持不变。
+生命周期 hook 抛错仍沿用上报后继续执行的策略。
+
 ## 5. 生命周期控制
 
 - 普通实例在最后一个 binding source 离开时自动销毁。

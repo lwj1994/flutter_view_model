@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:stack_trace/stack_trace.dart';
 
 class StackPathLocator {
+  StackPathLocator({Trace Function() captureTrace = Trace.current})
+      : _captureTrace = captureTrace;
+
+  final Trace Function() _captureTrace;
   // Cache path information to avoid repeated retrieval
   String? _cachedObjectPath;
 
@@ -31,7 +35,7 @@ class StackPathLocator {
         return _cachedObjectPath!;
       }
 
-      final frames = Trace.current().frames;
+      final frames = _captureTrace().frames;
 
       Frame? relevantFrame;
 

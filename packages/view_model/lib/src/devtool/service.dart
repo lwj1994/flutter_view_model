@@ -41,9 +41,15 @@ class DevToolsService {
   static DevToolsService? _instance;
 
   /// Gets the singleton instance of the DevTools service.
-  static DevToolsService get instance => _instance ??= DevToolsService._();
+  static DevToolsService get instance => _instance ??= DevToolsService();
 
-  DevToolsService._();
+  DevToolsService({
+    void Function(String, developer.ServiceExtensionHandler) registerExtension =
+        developer.registerExtension,
+  }) : _registerExtension = registerExtension;
+
+  final void Function(String, developer.ServiceExtensionHandler)
+      _registerExtension;
 
   /// Subscription for handling DevTools messages (reserved for future use).
   StreamSubscription? _messageSubscription;
@@ -80,7 +86,7 @@ class DevToolsService {
     _messageSubscription?.cancel();
     _messageSubscription = null;
     _isInitialized = false;
-    _instance = null;
+    if (identical(_instance, this)) _instance = null;
   }
 
   /// Registers service extensions for DevTools communication.
@@ -94,7 +100,7 @@ class DevToolsService {
   /// - `ext.view_model.getDependencyGraph`: Returns dependency graph data
   void _registerServiceExtensions() {
     viewModelLog("DevTool registerExtension: ext.view_model.getViewModelData");
-    developer.registerExtension('ext.view_model.getViewModelData',
+    _registerExtension('ext.view_model.getViewModelData',
         (method, parameters) async {
       try {
         final data = _getViewModelData();
@@ -111,7 +117,7 @@ class DevToolsService {
       }
     });
 
-    developer.registerExtension('ext.view_model.getDependencyGraph',
+    _registerExtension('ext.view_model.getDependencyGraph',
         (method, parameters) async {
       try {
         final data = _getDependencyGraph();
