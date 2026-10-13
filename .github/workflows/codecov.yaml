@@ -24,7 +24,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test publish warning gate
+      - name: Test CI gates
         run: python3 -m unittest discover -s .github/scripts/tests -v
 
       - name: Setup Flutter
@@ -75,9 +75,17 @@ jobs:
         working-directory: packages/view_model
         run: |
           flutter pub get
-          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart format --set-exit-if-changed -l 80 -o none lib test \
+            "$GITHUB_WORKSPACE/.github/scripts/test_release_conditions.dart"
           dart analyze --fatal-infos --fatal-warnings lib
-          flutter test --concurrency=1 --coverage test
+          flutter test --concurrency=1 --coverage --coverage-path coverage/debug.info test
+          dart --packages="$FLUTTER_ROOT/packages/flutter_tools/.dart_tool/package_config.json" \
+            "$GITHUB_WORKSPACE/.github/scripts/test_release_conditions.dart" \
+            test --no-pub --concurrency=1 --coverage --coverage-path coverage/release.info \
+            --dart-define=dart.vm.product=true \
+            test/release_contract_test.dart
+          python3 "$GITHUB_WORKSPACE/.github/scripts/check_view_model_coverage.py" \
+            coverage/debug.info coverage/release.info --output coverage/lcov.info
 
       - name: Check view_model_annotation
         timeout-minutes: 3
