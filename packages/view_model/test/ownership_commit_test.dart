@@ -236,6 +236,53 @@ void main() {
     expect(keeper.vm.refHandler.owners, [keeper]);
   });
 
+  test('child onUnbind reentry suppresses an obsolete parent onUnbind', () {
+    late _Owner owner;
+    var rebind = true;
+    var active = false;
+    owner = _Owner(ViewModelSpec(
+      builder: () => _Node('parent', events, bound: (_, id) {
+        if (id == owner.id) active = true;
+      }, unbound: (_, id) {
+        if (id == owner.id) active = false;
+      }),
+      key: 'parent',
+    ));
+    final childSpec = ViewModelSpec<_Node>(
+      builder: () => _Node('child', events, unbound: (_, id) {
+        if (id == owner.id && rebind) {
+          rebind = false;
+          owner.watched;
+        }
+      }),
+      key: 'child',
+    );
+    addTearDown(owner.dispose);
+    owner.watched.child(childSpec, watch: true);
+    final generation = identityHashCode(owner.vm);
+    events.clear();
+
+    owner.unbind(owner.vm);
+
+    expect(events, [
+      'unbind:child:${owner.id}',
+      'bind:parent:${owner.id}',
+      'bind:child:${owner.id}',
+    ]);
+    expect(active, isTrue);
+    expect(_handle('parent').bindingIds, [owner.id]);
+    expect(owner.vm.refHandler.owners, [owner]);
+    expect(identityHashCode(owner.vm), generation);
+    owner.vm.child(childSpec).notifyListeners();
+    expect(owner.updates, 1);
+
+    owner.dispose();
+    expect(active, isFalse);
+    expect(events.where((event) => event == 'unbind:parent:${owner.id}'),
+        hasLength(1));
+    expect(events.where((event) => event.startsWith('dispose:')), hasLength(2));
+  });
+
   test('child onBind can remove a joining parent root during propagation', () {
     late _Owner joining;
     final parentSpec = ViewModelSpec<_Node>(

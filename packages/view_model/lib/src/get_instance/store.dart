@@ -462,7 +462,10 @@ class InstanceHandle<T> with ChangeNotifier {
         : null;
     publish?.call();
     _publishPendingOwnerChange();
-    if (last && !_disposed) _notifyUnbind(id);
+    // Owner propagation can rebind this ID before the old release resumes.
+    if (last && !_disposed && !_bindingSources.containsKey(id)) {
+      _notifyUnbind(id);
+    }
     if (removed && _bindingSources.isEmpty) _recycle();
   }
 
