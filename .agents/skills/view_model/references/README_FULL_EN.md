@@ -8,6 +8,12 @@
 npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
 ```
 
+[![Latest release](https://img.shields.io/github/v/release/lwj1994/flutter_view_model?label=release)](https://github.com/lwj1994/flutter_view_model/releases/latest)
+[![pub.dev](https://img.shields.io/pub/v/view_model?label=pub.dev)](https://pub.dev/packages/view_model)
+[![Flutter checks](https://github.com/lwj1994/flutter_view_model/actions/workflows/codecov.yaml/badge.svg?branch=main)](https://github.com/lwj1994/flutter_view_model/actions/workflows/codecov.yaml)
+[![codecov](https://codecov.io/gh/lwj1994/flutter_view_model/branch/main/graph/badge.svg)](https://app.codecov.io/gh/lwj1994/flutter_view_model)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/lwj1994/flutter_view_model/blob/main/LICENSE)
+
 A Flutter architecture library built from first principles: instance identity,
 ownership, and notification relationships.
 
