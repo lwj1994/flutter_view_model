@@ -4,6 +4,7 @@ import 'package:view_model/src/get_instance/auto_dispose.dart';
 import 'package:view_model/src/get_instance/manager.dart';
 import 'package:view_model/src/get_instance/store.dart';
 import 'package:view_model/src/view_model/binding_zone.dart';
+import 'package:view_model/src/view_model/model.dart' as legacy_model;
 import 'package:view_model/src/view_model/pause_aware.dart';
 import 'package:view_model/src/view_model/state_store.dart';
 import 'package:view_model/view_model.dart';
@@ -187,6 +188,28 @@ void main() {
     expect(owner.legacyBindingMatches, isTrue);
     expect(owner.vm.legacyBinding, same(owner.vm.dependencies));
     expect(owner.getName(), contains('_Owner'));
+  });
+
+  test('legacy dependency metadata preserves the spec without resolving it',
+      () {
+    var built = false;
+    final spec = ViewModelSpec<_Vm>(builder: () {
+      built = true;
+      return _Vm();
+    });
+    final config = legacy_model.ViewModelConfig<_Vm>(
+      key: 'legacy-key',
+      tag: 'legacy-tag',
+      factory: spec,
+    );
+    final dependency = legacy_model.ViewModelDependencyConfig(config: config);
+    expect(dependency.config, same(config));
+    expect(config.key, 'legacy-key');
+    expect(config.tag, 'legacy-tag');
+    expect(config.factory, same(spec));
+    expect(config.toString(),
+        '_Vm {key: legacy-key, tag: legacy-tag, factory: $spec}');
+    expect(built, isFalse);
   });
 
   test('a custom status getter cannot bypass the internal disposal guard', () {
