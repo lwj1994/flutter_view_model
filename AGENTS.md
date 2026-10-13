@@ -170,20 +170,24 @@ watch/read/watchCached/readCached
 
 watchCachesByTag/readCachesByTag
   → AutoDisposeInstanceController.getInstancesByTag(tag)
-    → bind + addRef（始终执行）
-    → 追加 _attachHandleListener
+    → 预检全部依赖边，再逐个统一 attachment（持有 + handle listener）
+    → 失败时回滚本次新建的 registration，保留原有持有与订阅
   → listen=true 时追加 _addListener（仅 watchCachesByTag）
 ```
 
 ### AutoDisposeInstanceController.getInstance
 
 1. 将 `viewModelBinding.id` 注入 factory arg 的 `bindingId`
-2. 调用 `instanceManager.getNotifier(factory)` → `Store.getNotifier()`
-   - 缓存命中：直接返回已有 handle，并添加当前 binding source
-   - 缓存未命中：调用 `factory.builder()` 创建实例，包装为 `InstanceHandle`，触发 `onCreate` + `bind`
-3. `addRef(viewModelBinding)` — 将 binding 加入 ViewModel 的 refHandler（依赖追踪）
-4. `_attachHandleListener(notifier)` — 在 InstanceHandle 上注册 listener，仅响应
-   dispose/recycle 事件
+2. 调用 `instanceManager.getNotifier(factory, onResolve: ...)` → `Store.getNotifier()`
+   - 缓存命中：交给 controller 的统一 attachment 入口，不提前 bind
+   - 缓存未命中：builder + `onCreate` 完成后登记 handle/cache/dispose listener，
+     再进入同一个 attachment 入口；失败时回收没有 owner 的暂存新 generation
+3. attachment 先判环，再登记 parent-child edge 与 handle dispose listener；通过
+   `InstanceHandle.bindOwner` 一次提交 handle source 和 ViewModel ref，之后才
+   派发 `onBind` 与 owner 传播。重复解析不会重复持有或注册 listener
+4. direct 与 parent 传播统一使用 `bindOwner` / `unbindOwner`，不要在 controller
+   或 dependency binding 中分别写 `bind + addRef` / `removeRef + unbind`。
+   RefHandler 的 owner 列表从 sources 推导；重入清理只释放原 registration/edge
 
 ### 注意事项
 

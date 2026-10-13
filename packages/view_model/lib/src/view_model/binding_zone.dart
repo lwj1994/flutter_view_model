@@ -54,12 +54,10 @@ R runWithBinding<R>(R Function() body, ViewModelBinding binding) {
 /// ```
 @internal
 class ViewModelBindingHandler {
-  /// Callback function to resolve ViewModel dependencies.
-  /// This is typically set by ViewModelStateMixin to delegate
-  /// dependency resolution
-  /// to the State that manages the ViewModel.
+  /// Ordered owner view; source membership is the only mutable ref ledger.
   @internal
-  final List<ViewModelBinding> dependencyBindings = [];
+  List<ViewModelBinding> get dependencyBindings =>
+      List.unmodifiable(_refSources.keys);
 
   /// Ownership sources for each externally visible binding.
   ///
@@ -69,6 +67,7 @@ class ViewModelBindingHandler {
   final Map<ViewModelBinding, Set<Object>> _refSources = Map.identity();
 
   final List<ViewModelOwnersChanged> _ownerChangeListeners = [];
+  int _ownerRevision = 0;
 
   ViewModelBindingHandler();
 
@@ -79,7 +78,7 @@ class ViewModelBindingHandler {
   /// own stable dependency binding.
   @internal
   List<ViewModelBinding> get owners =>
-      List<ViewModelBinding>.unmodifiable(dependencyBindings);
+      List<ViewModelBinding>.unmodifiable(_refSources.keys);
 
   /// Root/application bindings that own this ViewModel.
   ///
@@ -87,7 +86,7 @@ class ViewModelBindingHandler {
   /// deliberately excluded so they are not propagated as if they were roots.
   @internal
   List<ViewModelBinding> get externalOwners => List.unmodifiable(
-        dependencyBindings.where((binding) => !binding.isDependencyBinding),
+        _refSources.keys.where((binding) => !binding.isDependencyBinding),
       );
 
   /// Initial external owners visible while a ViewModel is being constructed.
@@ -110,7 +109,7 @@ class ViewModelBindingHandler {
 
   /// The current binding used to resolve nested ViewModel dependencies.
   @internal
-  ViewModelBinding? get primaryOwner => dependencyBindings.firstOrNull;
+  ViewModelBinding? get primaryOwner => _refSources.keys.firstOrNull;
 
   /// Adds a diagnostics listener for owner and primary-owner changes.
   ///
@@ -122,27 +121,20 @@ class ViewModelBindingHandler {
     return () => _ownerChangeListeners.remove(listener);
   }
 
-  /// Sets the dependency resolver callback.
-  ///
-  /// This should only be called by ViewModelStateMixin or similar
-  /// framework code.
-  /// The resolver is responsible for creating or retrieving
-  /// ViewModel instances.
-  ///
-  /// Parameters:
-  /// - [resolver]: Function that resolves dependencies with listen parameter
+  /// Commits a source before publishing its owner change. The handle uses
+  /// [notify] = false commits both views before lifecycle callbacks.
   @internal
-  void addRef(
+  void Function()? addRef(
     ViewModelBinding ref, {
     Object? source,
+    bool notify = true,
   }) {
     final previousPrimaryOwner = primaryOwner?.id;
     final sources = _refSources.putIfAbsent(ref, HashSet.identity);
-    if (!sources.add(source ?? ref)) return;
-    if (sources.length == 1) {
-      dependencyBindings.add(ref);
-      _notifyOwnerChanges(previousPrimaryOwner);
-    }
+    if (!sources.add(source ?? ref) || sources.length != 1) return null;
+    final publish = _ownerChange(previousPrimaryOwner);
+    if (notify) publish();
+    return publish;
   }
 
   /// Whether [ref] owns this ViewModel through its own direct source.
@@ -151,33 +143,44 @@ class ViewModelBindingHandler {
       _refSources[ref]?.contains(ref) ?? false;
 
   @internal
-  void removeRef(
+  void Function()? removeRef(
     ViewModelBinding ref, {
     Object? source,
+    bool notify = true,
   }) {
     final previousPrimaryOwner = primaryOwner?.id;
     final sources = _refSources[ref];
-    if (sources == null || !sources.remove(source ?? ref)) return;
-    if (sources.isNotEmpty) return;
+    if (sources == null || !sources.remove(source ?? ref)) return null;
+    if (sources.isNotEmpty) return null;
     _refSources.remove(ref);
-    final index = dependencyBindings.indexWhere(
-      (binding) => identical(binding, ref),
-    );
-    if (index >= 0) {
-      dependencyBindings.removeAt(index);
-      _notifyOwnerChanges(previousPrimaryOwner);
-    }
+    final publish = _ownerChange(previousPrimaryOwner);
+    if (notify) publish();
+    return publish;
   }
 
-  /// Clears the dependency resolver callback and all stored dependencies.
-  ///
-  /// This should be called when the ViewModel is no longer managed by a State
-  /// to prevent memory leaks and ensure clean disposal.
-  void dispose() {
+  @internal
+  void Function()? clearRefs({bool notify = true}) {
+    if (_refSources.isEmpty) return null;
     final previousPrimaryOwner = primaryOwner?.id;
-    dependencyBindings.clear();
     _refSources.clear();
-    _notifyOwnerChanges(previousPrimaryOwner);
+    final publish = _ownerChange(previousPrimaryOwner);
+    if (notify) publish();
+    return publish;
+  }
+
+  void Function() _ownerChange(String? previousPrimaryOwner) {
+    final revision = ++_ownerRevision;
+    return () {
+      // A lifecycle callback may have released/rebound owners already. Never
+      // publish an older snapshot after that newer ownership transition.
+      if (revision == _ownerRevision) {
+        _notifyOwnerChanges(previousPrimaryOwner, revision);
+      }
+    };
+  }
+
+  void dispose() {
+    clearRefs();
     _ownerChangeListeners.clear();
   }
 
@@ -193,15 +196,17 @@ class ViewModelBindingHandler {
     return r;
   }
 
-  void _notifyOwnerChanges(String? previousPrimaryOwner) {
+  void _notifyOwnerChanges(String? previousPrimaryOwner, int revision) {
     if (_ownerChangeListeners.isEmpty) return;
     final ownerIds = List<String>.unmodifiable(
-      dependencyBindings.map((binding) => binding.id),
+      _refSources.keys.map((binding) => binding.id),
     );
     final currentPrimaryOwner = primaryOwner?.id;
     for (final listener in List<ViewModelOwnersChanged>.of(
       _ownerChangeListeners,
     )) {
+      if (revision != _ownerRevision) break;
+      if (!_ownerChangeListeners.contains(listener)) continue;
       try {
         listener(ownerIds, previousPrimaryOwner, currentPrimaryOwner);
       } catch (error, stack) {

@@ -163,6 +163,16 @@ children, listeners, and owner paths are rolled back. An `onCreate` exception
 keeps the existing lifecycle policy: it is reported through
 `ViewModelConfig.onError`, and creation continues.
 
+Ownership writes use the handle's `bindOwner` / `unbindOwner` entry points.
+Resolution validates the dependency edge, registers adjacency and disposal
+tracking, and commits handle sources and ViewModel refs before invoking
+`onBind`. Owner propagation follows the committed state; reentrant releases
+cannot leave a late ref or remove a replacement edge. Failed attachment rolls
+back only its own sources, and an unowned new generation is disposed even if
+its spec requested retention. Existing shared generations keep their owners
+and subscriptions. Lifecycle hook errors retain the existing report-and-continue
+policy.
+
 ## 5. Lifetime controls
 
 - Normal instances auto-dispose when their last binding source is removed.

@@ -53,12 +53,16 @@ class AutoDisposeInstanceController {
   /// cache-miss path on the next access.
   final VoidCallback onHandleDisposing;
 
-  /// Called when this controller starts tracking a handle.
+  /// Validates an edge without mutating ownership or invoking lifecycle code.
   final void Function(InstanceHandle handle, ViewModel viewModel)?
+      onInstanceAttaching;
+
+  /// Commits local tracking and returns optional work to publish after binding.
+  final VoidCallback? Function(InstanceHandle handle, ViewModel viewModel)?
       onInstanceAttached;
 
   /// Called before a tracked ViewModel is recycled or unbound.
-  final void Function(InstanceHandle handle, ViewModel viewModel)?
+  final VoidCallback? Function(InstanceHandle handle, ViewModel viewModel)?
       onInstanceDetached;
 
   /// Map tracking which notifiers already have listeners attached.
@@ -76,6 +80,7 @@ class AutoDisposeInstanceController {
   AutoDisposeInstanceController({
     required this.onHandleDisposing,
     required this.viewModelBinding,
+    this.onInstanceAttaching,
     this.onInstanceAttached,
     this.onInstanceDetached,
   });
@@ -88,46 +93,46 @@ class AutoDisposeInstanceController {
     }
   }
 
-  void _detachViewModelRef(InstanceHandle notifier) {
-    final ViewModel? viewModel =
-        !notifier.isDisposed && notifier.instance is ViewModel
-            ? notifier.instance as ViewModel
-            : null;
-    if (viewModel == null) return;
-    if (!viewModel.isDisposed) {
-      viewModel.refHandler.removeRef(viewModelBinding);
+  void _requireLive(InstanceHandle notifier) {
+    if (_disposed ||
+        viewModelBinding.isDisposed ||
+        notifier.isDisposed ||
+        notifier.isRecycling) {
+      throw ViewModelError('Cannot resolve an instance for a disposed binding '
+          'or while the instance is being recycled.');
     }
-    onInstanceDetached?.call(notifier, viewModel);
   }
 
-  /// Attaches a disposal listener to the notifier if not already attached.
-  void _attachHandleListener(InstanceHandle notifier) {
-    if (_disposed || _notifierListeners.containsKey(notifier)) return;
-    ViewModel? trackedViewModel;
-    if (!notifier.isDisposed && notifier.instance is ViewModel) {
-      trackedViewModel = notifier.instance as ViewModel;
-      try {
-        onInstanceAttached?.call(notifier, trackedViewModel);
-      } catch (_) {
-        // `getNotifier` already added this controller's direct bind/ref. Roll
-        // them back when dependency validation rejects the new edge.
-        if (!trackedViewModel.isDisposed) {
-          trackedViewModel.refHandler.removeRef(viewModelBinding);
-        }
-        if (!notifier.isDisposed) {
-          notifier.unbind(viewModelBinding.id);
-        }
-        rethrow;
-      }
+  void _validateAttachment(InstanceHandle notifier) {
+    _requireLive(notifier);
+    if (!_notifierListeners.containsKey(notifier) &&
+        notifier.instance is ViewModel) {
+      onInstanceAttaching?.call(notifier, notifier.instance as ViewModel);
     }
-    if (!_instanceNotifiers.contains(notifier)) {
-      _instanceNotifiers.add(notifier);
-    }
+  }
+
+  void _detachHandle(InstanceHandle notifier) {
+    if (!_notifierListeners.containsKey(notifier)) return;
+    // Stop tracking before callbacks: a callback can resolve the same cached
+    // generation again, installing a new independently owned registration.
+    _detachNotifier(notifier);
+    final target = !notifier.isDisposed ? notifier.instance : null;
+    final publish =
+        target is ViewModel ? onInstanceDetached?.call(notifier, target) : null;
+    notifier.unbindOwner(viewModelBinding);
+    publish?.call();
+  }
+
+  void _attachHandle(InstanceHandle notifier) {
+    _validateAttachment(notifier);
+    if (_notifierListeners.containsKey(notifier)) return;
+    final target = notifier.instance;
+    final publish =
+        target is ViewModel ? onInstanceAttached?.call(notifier, target) : null;
     final listener = () {
       try {
-        _detachViewModelRef(notifier);
-        _detachNotifier(notifier);
-        if (!instanceManager.isResetting) {
+        _detachHandle(notifier);
+        if (!instanceManager.isResetting && !_disposed) {
           onHandleDisposing.call();
         }
       } catch (e, stack) {
@@ -135,8 +140,27 @@ class AutoDisposeInstanceController {
             'AutoDisposeInstanceController handle listener error');
       }
     };
+    _instanceNotifiers.add(notifier);
     _notifierListeners[notifier] = listener;
     notifier.addListener(listener);
+    try {
+      // Validation, adjacency and disposal tracking precede the first onBind.
+      // bindOwner commits both ownership views before publishing callbacks.
+      notifier.bindOwner(viewModelBinding);
+      if (identical(_notifierListeners[notifier], listener)) publish?.call();
+      _requireLive(notifier);
+      if (!notifier.containsDirectBinding(viewModelBinding.id)) {
+        throw ViewModelError(
+            'Ownership was released while binding an instance.');
+      }
+    } catch (_) {
+      // Do not tear down a replacement registration created by a reentrant
+      // unbind/read. Only roll back the registration made by this attempt.
+      if (identical(_notifierListeners[notifier], listener)) {
+        _detachHandle(notifier);
+      }
+      rethrow;
+    }
   }
 
   /// Gets a ViewModel instance with automatic lifecycle management.
@@ -191,36 +215,42 @@ class AutoDisposeInstanceController {
         bindingId: viewModelBinding.id,
       ),
     );
-    // getNotifier calls bind(bindingId) internally via the factory arg.
-    // Order: bind (via getNotifier) → addRef → attachListener.
-    final InstanceHandle<T> notifier = instanceManager.getNotifier<T>(
+    return instanceManager.getNotifier<T>(
       factory: factory,
+      onResolve: _attachHandle,
     );
-    if (notifier.instance is ViewModel) {
-      (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
-    }
-    _attachHandleListener(notifier);
-    return notifier;
   }
 
   List<T> getInstancesByTag<T>(Object tag) {
-    if (_disposed) {
+    if (_disposed || viewModelBinding.isDisposed) {
       throw ViewModelError(
         'AutoDisposeInstanceController.getInstancesByTag() called after '
         'dispose.',
       );
     }
     final notifiers = instanceManager.getNotifiersByTag<T>(tag);
-    final List<T> result = [];
+    // A rejected member must not partially bind the rest of a tag batch.
     for (final notifier in notifiers) {
-      notifier.bind(viewModelBinding.id);
-      if (notifier.instance is ViewModel) {
-        (notifier.instance as ViewModel).refHandler.addRef(viewModelBinding);
-      }
-      _attachHandleListener(notifier);
-      result.add(notifier.instance);
+      _validateAttachment(notifier);
     }
-    return result;
+    final added = <InstanceHandle, VoidCallback>{};
+    try {
+      final result = <T>[];
+      for (final notifier in notifiers) {
+        final tracked = _notifierListeners.containsKey(notifier);
+        _attachHandle(notifier);
+        if (!tracked) added[notifier] = _notifierListeners[notifier]!;
+        result.add(notifier.instance);
+      }
+      return result;
+    } catch (_) {
+      for (final entry in added.entries.toList(growable: false).reversed) {
+        if (identical(_notifierListeners[entry.key], entry.value)) {
+          _detachHandle(entry.key);
+        }
+      }
+      rethrow;
+    }
   }
 
   /// Executes an action for all tracked ViewModel instances.
@@ -248,9 +278,7 @@ class AutoDisposeInstanceController {
     final notifiers = List<InstanceHandle>.of(_instanceNotifiers);
     for (final notifier in notifiers) {
       if (!notifier.isDisposed && identical(notifier.instance, instance)) {
-        _detachViewModelRef(notifier);
-        _detachNotifier(notifier);
-        notifier.unbind(viewModelBinding.id);
+        _detachHandle(notifier);
         return;
       }
     }
@@ -275,17 +303,9 @@ class AutoDisposeInstanceController {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    for (final e in _instanceNotifiers) {
+    for (final notifier in _instanceNotifiers.toList(growable: false)) {
       try {
-        if (!e.isDisposed && e.instance is ViewModel) {
-          (e.instance as ViewModel).refHandler.removeRef(viewModelBinding);
-        }
-        // Remove listener before unbind, because unbind may trigger _recycle()
-        // which disposes the ChangeNotifier, making removeListener fail.
-        if (_notifierListeners.containsKey(e)) {
-          e.removeListener(_notifierListeners[e]!);
-        }
-        e.unbind(viewModelBinding.id);
+        _detachHandle(notifier);
       } catch (e, stack) {
         reportViewModelError(e, stack, ErrorType.dispose,
             'AutoDisposeInstanceController dispose error');

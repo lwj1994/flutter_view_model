@@ -319,6 +319,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
 
   late final _instanceController = AutoDisposeInstanceController(
     onHandleDisposing: _handleInstanceChange,
+    onInstanceAttaching: _validateInstanceAttachment,
     onInstanceAttached: _handleInstanceAttached,
     onInstanceDetached: _handleInstanceDetached,
     viewModelBinding: this,
@@ -343,13 +344,20 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   @protected
-  void _handleInstanceAttached(
+  void _validateInstanceAttachment(
     InstanceHandle handle,
     ViewModel viewModel,
   ) {}
 
   @protected
-  void _handleInstanceDetached(
+  VoidCallback? _handleInstanceAttached(
+    InstanceHandle handle,
+    ViewModel viewModel,
+  ) =>
+      null;
+
+  @protected
+  VoidCallback? _handleInstanceDetached(
     InstanceHandle handle,
     ViewModel viewModel,
   ) {
@@ -369,6 +377,7 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
       }
       return true;
     }());
+    return null;
   }
 
   void _addSubscription<VM extends ViewModel>(
@@ -790,7 +799,11 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 
   bool _ownsResolvedHandle(InstanceHandle handle) {
-    if (handle.isDisposed || instanceManager.isResetting) return false;
+    if (handle.isDisposed ||
+        handle.isRecycling ||
+        instanceManager.isResetting) {
+      return false;
+    }
     if (!handle.containsDirectBinding(id)) return false;
     final instance = handle.instance;
     return instance is ViewModel &&
@@ -1016,6 +1029,13 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
   }
 }
 
+/// Identity token for one committed parent-child edge. A reentrant release
+/// and re-resolution must not let cleanup of the old edge remove the new one.
+class _DependencyEdge {
+  _DependencyEdge(this.viewModel);
+  final ViewModel viewModel;
+}
+
 /// Stable lifecycle and identity scope owned by one parent ViewModel object.
 ///
 /// Its private default key gives unkeyed children a parent-generation identity.
@@ -1043,7 +1063,7 @@ class ViewModelDependencyBinding extends ViewModelBinding {
   final ViewModel _parent;
   final void Function(ViewModel dependency) _onDependencyUpdate;
   final List<ViewModelBinding> _propagatedOwners = [];
-  final Map<InstanceHandle, ViewModel> _dependencies = Map.identity();
+  final Map<InstanceHandle, _DependencyEdge> _dependencies = Map.identity();
   late final void Function() _removeOwnerListener;
   bool _dependencyDisposed = false;
 
@@ -1054,26 +1074,43 @@ class ViewModelDependencyBinding extends ViewModelBinding {
   ViewModel get devToolsParentViewModel => _parent;
 
   @override
-  void _handleInstanceAttached(
-    InstanceHandle handle,
-    ViewModel viewModel,
-  ) {
+  bool get isDisposed => _dependencyDisposed || super.isDisposed;
+
+  @override
+  void _validateInstanceAttachment(InstanceHandle handle, ViewModel viewModel) {
     _requireAcyclicDependency(viewModel);
-    super._handleInstanceAttached(handle, viewModel);
-    _dependencies[handle] = viewModel;
-    for (final owner in _propagatedOwners) {
-      _attachOwner(handle, viewModel, owner);
-    }
   }
 
   @override
-  void _handleInstanceDetached(
+  VoidCallback? _handleInstanceAttached(
     InstanceHandle handle,
     ViewModel viewModel,
   ) {
-    _dependencies.remove(handle);
+    final edge = _DependencyEdge(viewModel);
+    _dependencies[handle] = edge;
+    return () {
+      for (final owner in _propagatedOwners.toList(growable: false)) {
+        _attachOwner(handle, edge, owner);
+      }
+    };
+  }
+
+  @override
+  VoidCallback? _handleInstanceDetached(
+    InstanceHandle handle,
+    ViewModel viewModel,
+  ) {
+    final edge = _dependencies.remove(handle);
+    final owners = _propagatedOwners.toList(growable: false);
     super._handleInstanceDetached(handle, viewModel);
-    _notifyDependency(viewModel);
+    return () {
+      if (edge != null) {
+        for (final owner in owners) {
+          _detachOwner(handle, edge, owner);
+        }
+      }
+      _notifyDependency(viewModel);
+    };
   }
 
   @override
@@ -1107,7 +1144,8 @@ class ViewModelDependencyBinding extends ViewModelBinding {
     Set<ViewModelDependencyBinding> visited,
   ) {
     if (!visited.add(this)) return false;
-    for (final dependency in _dependencies.values) {
+    for (final edge in _dependencies.values) {
+      final dependency = edge.viewModel;
       if (identical(dependency, target)) return true;
       if (dependency.dependencyBindingIfCreated?._reaches(target, visited) ??
           false) {
@@ -1137,14 +1175,17 @@ class ViewModelDependencyBinding extends ViewModelBinding {
         )
         .toList(growable: false);
 
+    // Publish the new projection before any child callback can reenter sync.
+    _propagatedOwners
+      ..clear()
+      ..addAll(currentOwners);
     for (final owner in removed) {
       for (final entry in _dependencies.entries.toList(growable: false)) {
+        if (_propagatedOwners.any((item) => identical(item, owner))) break;
         _detachOwner(entry.key, entry.value, owner);
       }
-      _propagatedOwners.removeWhere((item) => identical(item, owner));
     }
     for (final owner in added) {
-      _propagatedOwners.add(owner);
       for (final entry in _dependencies.entries.toList(growable: false)) {
         _attachOwner(entry.key, entry.value, owner);
       }
@@ -1153,25 +1194,25 @@ class ViewModelDependencyBinding extends ViewModelBinding {
 
   void _attachOwner(
     InstanceHandle handle,
-    ViewModel viewModel,
+    _DependencyEdge edge,
     ViewModelBinding owner,
   ) {
-    if (handle.isDisposed || viewModel.isDisposed) return;
-    handle.bindFrom(owner.id, this);
-    viewModel.refHandler.addRef(owner, source: this);
+    if (_dependencyDisposed ||
+        handle.isDisposed ||
+        handle.isRecycling ||
+        edge.viewModel.isDisposed ||
+        owner.isDisposed ||
+        !identical(_dependencies[handle], edge) ||
+        !_propagatedOwners.any((item) => identical(item, owner))) return;
+    handle.bindOwner(owner, source: edge);
   }
 
   void _detachOwner(
     InstanceHandle handle,
-    ViewModel viewModel,
+    _DependencyEdge edge,
     ViewModelBinding owner,
   ) {
-    if (!viewModel.isDisposed) {
-      viewModel.refHandler.removeRef(owner, source: this);
-    }
-    if (!handle.isDisposed) {
-      handle.unbindFrom(owner.id, this);
-    }
+    handle.unbindOwner(owner, source: edge);
   }
 
   @override

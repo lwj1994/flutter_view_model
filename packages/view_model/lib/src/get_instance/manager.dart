@@ -158,6 +158,7 @@ class InstanceManager {
   /// - No instance is found and cannot be created
   InstanceHandle<T> getNotifier<T>({
     InstanceFactory<T>? factory,
+    void Function(InstanceHandle<T>)? onResolve,
   }) {
     _requireNotResetting();
     if (T == dynamic) {
@@ -184,13 +185,16 @@ class InstanceManager {
           key: find.arg.key,
           tag: find.arg.tag,
         ));
-        return _getStore<T>().getNotifier(factory: factory);
+        return _getStore<T>()
+            .getNotifier(factory: factory, onResolve: onResolve);
       } else {
+        onResolve?.call(find);
         return find;
       }
     } else {
       return _getStore<T>().getNotifier(
         factory: factory,
+        onResolve: onResolve,
       );
     }
   }
