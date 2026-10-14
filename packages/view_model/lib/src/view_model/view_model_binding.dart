@@ -1196,7 +1196,9 @@ class ViewModelDependencyBinding extends ViewModelBinding {
         edge.viewModel.isDisposed ||
         owner.isDisposed ||
         !identical(_dependencies[handle], edge) ||
-        !_propagatedOwners.any((item) => identical(item, owner))) return;
+        !_propagatedOwners.any((item) => identical(item, owner))) {
+      return;
+    }
     handle.bindOwner(owner, source: edge);
   }
 
