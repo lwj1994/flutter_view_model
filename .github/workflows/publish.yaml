@@ -151,10 +151,12 @@ jobs:
         with:
           channel: stable
       - name: Resolve hosted dependencies
-        run: flutter pub get --no-example
+        # Flutter pub get migrates tracked project files on newer SDKs.
+        # Resolve with Flutter's bundled Dart without running project migrations.
+        run: '"$FLUTTER_ROOT/bin/dart" pub get --no-example'
       - name: Verify hosted annotation
         run: |
-          dart pub deps --json | python3 -c '
+          "$FLUTTER_ROOT/bin/dart" pub deps --json | python3 -c '
           import json, os, sys
           annotation = next(p for p in json.load(sys.stdin)["packages"] if p["name"] == "view_model_annotation")
           if annotation["source"] != "hosted" or annotation["version"] != os.environ["GITHUB_REF_NAME"][1:]:
@@ -162,14 +164,17 @@ jobs:
           '
       - name: Validate view_model
         run: |
-          dart format --set-exit-if-changed -l 80 -o none lib test
-          dart analyze --fatal-infos --fatal-warnings lib
-          flutter test --concurrency=1
+          "$FLUTTER_ROOT/bin/dart" format --set-exit-if-changed -l 80 -o none lib test
+          "$FLUTTER_ROOT/bin/dart" analyze --fatal-infos --fatal-warnings lib
+          flutter test --no-pub --concurrency=1
+          python3 "$GITHUB_WORKSPACE/.github/scripts/check_release_tree.py" --package view_model
           log_file="$(mktemp)"
           exit_code=0
-          flutter pub publish --dry-run > "$log_file" 2>&1 || exit_code=$?
+          "$FLUTTER_ROOT/bin/dart" pub publish --dry-run > "$log_file" 2>&1 || exit_code=$?
           cat "$log_file"
           python3 "$GITHUB_WORKSPACE/.github/scripts/check_pub_publish.py" \
             --package view_model --exit-code "$exit_code" "$log_file"
       - name: Publish view_model
-        run: flutter pub publish --force
+        run: |
+          python3 "$GITHUB_WORKSPACE/.github/scripts/check_release_tree.py" --package view_model
+          "$FLUTTER_ROOT/bin/dart" pub publish --force

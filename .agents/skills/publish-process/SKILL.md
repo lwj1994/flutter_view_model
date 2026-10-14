@@ -69,6 +69,14 @@ GitHub Actions 发布：
 由前置完整 CI 验证。发布 job 不复用测试 job 的 workspace、overrides 或
 解析结果，且不使用 `--skip-validation`。
 
+主包使用 Flutter SDK 自带的 `dart pub get --no-example`、
+`flutter test --no-pub --concurrency=1` 和 `dart pub publish`。
+不要在正式发布检出中使用 `flutter pub get` 或省略测试的 `--no-pub`：
+Flutter 3.47.7 会自动迁移 `analysis_options.yaml`，导致上传内容偏离 tag。
+dry-run 前和上传前运行 `check_release_tree.py --package view_model`，只允许
+当前包不会进入发布归档的 `pubspec.lock` 因托管依赖解析而变化；其余已跟踪、
+未跟踪文件或本地 overrides 均阻断发布。不得自动还原或放行未知改动。
+
 generator 和主包执行普通 `pub publish --dry-run`，完整输出日志，并将日志
 和原始退出码交给 `.github/scripts/check_pub_publish.py`。该检查只允许
 generator 的 annotation 精确版本约束警告；主包另外允许 `meta` 和
@@ -83,6 +91,6 @@ GitHub Actions 的 **Re-run failed jobs**，保留已成功的发布 job。不�
 
 需要手动排障时，在干净检出中遵循相同发布顺序与验证规则，本机使用
 `zsh -ic 'fd ...'` / `zsh -ic 'ff ...'`；手动发布不是默认流程。
-若失败只涉及 workflow 的预期警告处理，可从原 release tag 的干净检出
+若失败只涉及 workflow 的预期警告处理或工具自动迁移，可从原 release tag 的干净检出
 完成上述验证并补发尚未发布的包；单独提交 workflow 修复，不修改 tag，
 不重复上传已发布的包，也不将修复后的其他包内容混入当前版本。
