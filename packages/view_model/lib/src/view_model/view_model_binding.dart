@@ -694,21 +694,14 @@ mixin class ViewModelBinding implements ViewModelBindingInterface {
     if (VM == ViewModel || VM == dynamic) {
       throw ViewModelError("VM must extends ViewModel");
     }
-    // find key first to reuse
-    if (arg.key != null) {
-      try {
-        return _requireExistingViewModel<VM>(
-          arg: InstanceArg(
-            key: arg.key,
-          ),
-          listen: listen,
-        );
-      } on ViewModelError {
-        // Expected: not found by key; fall through to factory or tag lookup.
-        if (factory == null && arg.tag == null) {
-          rethrow;
-        }
-      }
+    // Only a key miss permits fallback. Attachment errors must propagate.
+    if (arg.key != null &&
+        ((factory == null && arg.tag == null) ||
+            instanceManager.containsKey<VM>(arg.key!))) {
+      return _requireExistingViewModel<VM>(
+        arg: InstanceArg(key: arg.key),
+        listen: listen,
+      );
     }
 
     // factory

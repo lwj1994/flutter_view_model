@@ -1,3 +1,17 @@
+## Unreleased
+
+## 1.2.1
+
+- Centralize managed ownership commits so handle sources and ViewModel refs
+  are consistent before lifecycle callbacks and dependency-owner propagation.
+- Preserve reentrant replacement ownership and watch subscriptions when a
+  later tagged batch attachment fails.
+- Track pending unbind callbacks by release identity so nested rebinding,
+  recycling, reset, and final-owner release cannot duplicate or lose lifecycle
+  notifications. Ordinary unbind callbacks can still reacquire the same instance.
+- Propagate key attachment failures instead of silently falling back to a
+  different tagged instance; only a missing key permits fallback.
+
 ## 1.2.0
 
 - Speed up repeated `watch(spec)` / `read(spec)` cache hits. A binding now

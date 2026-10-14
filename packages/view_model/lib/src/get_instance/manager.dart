@@ -199,6 +199,12 @@ class InstanceManager {
     }
   }
 
+  /// Checks identity without attaching an owner or running lifecycle callbacks.
+  bool containsKey<T>(Object key) {
+    _requireNotResetting();
+    return _getStore<T>().containsKey(key);
+  }
+
   List<InstanceHandle<T>> getNotifiersByTag<T>(Object tag) {
     _requireNotResetting();
     if (T == dynamic) {

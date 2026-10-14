@@ -61,6 +61,8 @@ class Store<T> implements RecyclableInstanceStore {
 
   bool get isEmpty => _instances.isEmpty;
 
+  bool containsKey(Object key) => _instances.containsKey(key);
+
   /// Finds the most recently created instance, optionally filtered by tag.
   ///
   /// This method searches through all cached instances and returns the one
@@ -347,6 +349,9 @@ class InstanceHandle<T> with ChangeNotifier {
   /// Stable source tokens used by the legacy/direct [bind]/[unbind] pair.
   final Map<String, Object> _directBindingSources = {};
 
+  /// One token per last-source release awaiting its lifecycle callback.
+  final Map<String, Object> _pendingUnbinds = {};
+
   /// Unmodifiable view of active binding IDs.
   List<String> get bindingIds => List.unmodifiable(_bindingSources.keys);
 
@@ -455,17 +460,18 @@ class InstanceHandle<T> with ChangeNotifier {
     final sources = _bindingSources[id];
     final removed = token != null && (sources?.remove(token) ?? false);
     final last = removed && sources!.isEmpty;
-    if (last) _bindingSources.remove(id);
+    final release = last ? Object() : null;
+    if (release != null) {
+      _bindingSources.remove(id);
+      _pendingUnbinds[id] = release;
+    }
     final target = _instance;
     final publish = target is ViewModel
         ? target.refHandler.removeRef(owner, source: source, notify: false)
         : null;
     publish?.call();
     _publishPendingOwnerChange();
-    // Owner propagation can rebind this ID before the old release resumes.
-    if (last && !_disposed && !_bindingSources.containsKey(id)) {
-      _notifyUnbind(id);
-    }
+    if (release != null) _publishUnbind(id, release);
     if (removed && _bindingSources.isEmpty) _recycle();
   }
 
@@ -509,8 +515,24 @@ class InstanceHandle<T> with ChangeNotifier {
     }
   }
 
+  void _publishUnbind(String id, Object release) {
+    if (!identical(_pendingUnbinds[id], release)) return;
+    _pendingUnbinds.remove(id);
+    _notifyUnbind(id);
+  }
+
+  void _flushPendingUnbinds() {
+    for (final entry in _pendingUnbinds.entries.toList(growable: false)) {
+      _publishUnbind(entry.key, entry.value);
+    }
+  }
+
   void _recycle({bool force = false}) {
     if (_disposed || _recycling || (arg.aliveForever && !force)) return;
+    // An inner release can reach zero owners while an outer release is still
+    // publishing. Its onUnbind must run while ordinary reacquisition is legal.
+    _flushPendingUnbinds();
+    if (_disposed || _recycling || _bindingSources.isNotEmpty) return;
     _recycling = true;
     _finishRecycle();
   }
@@ -523,6 +545,9 @@ class InstanceHandle<T> with ChangeNotifier {
 
   void _finishRecycle() {
     try {
+      // Forced disposal also delivers releases interrupted by owner
+      // propagation.
+      _flushPendingUnbinds();
       runInViewModelUpdateTransaction(() {
         // The Store listener removes this generation before controllers release
         // owners and invalidate their hosts. Preserve that re-resolution order.
@@ -569,6 +594,8 @@ class InstanceHandle<T> with ChangeNotifier {
   }
 
   void _notifyBind(String bindingId) {
+    // A new ownership generation supersedes the old release of this ID.
+    _pendingUnbinds.remove(bindingId);
     if (_instance is InstanceLifeCycle) {
       try {
         (_instance as InstanceLifeCycle).onBind(arg, bindingId);
@@ -617,6 +644,7 @@ class InstanceHandle<T> with ChangeNotifier {
     _instance = null;
     _bindingSources.clear();
     _directBindingSources.clear();
+    _pendingUnbinds.clear();
     super.dispose();
   }
 }

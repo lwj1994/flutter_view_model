@@ -312,6 +312,116 @@ void main() {
     expect(events.where((event) => event.startsWith('dispose:')), hasLength(3));
   });
 
+  test('child rebind followed by unbind does not repeat parent onUnbind', () {
+    final parentSpec = ViewModelSpec<_Node>(
+        builder: () => _Node('parent', events), key: 'parent');
+    final owner = _Owner(parentSpec);
+    final keeper = _Owner(parentSpec);
+    var rebind = true;
+    final childSpec = ViewModelSpec<_Node>(
+      builder: () => _Node('child', events, unbound: (_, id) {
+        if (id == owner.id && rebind) {
+          rebind = false;
+          owner.watched;
+          owner.unbind(owner.vm);
+        }
+      }),
+      key: 'child',
+    );
+    addTearDown(owner.dispose);
+    addTearDown(keeper.dispose);
+    keeper.vm;
+    owner.watched.child(childSpec, watch: true);
+    events.clear();
+
+    owner.unbind(owner.vm);
+
+    expect(events.where((event) => event == 'unbind:parent:${owner.id}'),
+        hasLength(1));
+    expect(keeper.vm.refHandler.externalOwners, [keeper]);
+    expect(_handle('parent').bindingIds, [keeper.id]);
+  });
+
+  for (final action in ['recycle', 'reset', 'release-last-owner']) {
+    test('child onUnbind $action preserves the pending parent onUnbind', () {
+      late _Owner owner;
+      var recycle = true;
+      owner = _Owner(
+          ViewModelSpec(builder: () => _Node('parent', events), key: 'parent'));
+      final keeper = _Owner(owner.spec);
+      final childSpec = ViewModelSpec<_Node>(
+        builder: () => _Node('child', events, unbound: (_, id) {
+          if (id == owner.id && recycle) {
+            recycle = false;
+            if (action == 'recycle') {
+              owner.recycle(_handle('parent').instance);
+            } else if (action == 'reset') {
+              ViewModel.reset();
+            } else {
+              keeper.unbind(keeper.vm);
+            }
+          }
+        }),
+        key: 'child',
+      );
+      addTearDown(owner.dispose);
+      addTearDown(keeper.dispose);
+      if (action == 'release-last-owner') keeper.vm;
+      owner.watched.child(childSpec, watch: true);
+      events.clear();
+
+      owner.unbind(owner.vm);
+
+      expect(events.where((event) => event == 'unbind:parent:${owner.id}'),
+          hasLength(1));
+      expect(events.indexOf('unbind:parent:${owner.id}'),
+          lessThan(events.indexOf('dispose:parent')));
+      expect(events.where((event) => event == 'dispose:parent'), hasLength(1));
+    });
+  }
+
+  test('pending onUnbind can reacquire before nested automatic disposal', () {
+    late _Owner owner;
+    var reacquire = true;
+    final parentSpec = ViewModelSpec<_Node>(
+      builder: () => _Node('parent', events, unbound: (_, id) {
+        if (id == owner.id && reacquire) {
+          reacquire = false;
+          owner.watched;
+        }
+      }),
+      key: 'parent',
+    );
+    owner = _Owner(parentSpec);
+    final keeper = _Owner(parentSpec);
+    var releaseKeeper = true;
+    final childSpec = ViewModelSpec<_Node>(
+      builder: () => _Node('child', events, unbound: (_, id) {
+        if (id == owner.id && releaseKeeper) {
+          releaseKeeper = false;
+          keeper.unbind(keeper.vm);
+        }
+      }),
+      key: 'child',
+    );
+    addTearDown(owner.dispose);
+    addTearDown(keeper.dispose);
+    keeper.vm;
+    owner.watched.child(childSpec, watch: true);
+    final generation = identityHashCode(owner.vm);
+    events.clear();
+
+    owner.unbind(owner.vm);
+
+    expect(events.where((event) => event == 'unbind:parent:${owner.id}'),
+        hasLength(1));
+    expect(events.where((event) => event == 'dispose:parent'), isEmpty);
+    expect(identityHashCode(owner.vm), generation);
+    expect(owner.vm.refHandler.externalOwners, [owner]);
+    owner.vm.child(childSpec).notifyListeners();
+    expect(owner.updates, 1);
+  });
+
   test('owner listeners never deliver an obsolete snapshot after reentry', () {
     final spec =
         ViewModelSpec<_Node>(builder: () => _Node('node', events), key: 'node');
@@ -377,6 +487,24 @@ void main() {
     expect(rejected, isA<ViewModelError>());
     expect(a.vm.refHandler.owners, [a]);
     expect(a.vm.child(bSpec).refHandler.externalOwners, [a]);
+  });
+
+  test('key attachment rejection does not fall back to a different tagged node',
+      () {
+    final a = _Owner(ViewModelSpec(
+        builder: () => _Node('a', events), key: 'a', tag: 'batch'));
+    final b = _Owner(ViewModelSpec(
+        builder: () => _Node('b', events), key: 'b', tag: 'batch'));
+    addTearDown(a.dispose);
+    addTearDown(b.dispose);
+    a.vm;
+    b.vm;
+    events.clear();
+    expect(
+        () => a.vm.viewModelBinding.readCached<_Node>(key: 'a', tag: 'batch'),
+        throwsA(isA<ViewModelError>()));
+    expect(events, isEmpty);
+    expect(_handle('b').bindingIds, [b.id]);
   });
 
   for (final watch in [false, true]) {
@@ -466,6 +594,49 @@ void main() {
     expect(a.updates, 1);
     expect(joining.updates, 1);
   });
+
+  for (final watch in [false, true]) {
+    test('failed batch watch=$watch preserves its reentrant replacement', () {
+      late _Owner joining;
+      late ViewModelSpec<_Node> aSpec;
+      var replace = true;
+      final b = _Owner(ViewModelSpec(
+          builder: () => _Node('b', events), key: 'b', tag: 'batch'));
+      aSpec = ViewModelSpec(
+        builder: () => _Node('a', events, bound: (vm, id) {
+          if (id == joining.id && replace) {
+            replace = false;
+            joining.unbind(vm);
+            joining.watch(aSpec);
+            b.recycle(b.vm);
+          }
+        }),
+        key: 'a',
+        tag: 'batch',
+      );
+      final a = _Owner(aSpec);
+      joining = _Owner(ViewModelSpec(
+          builder: () => _Node('existing', events), key: 'existing'));
+      addTearDown(a.dispose);
+      addTearDown(b.dispose);
+      addTearDown(joining.dispose);
+      b.vm;
+      a.vm;
+      joining.watched;
+
+      expect(
+          () => watch
+              ? joining.watchCachesByTag<_Node>('batch')
+              : joining.readCachesByTag<_Node>('batch'),
+          throwsA(isA<ViewModelError>()));
+      expect(a.vm.refHandler.owners, [a, joining]);
+      expect(_handle('a').bindingIds, [a.id, joining.id]);
+      a.vm.notifyListeners();
+      expect(joining.updates, 1);
+      joining.dispose();
+      expect(a.vm.refHandler.owners, [a]);
+    });
+  }
 
   test(
       'recycle in onUnbind is idempotent and refresh resolves a new generation',

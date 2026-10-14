@@ -123,9 +123,9 @@ class AutoDisposeInstanceController {
     publish?.call();
   }
 
-  void _attachHandle(InstanceHandle notifier) {
+  VoidCallback? _attachHandle(InstanceHandle notifier) {
     _validateAttachment(notifier);
-    if (_notifierListeners.containsKey(notifier)) return;
+    if (_notifierListeners.containsKey(notifier)) return null;
     final target = notifier.instance;
     final publish =
         target is ViewModel ? onInstanceAttached?.call(notifier, target) : null;
@@ -153,6 +153,9 @@ class AutoDisposeInstanceController {
         throw ViewModelError(
             'Ownership was released while binding an instance.');
       }
+      // Return this attempt's token even if onBind installed a replacement.
+      // Batch rollback compares identities before releasing ownership.
+      return listener;
     } catch (_) {
       // Do not tear down a replacement registration created by a reentrant
       // unbind/read. Only roll back the registration made by this attempt.
@@ -237,9 +240,8 @@ class AutoDisposeInstanceController {
     try {
       final result = <T>[];
       for (final notifier in notifiers) {
-        final tracked = _notifierListeners.containsKey(notifier);
-        _attachHandle(notifier);
-        if (!tracked) added[notifier] = _notifierListeners[notifier]!;
+        final registration = _attachHandle(notifier);
+        if (registration != null) added[notifier] = registration;
         result.add(notifier.instance);
       }
       return result;
