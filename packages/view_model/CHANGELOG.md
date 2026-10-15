@@ -1,6 +1,6 @@
 ## 1.3.0
 
-- Recommend the optional `view_model_lint` 0.1.0 analyzer plugin, with
+- Recommend the optional `view_model_lint` 1.3.0 analyzer plugin, with
   five usage diagnostics and example/CI integration. Runtime APIs are unchanged.
 
 ## 1.2.1

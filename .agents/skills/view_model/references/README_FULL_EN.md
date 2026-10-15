@@ -35,7 +35,7 @@ Add the published plugin to the consuming package's root `analysis_options.yaml`
 ```yaml
 plugins:
   view_model_lint:
-    version: ^0.1.0
+    version: ^1.3.0
 ```
 
 Restart the IDE analysis server and run `dart analyze --fatal-infos

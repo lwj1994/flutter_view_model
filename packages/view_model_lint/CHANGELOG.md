@@ -1,4 +1,4 @@
-## 0.1.0
+## 1.3.0
 
 - Add a native analyzer plugin with five ViewModel usage warnings.
 - Support IDE diagnostics, `dart analyze`, per-rule configuration, and ignores.

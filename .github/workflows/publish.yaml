@@ -35,7 +35,7 @@ jobs:
           if not re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', tag):
               raise SystemExit(f'Expected a stable release tag vX.Y.Z, got {tag}')
           version = tag[1:]
-          packages = ('view_model_annotation', 'view_model_generator', 'view_model')
+          packages = ('view_model_annotation', 'view_model_generator', 'view_model', 'view_model_lint')
           for name in packages:
               root = Path('packages') / name
               overrides = root / 'pubspec_overrides.yaml'
@@ -50,7 +50,7 @@ jobs:
                   for dep, constraint in pubspec.get(section, {}).items():
                       if isinstance(constraint, dict) and ('path' in constraint or 'git' in constraint):
                           raise SystemExit(f'{root}: {dep} must use a hosted or SDK dependency')
-              if name != 'view_model_annotation':
+              if name in ('view_model_generator', 'view_model'):
                   if pubspec.get('dependencies', {}).get('view_model_annotation') != version:
                       raise SystemExit(f'{root}: annotation dependency must be exactly {version}')
               print(f'Validated {name} {version}')

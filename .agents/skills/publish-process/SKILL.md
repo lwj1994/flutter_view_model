@@ -1,6 +1,6 @@
 ---
 name: Publish Process
-description: Workflow for publishing view_model packages (annotation, generator, view_model) in the correct order.
+description: Workflow for publishing view_model packages (lint, annotation, generator, view_model) in the correct order.
 ---
 
 # Publish Process
@@ -35,7 +35,7 @@ GitHub Actions 发布：
 - Tag pattern：`v{{version}}`
 - 当前 workflow 不使用 GitHub Environment，不勾选要求 Environment。
 
-本仓库三个包统一版本，共用一个 release tag。workflow 使用
+本仓库四个发布包统一版本，共用一个 release tag。lint 先手动发布，其余三个包通过 workflow 发布。workflow 使用
 `dart-lang/setup-dart@v1` 配置 GitHub OIDC 临时凭据，无需保存长期发布 token。
 缺少上述 pub.dev 配置时，workflow 的上传步骤会失败；仅添加 YAML 不会自动
 修改 pub.dev 的授权设置。
@@ -44,13 +44,13 @@ GitHub Actions 发布：
 
 ## 发布步骤：推送 release tag
 
-1. 更新三个包的 `version: X.Y.Z`，同时将 generator 和主包的
+1. 更新四个包（包含 `view_model_lint`）的 `version: X.Y.Z`，同时将 generator 和主包的
    `view_model_annotation` 依赖更新为相同的精确版本。其他依赖版本不变；
    `stack_trace:` 和 `meta:` 继续保持空版本约束。
 2. 编写英文 changelog，每个包只写一个正式版本条目，不拆分 `-dev.N`。
 3. 提交并 push 发布代码，确认所有模块的 CI 通过。发布 tag 必须指向包含
    `.github/workflows/publish.yaml` 的待发布提交。
-4. 创建 `vX.Y.Z` tag 并推送：`git tag vX.Y.Z`、`git push origin vX.Y.Z`。
+4. 按下方 lint 发布流程先发布并验证同版本 `view_model_lint`，然后创建 `vX.Y.Z` tag 并推送：`git tag vX.Y.Z`、`git push origin vX.Y.Z`。
    **推送 tag 即开始正式发布**，不再等发布完成后才打 tag。
 5. 查看 `Publish to pub.dev` workflow：
    - 校验 tag、三个包的版本和 annotation 依赖一致，发布包没有 overrides
@@ -96,27 +96,32 @@ GitHub Actions 的 **Re-run failed jobs**，保留已成功的发布 job。不�
 不重复上传已发布的包，也不将修复后的其他包内容混入当前版本。
 
 
-## Independent analyzer plugin releases
 
-`view_model_lint` has its own version and `view_model_lint-vX.Y.Z` tag. The
-`vX.Y.Z` workflow continues to publish only the three synchronized runtime,
-annotation, and generator packages.
+## Coordinated analyzer plugin release
 
-1. Update the lint package version, English changelog, README installation
-   constraint, and the ViewModel skill recommendation.
-2. Commit and push the reviewed changes, then require the complete repository CI
-   to pass. Use a clean checkout of that commit for publication.
-3. In `packages/view_model_lint`, run `fd pub get --no-example`,
-   `fd analyze --fatal-infos --fatal-warnings`, `fd test --concurrency=1`, and
-   `fd pub publish --dry-run` through `zsh -ic`. Require zero publication warnings
-   and inspect the archive contents; do not use local dependency overrides.
-4. Publish with `zsh -ic 'fd pub publish --force'` using the authorized pub.dev
-   account. First publication must precede any pub.dev automated-publishing
-   configuration. Never print credentials.
-5. Verify the exact version on pub.dev and test a consumer with the hosted plugin
-   in its root `analysis_options.yaml`. Create an annotated
-   `view_model_lint-vX.Y.Z` tag at the published commit and a matching GitHub
-   release. Never move a pushed tag or upload the same version twice.
+`view_model_lint` must have the same version as `view_model`,
+`view_model_annotation`, and `view_model_generator`. All four packages use the
+same `vX.Y.Z` tag and GitHub release. Do not create an independent lint tag.
+The workflow validates all four versions, then publishes the three existing
+runtime/annotation/generator packages. Publish lint before pushing that tag.
+
+1. Update all four versions and the lint README, English changelog, and skill
+   installation constraint together. Commit and push the reviewed changes,
+   and require the complete repository CI to pass.
+2. Use a clean checkout of that commit. In `packages/view_model_lint`, run
+   `fd pub get --no-example`, `fd analyze --fatal-infos --fatal-warnings`,
+   `fd test --concurrency=1`, and `fd pub publish --dry-run` through `zsh -ic`.
+   Require zero publication warnings, inspect the archive contents, and do not
+   use local dependency overrides.
+3. Publish with `zsh -ic 'fd pub publish --force'` using the authorized pub.dev
+   account. First publication must precede automated-publishing configuration.
+   Never print credentials or upload an already published version again.
+4. Verify the exact version on pub.dev and test a consumer with the hosted
+   plugin in its root `analysis_options.yaml`. Then push `vX.Y.Z` to publish
+   annotation, generator, and runtime through the workflow above.
+5. Verify all four versions before creating the shared GitHub release. If lint
+   is already published and a later stage fails, resume only the unfinished
+   packages from the same commit; do not move a pushed tag.
 
 See [Dart publishing](https://dart.dev/tools/pub/publishing) and
 [automated publishing](https://dart.dev/tools/pub/automated-publishing).

@@ -47,14 +47,14 @@ Use this skill for requests like:
 Recommend enabling `view_model_lint` when adding or reviewing ViewModel code in
 an application or business package. It is an optional native analyzer plugin
 for Dart 3.10 / Flutter 3.38+ and adds no app runtime dependency. Use the
-published `view_model_lint` 0.1.0 package.
+published `view_model_lint` 1.3.0 package.
 
 Preserve the consumer's existing analysis options and add at the package root:
 
 ```yaml
 plugins:
   view_model_lint:
-    version: ^0.1.0
+    version: ^1.3.0
     diagnostics:
       view_model_parameterized_spec_key: true
 ```

@@ -12,7 +12,7 @@ its existing includes and rules:
 ```yaml
 plugins:
   view_model_lint:
-    version: ^0.1.0
+    version: ^1.3.0
 ```
 
 For local plugin development, replace `version` with
@@ -46,7 +46,7 @@ Disable only the rule that conflicts with the intended design:
 ```yaml
 plugins:
   view_model_lint:
-    version: ^0.1.0
+    version: ^1.3.0
     diagnostics:
       view_model_parameterized_spec_key: false
 ```
@@ -81,8 +81,9 @@ dart test --concurrency=1
 
 Tests cover positive cases, false-positive boundaries, cross-file cycles,
 configuration, and plugin loading by a real `dart analyze` process. This package
-is versioned independently. See the repository
+shares its release version with `view_model`, `view_model_annotation`, and
+`view_model_generator`. See the repository
 [publishing skill](https://github.com/lwj1994/flutter_view_model/blob/main/.agents/skills/publish-process/SKILL.md)
-for its separate release procedure.
+for the coordinated release procedure.
 
 Integration follows the [Dart analyzer plugin documentation](https://dart.dev/tools/analyzer-plugins).

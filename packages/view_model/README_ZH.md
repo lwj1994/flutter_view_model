@@ -30,7 +30,7 @@ Flutter 3.38+），检查潜在依赖循环、缓存 VM、`aliveForever` 缺 key
 ```yaml
 plugins:
   view_model_lint:
-    version: ^0.1.0
+    version: ^1.3.0
 ```
 
 重启 IDE 分析服务，并从包根目录运行 `dart analyze --fatal-infos --fatal-warnings`，
