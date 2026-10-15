@@ -122,6 +122,14 @@ jobs:
           dart analyze --fatal-infos --fatal-warnings lib test
           dart test --concurrency=1
 
+      - name: Check oldest supported analyzer dependencies
+        timeout-minutes: 4
+        working-directory: packages/view_model_lint
+        run: |
+          dart pub downgrade analyzer analyzer_testing analysis_server_plugin
+          dart analyze --fatal-infos --fatal-warnings lib test
+          dart test --concurrency=1 test/rules_test.dart
+
       - name: Check view_model_devtools_extension
         timeout-minutes: 5
         working-directory: packages/view_model_devtools_extension

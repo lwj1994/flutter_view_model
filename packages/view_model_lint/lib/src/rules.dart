@@ -62,6 +62,8 @@ class ViewModelRule extends AnalysisRule {
 
   ViewModelRule(this.kind)
     : super(
+        // Shared API across analyzer 8-10; lowerCaseName was added later.
+        // ignore: deprecated_member_use
         name: _codes[kind]!.name,
         description: _codes[kind]!.problemMessage,
       );
@@ -258,7 +260,7 @@ class _Visitor extends SimpleAstVisitor<void> {
       }
       if (parent is ConstructorDeclaration) {
         // @GenSpec may select the named factory `spec` as its managed builder.
-        final owner = parent.parent;
+        final owner = parent.thisOrAncestorOfType<ClassDeclaration>();
         return parent.factoryKeyword != null &&
             parent.name?.lexeme == 'spec' &&
             owner is ClassDeclaration &&
@@ -302,6 +304,8 @@ class _Visitor extends SimpleAstVisitor<void> {
           };
       if (element is PropertyAccessorElement) {
         // An explicit setter may transform its input instead of retaining it.
+        // Keep analyzer 8 compatibility; isOriginVariable was added later.
+        // ignore: deprecated_member_use
         return element.isSynthetic;
       }
       return element is FieldElement || element is TopLevelVariableElement;
@@ -358,6 +362,8 @@ class _Dependencies {
       for (final getter in type.getters.where((g) => !g.isStatic)) {
         final resultType = getter.returnType;
         if (!_isVm(resultType) || resultType is! InterfaceType) continue;
+        // Keep analyzer 8 compatibility; isOriginVariable was added later.
+        // ignore: deprecated_member_use
         final Fragment fragment = getter.isSynthetic
             ? getter.variable.firstFragment
             : getter.firstFragment;
