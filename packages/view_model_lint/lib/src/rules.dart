@@ -13,7 +13,6 @@ enum ViewModelRuleKind {
   cachedInstance,
   aliveForeverKey,
   unmanagedConstruction,
-  parameterizedSpecKey,
 }
 
 const _codes = <ViewModelRuleKind, LintCode>{
@@ -46,14 +45,6 @@ const _codes = <ViewModelRuleKind, LintCode>{
     correctionMessage:
         'Construct it in a spec builder and resolve the spec '
         'through an owner binding.',
-  ),
-  ViewModelRuleKind.parameterizedSpecKey: LintCode(
-    'view_model_parameterized_spec_key',
-    'An unkeyed parameterized spec reuses one instance per type and binding.',
-    severity: DiagnosticSeverity.WARNING,
-    correctionMessage:
-        'Add an argument-derived key when distinct instances '
-        'are intended, or suppress this rule for deliberate reuse.',
   ),
 };
 
@@ -117,12 +108,12 @@ Expression? _literalResult(Expression? expression) {
   return expression;
 }
 
-({ArgumentList arguments, bool parameterized})? _spec(Expression expression) {
+ArgumentList? _spec(Expression expression) {
   if (expression is InstanceCreationExpression) {
     final element = expression.constructorName.element?.enclosingElement;
     if (element == null || !_inPackage(element)) return null;
     if (element.name == 'ViewModelSpec') {
-      return (arguments: expression.argumentList, parameterized: false);
+      return expression.argumentList;
     }
     if (const {
       'ViewModelSpecWithArg',
@@ -130,7 +121,7 @@ Expression? _literalResult(Expression? expression) {
       'ViewModelSpecWithArg3',
       'ViewModelSpecWithArg4',
     }.contains(element.name)) {
-      return (arguments: expression.argumentList, parameterized: true);
+      return expression.argumentList;
     }
   }
   if (expression is MethodInvocation) {
@@ -138,7 +129,7 @@ Expression? _literalResult(Expression? expression) {
     if (_inPackage(method) &&
         method?.enclosingElement?.name == 'ViewModelSpec' &&
         const {'arg', 'arg2', 'arg3', 'arg4'}.contains(method?.name)) {
-      return (arguments: expression.argumentList, parameterized: true);
+      return expression.argumentList;
     }
   }
   return null;
@@ -222,15 +213,11 @@ class _Visitor extends SimpleAstVisitor<void> {
   void _checkSpec(Expression node) {
     final spec = _spec(node);
     if (spec == null) return;
-    final key = _argument(spec.arguments, 'key');
+    final key = _argument(spec, 'key');
     if (key != null && _literalResult(key) is! NullLiteral) return;
     if (rule.kind == ViewModelRuleKind.aliveForeverKey) {
-      final alive = _literalResult(_argument(spec.arguments, 'aliveForever'));
+      final alive = _literalResult(_argument(spec, 'aliveForever'));
       if (alive is BooleanLiteral && alive.value) rule.reportAtNode(node);
-    }
-    if (rule.kind == ViewModelRuleKind.parameterizedSpecKey &&
-        spec.parameterized) {
-      rule.reportAtNode(node);
     }
   }
 

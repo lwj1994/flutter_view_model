@@ -14,7 +14,6 @@ void main() {
     defineReflectiveTests(CachedTest);
     defineReflectiveTests(AliveTest);
     defineReflectiveTests(ConstructionTest);
-    defineReflectiveTests(ParameterizedTest);
     defineReflectiveTests(CycleTest);
   });
 }
@@ -128,6 +127,13 @@ final c = [[ViewModelSpec.arg<Child, int>(
   builder: (_) => Child(), aliveForever: (_) => true, key: (_) => null)]];
 ''');
 
+  Future<void> test_unkeyed_parameterized_specs_are_allowed() => check('''
+class Child with ViewModel {}
+final a = ViewModelSpec.arg<Child, String>(builder: (_) => Child());
+final b = ViewModelSpecWithArg<Child, int>(builder: (_) => Child(), key: null);
+final c = ViewModelSpec.arg<Child, int>(builder: (_) => Child(), key: (_) => null);
+''');
+
   Future<void> test_valid_and_unknown_keys() => check('''
 class Child with ViewModel {}
 final a = ViewModelSpec(builder: Child.new, aliveForever: true, key: 'child');
@@ -180,19 +186,6 @@ final data = Object();
 class Base with ViewModel {}
 class Child extends Base {}
 Child make() => [[Child()]];
-''');
-}
-
-@reflectiveTest
-class ParameterizedTest extends _ViewModelTest {
-  @override
-  String get analysisRule => 'view_model_parameterized_spec_key';
-
-  Future<void> test_helper_and_constructor() => check('''
-class Child with ViewModel {}
-final a = [[ViewModelSpec.arg<Child, String>(builder: (_) => Child())]];
-final b = [[ViewModelSpecWithArg<Child, int>(builder: (_) => Child(), key: null)]];
-final c = ViewModelSpec.arg<Child, String>(builder: (_) => Child(), key: (id) => id);
 ''');
 }
 

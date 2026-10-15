@@ -47,31 +47,30 @@ Use this skill for requests like:
 Recommend enabling `view_model_lint` when adding or reviewing ViewModel code in
 an application or business package. It is an optional native analyzer plugin
 for Dart 3.10 / Flutter 3.38+ and adds no app runtime dependency. Use the
-published `view_model_lint` 1.3.0 package.
+published `view_model_lint` 1.3.1 package.
 
 Preserve the consumer's existing analysis options and add at the package root:
 
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.0
-    diagnostics:
-      view_model_parameterized_spec_key: true
+    version: ^1.3.1
 ```
 
-All five warnings are enabled by default: `view_model_dependency_cycle`,
+All four warnings are enabled by default: `view_model_dependency_cycle`,
 `view_model_cached_instance`, `view_model_alive_forever_key`,
-`view_model_unmanaged_construction`, and `view_model_parameterized_spec_key`.
+and `view_model_unmanaged_construction`.
 After restarting the IDE analysis server, run
 `dart analyze --fatal-infos --fatal-warnings` from the package root (locally,
 `zsh -ic 'fd analyze --fatal-infos --fatal-warnings'`). Do not restrict this
 command to `lib`/`test`: verified Dart 3.11 can skip plugin loading in that mode.
 Use the same command in consumer CI.
 
-Fix ownership/spec violations rather than disabling the entire plugin. For
-intentional per-binding argument reuse, set only
-`view_model_parameterized_spec_key: false`, or use a local
-`// ignore: view_model_lint/view_model_parameterized_spec_key` with a reason.
+Fix ownership/spec violations before disabling a rule. Ordinary parameterized
+specs may omit `key` without a warning; use an argument-derived key only when
+separate instances are intended. `aliveForever` still requires an explicit key.
+Remove obsolete `view_model_parameterized_spec_key` settings and ignores when
+upgrading to 1.3.1.
 The dependency rule follows static own-binding calls, and across libraries only
 direct resolution getters/fields; it does not prove key-aware instance cycles.
 Keep runtime cycle validation and avoid promising detection of dynamic helper

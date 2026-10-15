@@ -28,21 +28,22 @@ value objects, and pure functions can stay as they are.
 Enable the optional `view_model_lint` native analyzer plugin in each application
 or business package (Dart 3.10 / Flutter 3.38+). It checks potential dependency
 cycles, stored resolved VMs, missing keys for `aliveForever`, unmanaged
-construction, and unkeyed parameterized specs.
+construction. Parameterized specs may omit `key` without a warning;
+`aliveForever` still requires an explicit key.
 
 Add the published plugin to the consuming package's root `analysis_options.yaml`:
 
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.0
+    version: ^1.3.1
 ```
 
 Restart the IDE analysis server and run `dart analyze --fatal-infos
 --fatal-warnings` from the package root, without limiting the command to a
 subdirectory. Each diagnostic is a warning and can be individually disabled
 under the plugin's `diagnostics` map. Prefer a local ignore for an intentional
-exception, such as per-binding reuse of an unkeyed parameterized spec.
+exception, with a comment explaining the reason.
 Type-cycle warnings do not prove an instance cycle and do not replace runtime
 validation. See the [plugin guide](https://github.com/lwj1994/flutter_view_model/tree/main/packages/view_model_lint)
 for rule IDs, suppression syntax, and analysis boundaries.

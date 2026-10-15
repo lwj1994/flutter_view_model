@@ -1,3 +1,8 @@
+## 1.3.1
+
+- Recommend `view_model_lint` 1.3.1, which allows parameterized specs without
+  keys. The `aliveForever` key check and runtime behavior are unchanged.
+
 ## 1.3.0
 
 - Recommend the optional `view_model_lint` 1.3.0 analyzer plugin, with

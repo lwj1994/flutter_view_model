@@ -73,10 +73,13 @@ plugins:
         'view_model_cached_instance',
         'view_model_alive_forever_key',
         'view_model_unmanaged_construction',
-        'view_model_parameterized_spec_key',
       ];
       expect(enabled.exitCode, isNot(0), reason: output);
       expect(output, contains('WARNING|'));
+      expect(
+        output.toLowerCase(),
+        isNot(contains('view_model_parameterized_spec_key')),
+      );
       for (final code in codes) {
         expect(output.toLowerCase(), contains(code), reason: output);
       }

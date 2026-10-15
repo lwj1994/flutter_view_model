@@ -12,7 +12,7 @@ its existing includes and rules:
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.0
+    version: ^1.3.1
 ```
 
 For local plugin development, replace `version` with
@@ -28,7 +28,7 @@ dart analyze --fatal-infos --fatal-warnings
 Use this command in CI as well. With this workstation's aliases, run
 `zsh -ic 'fd analyze --fatal-infos --fatal-warnings'`. Avoid targeting only
 `lib` or `test`: on the verified Dart 3.11 toolchain that invocation can skip
-loading the package-root plugin. All five diagnostics are enabled as warnings.
+loading the package-root plugin. All four diagnostics are enabled as warnings.
 
 ## Rules
 
@@ -38,23 +38,16 @@ loading the package-root plugin. All five diagnostics are enabled as warnings.
 | `view_model_cached_instance` | A resolved `read/watch` VM is stored in a field, top-level variable, or field assignment. Use a getter that resolves on every access. |
 | `view_model_alive_forever_key` | Literal `aliveForever: true`, including a simple callback, has no non-null key. Supply an explicit key. |
 | `view_model_unmanaged_construction` | A VM is constructed outside a spec builder, `ViewModelFactory.build`, or an annotated `@GenSpec` factory named `spec`. Resolve a stable spec through a binding. |
-| `view_model_parameterized_spec_key` | `arg/arg2/arg3/arg4` or a parameterized spec constructor has no key. Use an argument-derived key when distinct instances are intended. |
 
-An unkeyed parameterized spec may deliberately reuse one instance per binding.
-Disable only the rule that conflicts with the intended design:
+Parameterized specs may omit `key` without a diagnostic. Use an argument-derived
+key when separate instances are intended. The `aliveForever` key requirement
+still applies to both ordinary and parameterized specs.
 
-```yaml
-plugins:
-  view_model_lint:
-    version: ^1.3.0
-    diagnostics:
-      view_model_parameterized_spec_key: false
-```
-
-For a local exception, use
-`// ignore: view_model_lint/view_model_parameterized_spec_key` or
-`// ignore_for_file: view_model_lint/view_model_parameterized_spec_key`.
-Explain the deliberate reuse in a nearby comment.
+Disable individual rules through the plugin's `diagnostics` map, for example
+`view_model_cached_instance: false`. For a narrowly scoped exception, use
+`// ignore: view_model_lint/view_model_cached_instance` with a reason.
+Remove old `view_model_parameterized_spec_key` settings and suppressions when
+upgrading; that diagnostic is no longer registered.
 
 ## Analysis boundaries
 
