@@ -1,0 +1,16 @@
+name: view_model_lint
+description: Analyzer plugin for safe ViewModel ownership, specs, and dependency composition.
+version: 0.1.0
+repository: https://github.com/lwj1994/flutter_view_model/tree/main/packages/view_model_lint
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  analysis_server_plugin: ^0.3.0
+  analyzer: ^8.4.0
+
+dev_dependencies:
+  analyzer_testing: ^0.1.0
+  test: ^1.25.0
+  test_reflective_loader: ^0.4.0

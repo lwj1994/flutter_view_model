@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:view_model/view_model.dart';
 
 import 'package:todo_list/main.dart' as app;
 import 'package:todo_list/todo_view_model.dart';
@@ -26,7 +27,13 @@ void main() {
   });
 
   test('editing a todo can clear its category', () {
-    final viewModel = TodoViewModel();
+    final binding = ViewModelBinding();
+    addTearDown(() {
+      binding.dispose();
+      ViewModel.reset();
+    });
+    final spec = ViewModelSpec(builder: TodoViewModel.new);
+    final viewModel = binding.read(spec);
     viewModel.addTodo('Buy milk', category: 'Groceries');
 
     final todo = viewModel.state.items.single;

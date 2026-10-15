@@ -94,3 +94,29 @@ GitHub Actions 的 **Re-run failed jobs**，保留已成功的发布 job。不�
 若失败只涉及 workflow 的预期警告处理或工具自动迁移，可从原 release tag 的干净检出
 完成上述验证并补发尚未发布的包；单独提交 workflow 修复，不修改 tag，
 不重复上传已发布的包，也不将修复后的其他包内容混入当前版本。
+
+
+## Independent analyzer plugin releases
+
+`view_model_lint` has its own version and `view_model_lint-vX.Y.Z` tag. The
+`vX.Y.Z` workflow continues to publish only the three synchronized runtime,
+annotation, and generator packages.
+
+1. Update the lint package version, English changelog, README installation
+   constraint, and the ViewModel skill recommendation.
+2. Commit and push the reviewed changes, then require the complete repository CI
+   to pass. Use a clean checkout of that commit for publication.
+3. In `packages/view_model_lint`, run `fd pub get --no-example`,
+   `fd analyze --fatal-infos --fatal-warnings`, `fd test --concurrency=1`, and
+   `fd pub publish --dry-run` through `zsh -ic`. Require zero publication warnings
+   and inspect the archive contents; do not use local dependency overrides.
+4. Publish with `zsh -ic 'fd pub publish --force'` using the authorized pub.dev
+   account. First publication must precede any pub.dev automated-publishing
+   configuration. Never print credentials.
+5. Verify the exact version on pub.dev and test a consumer with the hosted plugin
+   in its root `analysis_options.yaml`. Create an annotated
+   `view_model_lint-vX.Y.Z` tag at the published commit and a matching GitHub
+   release. Never move a pushed tag or upload the same version twice.
+
+See [Dart publishing](https://dart.dev/tools/pub/publishing) and
+[automated publishing](https://dart.dev/tools/pub/automated-publishing).

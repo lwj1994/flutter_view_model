@@ -23,6 +23,30 @@ A ViewModel is a managed functional module: a service, repository, coordinator,
 or page model. Modules compose through the same binding mechanism. Plain data,
 value objects, and pure functions can stay as they are.
 
+## Recommended usage lint
+
+Enable the optional `view_model_lint` native analyzer plugin in each application
+or business package (Dart 3.10 / Flutter 3.38+). It checks potential dependency
+cycles, stored resolved VMs, missing keys for `aliveForever`, unmanaged
+construction, and unkeyed parameterized specs.
+
+Add the published plugin to the consuming package's root `analysis_options.yaml`:
+
+```yaml
+plugins:
+  view_model_lint:
+    version: ^0.1.0
+```
+
+Restart the IDE analysis server and run `dart analyze --fatal-infos
+--fatal-warnings` from the package root, without limiting the command to a
+subdirectory. Each diagnostic is a warning and can be individually disabled
+under the plugin's `diagnostics` map. Prefer a local ignore for an intentional
+exception, such as per-binding reuse of an unkeyed parameterized spec.
+Type-cycle warnings do not prove an instance cycle and do not replace runtime
+validation. See the [plugin guide](https://github.com/lwj1994/flutter_view_model/tree/main/packages/view_model_lint)
+for rule IDs, suppression syntax, and analysis boundaries.
+
 ## Start with three questions
 
 | Question | Responsibility | Rule |

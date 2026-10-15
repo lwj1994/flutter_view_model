@@ -20,6 +20,24 @@ npx skills add https://github.com/lwj1994/flutter_view_model --skill view_model
 
 ViewModel 是受管理的功能模块，可以是服务、仓库、协调器，也可以是页面模型。模块之间通过同一种 Binding 机制组合。普通数据、值对象和纯函数保持原样即可。
 
+## 推荐启用使用规范检查
+
+推荐在业务包中接入可选的 `view_model_lint` 原生 analyzer 插件（Dart 3.10 /
+Flutter 3.38+），检查潜在依赖循环、缓存 VM、`aliveForever` 缺 key、非受管构造
+和参数化 spec 缺 key。插件已作为独立包发布到 pub.dev。
+在业务包根目录的 `analysis_options.yaml` 中配置：
+
+```yaml
+plugins:
+  view_model_lint:
+    version: ^0.1.0
+```
+
+重启 IDE 分析服务，并从包根目录运行 `dart analyze --fatal-infos --fatal-warnings`，
+不要仅指定子目录。五条 warning 可单独关闭；类型循环提醒不能替代运行时判环。
+完整英文接入说明、规则编号和扫描边界见
+[plugin guide](https://github.com/lwj1994/flutter_view_model/tree/main/packages/view_model_lint)。
+
 ## 从三个问题开始
 
 | 问题 | 由谁负责 | 规则 |

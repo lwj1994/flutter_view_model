@@ -113,6 +113,15 @@ jobs:
           dart analyze --fatal-infos --fatal-warnings lib
           git diff --exit-code -- lib/example.vm.dart
 
+      - name: Check view_model_lint and native analyzer integration
+        timeout-minutes: 6
+        working-directory: packages/view_model_lint
+        run: |
+          dart pub get
+          dart format --set-exit-if-changed -l 80 -o none lib test
+          dart analyze --fatal-infos --fatal-warnings lib test
+          dart test --concurrency=1
+
       - name: Check view_model_devtools_extension
         timeout-minutes: 5
         working-directory: packages/view_model_devtools_extension
@@ -128,7 +137,7 @@ jobs:
         run: |
           flutter pub get
           dart format --set-exit-if-changed -l 80 -o none lib test
-          dart analyze --fatal-infos --fatal-warnings lib test
+          dart analyze --fatal-infos --fatal-warnings
           flutter test --concurrency=1
 
       - name: Check example todo_list
@@ -137,7 +146,7 @@ jobs:
         run: |
           flutter pub get
           dart format --set-exit-if-changed -l 80 -o none lib test
-          dart analyze --fatal-infos --fatal-warnings lib test
+          dart analyze --fatal-infos --fatal-warnings
           flutter test --concurrency=1
 
       - name: Upload coverage to Codecov

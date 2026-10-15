@@ -1,0 +1,6 @@
+linter:
+  rules:
+    - avoid_dynamic_calls
+    - avoid_print
+    - curly_braces_in_flow_control_structures
+    - prefer_final_locals
