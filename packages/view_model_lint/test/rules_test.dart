@@ -100,6 +100,52 @@ class Host {
 }
 ''');
 
+  Future<void> test_block_getter_local_declarations() => check('''
+class Child with ViewModel {}
+final spec = ViewModelSpec(builder: Child.new);
+class Host with ViewModel {
+  Child get child {
+    final session = viewModelBinding.read(spec);
+    session.toString();
+    return session;
+  }
+  Child get observed {
+    final session = viewModelBinding.watch(spec);
+    return session;
+  }
+}
+''');
+
+  Future<void> test_block_getter_and_method_local_assignments() => check('''
+class Child with ViewModel {}
+final spec = ViewModelSpec(builder: Child.new);
+class Host with ViewModel {
+  Child get child {
+    Child session;
+    session = viewModelBinding.read(spec);
+    return session;
+  }
+  Child resolve() {
+    Child session;
+    session = viewModelBinding.watch(spec);
+    return session;
+  }
+}
+''');
+
+  Future<void> test_block_getter_field_assignments() => check('''
+class Child with ViewModel {}
+final spec = ViewModelSpec(builder: Child.new);
+class Host with ViewModel {
+  late Child session;
+  Child get child {
+    this.session = [[viewModelBinding.read(spec)]];
+    session = [[viewModelBinding.watch(spec)]];
+    return session;
+  }
+}
+''');
+
   Future<void> test_same_method_name_is_not_framework() => check('''
 class Child with ViewModel {}
 class Other { Child read() => Child(); }
