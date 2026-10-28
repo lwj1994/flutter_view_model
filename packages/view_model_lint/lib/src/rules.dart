@@ -106,8 +106,7 @@ const _codes = <ViewModelRuleKind, LintCode>{
   ),
   ViewModelRuleKind.temporarySpec: LintCode(
     'view_model_temporary_spec',
-    'A spec or factory must be a top-level or static variable, not a '
-        'temporary value.',
+    'A spec must be a top-level or static variable, not a temporary value.',
     severity: DiagnosticSeverity.WARNING,
     correctionMessage:
         'Declare it once as a top-level or static final and '
@@ -465,10 +464,10 @@ class _Visitor extends SimpleAstVisitor<void> {
           rule.reportAtNode(node);
         }
       case ViewModelRuleKind.temporarySpec:
-        // Custom ViewModelFactory classes are specs in the same sense.
-        if ((_spec(node) != null ||
-                _hasType(node.staticType, 'ViewModelFactory')) &&
-            !_isStableSpec(node)) {
+        // A custom ViewModelFactory resolves by its own key() and often
+        // takes per-call constructor arguments, so a fresh instance at each
+        // call is the intended legacy usage and is not reported.
+        if (_spec(node) != null && !_isStableSpec(node)) {
           rule.reportAtNode(node);
         }
       case ViewModelRuleKind.dependencyCycle:
@@ -586,6 +585,12 @@ class _Visitor extends SimpleAstVisitor<void> {
           parent is PropertyAccess && parent.target == created;
     }
     if (holder == null) return false;
+    // A top-level or static binding lives as long as the process, as an
+    // app-wide owner does, so it is never expected to be disposed.
+    if (holder is TopLevelVariableElement ||
+        holder is FieldElement && holder.isStatic) {
+      return false;
+    }
     final usage = _BindingUsage(holder);
     for (final unit in context.allUnits) {
       unit.unit.accept(usage);

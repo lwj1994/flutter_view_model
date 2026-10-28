@@ -1,3 +1,11 @@
+## Unreleased
+
+- `view_model_temporary_spec` no longer reports a custom `ViewModelFactory`
+  constructed at the call. It resolves by its own `key()` and often takes
+  per-call constructor arguments, so this is the intended legacy usage.
+- `view_model_undisposed_binding` no longer reports a binding held by a
+  top-level variable or static field, which is an app-wide owner.
+
 ## 1.3.2
 
 - Add six warnings: `view_model_listen_in_build`, `view_model_instance_handoff`,

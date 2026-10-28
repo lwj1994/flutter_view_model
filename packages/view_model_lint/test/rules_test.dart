@@ -846,10 +846,7 @@ class UndisposedBindingTest extends _ViewModelTest {
 
   Future<void> test_undisposed_bindings() => check('''
 class Child with ViewModel {}
-class Boot extends ViewModelBinding {}
 final spec = ViewModelSpec(builder: Child.new);
-final global = [[ViewModelBinding()]];
-final boot = [[Boot()]];
 class Host {
   final binding = [[ViewModelBinding()]];
 }
@@ -886,6 +883,25 @@ void main() {
   keep(ViewModelBinding());
 }
 ''');
+
+  Future<void> test_app_lifetime_bindings() => check('''
+class Child with ViewModel {}
+class Boot extends ViewModelBinding {}
+final spec = ViewModelSpec(builder: Child.new);
+final global = ViewModelBinding();
+final boot = Boot();
+late final ViewModelBinding assigned;
+class Task {
+  static final binding = ViewModelBinding();
+  static Boot? boot;
+}
+void main() {
+  assigned = ViewModelBinding();
+  Task.boot = Boot();
+  global.read(spec);
+  Task.binding.read(spec);
+}
+''');
 }
 
 @reflectiveTest
@@ -915,7 +931,7 @@ class Page with ViewModelStateMixin {
       [[ViewModelSpec.arg<Item, String>(builder: Item.new)]]('a'));
   Child get compat =>
       watchViewModel(factory: [[ViewModelProvider(builder: Child.new)]]);
-  Child get custom => viewModelBinding.read([[ChildFactory()]]);
+  Child get custom => viewModelBinding.read(ChildFactory());
   Object build(Object context) {
     final local = [[ViewModelSpec(builder: Child.new)]];
     viewModelBinding.listen(local, onChanged: () {});
@@ -1011,35 +1027,6 @@ class Page with ViewModelStateMixin {
 }
 
 final _itemSpec = ViewModelSpec.arg<Item, String>(builder: Item.new);
-''',
-      fix: 1,
-    );
-  }
-
-  Future<void> test_fix_extracts_inline_specs_4() async {
-    await checkFix(
-      ViewModelRuleKind.temporarySpec,
-      '''
-class Child with ViewModel {}
-class ChildFactory extends ViewModelFactory<Child> {
-  @override
-  Child build() => Child();
-}
-class Page with ViewModelStateMixin {
-  Child get child => viewModelBinding.read([[ChildFactory()]]);
-}
-''',
-      '''
-class Child with ViewModel {}
-class ChildFactory extends ViewModelFactory<Child> {
-  @override
-  Child build() => Child();
-}
-class Page with ViewModelStateMixin {
-  Child get child => viewModelBinding.read(_childFactory);
-}
-
-final _childFactory = ChildFactory();
 ''',
       fix: 1,
     );

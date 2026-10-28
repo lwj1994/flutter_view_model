@@ -541,18 +541,31 @@ class AppBootstrap {
 
   void dispose() => _binding.dispose();
 }
+
+// App-wide owners live for the whole process.
+final appBinding = ViewModelBinding();
+
+class MainTask {
+  static final _binding = ViewModelBinding();
+}
 ```
 
-A binding passed to another object, returned, or assigned elsewhere counts as
-handed over and is not reported. If a wrapper method such as `close()` calls
+A binding held by a top-level variable or a static field lives as long as the
+process, like an app-wide owner, and is not reported. A binding passed to
+another object, returned, or assigned elsewhere counts as handed over and is
+not reported either. If a wrapper method such as `close()` calls
 `dispose()` for you, suppress the warning with a reason.
 
 ## `view_model_temporary_spec`
 
-A spec, including a custom `ViewModelFactory`, must be created exactly once:
-in the initializer of a top-level variable or a static field. A spec in a
-local variable, an instance field, a function result, or inline at a call is
-rebuilt on every evaluation. A test can no longer replace it with `setProxy`.
+A spec must be created exactly once: in the initializer of a top-level
+variable or a static field. A spec in a local variable, an instance field, a
+function result, or inline at a call is rebuilt on every evaluation. A test can
+no longer replace it with `setProxy`.
+
+A custom `ViewModelFactory` is not reported. It resolves by its own `key()` and
+often takes per-call constructor arguments, so constructing it at the call is
+the intended usage.
 
 Quick fixes: make an instance-field spec `static`, or move a spec that captures
 nothing from its scope to a private top-level `final`.
@@ -560,13 +573,6 @@ nothing from its scope to a private top-level `final`.
 **Bad**
 
 ```dart
-class TodoViewModel with ViewModel {}
-
-class TodoViewModelFactory with ViewModelFactory<TodoViewModel> {
-  @override
-  TodoViewModel build() => TodoViewModel();
-}
-
 ViewModelSpec<UserViewModel> userSpecFor(String userId) {
   return ViewModelSpec(builder: () => UserViewModel(userId), key: userId);
 }
@@ -581,14 +587,11 @@ class _CounterPageState extends State<CounterPage>
     ViewModelSpec(builder: CounterViewModel.new),
   );
 
-  TodoViewModel get todo =>
-      watchViewModel(factory: TodoViewModelFactory());
-
   @override
   Widget build(BuildContext context) {
     final local = ViewModelSpec(builder: CounterViewModel.new);
     return Text(
-      '${counter.state.count} ${todo.hashCode} '
+      '${counter.state.count} '
       '${viewModelBinding.read(local).state.count} ${pageSpec.hashCode}',
     );
   }
@@ -598,14 +601,21 @@ class _CounterPageState extends State<CounterPage>
 **Good**
 
 ```dart
-class TodoViewModel with ViewModel {}
-
-class TodoViewModelFactory with ViewModelFactory<TodoViewModel> {
-  @override
-  TodoViewModel build() => TodoViewModel();
+class TodoViewModel with ViewModel {
+  TodoViewModel(this.listId);
+  final String listId;
 }
 
-final todoViewModelFactory = TodoViewModelFactory();
+class TodoViewModelFactory with ViewModelFactory<TodoViewModel> {
+  TodoViewModelFactory(this.listId);
+  final String listId;
+
+  @override
+  TodoViewModel build() => TodoViewModel(listId);
+
+  @override
+  Object? key() => listId;
+}
 
 class Box<T> with ViewModel {}
 
@@ -625,7 +635,8 @@ class _CounterPageState extends State<CounterPage>
     with ViewModelStateMixin<CounterPage> {
   CounterViewModel get counter => viewModelBinding.watch(Specs.counter);
   UserViewModel get user => viewModelBinding.read(userSpec('42'));
-  TodoViewModel get todo => watchViewModel(factory: todoViewModelFactory);
+  // A custom factory may be constructed at the call.
+  TodoViewModel get todo => watchViewModel(factory: TodoViewModelFactory('a'));
   Box<int> get box => viewModelBinding.read(boxSpec<int>());
 
   @override

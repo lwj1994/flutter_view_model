@@ -153,7 +153,7 @@ plugins:
           contains('lib/main.dart:10  view_model_alive_forever_key'),
           contains("Move the spec to the top-level variable '_bSpec'"),
           contains('5 fixes applied in 1 files.'),
-          contains('2 view_model_lint diagnostics need a manual change'),
+          contains('1 view_model_lint diagnostics need a manual change'),
         ),
         reason: output(run),
       );
@@ -167,10 +167,7 @@ plugins:
         for (final line in '${analyzed.stdout}'.split('\n'))
           if (line.split('|') case [_, _, final code, ...]) code.toLowerCase(),
       };
-      expect(codes, {
-        'view_model_cached_instance',
-        'view_model_undisposed_binding',
-      }, reason: output(analyzed));
+      expect(codes, {'view_model_cached_instance'}, reason: output(analyzed));
 
       final usage = await dart(['run', 'bin/fix.dart', '--bad']);
       expect(usage.exitCode, 64);
