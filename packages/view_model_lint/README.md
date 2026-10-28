@@ -12,7 +12,7 @@ its existing includes and rules:
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.2
+    version: ^1.3.3
 ```
 
 For local plugin development, replace `version` with
@@ -59,7 +59,7 @@ Disable individual rules through the plugin's `diagnostics` map, for example
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.2
+    version: ^1.3.3
     diagnostics:
       view_model_cached_lookup: true
 ```

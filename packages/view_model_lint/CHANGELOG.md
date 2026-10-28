@@ -1,10 +1,12 @@
-## Unreleased
+## 1.3.3
 
 - `view_model_temporary_spec` no longer reports a custom `ViewModelFactory`
   constructed at the call. It resolves by its own `key()` and often takes
   per-call constructor arguments, so this is the intended legacy usage.
 - `view_model_undisposed_binding` no longer reports a binding held by a
   top-level variable or static field, which is an app-wide owner.
+- This release ships only `view_model_lint`; `view_model`,
+  `view_model_annotation`, and `view_model_generator` stay at 1.3.1.
 
 ## 1.3.2
 
