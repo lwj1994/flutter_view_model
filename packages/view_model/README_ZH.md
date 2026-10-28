@@ -23,18 +23,21 @@ ViewModel 是受管理的功能模块，可以是服务、仓库、协调器，�
 ## 推荐启用使用规范检查
 
 推荐在业务包中接入可选的 `view_model_lint` 原生 analyzer 插件（Dart 3.10 /
-Flutter 3.38+），检查潜在依赖循环、缓存 VM、`aliveForever` 缺 key、非受管构造。
-普通参数化 spec 省略 `key` 不报警；`aliveForever` 仍必须有显式 key。插件已作为独立包发布到 pub.dev。
+Flutter 3.38+），检查潜在依赖循环、缓存 VM、`aliveForever` 缺 key、非受管构造、
+在 `build` 或 getter 中注册监听、通过构造参数传递 VM、无 key 的实例身份冲突、
+用 `watch` 喂给选择器、未 dispose 的 binding，以及没有声明为全局或 static 变量的 spec。
+普通参数化 spec 省略 `key` 不报警，除非同一个 binding 用不同实参解析它；`aliveForever` 仍必须有显式 key。插件已作为独立包发布到 pub.dev。
 在业务包根目录的 `analysis_options.yaml` 中配置：
 
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.1
+    version: ^1.3.2
 ```
 
 重启 IDE 分析服务，并从包根目录运行 `dart analyze --fatal-infos --fatal-warnings`，
-不要仅指定子目录。四条 warning 可单独关闭；类型循环提醒不能替代运行时判环。
+不要仅指定子目录。默认的十条 warning 可单独关闭；`view_model_cached_lookup` 是需在
+`diagnostics` 中设为 `true` 才启用的 info。类型循环提醒不能替代运行时判环。
 完整英文接入说明、规则编号和扫描边界见
 [plugin guide](https://github.com/lwj1994/flutter_view_model/tree/main/packages/view_model_lint)。
 

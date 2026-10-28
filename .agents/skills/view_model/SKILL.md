@@ -47,19 +47,29 @@ Use this skill for requests like:
 Recommend enabling `view_model_lint` when adding or reviewing ViewModel code in
 an application or business package. It is an optional native analyzer plugin
 for Dart 3.10 / Flutter 3.38+ and adds no app runtime dependency. Use the
-published `view_model_lint` 1.3.1 package.
+published `view_model_lint` 1.3.2 package.
 
 Preserve the consumer's existing analysis options and add at the package root:
 
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.1
+    version: ^1.3.2
 ```
 
-All four warnings are enabled by default: `view_model_dependency_cycle`,
+Ten warnings are enabled by default: `view_model_dependency_cycle`,
 `view_model_cached_instance`, `view_model_alive_forever_key`,
-and `view_model_unmanaged_construction`.
+`view_model_unmanaged_construction`, `view_model_listen_in_build`,
+`view_model_instance_handoff`, `view_model_identity_collision`,
+`view_model_selector_with_watch`, `view_model_undisposed_binding`, and
+`view_model_temporary_spec`. `view_model_cached_lookup` is an opt-in info; enable
+it with `view_model_cached_lookup: true` under the plugin's `diagnostics` map.
+`packages/view_model_lint/RULES.md` shows a good and a bad example for every
+rule; use it when fixing a diagnostic. The IDE offers quick fixes for
+`view_model_cached_instance`, `view_model_alive_forever_key`,
+`view_model_selector_with_watch`, and `view_model_temporary_spec`; `dart fix`
+cannot apply plugin fixes, so apply them in bulk with
+`dart pub global run view_model_lint:fix [--dry-run]` from the package root.
 After restarting the IDE analysis server, run
 `dart analyze --fatal-infos --fatal-warnings` from the package root (locally,
 `zsh -ic 'fd analyze --fatal-infos --fatal-warnings'`). Do not restrict this
@@ -68,7 +78,10 @@ Use the same command in consumer CI.
 
 Fix ownership/spec violations before disabling a rule. Ordinary parameterized
 specs may omit `key` without a warning; use an argument-derived key only when
-separate instances are intended. `aliveForever` still requires an explicit key.
+separate instances are intended. `view_model_identity_collision` reports the
+case where one binding resolves an unkeyed spec with different arguments, or
+two unkeyed specs of the same type, because those resolutions share the first
+instance. `aliveForever` still requires an explicit key.
 Remove obsolete `view_model_parameterized_spec_key` settings and ignores when
 upgrading to 1.3.1.
 The dependency rule follows static own-binding calls, and across libraries only
@@ -372,6 +385,11 @@ See `examples/sharing_example.dart` for the complete example.
 - `ChangeNotifierViewModel`: only when extending `ChangeNotifier` behavior is required.
 
 2. Define `ViewModelSpec`
+- Declare every spec as a top-level or static final variable. Never create one
+  in a local variable, instance field, getter, `build`, or inline at a
+  `watch/read` call; `view_model_temporary_spec` reports those. Generic
+  ViewModels use a generic function that only returns the spec, as `@GenSpec`
+  generates.
 - `ViewModelSpec<T>(builder: ...)` for no args.
 - `ViewModelSpec.arg/arg2/arg3/arg4` for parameterized construction.
 - Arguments only affect identity through the explicit key callback; choose a

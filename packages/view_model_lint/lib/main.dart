@@ -12,7 +12,16 @@ class ViewModelLintPlugin extends Plugin {
   @override
   void register(PluginRegistry registry) {
     for (final kind in ViewModelRuleKind.values) {
-      registry.registerWarningRule(ViewModelRule(kind));
+      if (kind.optIn) {
+        registry.registerLintRule(ViewModelRule(kind));
+      } else {
+        registry.registerWarningRule(ViewModelRule(kind));
+      }
+    }
+    for (final MapEntry(key: kind, value: fixes) in viewModelFixes.entries) {
+      for (final fix in fixes) {
+        registry.registerFixForRule(viewModelCode(kind), fix);
+      }
     }
   }
 }

@@ -11,8 +11,10 @@ Packages under `packages/`:
 - `view_model`: main Flutter package
 - `view_model_annotation`: annotation package for code generation
 - `view_model_generator`: source_gen/build package for `@GenSpec`
-- `view_model_lint`: optional native analyzer plugin (Dart 3.10+), four usage
-  warnings; recommend enabling it in business packages. Test with
+- `view_model_lint`: optional native analyzer plugin (Dart 3.10+), ten usage
+  warnings plus the opt-in `view_model_cached_lookup` info, IDE quick fixes, and
+  the `view_model_lint:fix` batch command; recommend enabling it in business
+  packages. Test with
   `zsh -ic 'fd test --concurrency=1'` in its package directory. Keep its version aligned
   with the other three published packages and follow the publishing skill.
 - `view_model_devtools_extension`: local DevTools extension, not published

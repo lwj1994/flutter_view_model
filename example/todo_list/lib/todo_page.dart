@@ -15,6 +15,8 @@ class TodoViewModelFactory with ViewModelFactory<TodoViewModel> {
   Object? key() => 'shared-todo-viewmodel';
 }
 
+final todoViewModelFactory = TodoViewModelFactory();
+
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
 
@@ -28,7 +30,7 @@ class _TodoPageState extends State<TodoPage>
   final _categoryController = TextEditingController();
 
   TodoViewModel get todoVM =>
-      watchViewModel<TodoViewModel>(factory: TodoViewModelFactory());
+      watchViewModel<TodoViewModel>(factory: todoViewModelFactory);
 
   @override
   void dispose() {
