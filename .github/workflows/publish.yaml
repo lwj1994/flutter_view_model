@@ -149,7 +149,11 @@ jobs:
       # Use Flutter's bundled Dart for validation and publishing this package.
       - uses: subosito/flutter-action@v2
         with:
+          # Pinned with codecov.yaml: Dart 3.14 (Flutter 3.50) needs analyzer
+          # 14 for native plugins, and view_model_lint still supports analyzer
+          # <11. Return to the latest stable once the lint migrates.
           channel: stable
+          flutter-version: 3.47.8
       - name: Resolve hosted dependencies
         # Flutter pub get migrates tracked project files on newer SDKs.
         # Resolve with Flutter's bundled Dart without running project migrations.
