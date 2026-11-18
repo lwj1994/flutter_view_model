@@ -77,10 +77,6 @@ jobs:
       - uses: actions/checkout@v4
       # setup-dart configures the temporary pub.dev OIDC credential.
       - uses: dart-lang/setup-dart@v1
-        with:
-          # Flutter 3.47.8's Dart. Dart 3.14 prints publish validation output
-          # that check_pub_publish.py does not recognize yet.
-          sdk: 3.13.7
       - name: Validate annotation
         run: |
           dart pub get --no-example
@@ -103,10 +99,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
-        with:
-          # Flutter 3.47.8's Dart. Dart 3.14 prints publish validation output
-          # that check_pub_publish.py does not recognize yet.
-          sdk: 3.13.7
       - name: Wait for annotation propagation
         run: sleep 300
       - name: Resolve hosted dependencies
@@ -154,18 +146,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
-        with:
-          # Flutter 3.47.8's Dart. Dart 3.14 prints publish validation output
-          # that check_pub_publish.py does not recognize yet.
-          sdk: 3.13.7
       # Use Flutter's bundled Dart for validation and publishing this package.
       - uses: subosito/flutter-action@v2
         with:
-          # Pinned with codecov.yaml: Dart 3.14 (Flutter 3.50) needs analyzer
-          # 14 for native plugins, and view_model_lint still supports analyzer
-          # <11. Return to the latest stable once the lint migrates.
           channel: stable
-          flutter-version: 3.47.8
       - name: Resolve hosted dependencies
         # Flutter pub get migrates tracked project files on newer SDKs.
         # Resolve with Flutter's bundled Dart without running project migrations.

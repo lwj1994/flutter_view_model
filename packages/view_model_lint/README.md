@@ -1,7 +1,7 @@
 # view_model_lint
 
 Recommended native analyzer checks for applications and business packages using
-`view_model`. Requires Dart 3.10 / Flutter 3.38 or newer. The plugin runs in the
+`view_model`. Requires Dart 3.13 / Flutter 3.47 or newer. The plugin runs in the
 analysis process and adds no runtime dependency or runtime SDK requirement.
 
 ## Enable the plugin
@@ -12,7 +12,7 @@ its existing includes and rules:
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.4
+    version: ^1.4.0
 ```
 
 For local plugin development, replace `version` with
@@ -59,7 +59,7 @@ Disable individual rules through the plugin's `diagnostics` map, for example
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.4
+    version: ^1.4.0
     diagnostics:
       view_model_cached_lookup: true
 ```

@@ -1,3 +1,8 @@
+## 1.4.0
+
+- Align the version and exact annotation dependency with `view_model` 1.4.0.
+  Code generation behavior is unchanged.
+
 ## 1.3.4
 
 - Align the version and exact annotation dependency with `view_model` 1.3.4.

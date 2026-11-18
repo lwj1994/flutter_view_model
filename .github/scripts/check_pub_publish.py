@@ -42,6 +42,12 @@ def check_output(package, exit_code, output):
     if package == "view_model" and exit_code == 65:
         output = re.sub(r"\nFailed to update packages\.\s*\Z", "", output)
     sections = output.split("Validating package...\n")
+    if len(sections) == 1:
+        # Dart 3.14 no longer prints "Validating package..."; its diagnostics
+        # start right after the single archive-size line instead.
+        sections = re.split(
+            r"(?m)^Total compressed archive size: [^\n]*\n", output
+        )
     if len(sections) != 2:
         raise ValueError("Missing or ambiguous Pub validation output")
     diagnostics = sections[1]

@@ -1,3 +1,9 @@
+## 1.4.0
+
+- Validate the runtime on Flutter 3.50 / Dart 3.14; CI follows the latest
+  stable Flutter again. Runtime APIs and behavior are unchanged from 1.3.4.
+- Recommend `view_model_lint` 1.4.0, which loads on Dart 3.14 / Flutter 3.50.
+
 ## 1.3.4
 
 - Fix a UI hang when many bindings own the same ViewModel that has

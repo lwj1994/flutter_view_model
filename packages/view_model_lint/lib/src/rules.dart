@@ -297,8 +297,8 @@ ArgumentList? _parsedSpec(Expression? expression) {
 }
 
 Expression? _argument(ArgumentList arguments, String name) {
-  for (final arg in arguments.arguments.whereType<NamedExpression>()) {
-    if (arg.name.label.name == name) return arg.expression;
+  for (final arg in arguments.arguments.whereType<NamedArgument>()) {
+    if (arg.name.lexeme == name) return arg.argumentExpression;
   }
   return null;
 }
@@ -308,8 +308,8 @@ Expression? _factoryOf(MethodInvocation node) {
   final named = _argument(node.argumentList, 'factory');
   if (named != null) return _unwrap(named);
   final arguments = node.argumentList.arguments;
-  if (arguments.isEmpty || arguments.first is NamedExpression) return null;
-  return _unwrap(arguments.first);
+  if (arguments.isEmpty || arguments.first is NamedArgument) return null;
+  return _unwrap(arguments.first.argumentExpression);
 }
 
 /// The variable or explicit getter that an identifier-like expression reads.
@@ -321,9 +321,7 @@ Element? _readElement(Expression? expression) {
     PropertyAccess(:final propertyName) => propertyName.element,
     _ => null,
   }?.baseElement;
-  // Keep analyzer 8 compatibility; isOriginVariable was added later.
-  // ignore: deprecated_member_use
-  if (element is PropertyAccessorElement && element.isSynthetic) {
+  if (element is PropertyAccessorElement && element.isOriginVariable) {
     return element.variable.baseElement;
   }
   return element;
@@ -434,7 +432,6 @@ class _Visitor extends SimpleAstVisitor<void> {
   void visitConstructorDeclaration(ConstructorDeclaration node) {
     if (_isFramework) return;
     for (var parameter in node.parameters.parameters) {
-      if (parameter is DefaultFormalParameter) parameter = parameter.parameter;
       // A super parameter is reported where the super constructor declares it.
       if (parameter is SuperFormalParameter) continue;
       if (_isVm(parameter.declaredFragment?.element.type)) {
@@ -606,8 +603,7 @@ class _Visitor extends SimpleAstVisitor<void> {
         while (argument is ParenthesizedExpression) {
           argument = argument.parent;
         }
-        if (argument is NamedExpression &&
-            argument.name.label.name == 'builder') {
+        if (argument is NamedArgument && argument.name.lexeme == 'builder') {
           final call = argument.parent?.parent;
           if (call is Expression && _spec(call) != null) return true;
         }
@@ -668,9 +664,7 @@ class _Visitor extends SimpleAstVisitor<void> {
           };
       if (element is PropertyAccessorElement) {
         // An explicit setter may transform its input instead of retaining it.
-        // Keep analyzer 8 compatibility; isOriginVariable was added later.
-        // ignore: deprecated_member_use
-        return element.isSynthetic;
+        return element.isOriginVariable;
       }
       return element is FieldElement || element is TopLevelVariableElement;
     }
@@ -684,9 +678,7 @@ bool _isDispose(Expression section) =>
 /// The variable an assignment writes, normalized like [_readElement].
 Element? _written(AssignmentExpression node) {
   final element = node.writeElement?.baseElement;
-  // Keep analyzer 8 compatibility; isOriginVariable was added later.
-  // ignore: deprecated_member_use
-  if (element is PropertyAccessorElement && element.isSynthetic) {
+  if (element is PropertyAccessorElement && element.isOriginVariable) {
     return element.variable.baseElement;
   }
   return element ?? _readElement(node.leftHandSide);
@@ -720,7 +712,8 @@ class _BindingUsage extends RecursiveAstVisitor<void> {
     } else if (parent is CascadeExpression && parent.target == reference) {
       if (parent.cascadeSections.any(_isDispose)) disposed = true;
     } else if (parent is ArgumentList ||
-        parent is NamedExpression ||
+        parent is NamedArgument ||
+        parent is RecordLiteralNamedField ||
         parent is ReturnStatement ||
         parent is ExpressionFunctionBody ||
         parent is VariableDeclaration ||
@@ -1002,9 +995,7 @@ class _Dependencies {
       for (final getter in type.getters.where((g) => !g.isStatic)) {
         final resultType = getter.returnType;
         if (!_isVm(resultType) || resultType is! InterfaceType) continue;
-        // Keep analyzer 8 compatibility; isOriginVariable was added later.
-        // ignore: deprecated_member_use
-        final Fragment fragment = getter.isSynthetic
+        final Fragment fragment = getter.isOriginVariable
             ? getter.variable.firstFragment
             : getter.firstFragment;
         final declaration = parsed.getFragmentDeclaration(fragment)?.node;

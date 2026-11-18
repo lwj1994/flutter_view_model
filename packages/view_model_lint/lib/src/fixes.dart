@@ -1,9 +1,8 @@
 part of 'rules.dart';
 
-typedef ViewModelFixGenerator =
-    ResolvedCorrectionProducer Function({
-      required CorrectionProducerContext context,
-    });
+typedef ViewModelFixGenerator = ResolvedCorrectionProducer Function({
+  required CorrectionProducerContext context,
+});
 
 /// IDE quick fixes for each diagnostic. Plugin fixes cannot be applied in
 /// bulk, so every fix is single-location and only edits what it can prove.
@@ -165,8 +164,8 @@ class _AddSpecKey extends _ViewModelFix {
     final arguments = _spec(spec);
     if (arguments == null) return;
     final aliveArgument = arguments.arguments
-        .whereType<NamedExpression>()
-        .where((argument) => argument.name.label.name == 'aliveForever')
+        .whereType<NamedArgument>()
+        .where((argument) => argument.name.lexeme == 'aliveForever')
         .firstOrNull;
     final arity = _arity(spec);
     if (aliveArgument == null || arity == null) return;

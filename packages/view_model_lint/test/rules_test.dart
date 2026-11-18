@@ -138,9 +138,9 @@ class ViewModelSpecWithArg<T extends ViewModel, A> {
     final diagnostic = result.diagnostics.singleWhere(
       (d) => d.problemMessage.offset == offset,
     );
-    final library =
-        await result.session.getResolvedLibrary(result.path)
-            as ResolvedLibraryResult;
+    final library = await result.session.getResolvedLibrary(
+      result.path,
+    ) as ResolvedLibraryResult;
     final context = CorrectionProducerContext.createResolved(
       libraryResult: library,
       unitResult: result,

@@ -1,3 +1,7 @@
+## 1.4.0
+
+- Align the version with `view_model` 1.4.0. The annotation API is unchanged.
+
 ## 1.3.4
 
 - Align the version with `view_model` 1.3.4. The annotation API is unchanged.

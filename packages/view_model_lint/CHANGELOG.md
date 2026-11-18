@@ -1,3 +1,14 @@
+## 1.4.0
+
+- Migrate to analyzer 14 (`analyzer` >=14.3.0 <15.0.0, `analysis_server_plugin`
+  ^0.3.22). The Dart 3.14 / Flutter 3.50 analysis server only loads plugins
+  built on analyzer 14, so 1.3.x silently reported nothing there.
+- Require Dart 3.13 / Flutter 3.47 or newer; older SDKs can stay on 1.3.x.
+- Rules, quick fixes, and the batch fix command are unchanged. Named arguments
+  in record literals now count as an escape for
+  `view_model_undisposed_binding`, as they did before analyzer 14 split
+  `NamedExpression`.
+
 ## 1.3.4
 
 - Align the version with `view_model` 1.3.4. The analyzer rules are unchanged.

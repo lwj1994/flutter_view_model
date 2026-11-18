@@ -11,6 +11,8 @@ from check_pub_publish import check_output
 FIXTURES = Path(__file__).parent / "fixtures"
 GENERATOR = (FIXTURES / "generator_dry_run.txt").read_text()
 MAIN = (FIXTURES / "view_model_dry_run.txt").read_text()
+# Dart 3.14 dropped "Validating package..." and adds version hints.
+GENERATOR_3_14 = (FIXTURES / "generator_dry_run_dart_3_14.txt").read_text()
 CLEAN = (
     "Validating package...\n"
     "The server may enforce additional checks.\n\nPackage has 0 warnings.\n"
@@ -25,6 +27,33 @@ UNKNOWN = MAIN.replace("3 potential issues", "4 potential issues").replace(
 class PublishWarningGateTest(unittest.TestCase):
     def test_actual_generator_warning_and_nonfatal_hint(self):
         self.assertEqual(check_output("view_model_generator", 65, GENERATOR), 1)
+
+    def test_dart_3_14_output_without_validating_line(self):
+        self.assertEqual(check_output("view_model_generator", 65, GENERATOR_3_14), 1)
+
+    def test_dart_3_14_main_output_without_validating_line(self):
+        report = MAIN.replace(
+            "Validating package...\n", "Total compressed archive size: 30 KB.\n"
+        )
+        self.assertEqual(check_output("view_model", 65, report), 3)
+
+    def test_dart_3_14_unknown_warning_is_blocked(self):
+        report = GENERATOR_3_14.replace("following potential issue:", "following 2 potential issues:").replace(
+            "Package validation found the following 2 hints",
+            "* Your package contains an unexpected credential file.\n"
+            "Package validation found the following 2 hints",
+        ).replace("1 warning", "2 warnings")
+        with self.assertRaisesRegex(ValueError, "Unexpected"):
+            check_output("view_model_generator", 65, report)
+
+    def test_repeated_archive_size_line_is_ambiguous(self):
+        report = GENERATOR_3_14.replace(
+            "Package validation found the following potential issue",
+            "Total compressed archive size: 1 KB.\n"
+            "Package validation found the following potential issue",
+        )
+        with self.assertRaisesRegex(ValueError, "ambiguous"):
+            check_output("view_model_generator", 65, report)
 
     def test_actual_main_warnings(self):
         self.assertEqual(check_output("view_model", 65, MAIN), 3)

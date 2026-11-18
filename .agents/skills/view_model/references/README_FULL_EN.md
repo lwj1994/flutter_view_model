@@ -26,7 +26,7 @@ value objects, and pure functions can stay as they are.
 ## Recommended usage lint
 
 Enable the optional `view_model_lint` native analyzer plugin in each application
-or business package (Dart 3.10 / Flutter 3.38+). It checks potential dependency
+or business package (Dart 3.13 / Flutter 3.47+). It checks potential dependency
 cycles, stored resolved VMs, missing keys for `aliveForever`, unmanaged
 construction, listeners registered in `build` or getters, VMs passed through
 constructors, unkeyed identity collisions, selectors fed by `watch`, undisposed
@@ -39,7 +39,7 @@ Add the published plugin to the consuming package's root `analysis_options.yaml`
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.4
+    version: ^1.4.0
 ```
 
 Restart the IDE analysis server and run `dart analyze --fatal-infos

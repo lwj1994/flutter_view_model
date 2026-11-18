@@ -30,11 +30,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Pinned: Dart 3.14 (Flutter 3.50) needs analyzer 14 for native
-          # plugins, and view_model_lint still supports analyzer <11. Return to
-          # the latest stable once the lint migrates to analyzer 14.
           channel: stable
-          flutter-version: 3.47.8
           cache: true
 
       - name: Verify toolchain
@@ -130,7 +126,7 @@ jobs:
         timeout-minutes: 4
         working-directory: packages/view_model_lint
         run: |
-          dart pub downgrade analyzer analyzer_testing analysis_server_plugin
+          dart pub downgrade analyzer analyzer_testing analysis_server_plugin analyzer_plugin
           dart analyze --fatal-infos --fatal-warnings lib test
           dart test --concurrency=1 test/rules_test.dart
 

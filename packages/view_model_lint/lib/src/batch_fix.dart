@@ -39,8 +39,9 @@ class FixSummary {
   const FixSummary(this.fixes, this.remaining);
 }
 
-typedef DiagnosticSource =
-    Future<List<ReportedDiagnostic>> Function(String root);
+typedef DiagnosticSource = Future<List<ReportedDiagnostic>> Function(
+  String root,
+);
 
 /// Runs `dart analyze --format=json` with the running SDK, so the package's
 /// own plugin configuration, disabled rules, and ignore comments apply.
