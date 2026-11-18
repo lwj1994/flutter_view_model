@@ -29,6 +29,26 @@ typedef ViewModelOwnersChanged = void Function(
   String? primaryOwner,
 );
 
+/// Internal owner-change callback used by dependency bindings.
+///
+/// [revision] is the handler's ownership revision for this change. [owner] is
+/// the single binding that was added ([added] = true) or removed, or null when
+/// several owners changed at once. A listener that has seen every previous
+/// revision can apply the change directly; otherwise it must resynchronize
+/// from the current owner list.
+@internal
+typedef ViewModelOwnerDelta = void Function(
+  int revision,
+  ViewModelBinding? owner,
+  bool added,
+);
+
+class _OwnerListener {
+  _OwnerListener({this.snapshot, this.delta});
+  final ViewModelOwnersChanged? snapshot;
+  final ViewModelOwnerDelta? delta;
+}
+
 /// Runs the given [body] in a zone with the provided [binding].
 /// This makes the binding available for dependency resolution.
 R runWithBinding<R>(R Function() body, ViewModelBinding binding) {
@@ -66,8 +86,15 @@ class ViewModelBindingHandler {
   /// independently without changing the public owner list prematurely.
   final Map<ViewModelBinding, Set<Object>> _refSources = Map.identity();
 
-  final List<ViewModelOwnersChanged> _ownerChangeListeners = [];
+  final List<_OwnerListener> _ownerChangeListeners = [];
+  int _snapshotListeners = 0;
   int _ownerRevision = 0;
+
+  /// Primary owner id for diagnostics listeners only. Owners leaving from the
+  /// front of a large insertion-ordered map make `keys.first` walk every
+  /// removed slot, so it is not computed when nobody reads it.
+  String? get _primaryOwnerForDiagnostics =>
+      _snapshotListeners == 0 ? null : primaryOwner?.id;
 
   ViewModelBindingHandler();
 
@@ -116,9 +143,25 @@ class ViewModelBindingHandler {
   /// The returned callback removes the listener. The listener is also removed
   /// automatically when this handler is disposed.
   @internal
-  void Function() addOwnerChangeListener(ViewModelOwnersChanged listener) {
+  void Function() addOwnerChangeListener(ViewModelOwnersChanged listener) =>
+      _addListener(_OwnerListener(snapshot: listener));
+
+  /// Adds an incremental owner listener; see [ViewModelOwnerDelta].
+  ///
+  /// A shared ViewModel can be owned by thousands of list cells, so dependency
+  /// propagation must not rebuild the owner list on every single change.
+  @internal
+  void Function() addOwnerDeltaListener(ViewModelOwnerDelta listener) =>
+      _addListener(_OwnerListener(delta: listener));
+
+  void Function() _addListener(_OwnerListener listener) {
     _ownerChangeListeners.add(listener);
-    return () => _ownerChangeListeners.remove(listener);
+    if (listener.snapshot != null) _snapshotListeners++;
+    return () {
+      if (_ownerChangeListeners.remove(listener) && listener.snapshot != null) {
+        _snapshotListeners--;
+      }
+    };
   }
 
   /// Commits a source before publishing its owner change. The handle uses
@@ -129,10 +172,10 @@ class ViewModelBindingHandler {
     Object? source,
     bool notify = true,
   }) {
-    final previousPrimaryOwner = primaryOwner?.id;
+    final previousPrimaryOwner = _primaryOwnerForDiagnostics;
     final sources = _refSources.putIfAbsent(ref, HashSet.identity);
     if (!sources.add(source ?? ref) || sources.length != 1) return null;
-    final publish = _ownerChange(previousPrimaryOwner);
+    final publish = _ownerChange(previousPrimaryOwner, ref, true);
     if (notify) publish();
     return publish;
   }
@@ -148,12 +191,12 @@ class ViewModelBindingHandler {
     Object? source,
     bool notify = true,
   }) {
-    final previousPrimaryOwner = primaryOwner?.id;
+    final previousPrimaryOwner = _primaryOwnerForDiagnostics;
     final sources = _refSources[ref];
     if (sources == null || !sources.remove(source ?? ref)) return null;
     if (sources.isNotEmpty) return null;
     _refSources.remove(ref);
-    final publish = _ownerChange(previousPrimaryOwner);
+    final publish = _ownerChange(previousPrimaryOwner, ref, false);
     if (notify) publish();
     return publish;
   }
@@ -161,20 +204,24 @@ class ViewModelBindingHandler {
   @internal
   void Function()? clearRefs({bool notify = true}) {
     if (_refSources.isEmpty) return null;
-    final previousPrimaryOwner = primaryOwner?.id;
+    final previousPrimaryOwner = _primaryOwnerForDiagnostics;
     _refSources.clear();
-    final publish = _ownerChange(previousPrimaryOwner);
+    final publish = _ownerChange(previousPrimaryOwner, null, false);
     if (notify) publish();
     return publish;
   }
 
-  void Function() _ownerChange(String? previousPrimaryOwner) {
+  void Function() _ownerChange(
+    String? previousPrimaryOwner,
+    ViewModelBinding? owner,
+    bool added,
+  ) {
     final revision = ++_ownerRevision;
     return () {
       // A lifecycle callback may have released/rebound owners already. Never
       // publish an older snapshot after that newer ownership transition.
       if (revision == _ownerRevision) {
-        _notifyOwnerChanges(previousPrimaryOwner, revision);
+        _notifyOwnerChanges(previousPrimaryOwner, revision, owner, added);
       }
     };
   }
@@ -182,6 +229,7 @@ class ViewModelBindingHandler {
   void dispose() {
     clearRefs();
     _ownerChangeListeners.clear();
+    _snapshotListeners = 0;
   }
 
   ViewModelBinding get binding {
@@ -196,19 +244,31 @@ class ViewModelBindingHandler {
     return r;
   }
 
-  void _notifyOwnerChanges(String? previousPrimaryOwner, int revision) {
+  void _notifyOwnerChanges(
+    String? previousPrimaryOwner,
+    int revision,
+    ViewModelBinding? owner,
+    bool added,
+  ) {
     if (_ownerChangeListeners.isEmpty) return;
-    final ownerIds = List<String>.unmodifiable(
-      _refSources.keys.map((binding) => binding.id),
-    );
-    final currentPrimaryOwner = primaryOwner?.id;
-    for (final listener in List<ViewModelOwnersChanged>.of(
-      _ownerChangeListeners,
-    )) {
+    // Built only for diagnostics listeners: O(owners) per change otherwise.
+    List<String>? ownerIds;
+    final currentPrimaryOwner = _primaryOwnerForDiagnostics;
+    for (final listener in List<_OwnerListener>.of(_ownerChangeListeners)) {
       if (revision != _ownerRevision) break;
       if (!_ownerChangeListeners.contains(listener)) continue;
       try {
-        listener(ownerIds, previousPrimaryOwner, currentPrimaryOwner);
+        if (listener.delta case final delta?) {
+          delta(revision, owner, added);
+        } else {
+          listener.snapshot!(
+            ownerIds ??= List<String>.unmodifiable(
+              _refSources.keys.map((binding) => binding.id),
+            ),
+            previousPrimaryOwner,
+            currentPrimaryOwner,
+          );
+        }
       } catch (error, stack) {
         reportViewModelError(
           error,

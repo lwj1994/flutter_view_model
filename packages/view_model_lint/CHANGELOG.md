@@ -1,3 +1,7 @@
+## 1.3.4
+
+- Align the version with `view_model` 1.3.4. The analyzer rules are unchanged.
+
 ## 1.3.3
 
 - `view_model_temporary_spec` no longer reports a custom `ViewModelFactory`

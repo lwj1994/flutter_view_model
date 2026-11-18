@@ -1,3 +1,16 @@
+## 1.3.4
+
+- Fix a UI hang when many bindings own the same ViewModel that has
+  dependencies, for example every cell of a long grid reading one shared
+  ViewModel. Each owner change used to resynchronize every dependency against
+  the full owner list (quadratic in the owner count, repeated per dependency
+  level), so building or unmounting thousands of cells could block the main
+  thread for seconds to minutes. Dependency bindings now apply the single
+  added or removed owner incrementally with identity sets, falling back to a
+  full resync only when a change was skipped by reentrancy. Owner snapshots
+  and primary-owner ids are computed only for diagnostics listeners.
+  Ownership semantics and lifecycle order are unchanged.
+
 ## 1.3.1
 
 - Recommend `view_model_lint` 1.3.1, which allows parameterized specs without

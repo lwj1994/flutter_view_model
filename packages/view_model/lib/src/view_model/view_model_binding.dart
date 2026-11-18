@@ -1,5 +1,7 @@
 library;
 
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 // ignore: unnecessary_import
 import 'package:meta/meta.dart' show internal;
@@ -1046,16 +1048,23 @@ class ViewModelDependencyBinding extends ViewModelBinding {
         _onDependencyUpdate = onDependencyUpdate {
     registerViewModelConstructionRollback(dispose);
     _propagatedOwners.addAll(parentHandler.constructionExternalOwners);
-    _removeOwnerListener = parentHandler.addOwnerChangeListener(
-      (owners, previousPrimaryOwner, primaryOwner) {
-        _syncOwners(parentHandler.externalOwners);
-      },
+    _removeOwnerListener = parentHandler.addOwnerDeltaListener(
+      (revision, owner, added) =>
+          _ownersChanged(parentHandler, revision, owner, added),
     );
   }
 
   final ViewModel _parent;
   final void Function(ViewModel dependency) _onDependencyUpdate;
-  final List<ViewModelBinding> _propagatedOwners = [];
+
+  /// Root owners mirrored onto every dependency, in the parent's owner order.
+  /// A linked identity set keeps membership checks and removals O(1): a shared
+  /// ViewModel can be owned by thousands of list cells.
+  final Set<ViewModelBinding> _propagatedOwners = LinkedHashSet.identity();
+
+  /// Parent owner revision [_propagatedOwners] reflects; null until the first
+  /// change, because construction may have used the Zone fallback owner.
+  int? _syncedRevision;
   final Map<InstanceHandle, _DependencyEdge> _dependencies = Map.identity();
   late final void Function() _removeOwnerListener;
   bool _dependencyDisposed = false;
@@ -1155,17 +1164,46 @@ class ViewModelDependencyBinding extends ViewModelBinding {
     super.onUpdate();
   }
 
+  void _ownersChanged(
+    ViewModelBindingHandler parentHandler,
+    int revision,
+    ViewModelBinding? owner,
+    bool added,
+  ) {
+    if (_dependencyDisposed) return;
+    final inStep = _syncedRevision == revision - 1;
+    // Record the revision before child callbacks can reenter with a newer one.
+    _syncedRevision = revision;
+    if (owner == null || !inStep) {
+      _syncOwners(parentHandler.externalOwners);
+    } else if (!owner.isDependencyBinding) {
+      added ? _addOwner(owner) : _removeOwner(owner);
+    }
+  }
+
+  void _addOwner(ViewModelBinding owner) {
+    if (!_propagatedOwners.add(owner)) return;
+    for (final entry in _dependencies.entries.toList(growable: false)) {
+      _attachOwner(entry.key, entry.value, owner);
+    }
+  }
+
+  void _removeOwner(ViewModelBinding owner) {
+    if (!_propagatedOwners.remove(owner)) return;
+    for (final entry in _dependencies.entries.toList(growable: false)) {
+      if (_propagatedOwners.contains(owner)) break;
+      _detachOwner(entry.key, entry.value, owner);
+    }
+  }
+
   void _syncOwners(List<ViewModelBinding> currentOwners) {
     if (_dependencyDisposed) return;
+    final current = HashSet<ViewModelBinding>.identity()..addAll(currentOwners);
     final removed = _propagatedOwners
-        .where(
-          (owner) => !currentOwners.any((item) => identical(item, owner)),
-        )
+        .where((owner) => !current.contains(owner))
         .toList(growable: false);
     final added = currentOwners
-        .where(
-          (owner) => !_propagatedOwners.any((item) => identical(item, owner)),
-        )
+        .where((owner) => !_propagatedOwners.contains(owner))
         .toList(growable: false);
 
     // Publish the new projection before any child callback can reenter sync.
@@ -1174,7 +1212,7 @@ class ViewModelDependencyBinding extends ViewModelBinding {
       ..addAll(currentOwners);
     for (final owner in removed) {
       for (final entry in _dependencies.entries.toList(growable: false)) {
-        if (_propagatedOwners.any((item) => identical(item, owner))) break;
+        if (_propagatedOwners.contains(owner)) break;
         _detachOwner(entry.key, entry.value, owner);
       }
     }
@@ -1196,7 +1234,7 @@ class ViewModelDependencyBinding extends ViewModelBinding {
         edge.viewModel.isDisposed ||
         owner.isDisposed ||
         !identical(_dependencies[handle], edge) ||
-        !_propagatedOwners.any((item) => identical(item, owner))) {
+        !_propagatedOwners.contains(owner)) {
       return;
     }
     handle.bindOwner(owner, source: edge);

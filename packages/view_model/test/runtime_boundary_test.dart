@@ -94,9 +94,10 @@ class _RefHandler extends ViewModelBindingHandler {
   _RefHandler({this.removeError, this.disposeError});
   final Object? removeError;
   final Object? disposeError;
+  // Dependency bindings subscribe through the incremental owner channel.
   @override
-  void Function() addOwnerChangeListener(ViewModelOwnersChanged listener) {
-    final remove = super.addOwnerChangeListener(listener);
+  void Function() addOwnerDeltaListener(ViewModelOwnerDelta listener) {
+    final remove = super.addOwnerDeltaListener(listener);
     return () {
       remove();
       if (removeError != null) throw removeError!;

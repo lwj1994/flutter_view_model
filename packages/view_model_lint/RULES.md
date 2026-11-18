@@ -666,7 +666,7 @@ or returns `null`. Enable the rule in `analysis_options.yaml`:
 ```yaml
 plugins:
   view_model_lint:
-    version: ^1.3.1
+    version: ^1.3.4
     diagnostics:
       view_model_cached_lookup: true
 ```
