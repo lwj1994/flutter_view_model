@@ -1,3 +1,6 @@
+// Flutter 3.50 deprecates this library for package:material_ui, a separate
+// copy whose types do not mix with the SDK's; migrate when dependencies do.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 
 import '../services/view_model_service.dart';

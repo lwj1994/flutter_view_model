@@ -3,6 +3,9 @@
 import 'package:devtools_app_shared/service.dart';
 import 'package:devtools_app_shared/utils.dart';
 import 'package:flutter/foundation.dart';
+// Flutter 3.50 deprecates this library for package:material_ui, a separate
+// copy whose types do not mix with the SDK's; migrate when dependencies do.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:view_model_devtools_extension/services/view_model_service.dart';
